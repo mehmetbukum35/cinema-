@@ -199,16 +199,21 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            c.gold.withValues(alpha: 0.18),
-            c.crimson.withValues(alpha: 0.14),
-          ],
+          colors: c.isLight
+              ? [
+                  Color.lerp(c.card, c.gold, 0.12)!,
+                  Color.lerp(c.card, c.crimson, 0.08)!,
+                ]
+              : [
+                  c.gold.withValues(alpha: 0.18),
+                  c.crimson.withValues(alpha: 0.14),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.gold.withValues(alpha: 0.35)),
-        boxShadow: CinemaShadows.card,
+        border: Border.all(color: c.gold.withValues(alpha: c.isLight ? 0.20 : 0.35)),
+        boxShadow: c.cardShadow,
       ),
       child: Column(
         children: [
@@ -315,9 +320,11 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: c.surface,
+              color: c.isLight ? c.gold.withValues(alpha: 0.08) : c.surface,
               shape: BoxShape.circle,
-              border: Border.all(color: c.border),
+              border: Border.all(
+                color: c.isLight ? c.gold.withValues(alpha: 0.20) : c.border,
+              ),
             ),
             alignment: Alignment.center,
             child: Icon(
@@ -348,7 +355,7 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       decoration: BoxDecoration(
         color: c.green.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.green.withValues(alpha: 0.4)),
+        border: Border.all(color: c.green.withValues(alpha: c.isLight ? 0.25 : 0.40)),
       ),
       child: Row(
         children: [
@@ -383,7 +390,16 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
         decoration: BoxDecoration(
           gradient: CinemaGradients.gold,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: CinemaShadows.card,
+          boxShadow: c.isLight
+              ? [
+                  BoxShadow(
+                    color: c.gold.withValues(alpha: 0.24),
+                    blurRadius: 16,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : CinemaShadows.card,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -282,6 +282,24 @@ class ThemePalette {
   });
 
   bool get isLight => brightness == Brightness.light;
+
+  List<BoxShadow> get cardShadow => brightness == Brightness.light
+      ? const [
+          BoxShadow(
+            color: Color(0x0F1A1208), // Çok hafif sıcak/koyu gölge
+            blurRadius: 16,
+            spreadRadius: -2,
+            offset: Offset(0, 8),
+          ),
+        ]
+      : const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 24,
+            spreadRadius: -4,
+            offset: Offset(0, 12),
+          ),
+        ];
 }
 
 const kDarkPalette = ThemePalette(
