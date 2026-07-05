@@ -1418,7 +1418,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       if (auth.isAuthenticated) {
                         try {
                           await ref.read(syncServiceProvider).sync();
-                        } catch (_) {}
+                        } catch (e, st) {
+                          debugPrint("Sync failed on friend select: $e\n$st");
+                        }
                       }
                       final id = int.tryParse(f['id'].toString()) ?? 0;
                       ref

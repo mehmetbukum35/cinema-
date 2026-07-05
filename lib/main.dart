@@ -33,8 +33,9 @@ void main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    } catch (_) {
+    } catch (e, st) {
       // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
+      debugPrint("Firebase background initialization failed: $e\n$st");
     }
   }));
 
@@ -124,7 +125,7 @@ class NeIzlesemApp extends ConsumerWidget {
           data: mediaQueryData.copyWith(
             textScaler: mediaQueryData.textScaler.clamp(
               minScaleFactor: 1.0,
-              maxScaleFactor: 1.15,
+              maxScaleFactor: 1.3,
             ),
           ),
           child: child!,

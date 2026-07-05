@@ -252,26 +252,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final c = context.c;
     if (_searching) return _skeletonLoader();
     if (_hasError) {
-      final isApiKeyMissing =
-          _error != null && (_error.toString().contains('TMDB_API_KEY') || _error.toString().toLowerCase().contains('tmdb_api_key eksik'));
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isApiKeyMissing
-                  ? Icons.vpn_key_off_rounded
-                  : Icons.wifi_off_rounded,
+              Icons.wifi_off_rounded,
               color: c.red,
               size: 40,
             ),
             const SizedBox(height: 12),
             Text(
-              isApiKeyMissing
-                  ? (AppLocalizations.of(context)?.get('browse_api_missing') ??
-                        'Yapılandırma Hatası')
-                  : (AppLocalizations.of(context)?.get('search_failed') ??
-                        'Arama başarısız oldu'),
+              AppLocalizations.of(context)?.get('search_failed') ?? 'Arama başarısız oldu',
               style: TextStyle(
                 color: c.ink,
                 fontSize: 15,
@@ -282,13 +274,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                isApiKeyMissing
-                    ? (AppLocalizations.of(
-                            context,
-                          )?.get('browse_api_missing_desc') ??
-                          'Sunucu taraflı servis yapılandırma hatası. Lütfen daha sonra tekrar deneyin.')
-                    : (AppLocalizations.of(context)?.get('browse_conn_error') ??
-                          'Bağlantınızı kontrol edip tekrar deneyin.'),
+                AppLocalizations.of(context)?.get('browse_conn_error') ?? 'Bağlantınızı kontrol edip tekrar deneyin.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.dim, fontSize: 13),
               ),

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(grep -iE \"config\\\\.php$|key\\\\.properties$|\\\\.jks$|service-account\")",
+      "Bash(git log *)",
+      "Bash(git status *)",
+      "Bash(grep -c 'case $route' api/index.php)"
     ]
   }
 }

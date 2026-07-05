@@ -115,7 +115,8 @@ class OfflineNotifier extends StateNotifier<bool> {
       if (mounted) {
         state = !isOnline;
       }
-    } catch (_) {
+    } catch (e) {
+      // Lookup başarısız olduysa veya zaman aşımına uğradıysa cihaz çevrimdışıdır.
       if (mounted) {
         state = true;
       }

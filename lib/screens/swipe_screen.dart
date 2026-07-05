@@ -68,14 +68,47 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final notifier = ref.read(swipeProvider.notifier);
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     if (disableAnims) {
-      await notifier.rate(rating);
+      try {
+        await notifier.rate(rating);
+      } catch (e) {
+        debugPrint("Error rating movie: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isTr
+                    ? 'Puan kaydedilirken hata oluştu.'
+                    : 'Error saving rating.',
+              ),
+            ),
+          );
+        }
+      }
       return;
     }
-    await _fadeCtrl.reverse();
-    await notifier.rate(rating);
-    if (!mounted) return;
-    _fadeCtrl.forward();
+    try {
+      await _fadeCtrl.reverse();
+      await notifier.rate(rating);
+    } catch (e) {
+      debugPrint("Error rating movie: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isTr
+                  ? 'Puan kaydedilirken hata oluştu.'
+                  : 'Error saving rating.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        _fadeCtrl.forward();
+      }
+    }
   }
 
   void _openDetail(Movie movie) {
@@ -96,14 +129,47 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final notifier = ref.read(swipeProvider.notifier);
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     if (disableAnims) {
-      await notifier.undo();
+      try {
+        await notifier.undo();
+      } catch (e) {
+        debugPrint("Error undoing rating: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isTr
+                    ? 'İşlem geri alınırken hata oluştu.'
+                    : 'Error undoing rating.',
+              ),
+            ),
+          );
+        }
+      }
       return;
     }
-    await _fadeCtrl.reverse();
-    await notifier.undo();
-    if (!mounted) return;
-    _fadeCtrl.forward();
+    try {
+      await _fadeCtrl.reverse();
+      await notifier.undo();
+    } catch (e) {
+      debugPrint("Error undoing rating: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isTr
+                  ? 'İşlem geri alınırken hata oluştu.'
+                  : 'Error undoing rating.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        _fadeCtrl.forward();
+      }
+    }
   }
 
   Map<String, String> _getLanguages(BuildContext context) {
@@ -804,7 +870,6 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
 
   Widget _errorView(Object error) {
     final c = context.c;
-    final isApiKeyMissing = error.toString().contains('TMDB_API_KEY') || error.toString().toLowerCase().contains('tmdb_api_key eksik');
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -817,20 +882,14 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
               color: c.red.withValues(alpha: 0.1),
             ),
             child: Icon(
-              isApiKeyMissing
-                  ? Icons.vpn_key_off_rounded
-                  : Icons.wifi_off_rounded,
+              Icons.wifi_off_rounded,
               color: c.red,
               size: 32,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            isApiKeyMissing
-                ? (AppLocalizations.of(context)?.get('browse_api_missing') ??
-                      'Yapılandırma Hatası')
-                : (AppLocalizations.of(context)?.get('swipe_failed') ??
-                      'Bağlantı kurulamadı'),
+            AppLocalizations.of(context)?.get('swipe_failed') ?? 'Bağlantı kurulamadı',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -841,13 +900,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              isApiKeyMissing
-                  ? (AppLocalizations.of(
-                          context,
-                        )?.get('browse_api_missing_desc') ??
-                        'Sunucu taraflı servis yapılandırma hatası. Lütfen daha sonra tekrar deneyin.')
-                  : (AppLocalizations.of(context)?.get('browse_conn_error') ??
-                        'İnternet bağlantınızı kontrol edip tekrar deneyin.'),
+              AppLocalizations.of(context)?.get('browse_conn_error') ?? 'İnternet bağlantınızı kontrol edip tekrar deneyin.',
               textAlign: TextAlign.center,
               style: TextStyle(color: c.dim, fontSize: 13),
             ),
@@ -1293,7 +1346,7 @@ class _SwipeCard extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: dragX > 0 ? c.rIyi : c.rBerbat,
+                            color: dragX > 0 ? c.rHarika : c.rBerbat,
                             width: 3,
                           ),
                           borderRadius: BorderRadius.circular(6),

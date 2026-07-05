@@ -11,6 +11,7 @@ import '../widgets/cinematic_background.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/pulsing_placeholder.dart';
 import 'movie_detail_sheet.dart';
+import 'movie_detail/spoiler_comment.dart';
 
 class SocialScreen extends ConsumerStatefulWidget {
   /// Açılışta seçili olacak sekme (0: Arkadaşlar, 1: İstekler, 2: Akış).

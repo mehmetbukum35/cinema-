@@ -208,7 +208,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         if (batch.isEmpty) _hasMore = false;
         _loadingMore = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Error loading more results: $e\n$st");
       if (!mounted) return;
       setState(() => _loadingMore = false);
     }
@@ -578,8 +579,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _error() {
     final c = context.c;
-    final isApiKeyMissing =
-        _fetchError != null && (_fetchError.toString().contains('TMDB_API_KEY') || _fetchError.toString().toLowerCase().contains('tmdb_api_key eksik'));
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -594,20 +593,14 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 color: c.red.withValues(alpha: 0.1),
               ),
               child: Icon(
-                isApiKeyMissing
-                    ? Icons.vpn_key_off_rounded
-                    : Icons.wifi_off_rounded,
+                Icons.wifi_off_rounded,
                 color: c.red,
                 size: 32,
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              isApiKeyMissing
-                  ? (AppLocalizations.of(context)?.get('browse_api_missing') ??
-                        'Configuration Error')
-                  : (AppLocalizations.of(context)?.get('browse_error') ??
-                        'An error occurred'),
+              AppLocalizations.of(context)?.get('browse_error') ?? 'An error occurred',
               style: TextStyle(
                 color: c.ink,
                 fontSize: 18,
@@ -618,36 +611,28 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                isApiKeyMissing
-                    ? (AppLocalizations.of(
-                            context,
-                          )?.get('browse_api_missing_desc') ??
-                          'Server-side service configuration error. Please try again later.')
-                    : (AppLocalizations.of(context)?.get('browse_conn_error') ??
-                          'Connection error. Please check your internet.'),
+                AppLocalizations.of(context)?.get('browse_conn_error') ?? 'Connection error. Please check your internet.',
                 style: TextStyle(color: c.dim, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ),
-            if (!isApiKeyMissing) ...[
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  _loadFirstPage();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.red,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text(
-                  AppLocalizations.of(context)?.get('browse_retry') ?? 'Retry',
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _loadFirstPage();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
-            ],
+              child: Text(
+                AppLocalizations.of(context)?.get('browse_retry') ?? 'Retry',
+              ),
+            ),
           ],
         ),
       ),

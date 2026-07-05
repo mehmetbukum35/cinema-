@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
@@ -161,7 +162,8 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
           vec[kid] = (vec[kid] ?? 0.0) + w;
         }
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Error calculating keyword vector: $e\n$st");
       // Hata → boş vektör; keyword fazı sessizce atlanır (cold-start gibi).
     }
 
@@ -246,7 +248,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
             similarCandidates.addAll(res[0]); // recommendations
             similarCandidates.addAll(res[1]); // similar
           }
-        } catch (_) {}
+        } catch (e, st) {
+          debugPrint("Failed to load similar/recommendation seeds: $e\n$st");
+        }
       }
 
       // Check if state changed/reset during network call
@@ -436,7 +440,9 @@ final swipeProvider =
           ref.read(statsProvider.notifier).load();
           final auth = ref.read(authProvider);
           if (auth.isAuthenticated) {
-            ref.read(syncServiceProvider).sync().catchError((_) {});
+            ref.read(syncServiceProvider).sync().catchError((e) {
+              debugPrint("Background sync failed on swipe: $e");
+            });
           }
         },
       );

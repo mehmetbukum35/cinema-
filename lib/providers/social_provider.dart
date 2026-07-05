@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
@@ -77,8 +78,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final map = await _apiService.getFriendSignals();
       state = state.copyWith(signals: map);
-    } catch (_) {
+    } catch (e, st) {
       // Fail silently to keep the swiping UI stable
+      debugPrint("Failed to load friend signals: $e\n$st");
     }
   }
 
@@ -194,8 +196,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
         if (res['has_data'] == true) {
           scores[id] = (res['score'] as num).toInt();
         }
-      } catch (_) {
+      } catch (e, st) {
         // Skorsuz devam et.
+        debugPrint("Failed to load taste match for friend $id: $e\n$st");
       }
     }
     if (mounted) state = state.copyWith(tasteScores: scores);
@@ -209,8 +212,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
         recommendations: res['recommendations'] as List<dynamic>,
         unseenRecommendations: (res['unseen'] as num?)?.toInt() ?? 0,
       );
-    } catch (_) {
+    } catch (e, st) {
       // Sessiz: öneri kutusu boş görünür, akış bozulmaz.
+      debugPrint("Failed to load recommendations: $e\n$st");
     }
   }
 
@@ -220,8 +224,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(unseenRecommendations: 0);
     try {
       await _apiService.markRecommendationsSeen();
-    } catch (_) {
+    } catch (e, st) {
       // Sunucuya yazılamadıysa bir sonraki yüklemede tekrar görünür.
+      debugPrint("Failed to mark recommendations seen: $e\n$st");
     }
   }
 

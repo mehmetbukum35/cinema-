@@ -28,19 +28,11 @@ class _CinematicBackgroundState extends State<CinematicBackground>
   @override
   void initState() {
     super.initState();
-    if (widget.animate) _c.repeat();
   }
 
   @override
   void didUpdateWidget(CinematicBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.animate != oldWidget.animate) {
-      if (widget.animate) {
-        _c.repeat();
-      } else {
-        _c.stop();
-      }
-    }
   }
 
   @override
@@ -52,10 +44,16 @@ class _CinematicBackgroundState extends State<CinematicBackground>
   @override
   Widget build(BuildContext context) {
     final pal = context.c;
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final shouldAnimate = widget.animate && !reduceMotion;
+
+    if (shouldAnimate) {
+      if (!_c.isAnimating) _c.repeat();
+    } else {
+      if (_c.isAnimating) _c.stop();
+    }
 
     if (reduceMotion) {
-      if (_c.isAnimating) _c.stop();
       return Stack(
         children: [
           Positioned.fill(

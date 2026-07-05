@@ -25,10 +25,13 @@ class Smtp
         $remote = 'ssl://' . $this->host;
         $socket = @stream_socket_client("$remote:{$this->port}", $errno, $errstr, 15);
         if (!$socket) {
-            error_log("SMTP connection failed: $errstr ($errno)");
+            if (function_exists('cinema_error')) {
+                cinema_error("SMTP connection failed: $errstr ($errno)");
+            } else {
+                error_log("SMTP connection failed: $errstr ($errno)");
+            }
             return false;
         }
-
         $getResponse = function ($socket) {
             $data = '';
             while ($str = fgets($socket, 515)) {

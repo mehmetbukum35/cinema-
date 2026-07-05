@@ -45,8 +45,16 @@ class DatabaseHelper {
       return _database;
     } catch (e) {
       debugPrint(
-        "SQLite initialization failed, falling back to In-Memory Mock: $e",
+        "SQLite initialization failed: $e",
       );
+      if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
+        _useInMemoryMock = true;
+        return null;
+      }
+      if (Platform.isAndroid || Platform.isIOS) {
+        // Mobilde sessizce in-memory mock'a düşmek yerine hata fırlatıyoruz.
+        rethrow;
+      }
       _useInMemoryMock = true;
       return null;
     }

@@ -36,6 +36,15 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final pal = context.c;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    if (reduceMotion) {
+      if (_c.isAnimating) _c.stop();
+      return widget.child;
+    }
+
+    if (!_c.isAnimating) _c.repeat();
+
     final base = widget.baseColor ?? (pal.isLight ? pal.border : pal.surface);
     final highlight =
         widget.highlightColor ?? (pal.isLight ? pal.surface : pal.cardHi);

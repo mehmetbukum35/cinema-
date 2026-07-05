@@ -164,7 +164,7 @@ class _WrappedModalState extends State<WrappedModal> {
           ),
           const SizedBox(height: 36),
           Text(
-            isTr ? '$_currentYear Sinema\nYolculuğun' : 'Your $_currentYear\nCinema Journey',
+            (AppLocalizations.of(context)?.get('recap_journey_title') ?? 'Your {}\nCinema Journey').replaceAll('{}', _currentYear.toString()),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -176,9 +176,7 @@ class _WrappedModalState extends State<WrappedModal> {
           ),
           const SizedBox(height: 16),
           Text(
-            isTr
-                ? 'Geçtiğimiz yıl boyunca yaptığın değerlendirmeleri senin için derledik. Keşfetmek için kaydır!'
-                : 'We compiled all your ratings from the past year. Swipe to discover your recap!',
+            AppLocalizations.of(context)?.get('recap_journey_desc') ?? 'We compiled all your ratings from the past year. Swipe to discover your recap!',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.6),
@@ -191,7 +189,7 @@ class _WrappedModalState extends State<WrappedModal> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                isTr ? 'Kaydır' : 'Swipe to continue',
+                AppLocalizations.of(context)?.get('recap_swipe_continue') ?? 'Swipe to continue',
                 style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 6),
@@ -226,12 +224,12 @@ class _WrappedModalState extends State<WrappedModal> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            isTr ? 'Neler İzledin?' : 'What Did You Watch?',
+            AppLocalizations.of(context)?.get('recap_what_watched') ?? 'What Did You Watch?',
             style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 1.5),
           ),
           const SizedBox(height: 12),
           Text(
-            isTr ? 'Tam $total Yapım' : '$total Titles',
+            (AppLocalizations.of(context)?.get('recap_total_titles') ?? '{} Titles').replaceAll('{}', total.toString()),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -241,14 +239,14 @@ class _WrappedModalState extends State<WrappedModal> {
           ),
           const SizedBox(height: 6),
           Text(
-            isTr ? 'oyladın ve puanladın!' : 'rated and reviewed!',
+            AppLocalizations.of(context)?.get('recap_rated_sub') ?? 'rated and reviewed!',
             style: const TextStyle(color: Colors.white54, fontSize: 14),
           ),
           const SizedBox(height: 40),
-          _buildStatRow(isTr ? 'Harika 🌟' : 'Amazing 🌟', harika, total, c.green),
-          _buildStatRow(isTr ? 'İyi 👍' : 'Good 👍', iyi, total, c.gold),
-          _buildStatRow(isTr ? 'Eh 😐' : 'Meh 😐', eh, total, c.rEh),
-          _buildStatRow(isTr ? 'Berbat 👎' : 'Awful 👎', berbat, total, c.rBerbat),
+          _buildStatRow(AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing 🌟', harika, total, c.green),
+          _buildStatRow(AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good 👍', iyi, total, c.gold),
+          _buildStatRow(AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh 😐', eh, total, c.rEh),
+          _buildStatRow(AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful 👎', berbat, total, c.rBerbat),
         ],
       ),
     );
@@ -301,13 +299,13 @@ class _WrappedModalState extends State<WrappedModal> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            isTr ? 'EN SEVDİĞİN TÜRLER' : 'YOUR TOP GENRES',
+            AppLocalizations.of(context)?.get('recap_top_genres') ?? 'YOUR TOP GENRES',
             style: const TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 2),
           ),
           const SizedBox(height: 24),
           if (topGenres.isEmpty)
             Text(
-              isTr ? 'Henüz yeterli zevk profili oluşmadı.' : 'Not enough taste data yet.',
+              AppLocalizations.of(context)?.get('recap_no_taste_data') ?? 'Not enough taste data yet.',
               style: const TextStyle(color: Colors.white38, fontSize: 14),
             )
           else
@@ -383,12 +381,12 @@ class _WrappedModalState extends State<WrappedModal> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            isTr ? 'EN BEĞENDİĞİN YAPIMLAR' : 'YOUR HIGHEST RATED TITLES',
+            AppLocalizations.of(context)?.get('recap_highest_rated') ?? 'YOUR HIGHEST RATED TITLES',
             style: const TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 2),
           ),
           const SizedBox(height: 6),
           Text(
-            isTr ? 'Harika Puan Verdiklerin' : 'Rated as Amazing',
+            AppLocalizations.of(context)?.get('recap_rated_amazing') ?? 'Rated as Amazing',
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
@@ -396,7 +394,7 @@ class _WrappedModalState extends State<WrappedModal> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Text(
-                isTr ? 'Henüz hiçbir filme "Harika" dememişsin.' : 'You haven\'t rated any movie "Amazing" yet.',
+                AppLocalizations.of(context)?.get('recap_no_amazing_yet') ?? "You haven't rated any title \"Amazing\" yet.",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white38, fontSize: 14),
               ),
@@ -497,7 +495,7 @@ class _WrappedModalState extends State<WrappedModal> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  isTr ? '$_currentYear SİNEMA YOLCULUĞUM' : 'MY $_currentYear CINEMA JOURNEY',
+                  (AppLocalizations.of(context)?.get('recap_share_title') ?? 'MY {} CINEMA JOURNEY').replaceAll('{}', _currentYear.toString()),
                   style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                 ),
                 const SizedBox(height: 14),
@@ -507,7 +505,7 @@ class _WrappedModalState extends State<WrappedModal> {
                     const Icon(Icons.movie_outlined, color: Colors.white70, size: 18),
                     const SizedBox(width: 6),
                     Text(
-                      isTr ? '$total yapım oyladım' : 'rated $total titles',
+                      (AppLocalizations.of(context)?.get('recap_share_sub') ?? 'rated {} titles').replaceAll('{}', total.toString()),
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -516,7 +514,7 @@ class _WrappedModalState extends State<WrappedModal> {
                   const SizedBox(height: 12),
                   const Divider(color: Colors.white10, height: 20),
                   Text(
-                    isTr ? 'Favori Türlerim:' : 'My Favorite Genres:',
+                    AppLocalizations.of(context)?.get('recap_share_genres') ?? 'My Favorite Genres:',
                     style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
@@ -569,7 +567,7 @@ class _WrappedModalState extends State<WrappedModal> {
                   const Icon(Icons.share_rounded, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    isTr ? 'Özetini Paylaş' : 'Share Your Recap',
+                    AppLocalizations.of(context)?.get('recap_share_button') ?? 'Share Your Recap',
                     style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ],

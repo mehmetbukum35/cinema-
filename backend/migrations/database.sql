@@ -322,6 +322,18 @@ CREATE TABLE `device_tokens` (
   CONSTRAINT `fk_device_tokens_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Tablo yapısı: `rate_limits` (DB rate limiting)
+--
+CREATE TABLE IF NOT EXISTS `rate_limits` (
+  `ip_bucket` varchar(100) NOT NULL,
+  `window_time` int(11) NOT NULL,
+  `request_count` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`ip_bucket`,`window_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

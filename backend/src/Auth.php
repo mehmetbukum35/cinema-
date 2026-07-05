@@ -222,7 +222,7 @@ class Auth
 
             $smtp->send($email, $subject, $body);
         } catch (Throwable $e) {
-            error_log("Failed to process background password reset for $email: " . $e->getMessage());
+            cinema_error("Failed to process background password reset for $email: " . $e->getMessage());
         }
     }
 

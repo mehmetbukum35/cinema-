@@ -95,8 +95,9 @@ class NotificationService {
       // GEÇİCİ (test için): token'ı konsola yazdır. Yayın öncesi bu satırı sil.
       final debugToken = await FirebaseMessaging.instance.getToken();
       debugPrint('🔑 FCM TOKEN: $debugToken');
-    } catch (_) {
+    } catch (e, st) {
       // Firebase yapılandırılmamış olabilir; sessizce geç.
+      debugPrint('Firebase messaging init failed: $e\n$st');
     }
   }
 
@@ -106,7 +107,9 @@ class NotificationService {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _sendToken(token);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('Failed to register FCM token: $e\n$st');
+    }
   }
 
   /// Çıkış yapmadan ÖNCE çağrılır: token'ı sunucudan siler ki kullanıcı
@@ -115,7 +118,9 @@ class NotificationService {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _api?.unregisterDevice(token);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('Failed to unregister FCM token: $e\n$st');
+    }
   }
 
   Future<void> _sendToken(String token) async {
@@ -124,7 +129,9 @@ class NotificationService {
           ? 'ios'
           : (Platform.isAndroid ? 'android' : 'web');
       await _api?.registerDevice(token, platform: platform);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('Failed to send FCM token to API: $e\n$st');
+    }
   }
 
   Future<void> _showForeground(RemoteMessage m) async {
@@ -151,7 +158,9 @@ class NotificationService {
         ),
         payload: "$type|$movieId|$isTv",
       );
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('Failed to show foreground notification: $e\n$st');
+    }
   }
 
   /// Bildirim payload'una göre ilgili ekrana yönlendirir.

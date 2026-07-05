@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'movie_detail/recommend_sheet.dart';
+import 'movie_detail/spoiler_comment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../models/cast_member.dart';
@@ -532,24 +534,29 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             Positioned(
               top: 6,
               left: 6,
-              child: SpringButton(
-                onTap: _confirmBlockMovie,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1,
+              child: Tooltip(
+                message: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                    ? 'Yapımı Engelle ve Gizle'
+                    : 'Block and Hide Title',
+                child: SpringButton(
+                  onTap: _confirmBlockMovie,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.visibility_off_rounded,
-                    color: Colors.white,
-                    size: 13,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.visibility_off_rounded,
+                      color: Colors.white,
+                      size: 13,
+                    ),
                   ),
                 ),
               ),
@@ -557,24 +564,29 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             Positioned(
               top: 6,
               right: 6,
-              child: SpringButton(
-                onTap: _openRecommendSheet,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1,
+              child: Tooltip(
+                message: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                    ? 'Arkadaşına Öner'
+                    : 'Recommend to Friend',
+                child: SpringButton(
+                  onTap: _openRecommendSheet,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.send_rounded,
-                    color: Colors.white,
-                    size: 13,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 13,
+                    ),
                   ),
                 ),
               ),
@@ -728,30 +740,33 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         ),
         // Share button
         const SizedBox(width: 10),
-        SpringButton(
-          onTap: () {
-            final typeLabel = widget.movie.isTV
-                ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
-                : (AppLocalizations.of(context)?.get('onboarding_movie') ??
-                      'Film');
-            final shareTemplate =
-                AppLocalizations.of(context)?.get('detail_share_text') ??
-                'What to Watch recommendation: {}';
-            final shareText = shareTemplate.replaceAll(
-              '{}',
-              '${widget.movie.title} (${widget.movie.year})\n⭐ ${widget.movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
-            );
-            Share.share(shareText);
-          },
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: c.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: c.border),
+        Tooltip(
+          message: AppLocalizations.of(context)?.locale.languageCode == 'tr' ? 'Paylaş' : 'Share',
+          child: SpringButton(
+            onTap: () {
+              final typeLabel = widget.movie.isTV
+                  ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
+                  : (AppLocalizations.of(context)?.get('onboarding_movie') ??
+                        'Film');
+              final shareTemplate =
+                  AppLocalizations.of(context)?.get('detail_share_text') ??
+                  'What to Watch recommendation: {}';
+              final shareText = shareTemplate.replaceAll(
+                '{}',
+                '${widget.movie.title} (${widget.movie.year})\n⭐ ${widget.movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
+              );
+              Share.share(shareText);
+            },
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: c.border),
+              ),
+              child: Icon(Icons.share_rounded, color: c.dim, size: 18),
             ),
-            child: Icon(Icons.share_rounded, color: c.dim, size: 18),
           ),
         ),
         // Trailer button (only shown when available)
@@ -1868,261 +1883,3 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 }
 
-class RecommendSheet extends StatefulWidget {
-  final Movie movie;
-  final List<dynamic> friends;
-  final WidgetRef ref;
-
-  const RecommendSheet({
-    super.key,
-    required this.movie,
-    required this.friends,
-    required this.ref,
-  });
-
-  @override
-  State<RecommendSheet> createState() => RecommendSheetState();
-}
-
-class RecommendSheetState extends State<RecommendSheet> {
-  final _noteCtrl = TextEditingController();
-  int? _sendingToFriendId;
-
-  @override
-  void dispose() {
-    _noteCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final tr = AppLocalizations.of(context);
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            tr?.get('recommend_pick_friend') ?? 'Kime önerelim?',
-            style: TextStyle(
-              color: c.ink,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.movie.title,
-            style: TextStyle(color: c.dim, fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _noteCtrl,
-            maxLength: 280,
-            enabled: _sendingToFriendId == null,
-            style: TextStyle(color: c.ink, fontSize: 14),
-            decoration: InputDecoration(
-              hintText:
-                  tr?.get('recommend_note_hint') ?? 'Not ekle (isteğe bağlı)',
-              hintStyle: TextStyle(color: c.dim, fontSize: 13),
-              counterText: '',
-              filled: true,
-              fillColor: c.card,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: widget.friends.length,
-              itemBuilder: (listCtx, idx) {
-                final f = widget.friends[idx];
-                final name = f['display_name'] ?? f['username'] ?? 'User';
-                final friendId = int.tryParse(f['id'].toString()) ?? 0;
-                final isSending = _sendingToFriendId == friendId;
-                final isAnySending = _sendingToFriendId != null;
-
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: CinemaGradients.crimson,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      name.toString().isNotEmpty
-                          ? name.toString()[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    name.toString(),
-                    style: TextStyle(
-                      color: c.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  trailing: isSending
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: c.gold,
-                          ),
-                        )
-                      : Icon(
-                          Icons.send_rounded,
-                          color: isAnySending ? c.dim : c.gold,
-                          size: 20,
-                        ),
-                  onTap: isAnySending
-                      ? null
-                      : () async {
-                          final sm = ScaffoldMessenger.of(context);
-                          final nav = Navigator.of(context);
-
-                          setState(() {
-                            _sendingToFriendId = friendId;
-                          });
-
-                          final ok = await widget.ref
-                              .read(socialProvider.notifier)
-                              .recommendToFriend(
-                                friendId: friendId,
-                                movie: widget.movie,
-                                note: _noteCtrl.text.trim(),
-                              );
-
-                          if (!mounted) return;
-
-                          sm.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? (tr?.get('recommend_sent') ??
-                                          'Öneri gönderildi!')
-                                    : (widget.ref.read(socialProvider).error ??
-                                          'Öneri gönderilemedi.'),
-                              ),
-                            ),
-                          );
-
-                          if (ok) {
-                            nav.pop();
-                          } else {
-                            setState(() {
-                              _sendingToFriendId = null;
-                            });
-                          }
-                        },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SpoilerComment extends StatefulWidget {
-  final String comment;
-  final bool isSpoiler;
-
-  const SpoilerComment({
-    super.key,
-    required this.comment,
-    required this.isSpoiler,
-  });
-
-  @override
-  State<SpoilerComment> createState() => _SpoilerCommentState();
-}
-
-class _SpoilerCommentState extends State<SpoilerComment> {
-  late bool _reveal;
-
-  @override
-  void initState() {
-    super.initState();
-    _reveal = !widget.isSpoiler;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final tr = AppLocalizations.of(context);
-
-    if (widget.isSpoiler && !_reveal) {
-      return GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          setState(() => _reveal = true);
-        },
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: c.rBerbat.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: c.rBerbat.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: c.rBerbat, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tr?.get('review_spoiler_warning') ?? 'Spoiler içeriyor. Görmek için dokunun.',
-                  style: TextStyle(
-                    color: c.rBerbat,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: c.borderSoft.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      width: double.infinity,
-      child: Text(
-        widget.comment,
-        style: TextStyle(
-          color: c.ink,
-          fontSize: 13,
-          height: 1.35,
-        ),
-      ),
-    );
-  }
-}

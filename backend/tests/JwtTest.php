@@ -108,4 +108,79 @@ class JwtTest extends TestCase
         $this->assertSame('refresh', $decodedRefresh['typ']);
         $this->assertNotEquals($access, $refresh);
     }
+
+    // --- Key Rotation ve kid desteği testleri ---------------------------------
+
+    public function testEncodeAndDecodeWithSecretArrayKeyRotation(): void
+    {
+        $secrets = [
+            'v1' => 'old-secret-key-12345',
+            'v2' => 'new-secret-key-67890', // active
+        ];
+
+        $payload = ['sub' => 101, 'exp' => time() + 3600];
+
+        // active key (v2) ile encode edilmeli
+        $token = Jwt::encode($payload, $secrets);
+
+        // header'da kid = v2 olmalı
+        $parts = explode('.', $token);
+        $header = json_decode(base64_decode(strtr($parts[0], '-_', '+/')), true);
+        $this->assertSame('v2', $header['kid']);
+
+        // decode edebilmeli
+        $decoded = Jwt::decode($token, $secrets);
+        $this->assertIsArray($decoded);
+        $this->assertSame(101, $decoded['sub']);
+    }
+
+    public function testDecodeAcceptsTokenSignedWithOlderConfiguredSecret(): void
+    {
+        $secrets = [
+            'v1' => 'old-secret-key-12345',
+            'v2' => 'new-secret-key-67890', // active
+        ];
+
+        $payload = ['sub' => 102, 'exp' => time() + 3600];
+
+        // Eski anahtarla (v1) token imzalıyoruz
+        $token = Jwt::encode($payload, $secrets, 'v1');
+
+        $parts = explode('.', $token);
+        $header = json_decode(base64_decode(strtr($parts[0], '-_', '+/')), true);
+        $this->assertSame('v1', $header['kid']);
+
+        // decode işlemi hem v1 hem de v2'yi bildiği için başarılı olmalı
+        $decoded = Jwt::decode($token, $secrets);
+        $this->assertIsArray($decoded);
+        $this->assertSame(102, $decoded['sub']);
+    }
+
+    public function testDecodeRejectsTokenWithNoneAlgorithm(): void
+    {
+        $payload = ['sub' => 103, 'exp' => time() + 3600];
+
+        // "alg": "none" saldırısı için sahte bir token üretiyoruz
+        $header = ['alg' => 'none', 'typ' => 'JWT'];
+        $h = rtrim(strtr(base64_encode(json_encode($header)), '+/', '-_'), '=');
+        $p = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
+        $tamperedToken = "$h.$p.";
+
+        $decoded = Jwt::decode($tamperedToken, self::SECRET);
+        $this->assertNull($decoded, 'alg: none olan token decode edilmemeli, null dönmeli.');
+    }
+
+    public function testDecodeRejectsTokenWithMissingOrUnknownKidInSecretArray(): void
+    {
+        $secrets = [
+            'v2' => 'new-secret-key-67890',
+        ];
+
+        // 'v1' kid'ine sahip token üretiyoruz
+        $token = Jwt::encode(['sub' => 104], ['v1' => 'old-secret-key-12345'], 'v1');
+
+        // Config'de 'v1' olmadığı için decode edilmemeli
+        $decoded = Jwt::decode($token, $secrets);
+        $this->assertNull($decoded, 'Unknown kid olan token null dönmeli.');
+    }
 }

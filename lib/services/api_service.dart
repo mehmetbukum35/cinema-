@@ -200,7 +200,10 @@ class ApiService {
           body: {'refresh_token': refreshToken},
           requireAuth: false,
         );
-      } catch (_) {}
+      } catch (e, st) {
+        // Oturumu kapatırken sunucu çağrısı başarısız olsa bile yerel verileri temizlemeye devam ediyoruz.
+        debugPrint("Sunucu logout isteği başarısız oldu: $e\n$st");
+      }
     }
     await PrefsService.clearAuthData();
   }

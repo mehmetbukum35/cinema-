@@ -384,7 +384,8 @@ class TmdbService {
         final key = pickKey(results);
         if (key != null) return key;
       }
-      // Fallback: English
+      // Fallback: English (only if primary language is not English)
+      if (_language == 'en-US' || _language == 'en') return null;
       final enJson = await _fetchRawWithCache(
         path: path,
         params: {'api_key': _apiKey, 'language': 'en-US'},
@@ -1026,7 +1027,9 @@ class TmdbService {
           return !blocked.contains(key);
         }).toList();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint("Error loading blocked movies from SharedPreferences: $e\n$st");
+    }
 
 
     const int kMinVoteCountDefault = 15;
@@ -1063,7 +1066,8 @@ class TmdbService {
       if (errBody is Map && errBody['error'] != null) {
         msg = errBody['error'].toString();
       }
-    } catch (_) {
+    } catch (e) {
+      // response.body geçerli bir JSON değilse (örn. HTML hata sayfası), fallback olarak doğrudan body içeriğini kullanıyoruz.
       if (response.body.isNotEmpty) {
         msg = response.body;
       }

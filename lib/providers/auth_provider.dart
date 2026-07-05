@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import '../services/prefs_service.dart';
@@ -63,7 +64,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         state = state.copyWith(loading: false);
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Error restoring session: $e\n$st");
       if (!mounted) return;
       state = state.copyWith(loading: false);
     }
@@ -168,7 +170,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await NotificationService.instance.unregisterToken();
     try {
       await _apiService.logout();
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint("Auth notifier logout request failed: $e\n$st");
+    }
     await PrefsService.clearAuthData();
     await DatabaseHelper().hardClearAllData();
     state = AuthState(); // Reset auth state to defaults
@@ -205,7 +209,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Account deletion failed: $e\n$st");
       state = state.copyWith(
         loading: false,
         error: 'Hesap silinemedi. Lütfen tekrar deneyin.',
@@ -232,7 +237,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Change password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
         error: 'Parola değiştirilemedi. Lütfen tekrar deneyin.',
@@ -251,7 +257,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Forgot password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
         error:
@@ -271,7 +278,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Verify reset code failed: $e\n$st");
       state = state.copyWith(
         loading: false,
         error: 'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
@@ -294,7 +302,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint("Reset password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
         error: 'Şifre sıfırlanamadı. Lütfen tekrar deneyin.',
