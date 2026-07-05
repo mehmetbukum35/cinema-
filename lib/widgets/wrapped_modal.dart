@@ -131,7 +131,6 @@ class _WrappedModalState extends State<WrappedModal> {
 
   // Slide 1: Welcome Intro
   Widget _buildIntroPage(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -203,7 +202,6 @@ class _WrappedModalState extends State<WrappedModal> {
 
   // Slide 2: Rating Statistics
   Widget _buildStatsPage(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final total = widget.stats['total'] as int? ?? 0;
     
     final berbat = widget.stats['berbat'] as int? ?? 0;
@@ -283,7 +281,6 @@ class _WrappedModalState extends State<WrappedModal> {
 
   // Slide 3: Top Genres
   Widget _buildGenresPage(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
 
     return Container(
@@ -361,7 +358,6 @@ class _WrappedModalState extends State<WrappedModal> {
 
   // Slide 4: Favorite Movies
   Widget _buildFavouritesPage(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final ratedMovies = widget.stats['ratedMovies'] as List<dynamic>? ?? [];
     final favourites = ratedMovies
         .where((item) => item['rating'] == 3)
@@ -445,7 +441,6 @@ class _WrappedModalState extends State<WrappedModal> {
 
   // Slide 5: Share Summary Card
   Widget _buildSharePage(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
     final genreNames = topGenres.map((id) => PrefsService.genreName(id as int)).toList();

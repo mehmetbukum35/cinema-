@@ -32,7 +32,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _searching = false;
   String _lastQuery = '';
   bool _hasError = false;
-  Object? _error;
 
   String? _selectedLanguage;
   int? _selectedProvider;
@@ -62,7 +61,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _searching = false;
         _lastQuery = '';
         _hasError = false;
-        _error = null;
       });
       return;
     }
@@ -72,7 +70,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       setState(() {
         _searching = true;
         _hasError = false;
-        _error = null;
       });
       try {
         final results = await _service.searchMulti(q);
@@ -91,7 +88,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           _results = [];
           _searching = false;
           _hasError = true;
-          _error = e;
         });
       }
     });
@@ -524,7 +520,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() {
       _searching = true;
       _hasError = false;
-      _error = null;
     });
     try {
       final results = await _service.searchMulti(q);
@@ -539,7 +534,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _results = [];
         _searching = false;
         _hasError = true;
-        _error = e;
       });
     }
   }

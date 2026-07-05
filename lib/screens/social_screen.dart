@@ -10,7 +10,6 @@ import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/pulsing_placeholder.dart';
-import 'movie_detail_sheet.dart';
 import 'movie_detail/spoiler_comment.dart';
 
 class SocialScreen extends ConsumerStatefulWidget {

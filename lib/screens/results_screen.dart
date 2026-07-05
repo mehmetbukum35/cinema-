@@ -59,7 +59,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   bool _loadingMore = false; // sonraki sayfa yükleniyor
   bool _hasMore = true;
   bool _hasError = false;
-  Object? _fetchError;
 
   // Filter state
   late final int _currentYear = DateTime.now().year;
@@ -169,7 +168,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     setState(() {
       _loading = true;
       _hasError = false;
-      _fetchError = null;
       _movies.clear();
       _seenIds.clear();
       _page = 1;
@@ -187,7 +185,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       if (!mounted) return;
       setState(() {
         _hasError = true;
-        _fetchError = e;
         _hasMore = false;
         _loading = false;
       });
