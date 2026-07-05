@@ -136,7 +136,9 @@ CREATE TABLE `users` (
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `username` varchar(50) DEFAULT NULL,
-  `is_public` tinyint(1) NOT NULL DEFAULT 1
+  `is_public` tinyint(1) NOT NULL DEFAULT 1,
+  `taste_dna` text DEFAULT NULL,
+  `taste_dna_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

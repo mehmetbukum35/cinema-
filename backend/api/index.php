@@ -244,6 +244,11 @@ switch (true) {
         $social->getFriendSignals($auth->requireUser());
         break;
 
+    // ── Sinema DNA ──────────────────────────────────────────────────────────
+    case $route === 'POST /social/dna':
+        $social->publishTasteDna($auth->requireUser(), read_json());
+        break;
+
     // ── Arkadaşa Öneri ──────────────────────────────────────────────────────
     case $route === 'POST /social/recommend':
         $uid = $auth->requireUser();

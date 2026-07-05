@@ -66,6 +66,44 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame([28, 35], TestHelperRegistry::$lastBody['watchlist'][0]['genre_ids']);
     }
 
+    public function testPublishTasteDnaStoresSnapshot(): void
+    {
+        $snapshot = ['archetype' => 'dark_chronicler', 'themes' => ['revenge']];
+        $this->social->publishTasteDna(1, ['dna' => $snapshot]);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertTrue(TestHelperRegistry::$lastBody['ok']);
+
+        $st = $this->db->prepare('SELECT taste_dna, taste_dna_at FROM users WHERE id = 1');
+        $st->execute();
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame($snapshot, json_decode($row['taste_dna'], true));
+        $this->assertGreaterThan(0, (int) $row['taste_dna_at']);
+    }
+
+    public function testPublishTasteDnaRejectsNonArray(): void
+    {
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(422);
+        try {
+            $this->social->publishTasteDna(1, ['dna' => 'not-an-object']);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testPublishTasteDnaRejectsOversizedSnapshot(): void
+    {
+        $huge = ['themes' => array_fill(0, 5000, 'padding-keyword')];
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(422);
+        try {
+            $this->social->publishTasteDna(1, ['dna' => $huge]);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
     public function testWatchlistIntersectionRejectsNonFriends(): void
     {
         $this->expectException(TestExitException::class);
@@ -408,7 +446,9 @@ class SocialIntegrationTest extends TestCase
                 display_name TEXT,
                 username TEXT UNIQUE,
                 is_public INTEGER NOT NULL DEFAULT 1,
-                updated_at INTEGER NOT NULL DEFAULT 0
+                updated_at INTEGER NOT NULL DEFAULT 0,
+                taste_dna TEXT NULL,
+                taste_dna_at INTEGER NOT NULL DEFAULT 0
             )'
         );
         $this->db->exec(
