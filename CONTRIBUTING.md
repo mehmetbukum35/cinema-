@@ -30,10 +30,9 @@ The project is structured as a monorepo containing both the Flutter frontend app
     ```bash
     flutter pub get
     ```
-3.  Run the application locally:
+3.  Run the application locally (TMDB requests are proxied through the backend, so a local API key is not required on the client):
     ```bash
     flutter run \
-      --dart-define=TMDB_API_KEY=YOUR_TMDB_API_KEY \
       --dart-define=API_BASE_URL=http://localhost:8000 \
       --dart-define=WEB_PROFILE_BASE_URL=http://localhost:8000/profile
     ```

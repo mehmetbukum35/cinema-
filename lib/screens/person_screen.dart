@@ -98,10 +98,8 @@ class _PersonScreenState extends State<PersonScreen> {
           const SizedBox(height: 8),
           Builder(
             builder: (context) {
-              final isTr =
-                  AppLocalizations.of(context)?.locale.languageCode == 'tr';
               return Text(
-                isTr ? 'FİLMOGRAFİ' : 'FILMOGRAPHY',
+                AppLocalizations.of(context)?.get('filmography') ?? 'FILMOGRAPHY',
                 style: TextStyle(
                   color: c.dim,
                   fontSize: 11,

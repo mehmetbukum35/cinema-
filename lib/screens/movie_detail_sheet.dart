@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'movie_detail/recommend_sheet.dart';
-import 'movie_detail/spoiler_comment.dart';
+import 'movie_detail/review_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../models/cast_member.dart';
@@ -97,7 +97,6 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
     required VoidCallback onBlocked,
   }) {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     
     showDialog(
       context: context,
@@ -106,20 +105,18 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          isTr ? 'Yapımı Gizle' : 'Hide Title',
+          AppLocalizations.of(context)?.get('hide_title') ?? 'Hide Title',
           style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          isTr
-              ? 'Bu yapımı engellemek ve tüm listelerden kalıcı olarak gizlemek istediğinize emin misiniz?'
-              : 'Are you sure you want to block this title and permanently hide it from all lists?',
+          AppLocalizations.of(context)?.get('are_you_sure_you_want_to_block') ?? 'Are you sure you want to block this title and permanently hide it from all lists?',
           style: TextStyle(color: c.dim, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              isTr ? 'İptal' : 'Cancel',
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
               style: TextStyle(color: c.dim),
             ),
           ),
@@ -133,9 +130,7 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      isTr
-                          ? 'Yapım gizlendi ve listelerden kaldırıldı.'
-                          : 'Title hidden and removed from lists.',
+                      AppLocalizations.of(context)?.get('title_hidden_and_removed_from_') ?? 'Title hidden and removed from lists.',
                     ),
                     backgroundColor: c.green,
                   ),
@@ -147,7 +142,7 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
               onBlocked();
             },
             child: Text(
-              isTr ? 'Gizle' : 'Hide',
+              AppLocalizations.of(context)?.get('hide') ?? 'Hide',
               style: TextStyle(color: c.red, fontWeight: FontWeight.bold),
             ),
           ),
@@ -300,7 +295,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       data: (list) => list.any((m) => m.id == movie.id && m.isTV == movie.isTV),
       orElse: () => false,
     );
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final c = context.c;
     if (inWatchlist) {
       await ref.read(watchlistProvider.notifier).remove(movie.id, movie.isTV);
@@ -309,13 +303,11 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isTr
-                ? '${movie.title} izleme listesinden çıkarıldı.'
-                : '${movie.title} removed from watchlist.',
+            AppLocalizations.of(context)?.get('title_removed_from_watchlist').replaceAll('{}', movie.title) ?? '${movie.title} removed from watchlist.',
           ),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
-            label: isTr ? 'Geri Al' : 'Undo',
+            label: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
             textColor: c.red,
             onPressed: () async {
               await ref.read(watchlistProvider.notifier).add(movie);
@@ -535,9 +527,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               top: 6,
               left: 6,
               child: Tooltip(
-                message: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                    ? 'Yapımı Engelle ve Gizle'
-                    : 'Block and Hide Title',
+                message: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
                 child: SpringButton(
                   onTap: _confirmBlockMovie,
                   child: Container(
@@ -565,9 +555,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               top: 6,
               right: 6,
               child: Tooltip(
-                message: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                    ? 'Arkadaşına Öner'
-                    : 'Recommend to Friend',
+                message: AppLocalizations.of(context)?.get('recommend_to_friend') ?? 'Recommend to Friend',
                 child: SpringButton(
                   onTap: _openRecommendSheet,
                   child: Container(
@@ -690,50 +678,61 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   Widget _actionButtons(Movie movie, bool inWatchlist) {
     final c = context.c;
+    final watchlistLabel = inWatchlist
+        ? (AppLocalizations.of(context)?.get('detail_watchlist_remove') ?? 'Listeden Çıkar')
+        : (AppLocalizations.of(context)?.get('detail_watchlist_add') ?? 'İzleme Listesine Ekle');
+
     return Row(
       children: [
         // Watchlist toggle
         Expanded(
-          child: SpringButton(
-            onTap: _toggleWatchlist,
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: inWatchlist ? c.red.withValues(alpha: 0.15) : c.card,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: inWatchlist ? c.red : c.border,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    inWatchlist
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_border_rounded,
-                    color: inWatchlist ? c.red : c.dim,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    inWatchlist
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('detail_watchlist_remove') ??
-                              'Listeden Çıkar')
-                        : (AppLocalizations.of(
-                                context,
-                              )?.get('detail_watchlist_add_short') ??
-                              'Watchlist'),
-                    style: TextStyle(
-                      color: inWatchlist ? c.red : c.dim,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+          child: Tooltip(
+            message: watchlistLabel,
+            child: Semantics(
+              button: true,
+              label: watchlistLabel,
+              child: SpringButton(
+                onTap: _toggleWatchlist,
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: inWatchlist ? c.red.withValues(alpha: 0.15) : c.card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: inWatchlist ? c.red : c.border,
+                      width: 1,
                     ),
                   ),
-                ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        inWatchlist
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        color: inWatchlist ? c.red : c.dim,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        inWatchlist
+                            ? (AppLocalizations.of(
+                                    context,
+                                  )?.get('detail_watchlist_remove') ??
+                                  'Listeden Çıkar')
+                            : (AppLocalizations.of(
+                                    context,
+                                  )?.get('detail_watchlist_add_short') ??
+                                  'Watchlist'),
+                        style: TextStyle(
+                          color: inWatchlist ? c.red : c.dim,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -741,69 +740,80 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         // Share button
         const SizedBox(width: 10),
         Tooltip(
-          message: AppLocalizations.of(context)?.locale.languageCode == 'tr' ? 'Paylaş' : 'Share',
-          child: SpringButton(
-            onTap: () {
-              final typeLabel = widget.movie.isTV
-                  ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
-                  : (AppLocalizations.of(context)?.get('onboarding_movie') ??
-                        'Film');
-              final shareTemplate =
-                  AppLocalizations.of(context)?.get('detail_share_text') ??
-                  'What to Watch recommendation: {}';
-              final shareText = shareTemplate.replaceAll(
-                '{}',
-                '${widget.movie.title} (${widget.movie.year})\n⭐ ${widget.movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
-              );
-              Share.share(shareText);
-            },
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: c.border),
+          message: AppLocalizations.of(context)?.get('share') ?? 'Share',
+          child: Semantics(
+            button: true,
+            label: AppLocalizations.of(context)?.get('share') ?? 'Share',
+            child: SpringButton(
+              onTap: () {
+                final typeLabel = widget.movie.isTV
+                    ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
+                    : (AppLocalizations.of(context)?.get('onboarding_movie') ??
+                          'Film');
+                final shareTemplate =
+                    AppLocalizations.of(context)?.get('detail_share_text') ??
+                    'What to Watch recommendation: {}';
+                final shareText = shareTemplate.replaceAll(
+                  '{}',
+                  '${widget.movie.title} (${widget.movie.year})\n⭐ ${widget.movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
+                );
+                Share.share(shareText);
+              },
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: c.border),
+                ),
+                child: Icon(Icons.share_rounded, color: c.dim, size: 18),
               ),
-              child: Icon(Icons.share_rounded, color: c.dim, size: 18),
             ),
           ),
         ),
         // Trailer button (only shown when available)
         if (_trailerKey != null) ...[
           const SizedBox(width: 10),
-          SpringButton(
-            onTap: _openTrailer,
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF0000).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0xFFFF0000).withValues(alpha: 0.4),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.play_circle_rounded,
-                    color: Color(0xFFFF0000),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    AppLocalizations.of(context)?.get('detail_trailer') ??
-                        'Trailer',
-                    style: const TextStyle(
-                      color: Color(0xFFFF0000),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+          Tooltip(
+            message: AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer',
+            child: Semantics(
+              button: true,
+              label: AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer',
+              child: SpringButton(
+                onTap: _openTrailer,
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF0000).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFFF0000).withValues(alpha: 0.4),
+                      width: 1,
                     ),
                   ),
-                ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.play_circle_rounded,
+                        color: Color(0xFFFF0000),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppLocalizations.of(context)?.get('detail_trailer') ??
+                            'Trailer',
+                        style: const TextStyle(
+                          color: Color(0xFFFF0000),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -1032,9 +1042,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         ),
         alignment: Alignment.center,
         child: Text(
-          AppLocalizations.of(context)?.locale.languageCode == 'tr'
-              ? 'Benzer Öner'
-              : 'Recommend Similar',
+          AppLocalizations.of(context)?.get('recommend_similar') ?? 'Recommend Similar',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 15,
@@ -1290,7 +1298,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 
   Widget _synergyBadge(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final synergyScore = _calculateSynergyScore();
     
     return SpringButton(
@@ -1312,7 +1319,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             Icon(Icons.bolt_rounded, color: c.green, size: 14),
             const SizedBox(width: 4),
             Text(
-              isTr ? '%$synergyScore Uyumlu' : '$synergyScore% Match',
+              AppLocalizations.of(context)?.get('synergy_score_match').replaceAll('{}', '$synergyScore') ?? '$synergyScore% Match',
               style: TextStyle(
                 color: c.green,
                 fontSize: 12,
@@ -1337,7 +1344,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Center(
           child: Text(
-            isTr ? 'Uyum Detayları' : 'Match Details',
+            AppLocalizations.of(context)?.get('match_details') ?? 'Match Details',
             style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.w800),
           ),
         ),
@@ -1367,7 +1374,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     ),
                   ),
                   Text(
-                    isTr ? 'Uyum' : 'Match',
+                    AppLocalizations.of(context)?.get('match_button') ?? 'Match',
                     style: TextStyle(
                       color: c.green,
                       fontSize: 10,
@@ -1379,20 +1386,20 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             ),
             const SizedBox(height: 24),
             _buildDialogRow(
-              isTr ? 'Kişisel Beğeni Uyumu' : 'Personal Taste Match',
+              AppLocalizations.of(context)?.get('personal_taste_match') ?? 'Personal Taste Match',
               '%${widget.movie.matchScore}',
               widget.movie.matchScore / 100.0,
               c.green,
             ),
             _buildDialogRow(
-              isTr ? 'TMDB Puanı' : 'TMDB Rating',
+              AppLocalizations.of(context)?.get('tmdb_rating') ?? 'TMDB Rating',
               '${widget.movie.voteAverage.toStringAsFixed(1)} / 10',
               widget.movie.voteAverage / 10.0,
               c.gold,
             ),
             if (_communityScore != null && _communityScore!['total'] > 0)
               _buildDialogRow(
-                isTr ? 'cinema+ Üye Skoru' : 'cinema+ Member Score',
+                AppLocalizations.of(context)?.get('cinema_member_score') ?? 'cinema+ Member Score',
                 _communityScore!['enough'] == true
                     ? '%${_communityScore!['liked_percent']}'
                     : (isTr ? '${_communityScore!['total']} oy' : '${_communityScore!['total']} votes'),
@@ -1426,7 +1433,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              isTr ? 'Kapat' : 'Close',
+              AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
               style: TextStyle(color: c.dim, fontWeight: FontWeight.w700),
             ),
           ),
@@ -1496,7 +1503,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 
   Widget _ratingSection(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1504,13 +1510,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _ratingButton(0, c.rBerbat, isTr ? 'Berbat' : 'Awful', c)),
+            Expanded(child: _ratingButton(0, c.rBerbat, AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful', c)),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(1, c.rEh, isTr ? 'Eh' : 'Meh', c)),
+            Expanded(child: _ratingButton(1, c.rEh, AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh', c)),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(2, c.rIyi, isTr ? 'İyi' : 'Good', c)),
+            Expanded(child: _ratingButton(2, c.rIyi, AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good', c)),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(3, c.rHarika, isTr ? 'Harika' : 'Amazing', c)),
+            Expanded(child: _ratingButton(3, c.rHarika, AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing', c)),
           ],
         ),
         if (_currentRating != null) ...[
@@ -1522,7 +1528,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   Widget _commentSection(ThemePalette c) {
     final tr = AppLocalizations.of(context);
-    final isTr = tr?.locale.languageCode == 'tr';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1623,7 +1628,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      isTr ? 'Yorumunuz kaydedildi' : 'Review saved successfully',
+                                      AppLocalizations.of(context)?.get('review_saved_successfully') ?? 'Review saved successfully',
                                       style: const TextStyle(color: Colors.white),
                                     ),
                                     backgroundColor: c.red,
@@ -1643,7 +1648,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      isTr ? 'Hata oluştu: $e' : 'Error: $e',
+                                      AppLocalizations.of(context)?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Error: $e',
                                       style: const TextStyle(color: Colors.white),
                                     ),
                                     backgroundColor: c.red,
@@ -1666,7 +1671,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                         ),
                         child: Text(
                           _justSavedComment
-                              ? (isTr ? 'Kaydedildi ✔' : 'Saved ✔')
+                              ? (AppLocalizations.of(context)?.get('saved') ?? 'Saved ✔')
                               : (tr?.get('review_save') ?? 'Kaydet'),
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
@@ -1682,111 +1687,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-  Widget _buildReviewItem(dynamic rev, ThemePalette c) {
-    final tr = AppLocalizations.of(context);
-    final ratingVal = rev['rating'] is int
-        ? rev['rating'] as int
-        : (int.tryParse(rev['rating']?.toString() ?? '') ?? 3);
-    final reviewerName = rev['friend_name'] ?? rev['friend_username'] ?? 'User';
-    final comment = rev['comment'] as String? ?? '';
-    final isSpoiler = (rev['is_spoiler'] ?? 0) == 1;
 
-    Color badgeColor = c.rIyi;
-    String badgeText = 'İyi';
-    if (ratingVal == 3) {
-      badgeColor = c.rHarika;
-      badgeText = tr?.get('profile_harika') ?? 'Harika';
-    } else if (ratingVal == 2) {
-      badgeColor = c.rIyi;
-      badgeText = tr?.get('profile_iyi') ?? 'İyi';
-    } else if (ratingVal == 1) {
-      badgeColor = c.rEh;
-      badgeText = tr?.get('profile_eh') ?? 'Eh';
-    } else if (ratingVal == 0) {
-      badgeColor = c.rBerbat;
-      badgeText = tr?.get('profile_berbat') ?? 'Berbat';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.borderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.border,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
-                      style: TextStyle(
-                        color: c.ink,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    reviewerName,
-                    style: TextStyle(
-                      color: c.ink,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: badgeColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.star_rounded, color: badgeColor, size: 10),
-                    const SizedBox(width: 2),
-                    Text(
-                      badgeText,
-                      style: TextStyle(
-                        color: badgeColor,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SpoilerComment(comment: comment, isSpoiler: isSpoiler),
-        ],
-      ),
-    );
-  }
 
   Widget _friendsReviewsSection(ThemePalette c) {
     final tr = AppLocalizations.of(context);
@@ -1819,13 +1720,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           const SizedBox(height: 20),
           _sectionLabel('review_friends_title'),
           const SizedBox(height: 10),
-          ..._friendsReviews.map((rev) => _buildReviewItem(rev, c)),
+          ..._friendsReviews.map((rev) => ReviewItem(rev: rev)),
         ],
         if (_communityReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
           _sectionLabel('review_community_title'),
           const SizedBox(height: 10),
-          ..._communityReviews.map((rev) => _buildReviewItem(rev, c)),
+          ..._communityReviews.map((rev) => ReviewItem(rev: rev)),
         ],
       ],
     );

@@ -40,6 +40,7 @@ class WatchlistScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          tooltip: AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
           onPressed: () {
             HapticFeedback.lightImpact();
             Navigator.pop(context);
@@ -110,9 +111,7 @@ class WatchlistScreen extends ConsumerWidget {
           Icon(Icons.error_outline_rounded, color: c.red, size: 48),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                ? 'Yüklenirken bir hata oluştu.'
-                : 'An error occurred while loading.',
+            AppLocalizations.of(context)?.get('an_error_occurred_while_loadin') ?? 'An error occurred while loading.',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -222,32 +221,39 @@ class WatchlistScreen extends ConsumerWidget {
                  Positioned(
                   top: 6,
                   left: 6,
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      MovieDetailSheet.confirmBlockMovie(
-                        context: context,
-                        ref: ref,
-                        movie: m,
-                        onBlocked: () {},
-                      );
-                    },
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 1,
+                  child: Tooltip(
+                    message: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
+                    child: Semantics(
+                      button: true,
+                      label: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          MovieDetailSheet.confirmBlockMovie(
+                            context: context,
+                            ref: ref,
+                            movie: m,
+                            onBlocked: () {},
+                          );
+                        },
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 1,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.visibility_off_rounded,
+                            color: Colors.white,
+                            size: 11,
+                          ),
                         ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.visibility_off_rounded,
-                        color: Colors.white,
-                        size: 11,
                       ),
                     ),
                   ),
@@ -323,19 +329,26 @@ class WatchlistScreen extends ConsumerWidget {
                 Positioned(
                   top: 6,
                   right: 6,
-                  child: GestureDetector(
-                    onTap: () => _confirmRemove(context, ref, m),
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black.withValues(alpha: 0.65),
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white70,
-                        size: 16,
+                  child: Tooltip(
+                    message: AppLocalizations.of(context)?.get('remove') ?? 'Remove',
+                    child: Semantics(
+                      button: true,
+                      label: AppLocalizations.of(context)?.get('remove') ?? 'Remove',
+                      child: GestureDetector(
+                        onTap: () => _confirmRemove(context, ref, m),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.65),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -355,7 +368,6 @@ class WatchlistScreen extends ConsumerWidget {
     Movie m,
   ) async {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final messenger = ScaffoldMessenger.of(context);
     HapticFeedback.lightImpact();
     final ok = await showDialog<bool>(
@@ -371,9 +383,7 @@ class WatchlistScreen extends ConsumerWidget {
           ),
         ),
         content: Text(
-          AppLocalizations.of(context)?.locale.languageCode == 'tr'
-              ? 'Listeden çıkarılsın mı?'
-              : 'Remove from watchlist?',
+          AppLocalizations.of(context)?.get('remove_from_watchlist') ?? 'Remove from watchlist?',
           style: TextStyle(color: c.dim, fontSize: 13),
         ),
         actions: [
@@ -393,9 +403,7 @@ class WatchlistScreen extends ConsumerWidget {
               Navigator.pop(ctx, true);
             },
             child: Text(
-              AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                  ? 'Çıkar'
-                  : 'Remove',
+              AppLocalizations.of(context)?.get('remove') ?? 'Remove',
               style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
             ),
           ),
@@ -409,13 +417,11 @@ class WatchlistScreen extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            isTr
-                ? '${m.title} izleme listesinden çıkarıldı.'
-                : '${m.title} removed from watchlist.',
+            AppLocalizations.of(context)?.get('title_removed_from_watchlist').replaceAll('{}', m.title) ?? '${m.title} removed from watchlist.',
           ),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
-            label: isTr ? 'Geri Al' : 'Undo',
+            label: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
             textColor: c.red,
             onPressed: () async {
               await ref.read(watchlistProvider.notifier).add(m);

@@ -71,13 +71,12 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   }
 
   Future<void> _setupProfile() async {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final username = _usernameCtrl.text.trim().toLowerCase();
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isTr ? 'Lütfen kullanıcı adı girin.' : 'Please enter a username.',
+            AppLocalizations.of(context)?.get('please_enter_a_username') ?? 'Please enter a username.',
           ),
         ),
       );
@@ -92,9 +91,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isTr
-                ? 'Profil başarıyla güncellendi.'
-                : 'Profile updated successfully.',
+            AppLocalizations.of(context)?.get('profile_updated_successfully') ?? 'Profile updated successfully.',
           ),
         ),
       );
@@ -102,7 +99,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   }
 
   Future<void> _sendFriendRequest() async {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final query = _searchCtrl.text.trim();
     if (query.isEmpty) return;
 
@@ -114,7 +110,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isTr ? 'Arkadaşlık isteği gönderildi.' : 'Friend request sent.',
+            AppLocalizations.of(context)?.get('friend_request_sent') ?? 'Friend request sent.',
           ),
         ),
       );
@@ -136,7 +132,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         backgroundColor: c.navBg,
         elevation: 0,
         title: Text(
-          isTr ? 'Sosyal Ağ' : 'Social Network',
+          AppLocalizations.of(context)?.get('social_network') ?? 'Social Network',
           style: TextStyle(color: c.ink, fontWeight: FontWeight.w800),
         ),
         actions: [
@@ -146,9 +142,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
               onPressed: () {
                 final username = authUser['username'];
                 Share.share(
-                  isTr
-                      ? 'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: ${ApiService.webProfileBaseUrl}/$username'
-                      : 'Follow me on What to Watch! Check out my watchlist and favorites here: ${ApiService.webProfileBaseUrl}/$username',
+                  AppLocalizations.of(context)?.get('share_profile_text').replaceAll('{}', '${ApiService.webProfileBaseUrl}/$username') ?? 'Follow me on What to Watch! Check out my watchlist and favorites here: ${ApiService.webProfileBaseUrl}/$username',
                 );
               },
             ),
@@ -165,13 +159,13 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           unselectedLabelColor: c.dim,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: [
-            Tab(text: isTr ? 'Arkadaşlar' : 'Friends'),
+            Tab(text: AppLocalizations.of(context)?.get('together_friends') ?? 'Friends'),
             Tab(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(isTr ? 'İstekler' : 'Requests'),
+                  Text(AppLocalizations.of(context)?.get('requests') ?? 'Requests'),
                   if (socialState.pendingReceived.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -206,7 +200,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(isTr ? 'Akış' : 'Activity'),
+                  Text(AppLocalizations.of(context)?.get('activity') ?? 'Activity'),
                   if (socialState.unseenRecommendations > 0) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -295,7 +289,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            isTr ? 'Profilini Özelleştir' : 'Customize Profile',
+            AppLocalizations.of(context)?.get('customize_profile') ?? 'Customize Profile',
             style: TextStyle(
               color: c.ink,
               fontWeight: FontWeight.w700,
@@ -307,9 +301,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
             controller: _usernameCtrl,
             style: TextStyle(color: c.ink),
             decoration: InputDecoration(
-              labelText: isTr
-                  ? 'Kullanıcı Adı (@username)'
-                  : 'Username (@username)',
+              labelText: AppLocalizations.of(context)?.get('username_username') ?? 'Username (@username)',
               labelStyle: TextStyle(color: c.dim),
               prefixText: '@',
               prefixStyle: TextStyle(
@@ -324,13 +316,11 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           const SizedBox(height: 12),
           SwitchListTile(
             title: Text(
-              isTr ? 'Profilim Halka Açık Olsun' : 'Public Profile',
+              AppLocalizations.of(context)?.get('public_profile') ?? 'Public Profile',
               style: TextStyle(color: c.ink, fontSize: 14),
             ),
             subtitle: Text(
-              isTr
-                  ? 'Kapalıyken profiliniz internette paylaşılamaz.'
-                  : 'When disabled, your profile cannot be viewed on the web.',
+              AppLocalizations.of(context)?.get('when_disabled_your_profile_can') ?? 'When disabled, your profile cannot be viewed on the web.',
               style: TextStyle(color: c.dim, fontSize: 11),
             ),
             value: _isPublic,
@@ -349,7 +339,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
               ),
             ),
             child: Text(
-              isTr ? 'Kaydet' : 'Save Settings',
+              AppLocalizations.of(context)?.get('save_settings') ?? 'Save Settings',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -377,9 +367,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     controller: _searchCtrl,
                     style: TextStyle(color: c.ink),
                     decoration: InputDecoration(
-                      hintText: isTr
-                          ? 'Kullanıcı adı veya e-posta...'
-                          : 'Username or email...',
+                      hintText: AppLocalizations.of(context)?.get('username_or_email') ?? 'Username or email...',
                       hintStyle: TextStyle(color: c.dim),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -407,7 +395,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           child: state.friends.isEmpty
               ? Center(
                   child: Text(
-                    isTr ? 'Henüz arkadaşınız yok.' : 'No friends added yet.',
+                    AppLocalizations.of(context)?.get('no_friends_added_yet') ?? 'No friends added yet.',
                     style: TextStyle(color: c.dim),
                   ),
                 )
@@ -509,9 +497,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          isTr
-                                              ? '%$tasteScore uyum'
-                                              : '$tasteScore% match',
+                                          AppLocalizations.of(context)?.get('taste_score_match').replaceAll('{}', '$tasteScore') ?? '$tasteScore% match',
                                           style: TextStyle(
                                             color: c.gold,
                                             fontSize: 11,
@@ -536,18 +522,16 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                                 builder: (ctx) => AlertDialog(
                                   backgroundColor: c.surface,
                                   title: Text(
-                                    isTr ? 'Arkadaşı Çıkar' : 'Remove Friend',
+                                    AppLocalizations.of(context)?.get('remove_friend') ?? 'Remove Friend',
                                   ),
                                   content: Text(
-                                    isTr
-                                        ? '$name arkadaş listenizden çıkarılacak. Emin misiniz?'
-                                        : 'Are you sure you want to remove $name from friends?',
+                                    AppLocalizations.of(context)?.get('remove_friend_confirm_msg').replaceAll('{}', name) ?? 'Are you sure you want to remove $name from friends?',
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(ctx),
                                       child: Text(
-                                        isTr ? 'Vazgeç' : 'Cancel',
+                                        AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
                                         style: TextStyle(color: c.dim),
                                       ),
                                     ),
@@ -562,7 +546,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                                             .rejectRequest(id);
                                       },
                                       child: Text(
-                                        isTr ? 'Çıkar' : 'Remove',
+                                        AppLocalizations.of(context)?.get('remove') ?? 'Remove',
                                         style: TextStyle(color: c.red),
                                       ),
                                     ),
@@ -586,7 +570,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     if (state.pendingReceived.isEmpty && state.pendingSent.isEmpty) {
       return Center(
         child: Text(
-          isTr ? 'Bekleyen istek bulunmuyor.' : 'No pending requests.',
+          AppLocalizations.of(context)?.get('no_pending_requests') ?? 'No pending requests.',
           style: TextStyle(color: c.dim),
         ),
       );
@@ -597,7 +581,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       children: [
         if (state.pendingReceived.isNotEmpty) ...[
           Text(
-            isTr ? 'Gelen İstekler' : 'Received Requests',
+            AppLocalizations.of(context)?.get('received_requests') ?? 'Received Requests',
             style: TextStyle(
               color: c.gold,
               fontWeight: FontWeight.w800,
@@ -659,7 +643,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
 
         if (state.pendingSent.isNotEmpty) ...[
           Text(
-            isTr ? 'Gönderilen İstekler' : 'Sent Requests',
+            AppLocalizations.of(context)?.get('sent_requests') ?? 'Sent Requests',
             style: TextStyle(
               color: c.dim,
               fontWeight: FontWeight.w800,
@@ -696,7 +680,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     ),
                   ),
                   Text(
-                    isTr ? 'Bekliyor' : 'Pending',
+                    AppLocalizations.of(context)?.get('pending') ?? 'Pending',
                     style: TextStyle(
                       color: c.gold,
                       fontSize: 12,
@@ -785,7 +769,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        isTr ? '$fromName önerdi' : 'Recommended by $fromName',
+                        AppLocalizations.of(context)?.get('recommended_by_user').replaceAll('{}', fromName) ?? 'Recommended by $fromName',
                         style: TextStyle(
                           color: c.gold,
                           fontWeight: FontWeight.w700,
@@ -810,8 +794,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 const SizedBox(height: 4),
                 Text(
                   isTv
-                      ? (isTr ? 'Dizi' : 'TV Show')
-                      : (isTr ? 'Film' : 'Movie'),
+                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'TV Show')
+                      : (AppLocalizations.of(context)?.get('onboarding_movie') ?? 'Movie'),
                   style: TextStyle(
                     color: c.dim,
                     fontSize: 11,
@@ -843,7 +827,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     if (state.activityFeed.isEmpty && state.recommendations.isEmpty) {
       return Center(
         child: Text(
-          isTr ? 'Henüz arkadaş aktivitesi yok.' : 'No friend activity yet.',
+          AppLocalizations.of(context)?.get('no_friend_activity_yet') ?? 'No friend activity yet.',
           style: TextStyle(color: c.dim),
         ),
       );
@@ -862,7 +846,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              isTr ? 'Sana Önerilenler' : 'Recommended to You',
+              AppLocalizations.of(context)?.get('recommended_to_you') ?? 'Recommended to You',
               style: TextStyle(
                 color: c.gold,
                 fontSize: 13,
@@ -881,7 +865,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           );
         }
         final act = state.activityFeed[idx - recCount];
-        return FriendActivityScreen._buildActivityCard(c, act, isTr);
+        return FriendActivityScreen._buildActivityCard(c, act, context);
       },
     );
   }
@@ -904,7 +888,6 @@ class FriendActivityScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final socialState = ref.watch(socialProvider);
 
     final friendActivities = socialState.activityFeed
@@ -978,7 +961,7 @@ class FriendActivityScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isTr ? 'Sinema Zevki Uyumu' : 'Cinema Taste Match',
+                            AppLocalizations.of(context)?.get('cinema_taste_match') ?? 'Cinema Taste Match',
                             style: TextStyle(
                               color: c.ink,
                               fontSize: 14,
@@ -987,9 +970,7 @@ class FriendActivityScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            isTr
-                                ? 'Bu arkadaşınızla ortak beğeni oranınız %$tasteScore.'
-                                : 'You have a $tasteScore% movie taste match with this friend.',
+                            AppLocalizations.of(context)?.get('friend_taste_match_desc').replaceAll('{}', '$tasteScore') ?? 'You have a $tasteScore% movie taste match with this friend.',
                             style: TextStyle(
                                 color: c.dim, fontSize: 11.5, height: 1.3),
                           ),
@@ -1027,9 +1008,7 @@ class FriendActivityScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            isTr
-                                ? 'Bu arkadaşın henüz bir aktivitesi yok.'
-                                : 'No activity from this friend yet.',
+                            AppLocalizations.of(context)?.get('no_activity_from_this_friend_y') ?? 'No activity from this friend yet.',
                             style: TextStyle(color: c.dim, fontSize: 13),
                           ),
                         ],
@@ -1040,7 +1019,7 @@ class FriendActivityScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: friendActivities.length,
                       itemBuilder: (ctx, i) {
-                        return _buildActivityCard(c, friendActivities[i], isTr);
+                        return _buildActivityCard(c, friendActivities[i], ctx);
                       },
                     ),
             ),
@@ -1051,7 +1030,7 @@ class FriendActivityScreen extends ConsumerWidget {
   }
 
   static Widget _buildActivityCard(
-      ThemePalette c, Map<String, dynamic> act, bool isTr) {
+      ThemePalette c, Map<String, dynamic> act, BuildContext context) {
     final friendName = act['friend_name'] ?? act['friend_username'] ?? 'Friend';
     final title = act['title'] ?? 'Movie';
     final ratingVal = act['rating'] is int
@@ -1066,16 +1045,16 @@ class FriendActivityScreen extends ConsumerWidget {
     String badgeText = 'İyi';
     if (ratingVal == 3) {
       badgeColor = c.rHarika;
-      badgeText = isTr ? 'Harika' : 'Amazing';
+      badgeText = AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing';
     } else if (ratingVal == 2) {
       badgeColor = c.rIyi;
-      badgeText = isTr ? 'İyi' : 'Good';
+      badgeText = AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good';
     } else if (ratingVal == 1) {
       badgeColor = c.rEh;
-      badgeText = isTr ? 'Eh' : 'Meh';
+      badgeText = AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh';
     } else if (ratingVal == 0) {
       badgeColor = c.rBerbat;
-      badgeText = isTr ? 'Berbat' : 'Awful';
+      badgeText = AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful';
     }
 
     return Container(
@@ -1165,8 +1144,8 @@ class FriendActivityScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   isTv
-                      ? (isTr ? 'Dizi' : 'TV Show')
-                      : (isTr ? 'Film' : 'Movie'),
+                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'TV Show')
+                      : (AppLocalizations.of(context)?.get('onboarding_movie') ?? 'Movie'),
                   style: TextStyle(
                     color: c.dim,
                     fontSize: 11,

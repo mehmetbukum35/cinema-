@@ -68,7 +68,6 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final notifier = ref.read(swipeProvider.notifier);
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     if (disableAnims) {
       try {
         await notifier.rate(rating);
@@ -78,9 +77,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isTr
-                    ? 'Puan kaydedilirken hata oluştu.'
-                    : 'Error saving rating.',
+                AppLocalizations.of(context)?.get('error_saving_rating') ?? 'Error saving rating.',
               ),
             ),
           );
@@ -97,9 +94,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isTr
-                  ? 'Puan kaydedilirken hata oluştu.'
-                  : 'Error saving rating.',
+              AppLocalizations.of(context)?.get('error_saving_rating') ?? 'Error saving rating.',
             ),
           ),
         );
@@ -129,7 +124,6 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final notifier = ref.read(swipeProvider.notifier);
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     if (disableAnims) {
       try {
         await notifier.undo();
@@ -139,9 +133,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isTr
-                    ? 'İşlem geri alınırken hata oluştu.'
-                    : 'Error undoing rating.',
+                AppLocalizations.of(context)?.get('error_undoing_rating') ?? 'Error undoing rating.',
               ),
             ),
           );
@@ -158,9 +150,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isTr
-                  ? 'İşlem geri alınırken hata oluştu.'
-                  : 'Error undoing rating.',
+              AppLocalizations.of(context)?.get('error_undoing_rating') ?? 'Error undoing rating.',
             ),
           ),
         );
@@ -198,9 +188,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
 
   String _getProviderLabel(BuildContext context, int? providerId) {
     final localizations = AppLocalizations.of(context);
-    final isTr = localizations?.locale.languageCode == 'tr';
-    if (providerId == null) return localizations?.get('lang_all') ?? (isTr ? 'Tümü' : 'All');
-    return _providers[providerId] ?? (localizations?.get('lang_unknown') ?? (isTr ? 'Bilinmeyen' : 'Unknown'));
+    if (providerId == null) return localizations?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All');
+    return _providers[providerId] ?? (localizations?.get('lang_unknown') ?? (AppLocalizations.of(context)?.get('lang_unknown') ?? 'Unknown'));
   }
 
   void _showFilterSheet(BuildContext context, WidgetRef ref, SwipeState state) {
@@ -258,21 +247,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         children: [
                           Builder(
                             builder: (context) {
-                              final isTr =
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr';
                               final activeCount =
                                   (activeLang != null ? 1 : 0) +
                                   (activeProv != null ? 1 : 0);
-                              final filterTitle = isTr
-                                  ? 'İçerik Filtreleri'
-                                  : 'Content Filters';
+                              final filterTitle = AppLocalizations.of(context)?.get('content_filters') ?? 'Content Filters';
                               final activeText = activeCount > 0
-                                  ? (isTr
-                                        ? ' ($activeCount Aktif)'
-                                        : ' ($activeCount Active)')
+                                  ? (AppLocalizations.of(context)?.get('active_count_label').replaceAll('{}', '$activeCount') ?? ' ($activeCount Active)')
                                   : '';
                               return Text(
                                 '$filterTitle$activeText',
@@ -313,13 +293,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         children: [
                           Builder(
                             builder: (context) {
-                              final isTr =
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr';
                               return Text(
-                                isTr ? 'DİL / ÜLKE' : 'LANGUAGE / REGION',
+                                AppLocalizations.of(context)?.get('language_region') ?? 'LANGUAGE / REGION',
                                 style: TextStyle(
                                   color: c.dim,
                                   fontSize: 11,
@@ -349,13 +324,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         children: [
                           Builder(
                             builder: (context) {
-                              final isTr =
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr';
                               return _FilterChip(
-                                label: '🌐 ${AppLocalizations.of(context)?.get('lang_all') ?? (isTr ? 'Tümü' : 'All')}',
+                                label: '🌐 ${AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All')}',
                                 selected: activeLang == null,
                                 onTap: () {
                                   HapticFeedback.lightImpact();
@@ -393,15 +363,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         children: [
                           Builder(
                             builder: (context) {
-                              final isTr =
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr';
                               return Text(
-                                isTr
-                                    ? 'DİJİTAL YAYIN PLATFORMU'
-                                    : 'STREAMING PLATFORMS',
+                                AppLocalizations.of(context)?.get('streaming_platforms') ?? 'STREAMING PLATFORMS',
                                 style: TextStyle(
                                   color: c.dim,
                                   fontSize: 11,
@@ -431,13 +394,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         children: [
                           Builder(
                             builder: (context) {
-                              final isTr =
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr';
                               return _FilterChip(
-                                label: isTr ? '🎬 Tümü' : '🎬 All',
+                                label: AppLocalizations.of(context)?.get('all') ?? '🎬 All',
                                 selected: activeProv == null,
                                 onTap: () {
                                   HapticFeedback.lightImpact();
@@ -566,9 +524,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 ),
                 onPressed: () => _showFilterSheet(context, ref, swipeState),
                 tooltip:
-                    AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                    ? 'Filtrele'
-                    : 'Filter',
+                    AppLocalizations.of(context)?.get('filter') ?? 'Filter',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 padding: const EdgeInsets.all(10),
               ),
@@ -663,13 +619,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       const SizedBox(height: 24),
                       Builder(
                         builder: (context) {
-                          final isTr =
-                              AppLocalizations.of(
-                                context,
-                              )?.locale.languageCode ==
-                              'tr';
                           return Text(
-                            isTr ? 'İçerik Kalmadı' : 'No More Content',
+                            AppLocalizations.of(context)?.get('no_more_content') ?? 'No More Content',
                             style: TextStyle(
                               color: c.ink,
                               fontSize: 18,
@@ -683,21 +634,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return Text(
                               (swipeState.loadingMore ||
                                       (swipeState.languageFilter == null &&
                                           swipeState.providerFilter == null))
-                                  ? (isTr
-                                        ? 'Daha fazla yükleniyor...'
-                                        : 'Loading more...')
-                                  : (isTr
-                                        ? 'Filtrenize uygun başka içerik kalmadı.\nFiltreleri temizleyerek devam edebilirsiniz.'
-                                        : 'No more content matches your filters.\nYou can clear the filters to continue.'),
+                                  ? (AppLocalizations.of(context)?.get('loading_more') ?? 'Loading more...')
+                                  : (AppLocalizations.of(context)?.get('no_more_content_matches_your_f') ?? 'No more content matches your filters.\\nYou can clear the filters to continue.'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: c.dim,
@@ -928,7 +870,6 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   }
 
   Widget _buildGestureGuideOverlay(ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Positioned.fill(
       child: Container(
         color: Colors.black.withValues(alpha: 0.85),
@@ -949,7 +890,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  isTr ? 'Keşfetme Hareketleri' : 'Discovery Gestures',
+                  AppLocalizations.of(context)?.get('discovery_gestures') ?? 'Discovery Gestures',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -958,9 +899,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isTr
-                      ? 'Kartları kaydırarak zevk analizi motorumuzu eğitin!'
-                      : 'Swipe cards to train our recommendation engine!',
+                  AppLocalizations.of(context)?.get('swipe_cards_to_train_our_recom') ?? 'Swipe cards to train our recommendation engine!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
@@ -968,22 +907,22 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 _guideRow(
                   Icons.arrow_forward_rounded,
                   c.green,
-                  isTr ? 'Sağa Kaydır' : 'Swipe Right',
-                  isTr ? 'Beğendim (İyi veya Harika)' : 'Liked (Good or Amazing)',
+                  AppLocalizations.of(context)?.get('swipe_right') ?? 'Swipe Right',
+                  AppLocalizations.of(context)?.get('liked_good_or_amazing') ?? 'Liked (Good or Amazing)',
                 ),
                 const SizedBox(height: 20),
                 _guideRow(
                   Icons.arrow_back_rounded,
                   c.red,
-                  isTr ? 'Sola Kaydır' : 'Swipe Left',
-                  isTr ? 'Beğenmedim (Eh veya Berbat)' : 'Disliked (Meh or Awful)',
+                  AppLocalizations.of(context)?.get('swipe_left') ?? 'Swipe Left',
+                  AppLocalizations.of(context)?.get('disliked_meh_or_awful') ?? 'Disliked (Meh or Awful)',
                 ),
                 const SizedBox(height: 20),
                 _guideRow(
                   Icons.touch_app_rounded,
                   c.gold,
-                  isTr ? 'Karta Dokun' : 'Tap Card',
-                  isTr ? 'Detaylar, Fragman ve Oyuncular' : 'View Details, Trailer & Cast',
+                  AppLocalizations.of(context)?.get('tap_card') ?? 'Tap Card',
+                  AppLocalizations.of(context)?.get('view_details_trailer_cast') ?? 'View Details, Trailer & Cast',
                 ),
                 const SizedBox(height: 50),
                 ElevatedButton(
@@ -1005,7 +944,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                     shadowColor: c.red.withValues(alpha: 0.4),
                   ),
                   child: Text(
-                    isTr ? 'Anladım, Keşfetmeye Başla!' : 'Got it, Let\'s Start!',
+                    AppLocalizations.of(context)?.get('got_it_lets_start') ?? 'Got it, Let\'s Start!',
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),

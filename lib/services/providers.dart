@@ -86,10 +86,22 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
 
 final tmdbServiceProvider = Provider<TmdbService>((ref) {
   final locale = ref.watch(localeProvider);
-  final isTr = locale.languageCode == 'tr';
+  final String tmdbLang;
+  final String tmdbRegion;
+  switch (locale.languageCode) {
+    case 'tr':
+      tmdbLang = 'tr-TR';
+      tmdbRegion = 'TR';
+      break;
+    case 'en':
+    default:
+      tmdbLang = 'en-US';
+      tmdbRegion = 'US';
+      break;
+  }
   return TmdbService(
-    language: isTr ? 'tr-TR' : 'en-US',
-    region: isTr ? 'TR' : 'US',
+    language: tmdbLang,
+    region: tmdbRegion,
   );
 });
 

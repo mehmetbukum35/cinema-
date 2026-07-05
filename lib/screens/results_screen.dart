@@ -243,16 +243,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 alignment: Alignment.centerLeft,
                 child: Builder(
                   builder: (context) {
-                    final isTr =
-                        AppLocalizations.of(context)?.locale.languageCode ==
-                        'tr';
                     final suffix =
                         (tempLang != null ||
                             _isYearRangeActive(tempYear))
-                        ? (isTr ? ' (Aktif)' : ' (Active)')
+                        ? (AppLocalizations.of(context)?.get('active') ?? ' (Active)')
                         : '';
                     return Text(
-                      '${isTr ? 'Filtrele' : 'Filter'}$suffix',
+                      '${AppLocalizations.of(context)?.get('filter') ?? 'Filter'}$suffix',
                       style: TextStyle(
                         color: c.ink,
                         fontSize: 17,
@@ -270,11 +267,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   children: [
                     Builder(
                       builder: (context) {
-                        final isTr =
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                            'tr';
                         return Text(
-                          '${isTr ? 'Yıl' : 'Year'}: ${tempYear.start.round()} – ${tempYear.end.round()}',
+                          '${AppLocalizations.of(context)?.get('year') ?? 'Year'}: ${tempYear.start.round()} – ${tempYear.end.round()}',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 12,
@@ -316,11 +310,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   children: [
                     Builder(
                       builder: (context) {
-                        final isTr =
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                            'tr';
                         return Text(
-                          isTr ? 'DİL' : 'LANGUAGE',
+                          AppLocalizations.of(context)?.get('language') ?? 'LANGUAGE',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 12,
@@ -351,11 +342,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 children: [
                   Builder(
                     builder: (context) {
-                      final isTr =
-                          AppLocalizations.of(context)?.locale.languageCode ==
-                          'tr';
                       return _LangChip(
-                        label: isTr ? 'Tümü' : 'All',
+                        label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
                         selected: tempLang == null,
                         onTap: () => setModal(() => tempLang = null),
                       );
@@ -663,9 +651,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                ? 'Farklı filtreler dene'
-                : 'Try different filters',
+            AppLocalizations.of(context)?.get('try_different_filters') ?? 'Try different filters',
             style: TextStyle(color: c.dim, fontSize: 13),
           ),
         ],

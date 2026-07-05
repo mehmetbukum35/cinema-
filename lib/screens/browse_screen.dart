@@ -13,7 +13,7 @@ import '../theme/app_theme.dart';
 import '../widgets/pulsing_placeholder.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
-import '../widgets/shimmer.dart';
+import 'browse/browse_skeleton.dart';
 import 'movie_detail_sheet.dart';
 import 'results_screen.dart';
 import '../providers/social_provider.dart';
@@ -376,151 +376,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       backgroundColor: context.c.bg,
       body: CinematicBackground(
         animate: true,
-        child: SafeArea(child: _loading ? _skeleton() : _content()),
+        child: SafeArea(child: _loading ? const BrowseSkeleton() : _content()),
       ),
     );
   }
 
-  Widget _skeleton() {
-    final c = context.c;
-    return Shimmer(
-      child: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header placeholder
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 140,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 120,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Mood placeholders
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                width: 120,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 44,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: 4,
-                itemBuilder: (ctx, i) => Container(
-                  width: 120,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: c.border),
-                  ),
-                ),
-              ),
-            ),
-            // Category List 1 placeholder
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                width: 150,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: 4,
-                itemBuilder: (ctx, i) => Container(
-                  width: 110,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    child: ColoredBox(color: c.surface),
-                  ),
-                ),
-              ),
-            ),
-            // Category List 2 placeholder
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                width: 180,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: 4,
-                itemBuilder: (ctx, i) => Container(
-                  width: 110,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    child: ColoredBox(color: c.surface),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _content() {
     final c = context.c;
@@ -635,9 +496,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                 Row(
                   children: [
                     Text(
-                      AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                          ? 'ne '
-                          : 'what to ',
+                      AppLocalizations.of(context)?.get('what_to') ?? 'what to ',
                       style: TextStyle(
                         color: c.ink,
                         fontSize: 28,
@@ -645,9 +504,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                       ),
                     ),
                     Text(
-                      AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                          ? 'izlesem?'
-                          : 'watch?',
+                      AppLocalizations.of(context)?.get('watch') ?? 'watch?',
                       style: TextStyle(
                         color: c.ink,
                         fontSize: 28,
@@ -1367,7 +1224,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   }
 
   Widget _buildOnboardingBanner(BuildContext context, ThemePalette c) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       decoration: BoxDecoration(
@@ -1415,9 +1271,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isTr
-                              ? 'Önerileri Zevkine Göre Kişiselleştir'
-                              : 'Personalize Recommendations',
+                          AppLocalizations.of(context)?.get('personalize_recommendations') ?? 'Personalize Recommendations',
                           style: TextStyle(
                             color: c.ink,
                             fontSize: 14,
@@ -1426,9 +1280,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          isTr
-                              ? 'Sana en uygun film ve dizileri bulmamız için 2 dakikalık analizi tamamla!'
-                              : 'Complete the 2-minute survey for the best matching movies and shows!',
+                          AppLocalizations.of(context)?.get('complete_the_2minute_survey_fo') ?? 'Complete the 2-minute survey for the best matching movies and shows!',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11.5,

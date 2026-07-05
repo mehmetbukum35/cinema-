@@ -173,19 +173,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   size: 20,
                                 ),
                                 suffixIcon: _ctrl.text.isNotEmpty
-                                    ? GestureDetector(
-                                        onTap: () {
-                                          HapticFeedback.lightImpact();
-                                          _ctrl.clear();
-                                          setState(() {
-                                            _results = [];
-                                            _lastQuery = '';
-                                          });
-                                        },
-                                        child: Icon(
-                                          Icons.close_rounded,
-                                          color: c.dim,
-                                          size: 18,
+                                    ? Tooltip(
+                                        message: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
+                                        child: Semantics(
+                                          button: true,
+                                          label: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              HapticFeedback.lightImpact();
+                                              _ctrl.clear();
+                                              setState(() {
+                                                _results = [];
+                                                _lastQuery = '';
+                                              });
+                                            },
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              color: c.dim,
+                                              size: 18,
+                                            ),
+                                          ),
                                         ),
                                       )
                                     : null,
@@ -198,35 +205,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: () => _showSearchFilterSheet(context),
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: c.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color:
-                                    (_selectedLanguage != null ||
-                                        _selectedProvider != null ||
-                                        _selectedMinRating != null)
-                                    ? c.red
-                                    : (c.isLight
-                                          ? c.border
-                                          : Colors.transparent),
-                                width: 1,
+                        Tooltip(
+                          message: AppLocalizations.of(context)?.get('filter') ?? 'Filter',
+                          child: Semantics(
+                            button: true,
+                            label: AppLocalizations.of(context)?.get('filter') ?? 'Filter',
+                            child: GestureDetector(
+                              onTap: () => _showSearchFilterSheet(context),
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: c.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color:
+                                        (_selectedLanguage != null ||
+                                            _selectedProvider != null ||
+                                            _selectedMinRating != null)
+                                        ? c.red
+                                        : (c.isLight
+                                              ? c.border
+                                              : Colors.transparent),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.tune_rounded,
+                                  color:
+                                      (_selectedLanguage != null ||
+                                          _selectedProvider != null ||
+                                          _selectedMinRating != null)
+                                      ? c.red
+                                      : c.dim,
+                                  size: 20,
+                                ),
                               ),
-                            ),
-                            child: Icon(
-                              Icons.tune_rounded,
-                              color:
-                                  (_selectedLanguage != null ||
-                                      _selectedProvider != null ||
-                                      _selectedMinRating != null)
-                                  ? c.red
-                                  : c.dim,
-                              size: 20,
                             ),
                           ),
                         ),
@@ -753,13 +767,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       children: [
                         Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return Text(
-                              isTr ? 'Gelişmiş Filtreler' : 'Advanced Filters',
+                              AppLocalizations.of(context)?.get('advanced_filters') ?? 'Advanced Filters',
                               style: TextStyle(
                                 color: c.ink,
                                 fontSize: 16,
@@ -797,11 +806,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     const SizedBox(height: 20),
                     Builder(
                       builder: (context) {
-                        final isTr =
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                            'tr';
                         return Text(
-                          isTr ? 'ÜLKE / BÖLGE' : 'COUNTRY / REGION',
+                          AppLocalizations.of(context)?.get('country_region') ?? 'COUNTRY / REGION',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -818,13 +824,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       children: [
                         Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return _filterChip(
-                              label: AppLocalizations.of(context)?.get('lang_all') ?? (isTr ? 'Tümü' : 'All'),
+                              label: AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All'),
                               selected: localLang == null,
                               onTap: () =>
                                   setModalState(() => localLang = null),
@@ -844,11 +845,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     const SizedBox(height: 20),
                     Builder(
                       builder: (context) {
-                        final isTr =
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                            'tr';
                         return Text(
-                          isTr ? 'PLATFORM' : 'PLATFORM',
+                          AppLocalizations.of(context)?.get('platform') ?? 'PLATFORM',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -865,13 +863,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       children: [
                         Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return _filterChip(
-                              label: isTr ? 'Tümü' : 'All',
+                              label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
                               selected: localProv == null,
                               onTap: () =>
                                   setModalState(() => localProv = null),
@@ -891,11 +884,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     const SizedBox(height: 20),
                     Builder(
                       builder: (context) {
-                        final isTr =
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                            'tr';
                         return Text(
-                          isTr ? 'MİNİMUM TMDB PUANI' : 'MINIMUM TMDB SCORE',
+                          AppLocalizations.of(context)?.get('minimum_tmdb_score') ?? 'MINIMUM TMDB SCORE',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -912,13 +902,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       children: [
                         Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return _filterChip(
-                              label: isTr ? 'Tümü' : 'All',
+                              label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
                               selected: localRating == null,
                               onTap: () =>
                                   setModalState(() => localRating = null),
@@ -968,13 +953,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         alignment: Alignment.center,
                         child: Builder(
                           builder: (context) {
-                            final isTr =
-                                AppLocalizations.of(
-                                  context,
-                                )?.locale.languageCode ==
-                                'tr';
                             return Text(
-                              isTr ? 'Filtrele ve Listele' : 'Filter and List',
+                              AppLocalizations.of(context)?.get('filter_and_list') ?? 'Filter and List',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,

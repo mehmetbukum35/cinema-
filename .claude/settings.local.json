@@ -5,7 +5,10 @@
       "Bash(grep -iE \"config\\\\.php$|key\\\\.properties$|\\\\.jks$|service-account\")",
       "Bash(git log *)",
       "Bash(git status *)",
-      "Bash(grep -c 'case $route' api/index.php)"
+      "Bash(grep -c 'case $route' api/index.php)",
+      "Bash(vendor/bin/phpunit --configuration phpunit.xml)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)"
     ]
   }
 }

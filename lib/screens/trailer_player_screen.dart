@@ -42,7 +42,6 @@ class _TrailerPlayerScreenState extends State<TrailerPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -50,11 +49,11 @@ class _TrailerPlayerScreenState extends State<TrailerPlayerScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: Colors.white),
-          tooltip: isTr ? 'Kapat' : 'Close',
+          tooltip: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
-          widget.title ?? (isTr ? 'Fragman' : 'Trailer'),
+          widget.title ?? (AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(

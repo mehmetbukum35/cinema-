@@ -9,7 +9,6 @@ import '../services/localization_service.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/swipe_provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
@@ -17,6 +16,7 @@ import 'watchlist_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'social_screen.dart';
+import 'profile/sync_section.dart';
 import '../providers/social_provider.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
@@ -179,9 +179,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         content: Text(
-          AppLocalizations.of(context)?.locale.languageCode == 'tr'
-              ? 'Bu filmin değerlendirmesini silmek ve geçmişinizden çıkarmak istiyor musunuz?'
-              : 'Do you want to delete this rating and remove it from your history?',
+          AppLocalizations.of(context)?.get('do_you_want_to_delete_this_rat') ?? 'Do you want to delete this rating and remove it from your history?',
           style: TextStyle(color: c.dim, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -201,9 +199,7 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.pop(ctx, true);
             },
             child: Text(
-              AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                  ? 'Sil'
-                  : 'Delete',
+              AppLocalizations.of(context)?.get('delete') ?? 'Delete',
               style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
             ),
           ),
@@ -422,9 +418,7 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                  ? 'Sinema Özetin Hazır!'
-                                  : 'Your Cinema Recap!',
+                              AppLocalizations.of(context)?.get('your_cinema_recap') ?? 'Your Cinema Recap!',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -433,9 +427,7 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                  ? 'Yılın sinema yolculuğunu keşfet.'
-                                  : 'Discover your cinema journey of the year.',
+                              AppLocalizations.of(context)?.get('discover_your_cinema_journey_o') ?? 'Discover your cinema journey of the year.',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.85),
                                 fontSize: 11.5,
@@ -615,9 +607,7 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                  ? 'Sosyal & Arkadaşlar'
-                                  : 'Social & Friends',
+                              AppLocalizations.of(context)?.get('together_social_title') ?? 'Social & Friends',
                               style: TextStyle(
                                 color: c.ink,
                                 fontSize: 16,
@@ -628,9 +618,7 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               ref.watch(authProvider).user?['username'] != null
                                   ? '@${ref.watch(authProvider).user!['username']}'
-                                  : (AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                      ? 'Zevk uyumunuzu görün, istekleri ve arkadaş akışını yönetin.'
-                                      : 'See taste matches, manage requests and activity feeds.'),
+                                  : (AppLocalizations.of(context)?.get('see_taste_matches_manage_reque') ?? 'See taste matches, manage requests and activity feeds.'),
                               style: TextStyle(color: c.dim, fontSize: 12),
                             ),
                           ],
@@ -736,9 +724,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                          ? 'Tümünü Gör'
-                          : 'See All',
+                      AppLocalizations.of(context)?.get('see_all') ?? 'See All',
                       style: TextStyle(
                         color: c.red,
                         fontSize: 11.5,
@@ -776,7 +762,7 @@ class ProfileScreen extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: const _SyncSection(),
+            child: const SyncSection(),
           ),
         ),
         // Family Mode Card
@@ -1192,723 +1178,6 @@ class _RatedMovieCard extends StatelessWidget {
   }
 }
 
-class _SyncSection extends ConsumerStatefulWidget {
-  const _SyncSection();
-
-  @override
-  ConsumerState<_SyncSection> createState() => _SyncSectionState();
-}
-
-class _SyncSectionState extends ConsumerState<_SyncSection> {
-  bool _syncing = false;
-  String? _syncTimeStr;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSyncTime();
-  }
-
-  Future<void> _loadSyncTime() async {
-    final timestamp = await PrefsService.getLastSyncTime();
-    if (timestamp == 0) {
-      if (mounted) setState(() => _syncTimeStr = null);
-      return;
-    }
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final min = dt.minute.toString().padLeft(2, '0');
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = dt.month.toString().padLeft(2, '0');
-    if (mounted) {
-      setState(() => _syncTimeStr = "$day.$month $hour:$min");
-    }
-  }
-
-  Future<void> _runSync() async {
-    if (_syncing) return;
-    setState(() => _syncing = true);
-    HapticFeedback.lightImpact();
-    try {
-      await ref.read(syncServiceProvider).sync();
-      ref.invalidate(watchlistProvider);
-      ref.invalidate(statsProvider);
-      await _loadSyncTime();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('sync_success') ??
-                  'Successfully synced',
-            ),
-            backgroundColor: context.c.gold,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e'), backgroundColor: context.c.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
-  void _showAuthSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _AuthSheet(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final authState = ref.watch(authProvider);
-
-    if (authState.isAuthenticated) {
-      final displayName =
-          authState.user?['display_name'] as String? ??
-          authState.user?['email'] as String? ??
-          '';
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: c.isLight ? Border.all(color: c.border, width: 1) : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: c.gold.withValues(alpha: 0.15),
-                  ),
-                  child: Icon(
-                    Icons.cloud_done_rounded,
-                    color: c.gold,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.ink,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _syncTimeStr != null
-                            ? "${AppLocalizations.of(context)?.get('sync_last') ?? 'Last synced: '}$_syncTimeStr"
-                            : AppLocalizations.of(context)?.get('sync_desc') ??
-                                  'Cloud sync active',
-                        style: TextStyle(color: c.dim, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _syncing ? null : _runSync,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: c.gold,
-                      foregroundColor: Colors.black,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: _syncing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.black,
-                            ),
-                          )
-                        : Text(
-                            AppLocalizations.of(context)?.get('sync_now') ??
-                                'Sync Now',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                TextButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    ref.read(authProvider.notifier).logout();
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: c.red,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: Text(
-                    AppLocalizations.of(context)?.get('auth_logout') ??
-                        'Logout',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Unauthenticated state
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: c.isLight ? Border.all(color: c.border, width: 1) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: c.red.withValues(alpha: 0.15),
-                ),
-                child: Icon(Icons.cloud_off_rounded, color: c.red, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)?.get('sync_title') ??
-                          'Cloud Sync',
-                      style: TextStyle(
-                        color: c.ink,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      AppLocalizations.of(context)?.get('sync_desc') ??
-                          'Sync your data safely.',
-                      style: TextStyle(color: c.dim, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                _showAuthSheet(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: c.red,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                AppLocalizations.of(context)?.get('auth_title_login') ??
-                    'Sign In',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-enum _AuthMode { login, register, forgotEmail, forgotCode, forgotReset }
-
-class _AuthSheet extends ConsumerStatefulWidget {
-  const _AuthSheet();
-
-  @override
-  ConsumerState<_AuthSheet> createState() => _AuthSheetState();
-}
-
-class _AuthSheetState extends ConsumerState<_AuthSheet> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
-
-  _AuthMode _mode = _AuthMode.login;
-  bool _obscurePass = true;
-
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    _nameCtrl.dispose();
-    _codeCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final email = _emailCtrl.text.trim();
-    final password = _passCtrl.text;
-    final name = _nameCtrl.text.trim();
-    final code = _codeCtrl.text.trim();
-
-    bool success = false;
-    final notifier = ref.read(authProvider.notifier);
-
-    if (_mode == _AuthMode.login) {
-      success = await notifier.login(email, password);
-      if (success && mounted) {
-        Navigator.pop(context);
-      }
-    } else if (_mode == _AuthMode.register) {
-      success = await notifier.register(email, password, displayName: name);
-      if (success && mounted) {
-        Navigator.pop(context);
-      }
-    } else if (_mode == _AuthMode.forgotEmail) {
-      success = await notifier.forgotPassword(email);
-      if (success && mounted) {
-        setState(() => _mode = _AuthMode.forgotCode);
-      }
-    } else if (_mode == _AuthMode.forgotCode) {
-      success = await notifier.verifyResetCode(email, code);
-      if (success && mounted) {
-        setState(() => _mode = _AuthMode.forgotReset);
-      }
-    } else if (_mode == _AuthMode.forgotReset) {
-      success = await notifier.resetPassword(email, code, password);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('auth_forgot_success_reset') ??
-                  'Your password has been successfully reset. You can now sign in with your new password.',
-            ),
-            backgroundColor: context.c.gold,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final authState = ref.watch(authProvider);
-
-    String title = '';
-    String infoText = '';
-    if (_mode == _AuthMode.login) {
-      title =
-          AppLocalizations.of(context)?.get('auth_title_login') ?? 'Sign In';
-    } else if (_mode == _AuthMode.register) {
-      title =
-          AppLocalizations.of(context)?.get('auth_title_register') ?? 'Sign Up';
-    } else if (_mode == _AuthMode.forgotEmail) {
-      title =
-          AppLocalizations.of(context)?.get('auth_forgot_title') ??
-          'Forgot Password';
-      infoText =
-          AppLocalizations.of(context)?.get('auth_forgot_email_desc') ??
-          'Enter your registered email address to receive a password reset code.';
-    } else if (_mode == _AuthMode.forgotCode) {
-      title =
-          AppLocalizations.of(context)?.get('auth_forgot_code_title') ??
-          'Verify Code';
-      infoText =
-          AppLocalizations.of(context)?.get('auth_forgot_code_desc') ??
-          'Enter the 6-digit verification code sent to your email.';
-    } else if (_mode == _AuthMode.forgotReset) {
-      title =
-          AppLocalizations.of(context)?.get('auth_forgot_reset_title') ??
-          'Reset Password';
-      infoText =
-          AppLocalizations.of(context)?.get('auth_forgot_reset_desc') ??
-          'Set a new password of at least 8 characters for your account.';
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: c.ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (infoText.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  infoText,
-                  style: TextStyle(color: c.dim, fontSize: 13, height: 1.4),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              const SizedBox(height: 20),
-
-              if (authState.error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: c.red.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    authState.error!,
-                    style: TextStyle(
-                      color: c.red,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Display Name (if registering)
-              if (_mode == _AuthMode.register) ...[
-                TextFormField(
-                  key: const ValueKey('auth_name_field'),
-                  controller: _nameCtrl,
-                  style: TextStyle(color: c.ink),
-                  decoration: InputDecoration(
-                    labelText:
-                        AppLocalizations.of(
-                          context,
-                        )?.get('auth_display_name') ??
-                        'Display Name',
-                    labelStyle: TextStyle(color: c.dim),
-                    prefixIcon: Icon(Icons.person_rounded, color: c.dim),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: c.gold),
-                    ),
-                  ),
-                  validator: (val) => val == null || val.trim().isEmpty
-                      ? (AppLocalizations.of(
-                              context,
-                            )?.get('auth_forgot_err_name_empty') ??
-                            'Name field cannot be empty.')
-                      : null,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Email (if login, register, forgotEmail, forgotCode - readOnly in code/reset step)
-              if (_mode == _AuthMode.login ||
-                  _mode == _AuthMode.register ||
-                  _mode == _AuthMode.forgotEmail ||
-                  _mode == _AuthMode.forgotCode ||
-                  _mode == _AuthMode.forgotReset) ...[
-                TextFormField(
-                  key: const ValueKey('auth_email_field'),
-                  controller: _emailCtrl,
-                  style: TextStyle(color: c.ink),
-                  keyboardType: TextInputType.emailAddress,
-                  readOnly:
-                      _mode == _AuthMode.forgotCode ||
-                      _mode == _AuthMode.forgotReset,
-                  decoration: InputDecoration(
-                    labelText:
-                        AppLocalizations.of(context)?.get('auth_email') ??
-                        'Email Address',
-                    labelStyle: TextStyle(color: c.dim),
-                    prefixIcon: Icon(Icons.email_rounded, color: c.dim),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: c.gold),
-                    ),
-                  ),
-                  validator: (val) => val == null || !val.contains('@')
-                      ? (AppLocalizations.of(
-                              context,
-                            )?.get('auth_forgot_err_email_invalid') ??
-                            'Enter a valid email.')
-                      : null,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Verification Code (if forgotCode)
-              if (_mode == _AuthMode.forgotCode) ...[
-                TextFormField(
-                  key: const ValueKey('auth_code_field'),
-                  controller: _codeCtrl,
-                  style: TextStyle(
-                    color: c.ink,
-                    letterSpacing: 6,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 6,
-                  decoration: InputDecoration(
-                    labelText:
-                        AppLocalizations.of(
-                          context,
-                        )?.get('auth_forgot_label_code') ??
-                        '6-Digit Verification Code',
-                    labelStyle: TextStyle(color: c.dim, letterSpacing: 0),
-                    prefixIcon: Icon(Icons.lock_clock_rounded, color: c.dim),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: c.gold),
-                    ),
-                    counterText: '',
-                  ),
-                  validator: (val) => val == null || val.trim().length != 6
-                      ? (AppLocalizations.of(
-                              context,
-                            )?.get('auth_forgot_err_code_length') ??
-                            'Enter the complete 6-digit code.')
-                      : null,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Password (if login, register, forgotReset)
-              if (_mode == _AuthMode.login ||
-                  _mode == _AuthMode.register ||
-                  _mode == _AuthMode.forgotReset) ...[
-                TextFormField(
-                  key: const ValueKey('auth_password_field'),
-                  controller: _passCtrl,
-                  style: TextStyle(color: c.ink),
-                  obscureText: _obscurePass,
-                  keyboardType: TextInputType.visiblePassword,
-                  decoration: InputDecoration(
-                    labelText: _mode == _AuthMode.forgotReset
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('auth_forgot_label_new_pass') ??
-                              'New Password')
-                        : (AppLocalizations.of(context)?.get('auth_password') ??
-                              'Password'),
-                    labelStyle: TextStyle(color: c.dim),
-                    prefixIcon: Icon(Icons.lock_rounded, color: c.dim),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePass ? Icons.visibility_off : Icons.visibility,
-                        color: c.dim,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePass = !_obscurePass),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: c.gold),
-                    ),
-                  ),
-                  validator: (val) => val == null || val.length < 8
-                      ? (AppLocalizations.of(
-                              context,
-                            )?.get('auth_forgot_err_pass_length') ??
-                            'Password must be at least 8 characters.')
-                      : null,
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // Forgot Password link on login screen
-              if (_mode == _AuthMode.login) ...[
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => setState(() {
-                      _mode = _AuthMode.forgotEmail;
-                      _formKey.currentState?.reset();
-                    }),
-                    child: Text(
-                      AppLocalizations.of(
-                            context,
-                          )?.get('auth_forgot_password_link') ??
-                          'Forgot Password?',
-                      style: TextStyle(
-                        color: c.dim,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 16),
-              ],
-
-              // Primary Action Button
-              ElevatedButton(
-                onPressed: authState.loading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      _mode == _AuthMode.register ||
-                          _mode == _AuthMode.forgotReset
-                      ? c.red
-                      : c.gold,
-                  foregroundColor:
-                      _mode == _AuthMode.register ||
-                          _mode == _AuthMode.forgotReset
-                      ? Colors.white
-                      : Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: authState.loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _mode == _AuthMode.login
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_button_login') ??
-                                  'Login')
-                            : _mode == _AuthMode.register
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_button_register') ??
-                                  'Register')
-                            : _mode == _AuthMode.forgotEmail
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_forgot_btn_send_code') ??
-                                  'Send Code')
-                            : _mode == _AuthMode.forgotCode
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_forgot_btn_verify') ??
-                                  'Verify Code')
-                            : (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_forgot_btn_reset') ??
-                                  'Update Password'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 16),
-
-              // Bottom Toggle Links
-              if (_mode == _AuthMode.login || _mode == _AuthMode.register) ...[
-                TextButton(
-                  onPressed: () => setState(() {
-                    _mode = _mode == _AuthMode.login
-                        ? _AuthMode.register
-                        : _AuthMode.login;
-                    _formKey.currentState?.reset();
-                  }),
-                  child: Text(
-                    _mode == _AuthMode.register
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('auth_toggle_to_login') ??
-                              'Already have an account? Sign In')
-                        : (AppLocalizations.of(
-                                context,
-                              )?.get('auth_toggle_to_register') ??
-                              "Don't have an account? Sign Up"),
-                    style: TextStyle(color: c.dim, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ] else ...[
-                TextButton(
-                  onPressed: () => setState(() {
-                    if (_mode == _AuthMode.forgotEmail) {
-                      _mode = _AuthMode.login;
-                    } else if (_mode == _AuthMode.forgotCode) {
-                      _mode = _AuthMode.forgotEmail;
-                    } else if (_mode == _AuthMode.forgotReset) {
-                      _mode = _AuthMode.forgotCode;
-                    }
-                    _formKey.currentState?.reset();
-                  }),
-                  child: Text(
-                    AppLocalizations.of(context)?.get('auth_forgot_btn_back') ??
-                        'Back',
-                    style: TextStyle(color: c.dim, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _FamilyModeCard extends StatefulWidget {
   const _FamilyModeCard();
 
@@ -1949,7 +1218,6 @@ class _FamilyModeCardState extends State<_FamilyModeCard> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     if (_loading) {
       return const SizedBox.shrink();
     }
@@ -1992,9 +1260,7 @@ class _FamilyModeCardState extends State<_FamilyModeCard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isTr
-                      ? 'Deadpool, Euphoria vb. +18 olgun içerikleri listelerden filtreler.'
-                      : 'Filters out Deadpool, Euphoria, and mature R-rated content.',
+                  AppLocalizations.of(context)?.get('filters_out_deadpool_euphoria_') ?? 'Filters out Deadpool, Euphoria, and mature R-rated content.',
                   style: TextStyle(color: c.dim, fontSize: 11.5, height: 1.25),
                 ),
               ],

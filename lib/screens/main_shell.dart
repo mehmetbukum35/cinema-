@@ -66,9 +66,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                   const Icon(Icons.cloud_off_rounded, color: Colors.white, size: 14),
                   const SizedBox(width: 8),
                   Text(
-                    AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                        ? 'Çevrimdışısınız — Değişiklikleriniz senkronize edilecek'
-                        : 'You are offline — Your changes will be synced',
+                    AppLocalizations.of(context)?.get('you_are_offline_your_changes_w') ?? 'You are offline — Your changes will be synced',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,

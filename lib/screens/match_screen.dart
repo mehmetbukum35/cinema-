@@ -12,6 +12,7 @@ import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
+import 'match/similar_card.dart';
 import 'results_screen.dart';
 import 'social_screen.dart';
 import 'login_screen.dart';
@@ -185,25 +186,22 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         context: context,
         builder: (ctx) {
           final c = context.c;
-          final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
           return AlertDialog(
             backgroundColor: c.card,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text(
-              isTr ? 'Ortak Tür Bulunamadı' : 'No Common Genres',
+              AppLocalizations.of(context)?.get('no_common_genres') ?? 'No Common Genres',
               style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             content: Text(
-              isTr
-                  ? 'İkinizin de seçtiği ortak bir tür bulunmuyor. Ortak bir tavsiye üretebilmemiz için lütfen en az bir ortak tür seçin.'
-                  : 'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
+              AppLocalizations.of(context)?.get('you_have_no_common_genres_sele') ?? 'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
               style: TextStyle(color: c.dim, fontSize: 14, height: 1.45),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text(
-                  isTr ? 'Tamam' : 'OK',
+                  AppLocalizations.of(context)?.get('ok') ?? 'OK',
                   style: TextStyle(color: c.gold, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -247,7 +245,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     });
 
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -284,11 +281,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         Expanded(
                           child: Text(
                             switch (_matchMode) {
-                              0 => (isTr ? 'Film Eşleştir' : 'Movie Match'),
-                              1 => (isTr
-                                  ? 'Aynı Cihazda Eşleştir'
-                                  : 'Couch Mode'),
-                              _ => (isTr ? 'Arkadaşımla Eşleş' : 'Friend Match'),
+                              0 => (AppLocalizations.of(context)?.get('movie_match') ?? 'Movie Match'),
+                              1 => (AppLocalizations.of(context)?.get('together_couch_title') ?? 'Couch Mode'),
+                              _ => (AppLocalizations.of(context)?.get('together_friend_match_title') ?? 'Friend Match'),
                             },
                             style: TextStyle(
                               color: c.ink,
@@ -337,7 +332,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     child: _segmentedTab(
                                       0,
                                       Icons.compare_arrows_rounded,
-                                      isTr ? 'Film Tabanlı' : 'Movie Match',
+                                      AppLocalizations.of(context)?.get('movie_match_alt') ?? 'Movie Match',
                                       c,
                                     ),
                                   ),
@@ -345,7 +340,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     child: _segmentedTab(
                                       1,
                                       Icons.people_rounded,
-                                      isTr ? 'Aynı Cihazda' : 'Couch Mode',
+                                      AppLocalizations.of(context)?.get('together_couch_title') ?? 'Couch Mode',
                                       c,
                                     ),
                                   ),
@@ -353,7 +348,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     child: _segmentedTab(
                                       2,
                                       Icons.group_add_rounded,
-                                      isTr ? 'Arkadaşımla' : 'With Friend',
+                                      AppLocalizations.of(context)?.get('with_friend') ?? 'With Friend',
                                       c,
                                     ),
                                   ),
@@ -389,17 +384,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   Widget _matchBody() {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     return Column(
       children: [
         if (_selected == null && _searchResults.isEmpty && !_searching)
           _buildIntroBanner(
             c,
             Icons.movie_filter_rounded,
-            isTr ? 'Film Tabanlı Eşleştirme' : 'Movie Matcher',
-            isTr
-                ? 'Sevdiğiniz bir filmi veya diziyi aratın, o içeriğin benzerlerini ve tür eşleşmelerini analiz edip zevkinize uygun yapımları listeleyelim.'
-                : 'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
+            AppLocalizations.of(context)?.get('movie_matcher') ?? 'Movie Matcher',
+            AppLocalizations.of(context)?.get('search_for_a_movie_or_tv_show_') ?? 'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -681,7 +673,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               childAspectRatio: 0.62,
             ),
             itemCount: _similar.length,
-            itemBuilder: (ctx, i) => _SimilarCard(
+            itemBuilder: (ctx, i) => SimilarCard(
               movie: _similar[i],
               onTap: () => showModalBottomSheet(
                 context: context,
@@ -703,7 +695,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   Widget _togetherBody() {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final canFind = _p1.isNotEmpty && _p2.isNotEmpty;
 
     return Column(
@@ -711,10 +702,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         _buildIntroBanner(
           c,
           Icons.people_rounded,
-          isTr ? 'Aynı Cihazda Eşleştirme (Koltuk Modu)' : 'Couch Mode Matcher',
-          isTr
-              ? 'Telefonu sırayla yanınızdaki kişiye verin. İkiniz de en sevdiğiniz film türlerini işaretleyin, ortak beğenebileceğiniz filmleri bulalım.'
-              : 'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
+          AppLocalizations.of(context)?.get('couch_mode_matcher') ?? 'Couch Mode Matcher',
+          AppLocalizations.of(context)?.get('pass_the_phone_to_the_person_n') ?? 'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
         ),
 
         // ── Kişi seçici ────────────────────────────────────────────────────
@@ -753,12 +742,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             duration: const Duration(milliseconds: 200),
             child: Text(
               _activePerson == 1
-                  ? (isTr
-                      ? '👉 1. Kişi (Sen): En sevdiğin türleri seç...'
-                      : '👉 Player 1 (You): Select your favorite genres...')
-                  : (isTr
-                      ? '👉 2. Kişi (Arkadaşın): Şimdi senin sıran...'
-                      : '👉 Player 2 (Friend): Now it\'s your turn...'),
+                  ? (AppLocalizations.of(context)?.get('player_1_you_select_your_favor') ?? '👉 Player 1 (You): Select your favorite genres...')
+                  : (AppLocalizations.of(context)?.get('player_2_friend_now_its_your_t') ?? '👉 Player 2 (Friend): Now it\'s your turn...'),
               key: ValueKey<int>(_activePerson),
               style: TextStyle(
                 color: _activePerson == 1 ? c.red : c.blue,
@@ -776,11 +761,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _legendItem(c.red, isTr ? 'Sen' : 'You'),
+              _legendItem(c.red, AppLocalizations.of(context)?.get('match_you') ?? 'You'),
               const SizedBox(width: 14),
-              _legendItem(c.blue, isTr ? 'Arkadaşın' : 'Friend'),
+              _legendItem(c.blue, AppLocalizations.of(context)?.get('match_friend') ?? 'Friend'),
               const SizedBox(width: 14),
-              _legendItem(Colors.purple, isTr ? 'Ortak Beğeni' : 'Common Match'),
+              _legendItem(Colors.purple, AppLocalizations.of(context)?.get('common_match') ?? 'Common Match'),
             ],
           ),
         ),
@@ -1187,7 +1172,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   Widget _friendBody() {
     final c = context.c;
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
 
     // Check authentication
     final authState = ref.watch(authProvider);
@@ -1209,7 +1193,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                isTr ? 'Giriş Yapmalısınız' : 'Authentication Required',
+                AppLocalizations.of(context)?.get('authentication_required') ?? 'Authentication Required',
                 style: TextStyle(
                   color: c.ink,
                   fontSize: 16,
@@ -1218,9 +1202,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                isTr
-                    ? 'Arkadaşlarınızla ortak film kesişimlerini görebilmek için lütfen giriş yapın.'
-                    : 'Please sign in to view watchlist intersections with your friends.',
+                AppLocalizations.of(context)?.get('please_sign_in_to_view_watchli') ?? 'Please sign in to view watchlist intersections with your friends.',
                 style: TextStyle(color: c.dim, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -1239,7 +1221,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: Text(isTr ? 'Giriş Yap' : 'Sign In'),
+                child: Text(AppLocalizations.of(context)?.get('auth_title_login') ?? 'Sign In'),
               ),
             ],
           ),
@@ -1277,7 +1259,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  isTr ? 'Henüz Arkadaş Yok' : 'No Friends Yet',
+                  AppLocalizations.of(context)?.get('no_friends_yet') ?? 'No Friends Yet',
                   style: TextStyle(
                     color: c.ink,
                     fontSize: 16,
@@ -1286,9 +1268,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isTr
-                      ? 'Eşleşebilmek için önce arkadaş eklemelisiniz.'
-                      : 'You must add friends first to match with them.',
+                  AppLocalizations.of(context)?.get('you_must_add_friends_first_to_') ?? 'You must add friends first to match with them.',
                   style: TextStyle(color: c.dim, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
@@ -1308,7 +1288,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     ),
                   ),
                   child: Text(
-                    isTr ? 'Arkadaş Ekle / Yönet' : 'Add / Manage Friends',
+                    AppLocalizations.of(context)?.get('add_manage_friends') ?? 'Add / Manage Friends',
                   ),
                 ),
               ],
@@ -1323,10 +1303,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           _buildIntroBanner(
             c,
             Icons.group_add_rounded,
-            isTr ? 'Arkadaşımla Eşleş (Online)' : 'Online Friend Match',
-            isTr
-                ? 'Eşleşmek istediğiniz bir arkadaşınızı seçin, ikinizin ortak izleme listelerini (watchlist) karşılaştırıp ortak ilgi alanlarınıza göre öneriler çıkaralım.'
-                : 'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
+            AppLocalizations.of(context)?.get('online_friend_match') ?? 'Online Friend Match',
+            AppLocalizations.of(context)?.get('select_a_friend_to_find_common') ?? 'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1334,9 +1312,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    isTr
-                        ? 'Eşleşmek istediğiniz arkadaşınızı seçin:'
-                        : 'Select a friend to match with:',
+                    AppLocalizations.of(context)?.get('select_a_friend_to_match_with') ?? 'Select a friend to match with:',
                     style: TextStyle(
                       color: c.dim,
                       fontSize: 13,
@@ -1357,7 +1333,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       Icon(Icons.manage_accounts_rounded, color: c.red, size: 14),
                       const SizedBox(width: 4),
                       Text(
-                        isTr ? 'Yönet' : 'Manage',
+                        AppLocalizations.of(context)?.get('manage') ?? 'Manage',
                         style: TextStyle(color: c.red, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -1516,9 +1492,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          isTr
-                              ? 'Ortak İzleme Listesi Boş'
-                              : 'No Common Movies',
+                          AppLocalizations.of(context)?.get('no_common_movies') ?? 'No Common Movies',
                           style: TextStyle(
                             color: c.ink,
                             fontSize: 16,
@@ -1527,9 +1501,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          isTr
-                              ? 'İkinizin de ortak izleme listesine eklediği film bulunmuyor.'
-                              : 'Neither of you have added the same movies to your watchlists.',
+                          AppLocalizations.of(context)?.get('neither_of_you_have_added_the_') ?? 'Neither of you have added the same movies to your watchlists.',
                           style: TextStyle(color: c.dim, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
@@ -1546,9 +1518,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         vertical: 8,
                       ),
                       child: Text(
-                        isTr
-                            ? 'Ortak İzleme Listeniz (${intersection.length} Film/Dizi)'
-                            : 'Your Common Watchlist (${intersection.length} Titles)',
+                        AppLocalizations.of(context)?.get('your_common_watchlist_intersec').replaceAll('{}', '${intersection.length}') ?? 'Your Common Watchlist (${intersection.length} Titles)',
                         style: TextStyle(
                           color: c.gold,
                           fontWeight: FontWeight.w700,
@@ -1654,9 +1624,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          isTr
-                              ? 'Ortak Tavsiye Bul'
-                              : 'Find Joint Recommendations',
+                          AppLocalizations.of(context)?.get('find_joint_recommendations') ?? 'Find Joint Recommendations',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
@@ -1672,93 +1640,4 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 }
 
-// ─── Similar card ─────────────────────────────────────────────────────────────
-class _SimilarCard extends StatelessWidget {
-  final Movie movie;
-  final VoidCallback onTap;
-  const _SimilarCard({required this.movie, required this.onTap});
 
-  static const _gold = AppColors.gold;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            movie.posterUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: movie.posterUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => _placeholder(context),
-                    errorWidget: (ctx, url, err) => _placeholder(context),
-                  )
-                : _placeholder(context),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.5, 1.0],
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.9),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 6,
-              right: 6,
-              bottom: 6,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    movie.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded, color: _gold, size: 10),
-                      const SizedBox(width: 2),
-                      Text(
-                        movie.voteAverage.toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: _gold,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder(BuildContext context) => Container(
-    color: context.c.card,
-    child: Center(
-      child: Icon(Icons.movie_rounded, color: context.c.textFaint, size: 24),
-    ),
-  );
-}
