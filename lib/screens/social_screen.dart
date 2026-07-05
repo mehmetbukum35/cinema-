@@ -11,6 +11,9 @@ import '../widgets/cinematic_background.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/pulsing_placeholder.dart';
 import 'movie_detail/spoiler_comment.dart';
+import '../models/movie.dart';
+import 'movie_detail_sheet.dart';
+import '../services/providers.dart';
 
 class SocialScreen extends ConsumerStatefulWidget {
   /// Açılışta seçili olacak sekme (0: Arkadaşlar, 1: İstekler, 2: Akış).
@@ -775,111 +778,120 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     final isTv = (rec['is_tv'] ?? 0) == 1;
     final seen = rec['seen'] == true;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: isLast ? 24 : 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: seen ? c.borderSoft : c.gold.withValues(alpha: 0.5),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        final movieId = int.tryParse(rec['movie_id']?.toString() ?? '') ?? 0;
+        if (movieId > 0) {
+          _openMovieDetail(context, ref, movieId, isTv);
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: isLast ? 24 : 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: seen ? c.borderSoft : c.gold.withValues(alpha: 0.5),
+          ),
+          boxShadow: CinemaShadows.card,
         ),
-        boxShadow: CinemaShadows.card,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 60,
-              height: 90,
-              child: posterPath != null
-                  ? CachedNetworkImage(
-                      imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const PulsingPlaceholder(),
-                      errorWidget: (context, url, error) => Container(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 60,
+                height: 90,
+                child: posterPath != null
+                    ? CachedNetworkImage(
+                        imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const PulsingPlaceholder(),
+                        errorWidget: (context, url, error) => Container(
+                          color: c.border,
+                          alignment: Alignment.center,
+                          child: Icon(Icons.movie_rounded, color: c.dim),
+                        ),
+                      )
+                    : Container(
                         color: c.border,
                         alignment: Alignment.center,
                         child: Icon(Icons.movie_rounded, color: c.dim),
                       ),
-                    )
-                  : Container(
-                      color: c.border,
-                      alignment: Alignment.center,
-                      child: Icon(Icons.movie_rounded, color: c.dim),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.card_giftcard_rounded, color: c.gold, size: 16),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.of(context)
-                                ?.get('recommended_by_user')
-                                .replaceAll('{}', fromName) ??
-                            'Recommended by $fromName',
-                        style: TextStyle(
-                          color: c.gold,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.card_giftcard_rounded, color: c.gold, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.of(context)
+                                  ?.get('recommended_by_user')
+                                  .replaceAll('{}', fromName) ??
+                              'Recommended by $fromName',
+                          style: TextStyle(
+                            color: c.gold,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: c.ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isTv
-                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
-                            'TV Show')
-                      : (AppLocalizations.of(
-                              context,
-                            )?.get('onboarding_movie') ??
-                            'Movie'),
-                  style: TextStyle(
-                    color: c.dim,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (note.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '"$note"',
+                    title,
                     style: TextStyle(
-                      color: c.dim,
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
+                      color: c.ink,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isTv
+                        ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
+                              'TV Show')
+                        : (AppLocalizations.of(
+                                context,
+                              )?.get('onboarding_movie') ??
+                              'Movie'),
+                    style: TextStyle(
+                      color: c.dim,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (note.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '"$note"',
+                      style: TextStyle(
+                        color: c.dim,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -928,7 +940,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           );
         }
         final act = state.activityFeed[idx - recCount];
-        return FriendActivityScreen._buildActivityCard(c, act, context);
+        return FriendActivityScreen._buildActivityCard(c, act, context, ref);
       },
     );
   }
@@ -1100,7 +1112,7 @@ class FriendActivityScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: friendActivities.length,
                       itemBuilder: (ctx, i) {
-                        return _buildActivityCard(c, friendActivities[i], ctx);
+                        return _buildActivityCard(c, friendActivities[i], ctx, ref);
                       },
                     ),
             ),
@@ -1114,6 +1126,7 @@ class FriendActivityScreen extends ConsumerWidget {
     ThemePalette c,
     Map<String, dynamic> act,
     BuildContext context,
+    WidgetRef ref,
   ) {
     final friendName = act['friend_name'] ?? act['friend_username'] ?? 'Friend';
     final title = act['title'] ?? 'Movie';
@@ -1144,143 +1157,198 @@ class FriendActivityScreen extends ConsumerWidget {
           AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.borderSoft),
-        boxShadow: CinemaShadows.card,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 60,
-              height: 90,
-              child: posterPath != null
-                  ? CachedNetworkImage(
-                      imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const PulsingPlaceholder(),
-                      errorWidget: (context, url, error) => Container(
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        final movieId = int.tryParse(act['movie_id']?.toString() ?? '') ?? 0;
+        if (movieId > 0) {
+          _openMovieDetail(context, ref, movieId, isTv);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.borderSoft),
+          boxShadow: CinemaShadows.card,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 60,
+                height: 90,
+                child: posterPath != null
+                    ? CachedNetworkImage(
+                        imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const PulsingPlaceholder(),
+                        errorWidget: (context, url, error) => Container(
+                          color: c.border,
+                          alignment: Alignment.center,
+                          child: Icon(Icons.movie_rounded, color: c.dim),
+                        ),
+                      )
+                    : Container(
                         color: c.border,
                         alignment: Alignment.center,
                         child: Icon(Icons.movie_rounded, color: c.dim),
                       ),
-                    )
-                  : Container(
-                      color: c.border,
-                      alignment: Alignment.center,
-                      child: Icon(Icons.movie_rounded, color: c.dim),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.border,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        friendName[0].toUpperCase(),
-                        style: TextStyle(
-                          color: c.ink,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        friendName,
-                        style: TextStyle(
-                          color: c.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: c.ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isTv
-                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
-                            'TV Show')
-                      : (AppLocalizations.of(
-                              context,
-                            )?.get('onboarding_movie') ??
-                            'Movie'),
-                  style: TextStyle(
-                    color: c.dim,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: badgeColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Icon(Icons.star_rounded, color: badgeColor, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        badgeText,
-                        style: TextStyle(
-                          color: badgeColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: c.border,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          friendName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          friendName,
+                          style: TextStyle(
+                            color: c.ink,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
-                if (comment != null && comment.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: c.ink,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isTv
+                        ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
+                              'TV Show')
+                        : (AppLocalizations.of(
+                                context,
+                              )?.get('onboarding_movie') ??
+                              'Movie'),
+                    style: TextStyle(
+                      color: c.dim,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  SpoilerComment(comment: comment, isSpoiler: isSpoiler),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: badgeColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star_rounded, color: badgeColor, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          badgeText,
+                          style: TextStyle(
+                            color: badgeColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (comment != null && comment.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    SpoilerComment(comment: comment, isSpoiler: isSpoiler),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+}
+
+Future<void> _openMovieDetail(BuildContext context, WidgetRef ref, int movieId, bool isTv) async {
+  final service = ref.read(tmdbServiceProvider);
+  final c = context.c;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogCtx) => Center(
+      child: CircularProgressIndicator(color: c.gold),
+    ),
+  );
+
+  try {
+    final details = await service.getFullDetails(movieId, isTV: isTv);
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (details == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Yapım detayları yüklenemedi.')),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      final movie = Movie.fromJson(details, isTV: isTv);
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (_) => MovieDetailSheet(movie: movie, service: service),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
   }
 }
