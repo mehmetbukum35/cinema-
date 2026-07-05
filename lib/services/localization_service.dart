@@ -274,9 +274,7 @@ class AppLocalizations {
       'browse_offline_title': 'You are Offline',
       'browse_offline_desc':
           'Please check your internet connection and try again.',
-      'browse_cta_title': 'What to Watch Tonight?',
-      'browse_cta_subtitle':
-          "Let's roll the dice and pick a random movie matched to your taste.",
+      'browse_surprise': 'Surprise me',
       'swipe_rate': 'Rate',
       'swipe_not_watched': 'Not Watched',
       'swipe_liked': 'Liked',
@@ -771,9 +769,7 @@ class AppLocalizations {
       'browse_offline_title': 'Çevrimdışısınız',
       'browse_offline_desc':
           'Lütfen internet bağlantınızı kontrol edin. Çevrimdışı modda yalnızca önbelleğe alınmış içerikleri görüntüleyebilirsiniz.',
-      'browse_cta_title': 'Bu Akşam Ne İzlesem?',
-      'browse_cta_subtitle':
-          'Zevkine uygun rastgele bir film seçelim. Şansına ne çıkacak?',
+      'browse_surprise': 'Sürpriz film',
       'detail_runtime': 'Süre',
       'browse_on_the_air_tv': 'Yayında',
       'swipe_liked': 'Beğenildi',

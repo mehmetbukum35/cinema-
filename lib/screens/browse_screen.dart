@@ -20,7 +20,6 @@ import 'results_screen.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
 import 'onboarding_screen.dart';
-import '../widgets/spring_button.dart';
 
 class _Mood {
   final IconData icon;
@@ -262,27 +261,29 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Phase 2: Load secondary lists in the background
       Future.wait([
-        _service.getPopular(isTV: false, page: page),
-        _service.getPopular(isTV: true, page: page),
-        _service.getUpcoming(),
-        _service.getTopRated(isTV: false),
-        _service.getNowPlaying(),
-        _service.getAiringToday(),
-        _service.getOnTheAir(),
-      ]).then((phase2Results) {
-        if (!mounted) return;
-        setState(() {
-          _movies = List<Movie>.from(phase2Results[0])..shuffle(_rng);
-          _shows = List<Movie>.from(phase2Results[1])..shuffle(_rng);
-          _upcoming = List<Movie>.from(phase2Results[2])..shuffle(_rng);
-          _topRated = List<Movie>.from(phase2Results[3]);
-          _nowPlaying = List<Movie>.from(phase2Results[4])..shuffle(_rng);
-          _airingToday = List<Movie>.from(phase2Results[5])..shuffle(_rng);
-          _onTheAir = List<Movie>.from(phase2Results[6])..shuffle(_rng);
-        });
-      }).catchError((e, st) {
-        debugPrint("Error loading secondary browse lists: $e\n$st");
-      });
+            _service.getPopular(isTV: false, page: page),
+            _service.getPopular(isTV: true, page: page),
+            _service.getUpcoming(),
+            _service.getTopRated(isTV: false),
+            _service.getNowPlaying(),
+            _service.getAiringToday(),
+            _service.getOnTheAir(),
+          ])
+          .then((phase2Results) {
+            if (!mounted) return;
+            setState(() {
+              _movies = List<Movie>.from(phase2Results[0])..shuffle(_rng);
+              _shows = List<Movie>.from(phase2Results[1])..shuffle(_rng);
+              _upcoming = List<Movie>.from(phase2Results[2])..shuffle(_rng);
+              _topRated = List<Movie>.from(phase2Results[3]);
+              _nowPlaying = List<Movie>.from(phase2Results[4])..shuffle(_rng);
+              _airingToday = List<Movie>.from(phase2Results[5])..shuffle(_rng);
+              _onTheAir = List<Movie>.from(phase2Results[6])..shuffle(_rng);
+            });
+          })
+          .catchError((e, st) {
+            debugPrint("Error loading secondary browse lists: $e\n$st");
+          });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -644,6 +645,37 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Sürpriz/zar: zevke uygun rastgele film. "Bu Gece"
+                      // kartı motorun EN İYİ tahminini verirken bu "şaşırt
+                      // beni" niyetini karşılar; header'da küçük durur ki iki
+                      // ayrı "ne izlesem" kahramanı çakışmasın.
+                      Semantics(
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('browse_surprise') ??
+                            'Sürpriz film',
+                        button: true,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.casino_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          onPressed: _luckyPick,
+                          tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('browse_surprise') ??
+                              'Sürpriz film',
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Semantics(
                         label:
                             AppLocalizations.of(context)?.get('theme_switch') ??
@@ -719,88 +751,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                     ],
                   ),
                 ],
-              ),
-            ),
-          ),
-
-          // ── Bu Akşam Ne İzlesem? CTA Kartı ──────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: SpringButton(
-                onTap: _luckyPick,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFE94560), Color(0xFF8B0000)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFE94560).withValues(alpha: 0.35),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizations.of(
-                                    context,
-                                  )?.get('browse_cta_title') ??
-                                  'What to Watch Tonight?',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              AppLocalizations.of(
-                                    context,
-                                  )?.get('browse_cta_subtitle') ??
-                                  "Let's roll the dice and pick a random movie matched to your taste.",
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 12.5,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            width: 1.5,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.casino_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
