@@ -151,6 +151,8 @@ class AppLocalizations {
       'detail_keywords': 'KEYWORDS',
       'detail_storyline': 'STORYLINE',
       'detail_collection': 'COLLECTION',
+      'detail_rate_title': 'RATE THIS TITLE',
+      'detail_your_review': 'YOUR REVIEW',
 
       // Review
       'review_spoiler': 'Contains Spoiler',
@@ -454,6 +456,8 @@ class AppLocalizations {
       'detail_keywords': 'ANAHTAR KELİMELER',
       'detail_storyline': 'KONU',
       'detail_collection': 'SERİNİN DİĞER FİLMLERİ',
+      'detail_rate_title': 'BU YAPIMI PUANLA',
+      'detail_your_review': 'YORUMUNUZ',
 
       // Review
       'review_spoiler': 'Spoiler İçerir',

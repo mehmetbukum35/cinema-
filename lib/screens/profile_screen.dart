@@ -41,7 +41,7 @@ class ProfileScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
         title: Text(
-          'Hesap',
+          AppLocalizations.of(context)?.get('profile_account') ?? 'Hesap',
           style: TextStyle(
             color: c.ink,
             fontSize: 16,
@@ -55,7 +55,10 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Kapat', style: TextStyle(color: c.dim)),
+            child: Text(
+              AppLocalizations.of(context)?.get('semantics_close') ?? 'Kapat',
+              style: TextStyle(color: c.dim),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -63,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
               ref.read(authProvider.notifier).logout();
             },
             child: Text(
-              'Çıkış yap',
+              AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
               style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
             ),
           ),

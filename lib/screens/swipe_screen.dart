@@ -16,12 +16,6 @@ import '../widgets/pulsing_placeholder.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
 import '../widgets/spring_button.dart';
-
-const _rBerbat = AppColors.rBerbat;
-const _rEh = AppColors.rEh;
-const _rIyi = AppColors.rIyi;
-const _rHarika = AppColors.rHarika;
-
 class SwipeScreen extends ConsumerStatefulWidget {
   const SwipeScreen({super.key});
 
@@ -136,9 +130,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     return _getLanguages(context)[lang] ?? (AppLocalizations.of(context)?.get('lang_unknown') ?? 'Bilinmeyen');
   }
 
-  String _getProviderLabel(int? providerId) {
-    if (providerId == null) return 'Tümü';
-    return _providers[providerId] ?? 'Bilinmeyen';
+  String _getProviderLabel(BuildContext context, int? providerId) {
+    final localizations = AppLocalizations.of(context);
+    final isTr = localizations?.locale.languageCode == 'tr';
+    if (providerId == null) return localizations?.get('lang_all') ?? (isTr ? 'Tümü' : 'All');
+    return _providers[providerId] ?? (localizations?.get('lang_unknown') ?? (isTr ? 'Bilinmeyen' : 'Unknown'));
   }
 
   void _showFilterSheet(BuildContext context, WidgetRef ref, SwipeState state) {
@@ -549,7 +545,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       padding: const EdgeInsets.only(right: 8),
                       child: InputChip(
                         label: Text(
-                          _getProviderLabel(swipeState.providerFilter),
+                          _getProviderLabel(context, swipeState.providerFilter),
                           style: TextStyle(color: c.ink, fontSize: 12),
                         ),
                         backgroundColor: c.card,
@@ -743,7 +739,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       label:
                           AppLocalizations.of(context)?.get('profile_berbat') ??
                           'Berbat',
-                      color: _rBerbat,
+                      color: c.rBerbat,
                       size: berbatSize,
                       onTap: () => _rate(0),
                     ),
@@ -751,7 +747,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       label:
                           AppLocalizations.of(context)?.get('profile_eh') ??
                           'Eh',
-                      color: _rEh,
+                      color: c.rEh,
                       size: ehSize,
                       onTap: () => _rate(1),
                     ),
@@ -759,7 +755,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       label:
                           AppLocalizations.of(context)?.get('profile_iyi') ??
                           'İyi',
-                      color: _rIyi,
+                      color: c.rIyi,
                       size: iyiSize,
                       onTap: () => _rate(2),
                     ),
@@ -767,7 +763,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       label:
                           AppLocalizations.of(context)?.get('profile_harika') ??
                           'Harika',
-                      color: _rHarika,
+                      color: c.rHarika,
                       size: harikaSize,
                       onTap: () => _rate(3),
                     ),
@@ -1365,6 +1361,7 @@ class _RatingBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final visualSize = size;
     final touchSize = visualSize < 44.0 ? 44.0 : visualSize;
+    final c = context.c;
 
     return Semantics(
       label: (AppLocalizations.of(context)?.locale.languageCode == 'tr')
@@ -1386,7 +1383,7 @@ class _RatingBtn extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: (color == _rEh || color == _rHarika || color == _rIyi)
+                  color: (color == c.rEh || color == c.rHarika || color == c.rIyi)
                       ? Colors.black87
                       : Colors.white,
                   fontSize: visualSize > 72

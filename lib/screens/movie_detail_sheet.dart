@@ -416,19 +416,19 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           if (_extrasLoaded) ...[
                             if (_providers.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('NEREDE İZLENİR?'),
+                              _sectionLabel('detail_where_to_watch'),
                               const SizedBox(height: 10),
                               _providersRow(),
                             ],
                             if (_cast.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('OYUNCULAR'),
+                              _sectionLabel('detail_cast'),
                               const SizedBox(height: 10),
                               _castRow(),
                             ],
                             if (_keywords.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('ANAHTAR KELİMELER'),
+                              _sectionLabel('detail_keywords'),
                               const SizedBox(height: 8),
                               _keywordsWrap(),
                             ],
@@ -447,7 +447,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ],
                           if (movie.overview.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('KONU'),
+                            _sectionLabel('detail_storyline'),
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.all(14),
@@ -467,25 +467,25 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ],
                           if (_reviews.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('YORUMLAR'),
+                            _sectionLabel('detail_reviews'),
                             const SizedBox(height: 10),
                             ..._reviews.take(3).map(_reviewCard),
                           ],
                           if (_collection.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('SERİNİN DİĞER FİLMLERİ'),
+                            _sectionLabel('detail_collection'),
                             const SizedBox(height: 10),
                             _collectionRow(context),
                           ],
                           if (widget.movie.isTV && _extrasLoaded) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('SEZONLAR'),
+                            _sectionLabel('detail_seasons'),
                             const SizedBox(height: 10),
                             _seasonsSection(),
                           ],
                           if (_similar.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('BENZER İÇERİKLER'),
+                            _sectionLabel('detail_similar'),
                             const SizedBox(height: 10),
                             _similarRow(context),
                           ],
@@ -1463,25 +1463,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-  Widget _sectionLabel(String text) {
+  Widget _sectionLabel(String key) {
     return Builder(
       builder: (context) {
-        final key = switch (text) {
-          'NEREDE İZLENİR?' => 'detail_where_to_watch',
-          'OYUNCULAR' => 'detail_cast',
-          'ANAHTAR KELİMELER' => 'detail_keywords',
-          'KONU' => 'detail_storyline',
-          'YORUMLAR' => 'detail_reviews',
-          'SERİNİN DİĞER FİLMLERİ' => 'detail_collection',
-          'SEZONLAR' => 'detail_seasons',
-          'BENZER İÇERİKLER' => 'detail_similar',
-          _ => null,
-        };
-        final label = key != null
-            ? (AppLocalizations.of(context)?.get(key) ?? text)
-            : text;
+        final label = AppLocalizations.of(context)?.get(key) ?? key;
         return Text(
-          label,
+          label.toUpperCase(),
           style: TextStyle(
             color: context.c.dim,
             fontSize: 11,
@@ -1498,7 +1485,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel(isTr ? 'BU YAPIMI PUANLA' : 'RATE THIS TITLE'),
+        _sectionLabel('detail_rate_title'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -1525,7 +1512,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        _sectionLabel(isTr ? 'YORUMUNUZ' : 'YOUR REVIEW'),
+        _sectionLabel('detail_your_review'),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -1815,13 +1802,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       children: [
         if (_friendsReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
-          _sectionLabel(tr?.get('review_friends_title') ?? 'Arkadaşlarından Yorumlar'),
+          _sectionLabel('review_friends_title'),
           const SizedBox(height: 10),
           ..._friendsReviews.map((rev) => _buildReviewItem(rev, c)),
         ],
         if (_communityReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
-          _sectionLabel(tr?.get('review_community_title') ?? 'Topluluk Yorumları'),
+          _sectionLabel('review_community_title'),
           const SizedBox(height: 10),
           ..._communityReviews.map((rev) => _buildReviewItem(rev, c)),
         ],
@@ -1870,7 +1857,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           label,
           style: TextStyle(
             color: active
-                ? ((color == c.rEh || color == c.rIyi) ? Colors.black87 : Colors.white)
+                ? ((color == c.rEh || color == c.rIyi || color == c.rHarika) ? Colors.black87 : Colors.white)
                 : c.dim,
             fontSize: 11,
             fontWeight: active ? FontWeight.w800 : FontWeight.w500,
