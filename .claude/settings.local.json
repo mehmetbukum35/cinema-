@@ -19,7 +19,11 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('total:', d.get\\('total_results'\\), 'page results:', len\\(d.get\\('results',[]\\)\\)\\)\")",
       "Bash(python -c ' *)",
       "Bash(export PYTHONIOENCODING=utf-8)",
-      "Bash(curl -s \"https://foodlabeldetective.com.tr/cinema/api/tmdb/3/discover/movie?language=tr-TR&sort_by=vote_average.desc&include_adult=false&vote_count.gte=100&watch_region=TR&page=1&with_genres=18%7C9648%7C36&without_genres=16&vote_average.gte=7.5\")"
+      "Bash(curl -s \"https://foodlabeldetective.com.tr/cinema/api/tmdb/3/discover/movie?language=tr-TR&sort_by=vote_average.desc&include_adult=false&vote_count.gte=100&watch_region=TR&page=1&with_genres=18%7C9648%7C36&without_genres=16&vote_average.gte=7.5\")",
+      "Bash(php -l src/TasteDnaWebText.php)",
+      "Bash(php -l src/SocialWebRenderer.php)",
+      "Bash(php -l src/templates/profile.template.php)",
+      "Bash(rm -f /c/Users/mehme/AppData/Local/Temp/claude/E--cinema-/5a206882-f670-487e-a473-248cd2681617/scratchpad/dna_render.php)"
     ]
   }
 }

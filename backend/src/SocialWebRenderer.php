@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/TasteDnaWebText.php';
+
 class SocialWebRenderer
 {
     public function __construct(private PDO $db) {}
@@ -8,7 +10,7 @@ class SocialWebRenderer
     public function renderPublicWebProfile(string $username): void
     {
         // Kullanıcıyı bul
-        $st = $this->db->prepare('SELECT id, display_name, username, is_public FROM users WHERE username = ?');
+        $st = $this->db->prepare('SELECT id, display_name, username, is_public, taste_dna FROM users WHERE username = ?');
         $st->execute([$username]);
         $user = $st->fetch();
 
@@ -48,6 +50,13 @@ class SocialWebRenderer
 
         $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
         $userHandle = htmlspecialchars($user['username']);
+
+        // Sinema DNA (snapshot varsa ve hazırsa gösterim dizisi; yoksa null)
+        $dna = null;
+        if (!empty($user['taste_dna'])) {
+            $decoded = json_decode((string) $user['taste_dna'], true);
+            $dna = TasteDnaWebText::build(is_array($decoded) ? $decoded : null);
+        }
 
         $templatePath = __DIR__ . '/templates/profile.template.php';
         if (is_file($templatePath)) {

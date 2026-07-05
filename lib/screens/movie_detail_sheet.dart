@@ -231,7 +231,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
     // Phase 2: Load secondary details asynchronously in the background
     Future.wait([
-      runSafe(widget.service.getWatchProviders(id, isTV: isTV), <WatchProvider>[]),
+      runSafe(
+        widget.service.getWatchProviders(id, isTV: isTV),
+        <WatchProvider>[],
+      ),
       runSafe(widget.service.getCredits(id, isTV: isTV), <CastMember>[]),
       runSafe(widget.service.getSimilar(id, isTV: isTV), <Movie>[]),
       runSafe(widget.service.getReviews(id, isTV: isTV), <Review>[]),
@@ -258,7 +261,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             <Movie>[],
           );
           if (mounted && parts.isNotEmpty) {
-            setState(() => _collection = parts.where((m) => m.id != id).toList());
+            setState(
+              () => _collection = parts.where((m) => m.id != id).toList(),
+            );
           }
         }
       }

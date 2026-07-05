@@ -101,6 +101,84 @@
             box-shadow: 0 15px 25px rgba(229, 9, 20, 0.4);
         }
 
+        /* Sinema DNA kartı */
+        .dna {
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.14) 0%, rgba(229, 9, 20, 0.12) 100%);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            border-radius: 24px;
+            padding: 32px 24px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .dna-emoji { font-size: 48px; line-height: 1; }
+        .dna-label {
+            color: var(--gold);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-top: 12px;
+        }
+        .dna-name {
+            font-size: 30px;
+            font-weight: 800;
+            margin: 6px 0 10px;
+        }
+        .dna-essence { color: var(--dim); font-size: 15px; }
+        .dna-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 18px;
+        }
+        .dna-chip {
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(255, 179, 0, 0.12);
+            color: var(--gold);
+            border: 1px solid rgba(255, 179, 0, 0.4);
+        }
+        .dna-chip.genre {
+            background: var(--surface);
+            color: var(--ink);
+            border-color: var(--border);
+        }
+        .dna-signals {
+            text-align: left;
+            margin-top: 22px;
+            display: grid;
+            gap: 10px;
+        }
+        .dna-signal {
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1.4;
+            padding-left: 18px;
+            position: relative;
+        }
+        .dna-signal::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--gold);
+        }
+        .dna-accuracy {
+            margin-top: 18px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            background: rgba(52, 199, 89, 0.12);
+            border: 1px solid rgba(52, 199, 89, 0.4);
+            color: #E8FFF0;
+            font-size: 13.5px;
+            font-weight: 600;
+        }
+
         /* Sections */
         section {
             margin-bottom: 48px;
@@ -231,6 +309,44 @@
                 </a>
             </div>
         </header>
+
+        <!-- Sinema DNA -->
+        <?php if (!empty($dna)): ?>
+            <div class="dna">
+                <div class="dna-emoji"><?php echo $dna['emoji']; ?></div>
+                <div class="dna-label"><?php echo htmlspecialchars(mb_strtoupper($displayName, 'UTF-8')); ?></div>
+                <div class="dna-name"><?php echo htmlspecialchars($dna['archetype']); ?></div>
+                <div class="dna-essence"><?php echo htmlspecialchars($dna['essence']); ?></div>
+
+                <?php if (!empty($dna['themes'])): ?>
+                    <div class="dna-chips">
+                        <?php foreach ($dna['themes'] as $t): ?>
+                            <span class="dna-chip"><?php echo htmlspecialchars($t); ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($dna['genres'])): ?>
+                    <div class="dna-chips">
+                        <?php foreach ($dna['genres'] as $g): ?>
+                            <span class="dna-chip genre"><?php echo htmlspecialchars($g); ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($dna['signals'])): ?>
+                    <div class="dna-signals">
+                        <?php foreach ($dna['signals'] as $s): ?>
+                            <div class="dna-signal"><?php echo htmlspecialchars($s); ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($dna['accuracy'])): ?>
+                    <div class="dna-accuracy">✓ <?php echo htmlspecialchars($dna['accuracy']); ?></div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Harika Buldukları (Favorites / Top Rated) -->
         <section>
