@@ -99,6 +99,7 @@ class _SyncSectionState extends ConsumerState<SyncSection> {
           color: c.surface,
           borderRadius: BorderRadius.circular(14),
           border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+          boxShadow: c.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,6 +211,7 @@ class _SyncSectionState extends ConsumerState<SyncSection> {
         color: c.surface,
         borderRadius: BorderRadius.circular(14),
         border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+        boxShadow: c.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

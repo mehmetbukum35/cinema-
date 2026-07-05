@@ -27,54 +27,6 @@ class ProfileScreen extends ConsumerWidget {
 
   static const _ratingLabels = ['Berbat', 'Eh', 'İyi', 'Harika'];
 
-  void _openAccount(BuildContext context, WidgetRef ref) {
-    final auth = ref.read(authProvider);
-    if (!auth.isLoggedIn) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-      return;
-    }
-    final c = context.c;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.surface,
-        title: Text(
-          AppLocalizations.of(context)?.get('profile_account') ?? 'Hesap',
-          style: TextStyle(
-            color: c.ink,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          auth.user?['email'] as String? ?? '',
-          style: TextStyle(color: c.dim, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              AppLocalizations.of(context)?.get('semantics_close') ?? 'Kapat',
-              style: TextStyle(color: c.dim),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(authProvider.notifier).logout();
-            },
-            child: Text(
-              AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
-              style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
     final c = context.c;
@@ -268,6 +220,187 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _sectionHeader(BuildContext context, ThemePalette c, String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 12,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              gradient: CinemaGradients.crimson,
+              borderRadius: BorderRadius.circular(1.5),
+            ),
+          ),
+          Text(
+            text.toUpperCase(),
+            style: TextStyle(
+              color: c.dim,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logoutConfirm(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text(
+          AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
+          style: TextStyle(
+            color: c.ink,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          AppLocalizations.of(context)?.get('locale') == 'tr'
+              ? 'Hesabınızdan çıkış yapmak istediğinize emin misiniz?'
+              : 'Are you sure you want to log out of your account?',
+          style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
+              style: TextStyle(color: c.dim),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(authProvider.notifier).logout();
+            },
+            child: Text(
+              AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
+              style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _userHeaderCard(BuildContext context, WidgetRef ref, ThemePalette c) {
+    final auth = ref.watch(authProvider);
+    final isLoggedIn = auth.isLoggedIn;
+    final user = auth.user;
+
+    final String displayName = user?['display_name'] as String? ??
+        user?['username'] as String? ??
+        user?['email'] as String? ??
+        '';
+    final String email = user?['email'] as String? ?? '';
+    final String initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+
+    final tr = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+          boxShadow: c.cardShadow,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: isLoggedIn ? CinemaGradients.gold : null,
+                color: isLoggedIn ? null : (c.isLight ? c.borderSoft : c.border),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                isLoggedIn ? initial : '👤',
+                style: TextStyle(
+                  fontSize: isLoggedIn ? 20 : 18,
+                  fontWeight: FontWeight.w800,
+                  color: isLoggedIn ? Colors.black : c.dim,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isLoggedIn ? displayName : (tr?.get('profile_guest') ?? 'Misafir Kullanıcı'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isLoggedIn ? email : (tr?.get('profile_not_logged_in') ?? 'Bulut eşitleme aktif değil'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: c.dim,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (isLoggedIn)
+              IconButton(
+                icon: Icon(Icons.logout_rounded, color: c.red, size: 20),
+                onPressed: () => _logoutConfirm(context, ref),
+                tooltip: tr?.get('auth_logout') ?? 'Çıkış Yap',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                padding: EdgeInsets.zero,
+              )
+            else
+              ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+                child: Text(
+                  tr?.get('auth_title_login') ?? 'Giriş Yap',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _content(
     BuildContext context,
     WidgetRef ref,
@@ -277,6 +410,7 @@ class ProfileScreen extends ConsumerWidget {
     final c = context.c;
     final total = stats['total'] as int? ?? 0;
     final topGenres = stats['topGenres'] as List<dynamic>? ?? [];
+    final tr = AppLocalizations.of(context);
 
     return RefreshIndicator(
       color: c.gold,
@@ -292,54 +426,23 @@ class ProfileScreen extends ConsumerWidget {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          // Header
+          // Header Row
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
               child: Row(
                 children: [
                   Text(
-                    AppLocalizations.of(context)?.get('tab_profile') ??
-                        'Profilim',
+                    tr?.get('tab_profile') ?? 'Profilim',
                     style: TextStyle(
                       color: c.ink,
                       fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   const Spacer(),
                   Semantics(
-                    label:
-                        AppLocalizations.of(context)?.get('profile_account') ??
-                        'Account',
-                    button: true,
-                    child: IconButton(
-                      icon: Icon(
-                        ref.watch(authProvider).isLoggedIn
-                            ? Icons.account_circle_rounded
-                            : Icons.account_circle_outlined,
-                        color: ref.watch(authProvider).isLoggedIn
-                            ? c.red
-                            : c.dim,
-                        size: 22,
-                      ),
-                      onPressed: () => _openAccount(context, ref),
-                      tooltip:
-                          AppLocalizations.of(
-                            context,
-                          )?.get('profile_account') ??
-                          'Account',
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  Semantics(
-                    label:
-                        AppLocalizations.of(context)?.get('theme_switch') ??
-                        'Temayı değiştir',
+                    label: tr?.get('theme_switch') ?? 'Temayı değiştir',
                     button: true,
                     child: IconButton(
                       icon: Icon(
@@ -353,20 +456,13 @@ class ProfileScreen extends ConsumerWidget {
                         HapticFeedback.lightImpact();
                         ref.read(themeModeProvider.notifier).toggle();
                       },
-                      tooltip:
-                          AppLocalizations.of(context)?.get('theme_switch') ??
-                          'Temayı değiştir',
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
-                      ),
+                      tooltip: tr?.get('theme_switch') ?? 'Temayı değiştir',
+                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                       padding: EdgeInsets.zero,
                     ),
                   ),
                   Semantics(
-                    label:
-                        AppLocalizations.of(context)?.get('browse_refresh') ??
-                        'Yenile',
+                    label: tr?.get('browse_refresh') ?? 'Yenile',
                     button: true,
                     child: IconButton(
                       icon: Icon(Icons.refresh_rounded, color: c.dim, size: 22),
@@ -375,13 +471,8 @@ class ProfileScreen extends ConsumerWidget {
                         ref.invalidate(watchlistProvider);
                         ref.invalidate(statsProvider);
                       },
-                      tooltip:
-                          AppLocalizations.of(context)?.get('browse_refresh') ??
-                          'Yenile',
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
-                      ),
+                      tooltip: tr?.get('browse_refresh') ?? 'Yenile',
+                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -389,7 +480,69 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // ── Sinema DNA Banner ───────────────────────────────────────────────
+
+          // 1. User Header Card
+          SliverToBoxAdapter(
+            child: _userHeaderCard(context, ref, c),
+          ),
+
+          // 2. Taste Identity Section
+          SliverToBoxAdapter(
+            child: _sectionHeader(
+              context,
+              c,
+              tr?.get('dna_title') ?? 'Zevk Kimliğin',
+            ),
+          ),
+          if (total < 5)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                    boxShadow: c.cardShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🧬', style: TextStyle(fontSize: 24)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tr?.locale.languageCode == 'tr'
+                                  ? "Sinema DNA'n Kilitli"
+                                  : 'Cinema DNA Locked',
+                              style: TextStyle(
+                                color: c.ink,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              tr?.locale.languageCode == 'tr'
+                                  ? 'Zevk kimliğini oluşturmak için en az 5 filmi oylamalısın. Şu ana kadar $total film oyladın.'
+                                  : 'Rate at least 5 movies to unlock your taste identity. You have rated $total movies so far.',
+                              style: TextStyle(
+                                color: c.dim,
+                                fontSize: 11.5,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           if (total >= 5)
             SliverToBoxAdapter(
               child: Padding(
@@ -416,13 +569,21 @@ class ProfileScreen extends ConsumerWidget {
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: c.gold.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      boxShadow: c.isLight
+                          ? [
+                              BoxShadow(
+                                color: c.gold.withValues(alpha: 0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: c.gold.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                     ),
                     child: Row(
                       children: [
@@ -433,10 +594,7 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('dna_title') ??
-                                    'Sinema DNA\'n',
+                                tr?.get('dna_title') ?? "Sinema DNA'n",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -445,10 +603,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('dna_banner_desc') ??
-                                    'Zevkinin kimliğini keşfet.',
+                                tr?.get('dna_banner_desc') ?? 'Zevkinin kimliğini keşfet.',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.85),
                                   fontSize: 11.5,
@@ -468,16 +623,13 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-
-          // ── Wrapped Banner ──────────────────────────────────────────────────
           if (total >= 3)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: SpringButton(
                   onTap: () {
-                    final username =
-                        ref.read(authProvider).user?['username'] as String?;
+                    final username = ref.read(authProvider).user?['username'] as String?;
                     showGeneralDialog(
                       context: context,
                       barrierDismissible: false,
@@ -502,7 +654,7 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF2E93).withValues(alpha: 0.3),
+                          color: const Color(0xFFFF2E93).withValues(alpha: 0.25),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -521,10 +673,7 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('your_cinema_recap') ??
-                                    'Your Cinema Recap!',
+                                tr?.get('your_cinema_recap') ?? 'Your Cinema Recap!',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -533,10 +682,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('discover_your_cinema_journey_o') ??
-                                    'Discover your cinema journey of the year.',
+                                tr?.get('discover_your_cinema_journey_o') ?? 'Discover your cinema journey of the year.',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.85),
                                   fontSize: 11.5,
@@ -556,133 +702,248 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          // Stats card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Total count + top genres
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: c.isLight
-                          ? Border.all(color: c.border, width: 1)
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: c.red.withValues(alpha: 0.15),
-                              ),
-                              child: Icon(
-                                Icons.movie_filter_rounded,
-                                color: c.red,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$total',
-                                  style: TextStyle(
-                                    color: c.ink,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('profile_rating') ??
-                                      'Ratings',
-                                  style: TextStyle(
-                                    color: c.dim,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+
+          // 3. Movie Library Section
+          if (watchlist.isNotEmpty || (stats['ratedMovies'] != null && (stats['ratedMovies'] as List).isNotEmpty)) ...[
+            SliverToBoxAdapter(
+              child: _sectionHeader(
+                context,
+                c,
+                tr?.get('profile_watchlist') ?? 'Kütüphanen',
+              ),
+            ),
+            if (watchlist.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        tr?.get('profile_watchlist') ?? 'İZLEME LİSTESİ',
+                        style: TextStyle(
+                          color: c.dim,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
                         ),
-                        if (topGenres.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            AppLocalizations.of(
-                                  context,
-                                )?.get('profile_genres') ??
-                                'EN SEVDİĞİN TÜRLER',
-                            style: TextStyle(
-                              color: c.dim,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WatchlistScreen(),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: topGenres
-                                .map(
-                                  (g) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: c.card,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: c.isLight
-                                          ? Border.all(
-                                              color: c.border,
-                                              width: 1,
-                                            )
-                                          : null,
-                                    ),
-                                    child: Text(
-                                      PrefsService.genreName(g as int),
-                                      style: TextStyle(
-                                        color: c.ink,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                        ),
+                        child: Text(
+                          tr?.get('see_all') ?? 'See All',
+                          style: TextStyle(
+                            color: c.red,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 225,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: watchlist.length,
+                    itemBuilder: (ctx, i) => _WatchlistCard(
+                      movie: watchlist[i],
+                      onTap: () => _openDetail(context, ref, watchlist[i]),
+                      onRemove: () {
+                        ref
+                            .read(watchlistProvider.notifier)
+                            .remove(watchlist[i].id, watchlist[i].isTV);
+                      },
                     ),
                   ),
-                  // Rating distribution
-                  if (total > 0) ...[
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            ],
+            if (stats['ratedMovies'] != null && (stats['ratedMovies'] as List).isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Text(
+                    tr?.get('profile_history') ?? 'DEĞERLENDİRDİKLERİM',
+                    style: TextStyle(
+                      color: c.dim,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 225,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: (stats['ratedMovies'] as List).length,
+                    itemBuilder: (ctx, i) {
+                      final item = (stats['ratedMovies'] as List)[i] as Map<String, dynamic>;
+                      final movie = item['movie'] as Movie;
+                      final rating = item['rating'] as int;
+                      return _RatedMovieCard(
+                        movie: movie,
+                        rating: rating,
+                        onTap: () => _openDetail(context, ref, movie),
+                        onDelete: () => _confirmDeleteRating(context, ref, movie),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            ],
+          ],
+
+          // 4. Statistics Section
+          if (total > 0) ...[
+            SliverToBoxAdapter(
+              child: _sectionHeader(
+                context,
+                c,
+                tr?.get('profile_stats') ?? 'İstatistiklerin',
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                        boxShadow: c.cardShadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: c.red.withValues(alpha: 0.15),
+                                ),
+                                child: Icon(
+                                  Icons.movie_filter_rounded,
+                                  color: c.red,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$total',
+                                    style: TextStyle(
+                                      color: c.ink,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    tr?.get('profile_rating') ?? 'Ratings',
+                                    style: TextStyle(
+                                      color: c.dim,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (topGenres.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              tr?.get('profile_genres') ?? 'EN SEVDİĞİN TÜRLER',
+                              style: TextStyle(
+                                color: c.dim,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: topGenres
+                                  .map(
+                                    (g) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: c.card,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: c.isLight
+                                            ? Border.all(
+                                                color: c.border,
+                                                width: 1,
+                                              )
+                                            : null,
+                                      ),
+                                      child: Text(
+                                        PrefsService.genreName(g as int),
+                                        style: TextStyle(
+                                          color: c.ink,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     _ratingDistribution(context, stats),
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          // Social card (only if authenticated)
-          if (ref.watch(authProvider).isLoggedIn)
+          ],
+
+          // 5. Social Section
+          if (ref.watch(authProvider).isLoggedIn) ...[
+            SliverToBoxAdapter(
+              child: _sectionHeader(
+                context,
+                c,
+                tr?.get('together_social_title') ?? 'Sosyal',
+              ),
+            ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
@@ -699,12 +960,10 @@ class ProfileScreen extends ConsumerWidget {
                       color: c.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: c.isLight
-                            ? c.border
-                            : Colors.white.withValues(alpha: 0.05),
+                        color: c.isLight ? c.border : Colors.white.withValues(alpha: 0.05),
                         width: 1,
                       ),
-                      boxShadow: CinemaShadows.card,
+                      boxShadow: c.cardShadow,
                     ),
                     child: Row(
                       children: [
@@ -727,10 +986,7 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('together_social_title') ??
-                                    'Social & Friends',
+                                tr?.get('together_social_title') ?? 'Social & Friends',
                                 style: TextStyle(
                                   color: c.ink,
                                   fontSize: 16,
@@ -739,13 +995,10 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                ref.watch(authProvider).user?['username'] !=
-                                        null
+                                ref.watch(authProvider).user?['username'] != null
                                     ? '@${ref.watch(authProvider).user!['username']}'
-                                    : (AppLocalizations.of(context)?.get(
-                                            'see_taste_matches_manage_reque',
-                                          ) ??
-                                          'See taste matches, manage requests and activity feeds.'),
+                                    : (tr?.get('see_taste_matches_manage_reque') ??
+                                        'See taste matches, manage requests and activity feeds.'),
                                 style: TextStyle(color: c.dim, fontSize: 12),
                               ),
                             ],
@@ -754,10 +1007,7 @@ class ProfileScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Builder(
                           builder: (ctx) {
-                            final pendingCount = ref
-                                .watch(socialProvider)
-                                .pendingReceived
-                                .length;
+                            final pendingCount = ref.watch(socialProvider).pendingReceived.length;
                             if (pendingCount > 0) {
                               return Container(
                                 padding: const EdgeInsets.symmetric(
@@ -791,128 +1041,28 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          ],
 
-          // Rated Movies
-          if (stats['ratedMovies'] != null &&
-              (stats['ratedMovies'] as List).isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Text(
-                  AppLocalizations.of(context)?.get('profile_history') ??
-                      'DEĞERLENDİRDİKLERİM',
-                  style: TextStyle(
-                    color: c.dim,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 225,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: (stats['ratedMovies'] as List).length,
-                  itemBuilder: (ctx, i) {
-                    final item =
-                        (stats['ratedMovies'] as List)[i]
-                            as Map<String, dynamic>;
-                    final movie = item['movie'] as Movie;
-                    final rating = item['rating'] as int;
-                    return _RatedMovieCard(
-                      movie: movie,
-                      rating: rating,
-                      onTap: () => _openDetail(context, ref, movie),
-                      onDelete: () => _confirmDeleteRating(context, ref, movie),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
-          // Watchlist
-          if (watchlist.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Row(
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)?.get('profile_watchlist') ??
-                          'İZLEME LİSTESİ',
-                      style: TextStyle(
-                        color: c.dim,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const WatchlistScreen(),
-                        ),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)?.get('see_all') ??
-                            'See All',
-                        style: TextStyle(
-                          color: c.red,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 225,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: watchlist.length,
-                  itemBuilder: (ctx, i) => _WatchlistCard(
-                    movie: watchlist[i],
-                    onTap: () => _openDetail(context, ref, watchlist[i]),
-                    onRemove: () {
-                      ref
-                          .read(watchlistProvider.notifier)
-                          .remove(watchlist[i].id, watchlist[i].isTV);
-                    },
-                  ),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
-          // Sync Card
+          // 6. Settings & Utilities Section
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: const SyncSection(),
+            child: _sectionHeader(
+              context,
+              c,
+              tr?.get('settings_title') ?? 'Ayarlar & Tercihler',
             ),
           ),
-          // Family Mode Card
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: const _FamilyModeCard(),
             ),
           ),
-
-          // Onboarding / Taste analysis redo button
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: const SyncSection(),
+            ),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -926,9 +1076,8 @@ class ProfileScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: c.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: c.isLight
-                        ? Border.all(color: c.border, width: 1)
-                        : null,
+                    border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                    boxShadow: c.cardShadow,
                   ),
                   child: Row(
                     children: [
@@ -951,10 +1100,7 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              AppLocalizations.of(
-                                        context,
-                                      )?.locale.languageCode ==
-                                      'tr'
+                              tr?.locale.languageCode == 'tr'
                                   ? 'Zevk Analizini Yeniden Başlat'
                                   : 'Restart Taste Analysis',
                               style: TextStyle(
@@ -965,10 +1111,7 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              AppLocalizations.of(
-                                        context,
-                                      )?.locale.languageCode ==
-                                      'tr'
+                              tr?.locale.languageCode == 'tr'
                                   ? 'Film & dizi önerilerini zevkine göre ayarla'
                                   : 'Tune movie & show recommendations to your taste',
                               style: TextStyle(color: c.dim, fontSize: 12),
@@ -983,7 +1126,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Reset button
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
@@ -995,11 +1137,11 @@ class ProfileScreen extends ConsumerWidget {
                     color: c.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: c.border, width: 1),
+                    boxShadow: c.cardShadow,
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    AppLocalizations.of(context)?.get('profile_reset_title') ??
-                        'Tüm Verileri Sıfırla',
+                    tr?.get('profile_reset_title') ?? 'Tüm Verileri Sıfırla',
                     style: TextStyle(
                       color: c.red,
                       fontSize: 14,
@@ -1014,7 +1156,6 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
-
   Widget _ratingDistribution(BuildContext context, Map<String, dynamic> stats) {
     final c = context.c;
     final ratingColors = [c.rBerbat, c.rEh, c.rIyi, c.rHarika];
@@ -1033,6 +1174,7 @@ class ProfileScreen extends ConsumerWidget {
         color: c.surface,
         borderRadius: BorderRadius.circular(14),
         border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+        boxShadow: c.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1371,7 +1513,7 @@ class _FamilyModeCardState extends State<_FamilyModeCard> {
         color: c.surface,
         borderRadius: BorderRadius.circular(14),
         border: c.isLight ? Border.all(color: c.border, width: 1) : null,
-        boxShadow: CinemaShadows.card,
+        boxShadow: c.cardShadow,
       ),
       child: Row(
         children: [
