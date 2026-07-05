@@ -250,6 +250,7 @@ class SyncService {
 
     // Save final server_time as our new last_sync_time
     await PrefsService.setLastSyncTime(serverTime);
+    PrefsService.invalidateGenreWeights();
     debugPrint("Sync complete. New lastSync timestamp: $serverTime");
   }
 }

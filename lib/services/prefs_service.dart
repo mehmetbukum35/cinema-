@@ -185,6 +185,7 @@ class PrefsService {
     await prefs.remove(_keyInitialGenres);
     await prefs.remove(_keyInitialGenresSavedAt);
     await prefs.remove(_keyOnboardingBannerDismissed);
+    invalidateGenreWeights();
   }
 
   static Future<bool> isOnboardingBannerDismissed() async {
@@ -209,6 +210,7 @@ class PrefsService {
       _keyInitialGenresSavedAt,
       DateTime.now().millisecondsSinceEpoch,
     );
+    invalidateGenreWeights();
   }
 
   static Future<List<int>> getInitialGenres() async {
@@ -221,10 +223,12 @@ class PrefsService {
 
   static Future<void> saveFavoriteMovies(List<Movie> movies) async {
     await DatabaseHelper().saveFavorites(movies, false);
+    invalidateGenreWeights();
   }
 
   static Future<void> saveFavoriteTvShows(List<Movie> shows) async {
     await DatabaseHelper().saveFavorites(shows, true);
+    invalidateGenreWeights();
   }
 
   // ─── Öneri isabet telemetrisi ────────────────────────────────────────────────
@@ -282,6 +286,7 @@ class PrefsService {
       comment: comment,
       isSpoiler: isSpoiler,
     );
+    invalidateGenreWeights();
   }
 
   static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) async {
@@ -326,7 +331,22 @@ class PrefsService {
     return sorted.take(3).map((e) => e.key).toList();
   }
 
+  static Map<int, double>? _cachedGenreWeights;
+
+  static void invalidateGenreWeights() {
+    _cachedGenreWeights = null;
+  }
+
   static Future<Map<int, double>> getGenreWeights() async {
+    if (_cachedGenreWeights != null) {
+      return _cachedGenreWeights!;
+    }
+    final weights = await _calculateGenreWeights();
+    _cachedGenreWeights = weights;
+    return weights;
+  }
+
+  static Future<Map<int, double>> _calculateGenreWeights() async {
     final prefs = await SharedPreferences.getInstance();
     final Map<int, double> weights = {};
 
@@ -370,8 +390,8 @@ class PrefsService {
       }
     }
 
-    // 3. Puanlamalardan elde edilen türler (Negatif cezalandırma) * time decay
-    final ratings = await db.getRatings();
+    // 3. Puanlamalardan elde edilen türler (Negatif cezalandırma) * time decay - LIGHTWEIGHT query
+    final ratings = await db.getRatingsForWeights();
     for (final item in ratings) {
       final rating = item['rating'] as int;
       final genreList = item['genreIds'] as List? ?? const [];
@@ -437,6 +457,7 @@ class PrefsService {
 
   static Future<void> deleteRating(int movieId, bool isTV) async {
     await DatabaseHelper().deleteRating(movieId, isTV);
+    invalidateGenreWeights();
   }
 
   static Future<int> getRatingCount() async {

@@ -10,6 +10,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
 import 'services/prefs_service.dart';
+import 'services/db_helper.dart';
 import 'services/localization_service.dart';
 import 'services/notification_service.dart';
 import 'services/providers.dart';
@@ -39,6 +40,17 @@ void main() async {
       } catch (e, st) {
         // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
         debugPrint("Firebase background initialization failed: $e\n$st");
+      }
+    }),
+  );
+
+  // TMDB cache verilerinden süresi dolanları arka planda temizle (30 günlük limit)
+  unawaited(
+    Future(() async {
+      try {
+        await DatabaseHelper().deleteExpiredTmdbCache(30 * 24 * 60 * 60 * 1000);
+      } catch (e) {
+        debugPrint("Error clearing expired TMDB cache at startup: $e");
       }
     }),
   );

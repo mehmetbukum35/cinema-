@@ -204,55 +204,65 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       }
     }
 
-    final results = await Future.wait([
-      runSafe(widget.service.getTrailerKey(id, isTV: isTV), null),
-      runSafe(
-        widget.service.getWatchProviders(id, isTV: isTV),
-        <WatchProvider>[],
-      ),
-      runSafe(widget.service.getCredits(id, isTV: isTV), <CastMember>[]),
-      runSafe(widget.service.getSimilar(id, isTV: isTV), <Movie>[]),
+    // Phase 1: Load critical information needed for the upper fold immediately
+    final primaryResults = await Future.wait([
       runSafe(widget.service.getFullDetails(id, isTV: isTV), null),
-      runSafe(widget.service.getReviews(id, isTV: isTV), <Review>[]),
-      runSafe(widget.service.getKeywords(id, isTV: isTV), <String>[]),
-      runSafe(PrefsService.getWatchedSeasons(id), <int>{}),
+      runSafe(widget.service.getTrailerKey(id, isTV: isTV), null),
       runSafe(PrefsService.getRating(id, isTV), null),
+      runSafe(PrefsService.getWatchedSeasons(id), <int>{}),
     ]);
+
     if (!mounted) return;
-    final details = results[4] as Map<String, dynamic>?;
+
+    final details = primaryResults[0] as Map<String, dynamic>?;
+    final ratingData = primaryResults[2] as Map<String, dynamic>?;
+
     setState(() {
-      _trailerKey = results[0] as String?;
-      _providers = results[1] as List<WatchProvider>;
-      _cast = results[2] as List<CastMember>;
-      _similar = (results[3] as List<Movie>).take(10).toList();
       _details = details;
-      _reviews = results[5] as List<Review>;
-      _keywords = results[6] as List<String>;
-      _watchedSeasons = results[7] as Set<int>;
-      final ratingData = results[8] as Map<String, dynamic>?;
+      _trailerKey = primaryResults[1] as String?;
       _currentRating = ratingData?['rating'] as int?;
       _commentController.text = ratingData?['comment'] as String? ?? '';
       _isSpoiler = (ratingData?['is_spoiler'] ?? 0) == 1;
-      _extrasLoaded = true;
+      _watchedSeasons = primaryResults[3] as Set<int>;
     });
 
     _loadFriendsReviews();
     _loadCommunityScore();
 
-    // Load collection separately (needs details first)
-    if (!isTV && details != null) {
-      final col = details['belongs_to_collection'] as Map<String, dynamic>?;
-      if (col != null) {
-        final colId = col['id'] as int;
-        final parts = await runSafe(
-          widget.service.getCollection(colId),
-          <Movie>[],
-        );
-        if (mounted && parts.isNotEmpty) {
-          setState(() => _collection = parts.where((m) => m.id != id).toList());
+    // Phase 2: Load secondary details asynchronously in the background
+    Future.wait([
+      runSafe(widget.service.getWatchProviders(id, isTV: isTV), <WatchProvider>[]),
+      runSafe(widget.service.getCredits(id, isTV: isTV), <CastMember>[]),
+      runSafe(widget.service.getSimilar(id, isTV: isTV), <Movie>[]),
+      runSafe(widget.service.getReviews(id, isTV: isTV), <Review>[]),
+      runSafe(widget.service.getKeywords(id, isTV: isTV), <String>[]),
+    ]).then((secondaryResults) async {
+      if (!mounted) return;
+
+      setState(() {
+        _providers = secondaryResults[0] as List<WatchProvider>;
+        _cast = secondaryResults[1] as List<CastMember>;
+        _similar = (secondaryResults[2] as List<Movie>).take(10).toList();
+        _reviews = secondaryResults[3] as List<Review>;
+        _keywords = secondaryResults[4] as List<String>;
+        _extrasLoaded = true;
+      });
+
+      // Load collection separately (needs details first)
+      if (!isTV && details != null) {
+        final col = details['belongs_to_collection'] as Map<String, dynamic>?;
+        if (col != null) {
+          final colId = col['id'] as int;
+          final parts = await runSafe(
+            widget.service.getCollection(colId),
+            <Movie>[],
+          );
+          if (mounted && parts.isNotEmpty) {
+            setState(() => _collection = parts.where((m) => m.id != id).toList());
+          }
         }
       }
-    }
+    });
   }
 
   Future<void> _loadFriendsReviews() async {
@@ -525,6 +535,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     ? CachedNetworkImage(
                         imageUrl: movie.posterUrl,
                         fit: BoxFit.cover,
+                        memCacheWidth: 180,
                         placeholder: (context, url) =>
                             ColoredBox(color: c.card),
                         errorWidget: (context, url, error) =>
@@ -863,6 +874,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                         ? CachedNetworkImage(
                             imageUrl: p.logoUrl,
                             fit: BoxFit.cover,
+                            memCacheWidth: 80,
                             placeholder: (context, url) =>
                                 ColoredBox(color: c.card),
                             errorWidget: (context, url, error) =>
@@ -932,6 +944,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ? CachedNetworkImage(
                               imageUrl: c.profileUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth: 90,
                               placeholder: (context, url) =>
                                   _avatarPlaceholder(c.name),
                               errorWidget: (context, url, error) =>
@@ -1016,6 +1029,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     ? CachedNetworkImage(
                         imageUrl: s.posterUrl,
                         fit: BoxFit.cover,
+                        memCacheWidth: 150,
                         placeholder: (context, url) =>
                             ColoredBox(color: c.card),
                         errorWidget: (context, url, error) =>
@@ -1106,6 +1120,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ? CachedNetworkImage(
                               imageUrl: m.posterUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth: 150,
                               placeholder: (context, url) =>
                                   ColoredBox(color: c.card),
                               errorWidget: (context, url, error) =>

@@ -199,31 +199,24 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ref.read(socialProvider.notifier).loadActivityFeed();
       });
     }
+
     try {
       final page = ref.read(browsePopularPageProvider);
       final likedGenres = await PrefsService.getLikedGenreIds();
-      final results = await Future.wait([
+      final engine = ref.read(recommendationEngineProvider);
+
+      // Phase 1: Load critical lists needed for Tonight's Pick, For You, and Trending
+      final phase1Results = await Future.wait([
         _service.discoverByGenres(likedGenres, isTV: false, page: 1),
         _service.discoverByGenres(likedGenres, isTV: false, page: 2),
         _service.getTrending(),
-        _service.getPopular(isTV: false, page: page),
-        _service.getPopular(isTV: true, page: page),
-        _service.getUpcoming(),
-        _service.getTopRated(isTV: false),
-        _service.getNowPlaying(),
-        _service.getAiringToday(),
-        _service.getOnTheAir(),
-      ]).timeout(const Duration(seconds: 20));
+      ]).timeout(const Duration(seconds: 12));
+
       if (!mounted) return;
 
-      // ── "Sana Özel" boru hattı (RecommendationEngine) ────────────────────
-      // Recall: tür-bazlı discover + son "Harika"lardan TMDB similar/
-      // recommendations (gerekçe etiketli). Rank: tür + keyword re-rank +
-      // arkadaş sinyali boost'u + çeşitlilik geçişi. En yüksek skor "Bu Gece
-      // Ne İzlesem?" vitrin kartına, kalanı raya gider.
-      final engine = ref.read(recommendationEngineProvider);
-      final List<Movie> page1 = List<Movie>.from(results[0]);
-      final List<Movie> page2 = List<Movie>.from(results[1]);
+      final List<Movie> page1 = List<Movie>.from(phase1Results[0]);
+      final List<Movie> page2 = List<Movie>.from(phase1Results[1]);
+      final List<Movie> trendingList = List<Movie>.from(phase1Results[2]);
 
       final seedCandidates = await engine.fetchSeedCandidates();
 
@@ -262,18 +255,33 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       setState(() {
         _tonight = tonightPick;
         _personal = finalPersonal;
-        // "Bu Hafta Trend" sıralı bir listedir — shuffle sırayı bozardı.
-        _trending = List<Movie>.from(results[2]);
-        _movies = List<Movie>.from(results[3])..shuffle(_rng);
-        _shows = List<Movie>.from(results[4])..shuffle(_rng);
-        _upcoming = List<Movie>.from(results[5])..shuffle(_rng);
-        // "En Yüksek Puanlı" sıralı bir listedir — shuffle etiketi yalanlar.
-        _topRated = List<Movie>.from(results[6]);
-        _nowPlaying = List<Movie>.from(results[7])..shuffle(_rng);
-        _airingToday = List<Movie>.from(results[8])..shuffle(_rng);
-        _onTheAir = List<Movie>.from(results[9])..shuffle(_rng);
+        _trending = trendingList;
         _showOnboardingBanner = showBanner;
         _loading = false;
+      });
+
+      // Phase 2: Load secondary lists in the background
+      Future.wait([
+        _service.getPopular(isTV: false, page: page),
+        _service.getPopular(isTV: true, page: page),
+        _service.getUpcoming(),
+        _service.getTopRated(isTV: false),
+        _service.getNowPlaying(),
+        _service.getAiringToday(),
+        _service.getOnTheAir(),
+      ]).then((phase2Results) {
+        if (!mounted) return;
+        setState(() {
+          _movies = List<Movie>.from(phase2Results[0])..shuffle(_rng);
+          _shows = List<Movie>.from(phase2Results[1])..shuffle(_rng);
+          _upcoming = List<Movie>.from(phase2Results[2])..shuffle(_rng);
+          _topRated = List<Movie>.from(phase2Results[3]);
+          _nowPlaying = List<Movie>.from(phase2Results[4])..shuffle(_rng);
+          _airingToday = List<Movie>.from(phase2Results[5])..shuffle(_rng);
+          _onTheAir = List<Movie>.from(phase2Results[6])..shuffle(_rng);
+        });
+      }).catchError((e, st) {
+        debugPrint("Error loading secondary browse lists: $e\n$st");
       });
     } catch (e) {
       if (!mounted) return;
@@ -288,7 +296,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         _nowPlaying = [];
         _airingToday = [];
         _onTheAir = [];
-        _error = e;
+        _showOnboardingBanner = false;
+        _error = e.toString();
         _loading = false;
       });
     }
@@ -1128,6 +1137,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                                               imageUrl:
                                                   'https://image.tmdb.org/t/p/w342$posterPath',
                                               fit: BoxFit.cover,
+                                              memCacheWidth: 180,
                                               placeholder: (context, url) =>
                                                   const PulsingPlaceholder(),
                                               errorWidget:
@@ -1425,6 +1435,7 @@ class _BrowseCard extends ConsumerWidget {
                           ? CachedNetworkImage(
                               imageUrl: movie.posterUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth: 240,
                               placeholder: (context, url) =>
                                   const PulsingPlaceholder(),
                               errorWidget: (context, url, error) =>

@@ -64,7 +64,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 6,
+      version: 7,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
     );
@@ -162,6 +162,13 @@ class DatabaseHelper {
         locale TEXT NOT NULL
       )
     ''');
+
+    // Indices for updated_at (Performance optimization for delta-sync)
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_watchlist_updated_at ON watchlist (updated_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ratings_updated_at ON ratings (updated_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_favorites_updated_at ON favorites (updated_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_watched_seasons_updated_at ON watched_seasons (updated_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_search_history_updated_at ON search_history (updated_at)');
   }
 
   Future<void> onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -317,6 +324,17 @@ class DatabaseHelper {
         debugPrint("Error migrating database to v6: $e");
       }
     }
+    if (oldVersion < 7) {
+      try {
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_watchlist_updated_at ON watchlist (updated_at)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_ratings_updated_at ON ratings (updated_at)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_favorites_updated_at ON favorites (updated_at)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_watched_seasons_updated_at ON watched_seasons (updated_at)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_search_history_updated_at ON search_history (updated_at)');
+      } catch (e) {
+        debugPrint("Error migrating database to v7 (adding indices): $e");
+      }
+    }
   }
 
   // ─── Ratings Operations ──────────────────────────────────────────────────────
@@ -465,6 +483,42 @@ class DatabaseHelper {
           genreIds: genreIdsList,
           popularity: (m['popularity'] as num? ?? 0).toDouble(),
         ),
+      };
+    }).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getRatingsForWeights() async {
+    final db = await database;
+    if (db == null) {
+      return _mockRatings
+          .where((m) => m['deleted'] != 1)
+          .map((m) => {
+                'id': m['movie_id'] as int,
+                'isTV': (m['is_tv'] as int) == 1,
+                'rating': m['rating'] as int,
+                'genreIds': (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
+                    .map((e) => e as int)
+                    .toList(),
+                'created_at': m['created_at'] as int,
+              })
+          .toList();
+    }
+    final List<Map<String, dynamic>> maps = await db.query(
+      'ratings',
+      columns: ['movie_id', 'is_tv', 'rating', 'genre_ids', 'created_at'],
+      where: 'deleted = 0',
+    );
+    return maps.map((m) {
+      final genreIdsList =
+          (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
+              .map((e) => e as int)
+              .toList();
+      return {
+        'id': m['movie_id'] as int,
+        'isTV': (m['is_tv'] as int) == 1,
+        'rating': m['rating'] as int,
+        'genreIds': genreIdsList,
+        'created_at': m['created_at'] as int,
       };
     }).toList();
   }

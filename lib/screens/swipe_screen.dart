@@ -1154,6 +1154,7 @@ class _SwipeCard extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: movie.posterUrl,
                         fit: BoxFit.cover,
+                        memCacheWidth: 500,
                         placeholder: (context, url) =>
                             const PulsingPlaceholder(),
                         errorWidget: (context, url, error) =>

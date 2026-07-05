@@ -599,6 +599,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ? CachedNetworkImage(
                               imageUrl: m.posterUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth: 120,
                               placeholder: (context, url) =>
                                   ColoredBox(color: c.border),
                               errorWidget: (context, url, error) =>

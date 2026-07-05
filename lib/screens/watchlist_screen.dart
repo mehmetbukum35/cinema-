@@ -217,6 +217,7 @@ class WatchlistScreen extends ConsumerWidget {
                       ? CachedNetworkImage(
                           imageUrl: m.posterUrl,
                           fit: BoxFit.cover,
+                          memCacheWidth: 240,
                           placeholder: (ctx, url) => const PulsingPlaceholder(),
                           errorWidget: (ctx, url, err) =>
                               const PulsingPlaceholder(),

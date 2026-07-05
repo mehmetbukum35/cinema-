@@ -24,6 +24,7 @@ class SimilarCard extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: movie.posterUrl,
                     fit: BoxFit.cover,
+                    memCacheWidth: 240,
                     placeholder: (ctx, url) => _placeholder(context),
                     errorWidget: (ctx, url, err) => _placeholder(context),
                   )
