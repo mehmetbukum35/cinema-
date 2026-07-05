@@ -1740,21 +1740,26 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                       setState(() {
                                         _justSavedComment = true;
                                       });
+                                      final isGuest = !ref.read(authProvider).isLoggedIn;
+                                      final baseMsg = AppLocalizations.of(context)?.get('review_saved_successfully') ?? 'Review saved successfully';
+                                      final suffix = isGuest
+                                          ? (AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                                              ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
+                                              : ' (Saved locally, will sync when logged in.)')
+                                          : '';
+
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            AppLocalizations.of(context)?.get(
-                                                  'review_saved_successfully',
-                                                ) ??
-                                                'Review saved successfully',
+                                            '$baseMsg$suffix',
                                             style: const TextStyle(
                                               color: Colors.white,
                                             ),
                                           ),
                                           backgroundColor: c.red,
-                                          duration: const Duration(seconds: 2),
+                                          duration: const Duration(seconds: 3),
                                         ),
                                       );
                                       Future.delayed(
@@ -1896,6 +1901,21 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           setState(() {
             _currentRating = rating;
           });
+
+          if (mounted && !ref.read(authProvider).isLoggedIn) {
+            final tr = AppLocalizations.of(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  tr?.locale.languageCode == 'tr'
+                      ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
+                      : 'Rating saved locally. Will sync when logged in.',
+                ),
+                backgroundColor: c.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
         }
         ref.invalidate(statsProvider);
         ref.read(syncServiceProvider).sync();

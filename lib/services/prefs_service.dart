@@ -665,4 +665,13 @@ class PrefsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('swipe_guide_shown', true);
   }
+
+  static Future<bool> isFirstTimeDice() async {
+    final prefs = await SharedPreferences.getInstance();
+    final first = prefs.getBool('first_time_dice') ?? true;
+    if (first) {
+      await prefs.setBool('first_time_dice', false);
+    }
+    return first;
+  }
 }

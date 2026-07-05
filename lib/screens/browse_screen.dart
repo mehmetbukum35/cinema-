@@ -324,6 +324,42 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
   Future<void> _luckyPick() async {
     HapticFeedback.lightImpact();
+
+    final isFirst = await PrefsService.isFirstTimeDice();
+    if (isFirst && mounted) {
+      final tr = AppLocalizations.of(context);
+      final c = context.c;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: c.surface,
+          title: Text(
+            tr?.locale.languageCode == 'tr' ? 'Şanslı Seçim 🎲' : 'Lucky Pick 🎲',
+            style: TextStyle(
+              color: c.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            tr?.locale.languageCode == 'tr'
+                ? 'Bu zar butonu, puanladığınız filmlerden yola çıkarak zevklerinize uygun rastgele bir film seçer. "Şaşırt beni" demek istediğinizde kullanabilirsiniz!'
+                : 'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
+            style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                tr?.locale.languageCode == 'tr' ? 'Anladım' : 'Got it',
+                style: TextStyle(color: c.gold, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     try {
       final likedGenres = await PrefsService.getLikedGenreIds();
       var results = await _service.discoverByGenres(likedGenres, isTV: false);
