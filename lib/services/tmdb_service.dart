@@ -120,6 +120,36 @@ class TmdbService {
 
   Future<List<Movie>> searchMulti(String query) async {
     if (query.trim().isEmpty) return [];
+
+    // Detect 4-digit year (e.g. 1800 - 2099) in query
+    final yearRegex = RegExp(r'\b(1[89]\d{2}|20\d{2})\b');
+    final match = yearRegex.firstMatch(query);
+
+    if (match != null) {
+      final yearStr = match.group(0)!;
+      final year = int.tryParse(yearStr);
+      if (year != null) {
+        // Strip the year and any surrounding parentheses/brackets
+        var cleanQuery = query.replaceAll(yearStr, '').trim();
+        cleanQuery = cleanQuery.replaceAll(RegExp(r'\(\s*\)|\[\s*\]'), '').trim();
+        cleanQuery = cleanQuery.replaceAll(RegExp(r'^[\(\[,\-\s]+|[\)\]\s,\-\s]+$'), '').trim();
+
+        if (cleanQuery.isNotEmpty) {
+          try {
+            final results = await Future.wait([
+              _searchMoviesWithYear(cleanQuery, year),
+              _searchTvWithYear(cleanQuery, year),
+            ]);
+            final combined = [...results[0], ...results[1]];
+            combined.sort((a, b) => b.popularity.compareTo(a.popularity));
+            return _sanitizeList(combined, isSearch: true);
+          } catch (e) {
+            debugPrint("Parallel year-based search failed, falling back: $e");
+          }
+        }
+      }
+    }
+
     final uri = _tmdbUri('/3/search/multi', {
       'api_key': _apiKey,
       'language': _language,
@@ -150,6 +180,42 @@ class TmdbService {
         originalError: e,
       );
     }
+  }
+
+  Future<List<Movie>> _searchMoviesWithYear(String query, int year) async {
+    final uri = _tmdbUri('/3/search/movie', {
+      'api_key': _apiKey,
+      'language': _language,
+      'query': query,
+      'include_adult': 'false',
+      'primary_release_year': year.toString(),
+    });
+    final response = await _client.get(uri).timeout(_kTimeout);
+    _handleNon200Response(response);
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (data['results'] as List<dynamic>?) ?? [];
+    return results
+        .cast<Map<String, dynamic>>()
+        .map((e) => Movie.fromJson(e, isTV: false))
+        .toList();
+  }
+
+  Future<List<Movie>> _searchTvWithYear(String query, int year) async {
+    final uri = _tmdbUri('/3/search/tv', {
+      'api_key': _apiKey,
+      'language': _language,
+      'query': query,
+      'include_adult': 'false',
+      'first_air_date_year': year.toString(),
+    });
+    final response = await _client.get(uri).timeout(_kTimeout);
+    _handleNon200Response(response);
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = (data['results'] as List<dynamic>?) ?? [];
+    return results
+        .cast<Map<String, dynamic>>()
+        .map((e) => Movie.fromJson(e, isTV: true))
+        .toList();
   }
 
   // ─── Dedicated search (movie-only / tv-only) ────────────────────────────────
