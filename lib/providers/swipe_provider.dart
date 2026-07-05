@@ -5,10 +5,10 @@ import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
+import '../services/recommendation_engine.dart';
 import 'watchlist_provider.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
-import '../services/db_helper.dart';
 
 class SwipeState {
   final List<Movie> queue;
@@ -64,14 +64,10 @@ class SwipeState {
 
 class SwipeNotifier extends StateNotifier<SwipeState> {
   final TmdbService _service;
+  final RecommendationEngine _engine;
   final void Function()? onRated;
 
-  /// Kullanıcının anahtar kelime zevk vektörü (keyword_id → ağırlık).
-  /// Beğenilen (İyi/Harika) yapımların keyword'lerinden kurulur, memoize edilir;
-  /// yeni puan verilince/undo'da null'lanıp yeniden hesaplanır.
-  Map<int, double>? _userKeywordVector;
-
-  SwipeNotifier(this._service, {this.onRated})
+  SwipeNotifier(this._service, this._engine, {this.onRated})
     : super(
         SwipeState(
           queue: [],
@@ -118,57 +114,6 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       );
       await loadMore();
     }
-  }
-
-  /// Beğenilen (rating>=2) yapımların keyword'lerinden kullanıcı zevk vektörünü
-  /// kurar. Harika(3)→+2, İyi(2)→+1, zaman decay'li (prefs ile aynı yarı ömür).
-  /// En yeni 15 beğeni ile sınırlıdır; keyword uçları cache'li olduğundan
-  /// tekrar çağrılarda ağ maliyeti ~sıfırdır. Sonuç memoize edilir.
-  Future<Map<int, double>> _getUserKeywordVector() async {
-    final cached = _userKeywordVector;
-    if (cached != null) return cached;
-
-    final vec = <int, double>{};
-    try {
-      final ratings = await DatabaseHelper().getRatings();
-      final liked =
-          ratings.where((r) => (r['rating'] as int) >= 2).toList()
-            ..sort(
-              (a, b) =>
-                  (b['created_at'] as int).compareTo(a['created_at'] as int),
-            );
-      final seeds = liked.take(15).toList();
-      final nowMs = DateTime.now().millisecondsSinceEpoch;
-
-      final kwLists = await Future.wait(
-        seeds.map((r) {
-          final id = r['id'] as int;
-          final isTV = r['isTV'] as bool? ?? false;
-          return _service
-              .getKeywordIds(id, isTV: isTV)
-              .catchError((_) => <int>[]);
-        }),
-      );
-
-      for (var i = 0; i < seeds.length; i++) {
-        final r = seeds[i];
-        final rating = r['rating'] as int;
-        final base = rating == 3 ? 2.0 : 1.0; // Harika daha güçlü
-        final createdAt = r['created_at'] as int;
-        final days = (nowMs - createdAt) / 86400000.0;
-        final decay = exp(-0.00385 * days);
-        final w = base * decay;
-        for (final kid in kwLists[i]) {
-          vec[kid] = (vec[kid] ?? 0.0) + w;
-        }
-      }
-    } catch (e, st) {
-      debugPrint("Error calculating keyword vector: $e\n$st");
-      // Hata → boş vektör; keyword fazı sessizce atlanır (cold-start gibi).
-    }
-
-    _userKeywordVector = vec;
-    return vec;
   }
 
   Future<void> loadMore() async {
@@ -222,36 +167,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         }
       }
 
-      // Öneri Motoru: Kullanıcının 4 veya 5 yıldız (rating=3) verdiği yapımları tohum (seed) yap
-      final db = DatabaseHelper();
-      final ratings = await db.getRatings();
-      final highRated = ratings
-          .where((r) => r['rating'] == 3)
-          .toList()
-        ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
-      final seeds = highRated.take(3).toList();
-
-      final List<Movie> similarCandidates = [];
-      if (seeds.isNotEmpty) {
-        try {
-          final similarFutures = seeds.map((s) {
-            final int id = s['id'] as int;
-            final bool isTV = s['isTV'] as bool? ?? false;
-            return Future.wait([
-              _service.getRecommendations(id, isTV: isTV),
-              _service.getSimilar(id, isTV: isTV),
-            ]);
-          }).toList();
-
-          final similarResults = await Future.wait(similarFutures);
-          for (final res in similarResults) {
-            similarCandidates.addAll(res[0]); // recommendations
-            similarCandidates.addAll(res[1]); // similar
-          }
-        } catch (e, st) {
-          debugPrint("Failed to load similar/recommendation seeds: $e\n$st");
-        }
-      }
+      // Öneri Motoru: son "Harika"lar tohum yapılır; adaylar gerekçe/kaynak
+      // etiketiyle döner ("X'i beğendiğin için" rozeti + isabet telemetrisi).
+      final similarCandidates = await _engine.fetchSeedCandidates();
 
       // Check if state changed/reset during network call
       if (!mounted ||
@@ -289,14 +207,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
           userWeights,
           m.genreIds,
         );
-        final double rawScore = 0.7 * similarity + 0.3 * (m.voteAverage / 10.0);
-
-        // Sigmoid normalisation centering around 0.2 (cold start average)
-        // Map raw score to realistic display match percentage [40, 98]
-        final double z = (rawScore - 0.2) * 4.0;
-        final double sigmoid = 1.0 / (1.0 + exp(-z));
-        final int displayScore = (40 + (sigmoid * 58)).round();
-        m.personalizedMatchScore = displayScore.clamp(40, 98);
+        final double rawScore = RecommendationEngine.blend(
+          genreSim: similarity,
+          voteAverage: m.voteAverage,
+        );
+        m.personalizedMatchScore = RecommendationEngine.toDisplayScore(
+          rawScore,
+        );
+        m.recoSource ??= 'discover';
 
         // Add jitter (±0.08 noise) to dynamically change queue order each time
         final double jitteredScore =
@@ -314,7 +232,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       // (top-K) kullanıcının keyword zevk vektörüyle yeniden puanlayıp
       // sıralıyoruz. Böylece "seni tanıyor" hissi sıralama seviyesine çıkıyor,
       // maliyet ise K adet (cache'li) keyword isteğiyle sınırlı kalıyor.
-      final userKwVector = await _getUserKeywordVector();
+      final userKwVector = await _engine.buildUserKeywordVector();
       if (userKwVector.isNotEmpty && fresh.isNotEmpty) {
         const kRerank = 15;
         final topSlice = fresh.take(kRerank).toList();
@@ -345,24 +263,18 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
               kwLists[i],
             );
             // Harman: tür lider, keyword güçlü ikinci sinyal, TMDB puanı taban.
-            final double raw =
-                0.45 * genreSim + 0.25 * kwSim + 0.30 * (m.voteAverage / 10.0);
-
-            final double z = (raw - 0.2) * 4.0;
-            final double sigmoid = 1.0 / (1.0 + exp(-z));
-            m.personalizedMatchScore = (40 + (sigmoid * 58)).round().clamp(
-              40,
-              98,
+            final double raw = RecommendationEngine.blend(
+              genreSim: genreSim,
+              kwSim: kwSim,
+              voteAverage: m.voteAverage,
             );
+            m.personalizedMatchScore = RecommendationEngine.toDisplayScore(raw);
             reranked.add({'movie': m, 'score': raw});
           }
           reranked.sort(
             (a, b) => (b['score'] as double).compareTo(a['score'] as double),
           );
-          fresh = [
-            ...reranked.map((e) => e['movie'] as Movie),
-            ...rest,
-          ];
+          fresh = [...reranked.map((e) => e['movie'] as Movie), ...rest];
         }
       }
 
@@ -397,7 +309,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     // Save to local storage (SQLite)
     await PrefsService.saveRating(movie: movie, rating: rating);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
-    _userKeywordVector = null;
+    _engine.invalidateTasteVector();
+
+    // İsabet telemetrisi: hangi aday kaynağı gerçekten beğeni üretiyor?
+    // (rating>=2 = İyi/Harika → isabet). Best-effort; akışı bloklamaz.
+    PrefsService.recordRecoOutcome(
+      source: movie.recoSource ?? 'discover',
+      liked: rating >= 2,
+    ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
 
     if (mounted) {
       state = state.copyWith(ratedIds: newRatedIds, current: state.current + 1);
@@ -418,7 +337,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     // Delete the rating from DB
     await PrefsService.deleteRating(movie.id, movie.isTV);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
-    _userKeywordVector = null;
+    _engine.invalidateTasteVector();
 
     // Remove from ratedIds
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
@@ -434,8 +353,10 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 final swipeProvider =
     StateNotifierProvider.autoDispose<SwipeNotifier, SwipeState>((ref) {
       final service = ref.watch(tmdbServiceProvider);
+      final engine = ref.watch(recommendationEngineProvider);
       return SwipeNotifier(
         service,
+        engine,
         onRated: () {
           ref.read(statsProvider.notifier).load();
           final auth = ref.read(authProvider);

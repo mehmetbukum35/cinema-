@@ -76,7 +76,9 @@ class NotificationService {
 
       // Bildirime tıklanınca (uygulama arka plandayken)
       FirebaseMessaging.onMessageOpenedApp.listen(
-        (m) => _routeFromPayload("${m.data['type']}|${m.data['movie_id']}|${m.data['is_tv'] ?? m.data['isTV']}"),
+        (m) => _routeFromPayload(
+          "${m.data['type']}|${m.data['movie_id']}|${m.data['is_tv'] ?? m.data['isTV']}",
+        ),
       );
 
       // Soğuk başlatma: uygulama bir bildirime tıklanarak açıldıysa
@@ -85,7 +87,9 @@ class NotificationService {
         // Navigator'ın hazır olması için kısa bir gecikme
         Future.delayed(
           const Duration(milliseconds: 700),
-          () => _routeFromPayload("${initial.data['type']}|${initial.data['movie_id']}|${initial.data['is_tv'] ?? initial.data['isTV']}"),
+          () => _routeFromPayload(
+            "${initial.data['type']}|${initial.data['movie_id']}|${initial.data['is_tv'] ?? initial.data['isTV']}",
+          ),
         );
       }
 
@@ -140,7 +144,8 @@ class NotificationService {
     try {
       final type = m.data['type'] as String? ?? '';
       final movieId = m.data['movie_id']?.toString() ?? '';
-      final isTv = m.data['is_tv']?.toString() ?? m.data['isTV']?.toString() ?? '';
+      final isTv =
+          m.data['is_tv']?.toString() ?? m.data['isTV']?.toString() ?? '';
       await _local.show(
         n.hashCode,
         n.title,
@@ -175,7 +180,10 @@ class NotificationService {
       nav.push(
         MaterialPageRoute(builder: (_) => const SocialScreen(initialTab: 1)),
       );
-    } else if (type == 'movie_recommend' || type == 'recommendation' || type == 'movie_recommendation' || type == 'friend_recommend') {
+    } else if (type == 'movie_recommend' ||
+        type == 'recommendation' ||
+        type == 'movie_recommendation' ||
+        type == 'friend_recommend') {
       if (parts.length < 3) return;
       final movieId = int.tryParse(parts[1]) ?? 0;
       final isTV = parts[2] == '1' || parts[2] == 'true';
@@ -190,17 +198,13 @@ class NotificationService {
     final context = nav.overlay?.context;
     if (context == null) return;
 
-    final service = TmdbService(
-      language: 'tr-TR',
-      region: 'TR',
-    );
+    final service = TmdbService(language: 'tr-TR', region: 'TR');
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Colors.red),
-      ),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: Colors.red)),
     );
 
     try {

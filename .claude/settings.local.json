@@ -8,7 +8,11 @@
       "Bash(grep -c 'case $route' api/index.php)",
       "Bash(vendor/bin/phpunit --configuration phpunit.xml)",
       "Bash(flutter analyze *)",
-      "Bash(flutter test *)"
+      "Bash(flutter test *)",
+      "Bash(grep -n \"_section\\(\\\\s*$\\\\|Widget _section\\\\|MovieDetailSheet.show\\\\|void _openDetail\\\\|_open\\(\" lib/screens/browse_screen.dart)",
+      "Bash(dart format *)",
+      "Bash(flutter --version)",
+      "Bash(git add *)"
     ]
   }
 }

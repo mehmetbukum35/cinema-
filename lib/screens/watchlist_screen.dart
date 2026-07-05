@@ -40,7 +40,8 @@ class WatchlistScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          tooltip: AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
+          tooltip:
+              AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
           onPressed: () {
             HapticFeedback.lightImpact();
             Navigator.pop(context);
@@ -111,7 +112,10 @@ class WatchlistScreen extends ConsumerWidget {
           Icon(Icons.error_outline_rounded, color: c.red, size: 48),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context)?.get('an_error_occurred_while_loadin') ?? 'An error occurred while loading.',
+            AppLocalizations.of(
+                  context,
+                )?.get('an_error_occurred_while_loadin') ??
+                'An error occurred while loading.',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -192,172 +196,184 @@ class WatchlistScreen extends ConsumerWidget {
           parent: BouncingScrollPhysics(),
         ),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.64,
-      ),
-      itemCount: watchlist.length,
-      itemBuilder: (ctx, i) {
-        final m = watchlist[i];
-        return GestureDetector(
-          onTap: () => _openDetail(context, ref, m),
-          onLongPress: () => _confirmRemove(context, ref, m),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                m.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: m.posterUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (ctx, url) => const PulsingPlaceholder(),
-                        errorWidget: (ctx, url, err) =>
-                            const PulsingPlaceholder(),
-                      )
-                    : const PulsingPlaceholder(),
-                 Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Tooltip(
-                    message: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
-                    child: Semantics(
-                      button: true,
-                      label: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          MovieDetailSheet.confirmBlockMovie(
-                            context: context,
-                            ref: ref,
-                            movie: m,
-                            onBlocked: () {},
-                          );
-                        },
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              width: 1,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.64,
+        ),
+        itemCount: watchlist.length,
+        itemBuilder: (ctx, i) {
+          final m = watchlist[i];
+          return GestureDetector(
+            onTap: () => _openDetail(context, ref, m),
+            onLongPress: () => _confirmRemove(context, ref, m),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  m.posterUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: m.posterUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (ctx, url) => const PulsingPlaceholder(),
+                          errorWidget: (ctx, url, err) =>
+                              const PulsingPlaceholder(),
+                        )
+                      : const PulsingPlaceholder(),
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Tooltip(
+                      message:
+                          AppLocalizations.of(
+                            context,
+                          )?.get('block_and_hide_title') ??
+                          'Block and Hide Title',
+                      child: Semantics(
+                        button: true,
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('block_and_hide_title') ??
+                            'Block and Hide Title',
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            MovieDetailSheet.confirmBlockMovie(
+                              context: context,
+                              ref: ref,
+                              movie: m,
+                              onBlocked: () {},
+                            );
+                          },
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                width: 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.visibility_off_rounded,
+                              color: Colors.white,
+                              size: 11,
                             ),
                           ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.visibility_off_rounded,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: const [0.5, 1.0],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.88),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          m.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 11,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: const [0.5, 1.0],
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.88),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        m.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: c.gold, size: 13.5),
-                          const SizedBox(width: 2),
-                          Text(
-                            m.voteAverage.toStringAsFixed(1),
-                            style: TextStyle(
-                              color: c.gold,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.star_rounded, color: c.gold, size: 13.5),
+                            const SizedBox(width: 2),
+                            Text(
+                              m.voteAverage.toStringAsFixed(1),
+                              style: TextStyle(
+                                color: c.gold,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            m.isTV
-                                ? (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_tv') ??
-                                      '')
-                                : (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_movie') ??
-                                      ''),
-                            style: const TextStyle(
+                            const SizedBox(width: 6),
+                            Text(
+                              m.isTV
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_tv') ??
+                                        '')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_movie') ??
+                                        ''),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Tooltip(
+                      message:
+                          AppLocalizations.of(context)?.get('remove') ??
+                          'Remove',
+                      child: Semantics(
+                        button: true,
+                        label:
+                            AppLocalizations.of(context)?.get('remove') ??
+                            'Remove',
+                        child: GestureDetector(
+                          onTap: () => _confirmRemove(context, ref, m),
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withValues(alpha: 0.65),
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
                               color: Colors.white70,
-                              fontSize: 12.5,
+                              size: 16,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Tooltip(
-                    message: AppLocalizations.of(context)?.get('remove') ?? 'Remove',
-                    child: Semantics(
-                      button: true,
-                      label: AppLocalizations.of(context)?.get('remove') ?? 'Remove',
-                      child: GestureDetector(
-                        onTap: () => _confirmRemove(context, ref, m),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withValues(alpha: 0.65),
-                          ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.white70,
-                            size: 16,
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
       ),
     );
   }
@@ -383,7 +399,8 @@ class WatchlistScreen extends ConsumerWidget {
           ),
         ),
         content: Text(
-          AppLocalizations.of(context)?.get('remove_from_watchlist') ?? 'Remove from watchlist?',
+          AppLocalizations.of(context)?.get('remove_from_watchlist') ??
+              'Remove from watchlist?',
           style: TextStyle(color: c.dim, fontSize: 13),
         ),
         actions: [
@@ -417,7 +434,10 @@ class WatchlistScreen extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.get('title_removed_from_watchlist').replaceAll('{}', m.title) ?? '${m.title} removed from watchlist.',
+            AppLocalizations.of(context)
+                    ?.get('title_removed_from_watchlist')
+                    .replaceAll('{}', m.title) ??
+                '${m.title} removed from watchlist.',
           ),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(

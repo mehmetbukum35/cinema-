@@ -44,7 +44,8 @@ class _CinematicBackgroundState extends State<CinematicBackground>
   @override
   Widget build(BuildContext context) {
     final pal = context.c;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final shouldAnimate = widget.animate && !reduceMotion;
 
     if (shouldAnimate) {

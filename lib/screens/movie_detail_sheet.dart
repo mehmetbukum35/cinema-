@@ -82,11 +82,7 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => RecommendSheet(
-        movie: movie,
-        friends: friends,
-        ref: ref,
-      ),
+      builder: (_) => RecommendSheet(movie: movie, friends: friends, ref: ref),
     );
   }
 
@@ -97,7 +93,7 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
     required VoidCallback onBlocked,
   }) {
     final c = context.c;
-    
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -106,10 +102,15 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           AppLocalizations.of(context)?.get('hide_title') ?? 'Hide Title',
-          style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: c.ink,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
-          AppLocalizations.of(context)?.get('are_you_sure_you_want_to_block') ?? 'Are you sure you want to block this title and permanently hide it from all lists?',
+          AppLocalizations.of(context)?.get('are_you_sure_you_want_to_block') ??
+              'Are you sure you want to block this title and permanently hide it from all lists?',
           style: TextStyle(color: c.dim, fontSize: 14),
         ),
         actions: [
@@ -123,20 +124,23 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx); // Close dialog
-              
+
               await PrefsService.blockMovie(movie.id, movie.isTV);
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      AppLocalizations.of(context)?.get('title_hidden_and_removed_from_') ?? 'Title hidden and removed from lists.',
+                      AppLocalizations.of(
+                            context,
+                          )?.get('title_hidden_and_removed_from_') ??
+                          'Title hidden and removed from lists.',
                     ),
                     backgroundColor: c.green,
                   ),
                 );
               }
-              
+
               ref.invalidate(watchlistProvider);
               ref.invalidate(statsProvider);
               onBlocked();
@@ -303,7 +307,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.get('title_removed_from_watchlist').replaceAll('{}', movie.title) ?? '${movie.title} removed from watchlist.',
+            AppLocalizations.of(context)
+                    ?.get('title_removed_from_watchlist')
+                    .replaceAll('{}', movie.title) ??
+                '${movie.title} removed from watchlist.',
           ),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
@@ -486,7 +493,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           const SizedBox(height: 16),
                           _discoverButton(context, movie),
                           const SizedBox(height: 8),
-                          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+                          SizedBox(
+                            height: MediaQuery.of(context).viewInsets.bottom,
+                          ),
                         ],
                       ),
                     ),
@@ -516,7 +525,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     ? CachedNetworkImage(
                         imageUrl: movie.posterUrl,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => ColoredBox(color: c.card),
+                        placeholder: (context, url) =>
+                            ColoredBox(color: c.card),
                         errorWidget: (context, url, error) =>
                             ColoredBox(color: c.card),
                       )
@@ -527,7 +537,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               top: 6,
               left: 6,
               child: Tooltip(
-                message: AppLocalizations.of(context)?.get('block_and_hide_title') ?? 'Block and Hide Title',
+                message:
+                    AppLocalizations.of(context)?.get('block_and_hide_title') ??
+                    'Block and Hide Title',
                 child: SpringButton(
                   onTap: _confirmBlockMovie,
                   child: Container(
@@ -555,7 +567,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               top: 6,
               right: 6,
               child: Tooltip(
-                message: AppLocalizations.of(context)?.get('recommend_to_friend') ?? 'Recommend to Friend',
+                message:
+                    AppLocalizations.of(context)?.get('recommend_to_friend') ??
+                    'Recommend to Friend',
                 child: SpringButton(
                   onTap: _openRecommendSheet,
                   child: Container(
@@ -597,11 +611,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  _synergyBadge(c),
-                ],
-              ),
+              Row(children: [_synergyBadge(c)]),
               if (movie.year.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(movie.year, style: TextStyle(color: c.dim, fontSize: 13)),
@@ -679,8 +689,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   Widget _actionButtons(Movie movie, bool inWatchlist) {
     final c = context.c;
     final watchlistLabel = inWatchlist
-        ? (AppLocalizations.of(context)?.get('detail_watchlist_remove') ?? 'Listeden Çıkar')
-        : (AppLocalizations.of(context)?.get('detail_watchlist_add') ?? 'İzleme Listesine Ekle');
+        ? (AppLocalizations.of(context)?.get('detail_watchlist_remove') ??
+              'Listeden Çıkar')
+        : (AppLocalizations.of(context)?.get('detail_watchlist_add') ??
+              'İzleme Listesine Ekle');
 
     return Row(
       children: [
@@ -747,7 +759,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             child: SpringButton(
               onTap: () {
                 final typeLabel = widget.movie.isTV
-                    ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
+                    ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
+                          'Dizi')
                     : (AppLocalizations.of(context)?.get('onboarding_movie') ??
                           'Film');
                 final shareTemplate =
@@ -776,10 +789,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         if (_trailerKey != null) ...[
           const SizedBox(width: 10),
           Tooltip(
-            message: AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer',
+            message:
+                AppLocalizations.of(context)?.get('detail_trailer') ??
+                'Trailer',
             child: Semantics(
               button: true,
-              label: AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer',
+              label:
+                  AppLocalizations.of(context)?.get('detail_trailer') ??
+                  'Trailer',
               child: SpringButton(
                 onTap: _openTrailer,
                 child: Container(
@@ -1042,7 +1059,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         ),
         alignment: Alignment.center,
         child: Text(
-          AppLocalizations.of(context)?.get('recommend_similar') ?? 'Recommend Similar',
+          AppLocalizations.of(context)?.get('recommend_similar') ??
+              'Recommend Similar',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 15,
@@ -1283,12 +1301,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-
-
   int _calculateSynergyScore() {
     final matchVal = widget.movie.matchScore;
     final tmdbVal = (widget.movie.voteAverage * 10).clamp(0, 100).toInt();
-    
+
     if (_communityScore != null && _communityScore!['enough'] == true) {
       final commVal = (_communityScore!['liked_percent'] as num?)?.toInt() ?? 0;
       return (matchVal * 0.4 + commVal * 0.3 + tmdbVal * 0.3).round();
@@ -1299,7 +1315,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   Widget _synergyBadge(ThemePalette c) {
     final synergyScore = _calculateSynergyScore();
-    
+
     return SpringButton(
       onTap: () => _showScoreBreakdown(context, c, synergyScore),
       child: Container(
@@ -1307,10 +1323,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         decoration: BoxDecoration(
           color: c.green.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: c.green.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          border: Border.all(color: c.green.withValues(alpha: 0.3), width: 1),
           boxShadow: CinemaShadows.glow(c.green, strength: 0.08),
         ),
         child: Row(
@@ -1319,7 +1332,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             Icon(Icons.bolt_rounded, color: c.green, size: 14),
             const SizedBox(width: 4),
             Text(
-              AppLocalizations.of(context)?.get('synergy_score_match').replaceAll('{}', '$synergyScore') ?? '$synergyScore% Match',
+              AppLocalizations.of(context)
+                      ?.get('synergy_score_match')
+                      .replaceAll('{}', '$synergyScore') ??
+                  '$synergyScore% Match',
               style: TextStyle(
                 color: c.green,
                 fontSize: 12,
@@ -1327,14 +1343,22 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.info_outline_rounded, color: c.green.withValues(alpha: 0.7), size: 12),
+            Icon(
+              Icons.info_outline_rounded,
+              color: c.green.withValues(alpha: 0.7),
+              size: 12,
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showScoreBreakdown(BuildContext context, ThemePalette c, int synergyScore) {
+  void _showScoreBreakdown(
+    BuildContext context,
+    ThemePalette c,
+    int synergyScore,
+  ) {
     final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     showDialog(
       context: context,
@@ -1344,8 +1368,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Center(
           child: Text(
-            AppLocalizations.of(context)?.get('match_details') ?? 'Match Details',
-            style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.w800),
+            AppLocalizations.of(context)?.get('match_details') ??
+                'Match Details',
+            style: TextStyle(
+              color: c.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         content: Column(
@@ -1359,7 +1388,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: c.green.withValues(alpha: 0.1),
-                border: Border.all(color: c.green.withValues(alpha: 0.3), width: 2),
+                border: Border.all(
+                  color: c.green.withValues(alpha: 0.3),
+                  width: 2,
+                ),
               ),
               alignment: Alignment.center,
               child: Column(
@@ -1374,7 +1406,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     ),
                   ),
                   Text(
-                    AppLocalizations.of(context)?.get('match_button') ?? 'Match',
+                    AppLocalizations.of(context)?.get('match_button') ??
+                        'Match',
                     style: TextStyle(
                       color: c.green,
                       fontSize: 10,
@@ -1386,7 +1419,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             ),
             const SizedBox(height: 24),
             _buildDialogRow(
-              AppLocalizations.of(context)?.get('personal_taste_match') ?? 'Personal Taste Match',
+              AppLocalizations.of(context)?.get('personal_taste_match') ??
+                  'Personal Taste Match',
               '%${widget.movie.matchScore}',
               widget.movie.matchScore / 100.0,
               c.green,
@@ -1399,12 +1433,18 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             ),
             if (_communityScore != null && _communityScore!['total'] > 0)
               _buildDialogRow(
-                AppLocalizations.of(context)?.get('cinema_member_score') ?? 'cinema+ Member Score',
+                AppLocalizations.of(context)?.get('cinema_member_score') ??
+                    'cinema+ Member Score',
                 _communityScore!['enough'] == true
                     ? '%${_communityScore!['liked_percent']}'
-                    : (isTr ? '${_communityScore!['total']} oy' : '${_communityScore!['total']} votes'),
+                    : (isTr
+                          ? '${_communityScore!['total']} oy'
+                          : '${_communityScore!['total']} votes'),
                 _communityScore!['enough'] == true
-                    ? ((_communityScore!['liked_percent'] as num?)?.toDouble() ?? 0.0) / 100.0
+                    ? ((_communityScore!['liked_percent'] as num?)
+                                  ?.toDouble() ??
+                              0.0) /
+                          100.0
                     : 0.0,
                 c.red,
               ),
@@ -1418,12 +1458,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               ),
               child: Text(
                 isTr
-                    ? (_communityScore != null && _communityScore!['enough'] == true)
-                        ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
-                        : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
-                    : (_communityScore != null && _communityScore!['enough'] == true)
-                        ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
-                        : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).',
+                    ? (_communityScore != null &&
+                              _communityScore!['enough'] == true)
+                          ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
+                          : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
+                    : (_communityScore != null &&
+                          _communityScore!['enough'] == true)
+                    ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
+                    : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).',
                 style: TextStyle(color: c.dim, fontSize: 11, height: 1.4),
               ),
             ),
@@ -1442,7 +1484,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-  Widget _buildDialogRow(String label, String value, double fraction, Color color) {
+  Widget _buildDialogRow(
+    String label,
+    String value,
+    double fraction,
+    Color color,
+  ) {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1510,18 +1557,46 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _ratingButton(0, c.rBerbat, AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful', c)),
+            Expanded(
+              child: _ratingButton(
+                0,
+                c.rBerbat,
+                AppLocalizations.of(context)?.get('recap_stat_awful') ??
+                    'Awful',
+                c,
+              ),
+            ),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(1, c.rEh, AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh', c)),
+            Expanded(
+              child: _ratingButton(
+                1,
+                c.rEh,
+                AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh',
+                c,
+              ),
+            ),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(2, c.rIyi, AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good', c)),
+            Expanded(
+              child: _ratingButton(
+                2,
+                c.rIyi,
+                AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good',
+                c,
+              ),
+            ),
             const SizedBox(width: 6),
-            Expanded(child: _ratingButton(3, c.rHarika, AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing', c)),
+            Expanded(
+              child: _ratingButton(
+                3,
+                c.rHarika,
+                AppLocalizations.of(context)?.get('recap_stat_amazing') ??
+                    'Amazing',
+                c,
+              ),
+            ),
           ],
         ),
-        if (_currentRating != null) ...[
-          _commentSection(c),
-        ],
+        if (_currentRating != null) ...[_commentSection(c)],
       ],
     );
   }
@@ -1549,7 +1624,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                 maxLines: 3,
                 style: TextStyle(color: c.ink, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: tr?.get('review_comment_hint') ?? 'Düşüncelerini paylaş...',
+                  hintText:
+                      tr?.get('review_comment_hint') ??
+                      'Düşüncelerini paylaş...',
                   hintStyle: TextStyle(color: c.dim, fontSize: 13),
                   border: InputBorder.none,
                   counterText: '',
@@ -1568,7 +1645,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: _isSpoiler
                             ? c.rBerbat.withValues(alpha: 0.15)
@@ -1581,7 +1661,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                       child: Row(
                         children: [
                           Icon(
-                            _isSpoiler ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                            _isSpoiler
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_outline_rounded,
                             size: 14,
                             color: _isSpoiler ? c.rBerbat : c.dim,
                           ),
@@ -1606,63 +1688,91 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
-                        onPressed: _justSavedComment ? null : () async {
-                          HapticFeedback.mediumImpact();
-                          FocusScope.of(context).unfocus();
-                          if (_currentRating != null) {
-                            try {
-                              await PrefsService.saveRating(
-                                movie: widget.movie,
-                                rating: _currentRating!,
-                                comment: _commentController.text,
-                                isSpoiler: _isSpoiler ? 1 : 0,
-                              );
-                              ref.invalidate(statsProvider);
-                              ref.read(syncServiceProvider).sync().catchError((_) => {});
-                              ref.read(socialProvider.notifier).loadActivityFeed().catchError((_) => {});
-                              
-                              if (mounted) {
-                                setState(() {
-                                  _justSavedComment = true;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(context)?.get('review_saved_successfully') ?? 'Review saved successfully',
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
-                                    backgroundColor: c.red,
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                                Future.delayed(const Duration(seconds: 2), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      _justSavedComment = false;
-                                    });
+                        onPressed: _justSavedComment
+                            ? null
+                            : () async {
+                                HapticFeedback.mediumImpact();
+                                FocusScope.of(context).unfocus();
+                                if (_currentRating != null) {
+                                  try {
+                                    await PrefsService.saveRating(
+                                      movie: widget.movie,
+                                      rating: _currentRating!,
+                                      comment: _commentController.text,
+                                      isSpoiler: _isSpoiler ? 1 : 0,
+                                    );
+                                    ref.invalidate(statsProvider);
+                                    ref
+                                        .read(syncServiceProvider)
+                                        .sync()
+                                        .catchError((_) => {});
+                                    ref
+                                        .read(socialProvider.notifier)
+                                        .loadActivityFeed()
+                                        .catchError((_) => {});
+
+                                    if (mounted) {
+                                      setState(() {
+                                        _justSavedComment = true;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            AppLocalizations.of(context)?.get(
+                                                  'review_saved_successfully',
+                                                ) ??
+                                                'Review saved successfully',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          backgroundColor: c.red,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                      Future.delayed(
+                                        const Duration(seconds: 2),
+                                        () {
+                                          if (mounted) {
+                                            setState(() {
+                                              _justSavedComment = false;
+                                            });
+                                          }
+                                        },
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            AppLocalizations.of(context)
+                                                    ?.get('error_occurred_msg')
+                                                    .replaceAll('{}', '$e') ??
+                                                'Error: $e',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          backgroundColor: c.red,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
                                   }
-                                });
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(context)?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Error: $e',
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
-                                    backgroundColor: c.red,
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        },
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _justSavedComment ? c.green : c.red,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(
@@ -1671,9 +1781,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                         ),
                         child: Text(
                           _justSavedComment
-                              ? (AppLocalizations.of(context)?.get('saved') ?? 'Saved ✔')
+                              ? (AppLocalizations.of(context)?.get('saved') ??
+                                    'Saved ✔')
                               : (tr?.get('review_save') ?? 'Kaydet'),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -1686,8 +1800,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       ],
     );
   }
-
-
 
   Widget _friendsReviewsSection(ThemePalette c) {
     final tr = AppLocalizations.of(context);
@@ -1705,9 +1817,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         child: Center(
           child: Text(
             hasUserRated
-                ? (tr?.get('review_no_friends') ?? 'Arkadaşlarından henüz yorum yok')
+                ? (tr?.get('review_no_friends') ??
+                      'Arkadaşlarından henüz yorum yok')
                 : (tr?.get('review_empty_first') ?? 'İlk yorumu sen bırak'),
-            style: TextStyle(color: c.dim, fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: c.dim,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -1773,7 +1890,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           label,
           style: TextStyle(
             color: active
-                ? ((color == c.rEh || color == c.rIyi || color == c.rHarika) ? Colors.black87 : Colors.white)
+                ? ((color == c.rEh || color == c.rIyi || color == c.rHarika)
+                      ? Colors.black87
+                      : Colors.white)
                 : c.dim,
             fontSize: 11,
             fontWeight: active ? FontWeight.w800 : FontWeight.w500,
@@ -1783,4 +1902,3 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 }
-

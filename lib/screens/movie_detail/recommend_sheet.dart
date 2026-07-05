@@ -115,10 +115,7 @@ class RecommendSheetState extends State<RecommendSheet> {
                   ),
                   title: Text(
                     name.toString(),
-                    style: TextStyle(
-                      color: c.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: c.ink, fontWeight: FontWeight.w700),
                   ),
                   trailing: isSending
                       ? SizedBox(

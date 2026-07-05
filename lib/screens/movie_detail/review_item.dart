@@ -6,10 +6,7 @@ import 'spoiler_comment.dart';
 class ReviewItem extends StatelessWidget {
   final dynamic rev;
 
-  const ReviewItem({
-    super.key,
-    required this.rev,
-  });
+  const ReviewItem({super.key, required this.rev});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +60,9 @@ class ReviewItem extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
+                      reviewerName.isNotEmpty
+                          ? reviewerName[0].toUpperCase()
+                          : 'U',
                       style: TextStyle(
                         color: c.ink,
                         fontSize: 9,
@@ -83,16 +82,11 @@ class ReviewItem extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
                   color: badgeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: badgeColor.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

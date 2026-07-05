@@ -377,10 +377,10 @@ class TmdbService {
         params: {'api_key': _apiKey, 'language': _language},
       );
       if (trJson != null) {
-        final results = (((trJson as Map<String, dynamic>)['results']
-                    as List<dynamic>?) ??
-                [])
-            .cast<Map<String, dynamic>>();
+        final results =
+            (((trJson as Map<String, dynamic>)['results'] as List<dynamic>?) ??
+                    [])
+                .cast<Map<String, dynamic>>();
         final key = pickKey(results);
         if (key != null) return key;
       }
@@ -391,10 +391,10 @@ class TmdbService {
         params: {'api_key': _apiKey, 'language': 'en-US'},
       );
       if (enJson != null) {
-        final results = (((enJson as Map<String, dynamic>)['results']
-                    as List<dynamic>?) ??
-                [])
-            .cast<Map<String, dynamic>>();
+        final results =
+            (((enJson as Map<String, dynamic>)['results'] as List<dynamic>?) ??
+                    [])
+                .cast<Map<String, dynamic>>();
         return pickKey(results);
       }
       return null;
@@ -461,15 +461,11 @@ class TmdbService {
 
   Future<List<Movie>> getTrendingPaged({required bool isTV, int page = 1}) {
     final path = isTV ? '/3/trending/tv/week' : '/3/trending/movie/week';
-    return _fetchList(
-      path,
-      {
-        'api_key': _apiKey,
-        'language': _language,
-        'page': page.toString(),
-      },
-      isTV: isTV,
-    );
+    return _fetchList(path, {
+      'api_key': _apiKey,
+      'language': _language,
+      'page': page.toString(),
+    }, isTV: isTV);
   }
 
   // ─── Upcoming movies ─────────────────────────────────────────────────────────
@@ -668,7 +664,8 @@ class TmdbService {
     required Map<String, String> params,
     bool isCacheable = true,
   }) async {
-    final cacheKey = '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    final cacheKey =
+        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
 
     if (isCacheable) {
       try {
@@ -679,7 +676,8 @@ class TmdbService {
           final parsedJson = jsonDecode(payload);
 
           final ttl = _getTtlForPath(path);
-          final isStale = DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
+          final isStale =
+              DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
 
           if (isStale) {
             _performBackgroundRawReload(path, params, cacheKey);
@@ -698,7 +696,11 @@ class TmdbService {
       final parsedJson = jsonDecode(response.body);
 
       if (isCacheable) {
-        await DatabaseHelper().saveTmdbCache(cacheKey, response.body, _language);
+        await DatabaseHelper().saveTmdbCache(
+          cacheKey,
+          response.body,
+          _language,
+        );
       }
       return parsedJson;
     } catch (e) {
@@ -715,17 +717,23 @@ class TmdbService {
     Map<String, String> params,
     String cacheKey,
   ) {
-    unawaited(Future(() async {
-      try {
-        final uri = _tmdbUri(path, params);
-        final response = await _client.get(uri).timeout(_kTimeout);
-        if (response.statusCode == 200) {
-          await DatabaseHelper().saveTmdbCache(cacheKey, response.body, _language);
+    unawaited(
+      Future(() async {
+        try {
+          final uri = _tmdbUri(path, params);
+          final response = await _client.get(uri).timeout(_kTimeout);
+          if (response.statusCode == 200) {
+            await DatabaseHelper().saveTmdbCache(
+              cacheKey,
+              response.body,
+              _language,
+            );
+          }
+        } catch (e) {
+          debugPrint('Background raw SWR reload failed for key $cacheKey: $e');
         }
-      } catch (e) {
-        debugPrint('Background raw SWR reload failed for key $cacheKey: $e');
-      }
-    }));
+      }),
+    );
   }
 
   void _performBackgroundReload(
@@ -734,20 +742,26 @@ class TmdbService {
     bool isTV,
     String cacheKey,
   ) {
-    unawaited(Future(() async {
-      try {
-        final uri = _tmdbUri(path, params);
-        final response = await _client.get(uri).timeout(_kTimeout);
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final results = (data['results'] as List<dynamic>?) ?? [];
-          final rawResults = results.cast<Map<String, dynamic>>();
-          await DatabaseHelper().saveTmdbCache(cacheKey, jsonEncode(rawResults), _language);
+    unawaited(
+      Future(() async {
+        try {
+          final uri = _tmdbUri(path, params);
+          final response = await _client.get(uri).timeout(_kTimeout);
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final results = (data['results'] as List<dynamic>?) ?? [];
+            final rawResults = results.cast<Map<String, dynamic>>();
+            await DatabaseHelper().saveTmdbCache(
+              cacheKey,
+              jsonEncode(rawResults),
+              _language,
+            );
+          }
+        } catch (e) {
+          debugPrint('Background SWR reload failed for key $cacheKey: $e');
         }
-      } catch (e) {
-        debugPrint('Background SWR reload failed for key $cacheKey: $e');
-      }
-    }));
+      }),
+    );
   }
 
   void _performBackgroundReloadMixed(
@@ -755,34 +769,41 @@ class TmdbService {
     Map<String, String> params,
     String cacheKey,
   ) {
-    unawaited(Future(() async {
-      try {
-        final uri = _tmdbUri(path, params);
-        final response = await _client.get(uri).timeout(_kTimeout);
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final results = ((data['results'] as List<dynamic>?) ?? [])
-              .cast<Map<String, dynamic>>();
-          final cacheableData = results.where((e) {
-            final t = e['media_type'] as String?;
-            return t == 'movie' || t == 'tv';
-          }).toList();
-          await DatabaseHelper().saveTmdbCache(cacheKey, jsonEncode(cacheableData), _language);
+    unawaited(
+      Future(() async {
+        try {
+          final uri = _tmdbUri(path, params);
+          final response = await _client.get(uri).timeout(_kTimeout);
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final results = ((data['results'] as List<dynamic>?) ?? [])
+                .cast<Map<String, dynamic>>();
+            final cacheableData = results.where((e) {
+              final t = e['media_type'] as String?;
+              return t == 'movie' || t == 'tv';
+            }).toList();
+            await DatabaseHelper().saveTmdbCache(
+              cacheKey,
+              jsonEncode(cacheableData),
+              _language,
+            );
+          }
+        } catch (e) {
+          debugPrint('Background SWR reload failed for key $cacheKey: $e');
         }
-      } catch (e) {
-        debugPrint('Background SWR reload failed for key $cacheKey: $e');
-      }
-    }));
+      }),
+    );
   }
 
   Future<List<Movie>> _fetchListMixed(
     String path,
     Map<String, String> params,
   ) async {
-    final isCacheable = !path.contains('/search/') && 
-                        !path.contains('/social/');
+    final isCacheable =
+        !path.contains('/search/') && !path.contains('/social/');
 
-    final cacheKey = '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    final cacheKey =
+        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
 
     if (isCacheable) {
       try {
@@ -791,15 +812,14 @@ class TmdbService {
           final payload = cacheRecord['payload'] as String;
           final fetchedAt = cacheRecord['fetched_at'] as int;
           final dynamic listData = jsonDecode(payload);
-          final cachedList = (listData as List<dynamic>)
-              .map((e) {
-                final isTV = (e['media_type'] as String?) == 'tv';
-                return Movie.fromJson(e as Map<String, dynamic>, isTV: isTV);
-              })
-              .toList();
+          final cachedList = (listData as List<dynamic>).map((e) {
+            final isTV = (e['media_type'] as String?) == 'tv';
+            return Movie.fromJson(e as Map<String, dynamic>, isTV: isTV);
+          }).toList();
 
           final ttl = _getTtlForPath(path);
-          final isStale = DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
+          final isStale =
+              DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
 
           if (isStale) {
             _performBackgroundReloadMixed(path, params, cacheKey);
@@ -835,7 +855,11 @@ class TmdbService {
           final t = e['media_type'] as String?;
           return t == 'movie' || t == 'tv';
         }).toList();
-        await DatabaseHelper().saveTmdbCache(cacheKey, jsonEncode(cacheableData), _language);
+        await DatabaseHelper().saveTmdbCache(
+          cacheKey,
+          jsonEncode(cacheableData),
+          _language,
+        );
       }
     } catch (e) {
       if (e is TmdbApiException) rethrow;
@@ -853,10 +877,11 @@ class TmdbService {
     Map<String, String> params, {
     required bool isTV,
   }) async {
-    final isCacheable = !path.contains('/search/') && 
-                        !path.contains('/social/');
+    final isCacheable =
+        !path.contains('/search/') && !path.contains('/social/');
 
-    final cacheKey = '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    final cacheKey =
+        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
 
     if (isCacheable) {
       try {
@@ -870,7 +895,8 @@ class TmdbService {
               .toList();
 
           final ttl = _getTtlForPath(path);
-          final isStale = DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
+          final isStale =
+              DateTime.now().millisecondsSinceEpoch - fetchedAt > ttl;
 
           if (isStale) {
             _performBackgroundReload(path, params, isTV, cacheKey);
@@ -895,7 +921,11 @@ class TmdbService {
 
       if (isCacheable) {
         final rawResults = results.cast<Map<String, dynamic>>();
-        await DatabaseHelper().saveTmdbCache(cacheKey, jsonEncode(rawResults), _language);
+        await DatabaseHelper().saveTmdbCache(
+          cacheKey,
+          jsonEncode(rawResults),
+          _language,
+        );
       }
     } catch (e) {
       if (e is TmdbApiException) rethrow;
@@ -1028,9 +1058,10 @@ class TmdbService {
         }).toList();
       }
     } catch (e, st) {
-      debugPrint("Error loading blocked movies from SharedPreferences: $e\n$st");
+      debugPrint(
+        "Error loading blocked movies from SharedPreferences: $e\n$st",
+      );
     }
-
 
     const int kMinVoteCountDefault = 15;
     const int kMinVoteCountSearch = 3;
@@ -1072,9 +1103,6 @@ class TmdbService {
         msg = response.body;
       }
     }
-    throw TmdbApiException(
-      msg,
-      statusCode: response.statusCode,
-    );
+    throw TmdbApiException(msg, statusCode: response.statusCode);
   }
 }

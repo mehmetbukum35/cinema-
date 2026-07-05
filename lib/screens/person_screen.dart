@@ -99,7 +99,8 @@ class _PersonScreenState extends State<PersonScreen> {
           Builder(
             builder: (context) {
               return Text(
-                AppLocalizations.of(context)?.get('filmography') ?? 'FILMOGRAPHY',
+                AppLocalizations.of(context)?.get('filmography') ??
+                    'FILMOGRAPHY',
                 style: TextStyle(
                   color: c.dim,
                   fontSize: 11,

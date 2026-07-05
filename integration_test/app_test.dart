@@ -8,7 +8,6 @@ import 'package:ne_izlesem/main.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 
-
 // Mock Secure Storage method handler
 void setupSecureStorageMock() {
   const channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
@@ -16,27 +15,27 @@ void setupSecureStorageMock() {
 
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-    switch (methodCall.method) {
-      case 'write':
-        final args = methodCall.arguments as Map;
-        values[args['key'] as String] = args['value'] as String;
-        return null;
-      case 'read':
-        final args = methodCall.arguments as Map;
-        return values[args['key'] as String];
-      case 'delete':
-        final args = methodCall.arguments as Map;
-        values.remove(args['key'] as String);
-        return null;
-      case 'deleteAll':
-        values.clear();
-        return null;
-      case 'readAll':
-        return values;
-      default:
-        return null;
-    }
-  });
+        switch (methodCall.method) {
+          case 'write':
+            final args = methodCall.arguments as Map;
+            values[args['key'] as String] = args['value'] as String;
+            return null;
+          case 'read':
+            final args = methodCall.arguments as Map;
+            return values[args['key'] as String];
+          case 'delete':
+            final args = methodCall.arguments as Map;
+            values.remove(args['key'] as String);
+            return null;
+          case 'deleteAll':
+            values.clear();
+            return null;
+          case 'readAll':
+            return values;
+          default:
+            return null;
+        }
+      });
 }
 
 class MockIntegrationApiService implements ApiService {
@@ -64,10 +63,7 @@ class MockIntegrationApiService implements ApiService {
     'server_time': 5000,
   };
 
-  Map<String, dynamic> pushResponse = {
-    'applied': true,
-    'server_time': 6000,
-  };
+  Map<String, dynamic> pushResponse = {'applied': true, 'server_time': 6000};
 
   @override
   Future<Map<String, dynamic>> login({
@@ -111,9 +107,7 @@ void main() {
         // 1. Start App with overridden ApiService
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [
-              apiServiceProvider.overrideWithValue(mockApi),
-            ],
+            overrides: [apiServiceProvider.overrideWithValue(mockApi)],
             child: const NeIzlesemApp(showOnboarding: false),
           ),
         );
@@ -137,7 +131,7 @@ void main() {
 
         // Verify we are on Profile and see Cloud Sync section
         expect(find.text('Cloud Sync'), findsOneWidget);
-        
+
         // 3. Click "Sign In" button to open AuthSheet
         final signInBtnFinder = find.text('Sign In');
         expect(signInBtnFinder, findsOneWidget);
@@ -149,7 +143,9 @@ void main() {
 
         // 4. Fill in Email and Password fields
         final emailFieldFinder = find.byKey(const ValueKey('auth_email_field'));
-        final passwordFieldFinder = find.byKey(const ValueKey('auth_password_field'));
+        final passwordFieldFinder = find.byKey(
+          const ValueKey('auth_password_field'),
+        );
         expect(emailFieldFinder, findsOneWidget);
         expect(passwordFieldFinder, findsOneWidget);
 
@@ -173,7 +169,7 @@ void main() {
         final syncNowBtnFinder = find.text('Sync Now');
         expect(syncNowBtnFinder, findsOneWidget);
         await tester.tap(syncNowBtnFinder);
-        
+
         // Let sync finish and SnackBar settle
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 1000));

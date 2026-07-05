@@ -365,8 +365,8 @@ void main() {
             'release_date': '2026-01-02',
             'poster_path': '/path2.jpg',
             'vote_count': 100,
-          }
-        ]
+          },
+        ],
       };
 
       final client = MockClient((request) async {
@@ -380,23 +380,61 @@ void main() {
       expect(results[0].title, 'Safe Movie');
     });
 
-    test('sanitizeListForTesting should filter out low quality items when forced', () async {
-      final list = [
-        Movie(id: 1, title: 'No Poster', voteCount: 100, overview: '', voteAverage: 7.0), // Filtered (no poster)
-        Movie(id: 2, title: 'Low Votes', posterPath: '/p.jpg', voteCount: 5, overview: '', voteAverage: 7.0), // Filtered in default, kept in search
-        Movie(id: 3, title: 'High Quality Movie', posterPath: '/p.jpg', voteCount: 100, overview: '', voteAverage: 7.0), // Kept
-        Movie(id: 4, title: 'Search Border Movie', posterPath: '/p.jpg', voteCount: 4, overview: '', voteAverage: 7.0), // Kept in search, filtered in default
-      ];
+    test(
+      'sanitizeListForTesting should filter out low quality items when forced',
+      () async {
+        final list = [
+          Movie(
+            id: 1,
+            title: 'No Poster',
+            voteCount: 100,
+            overview: '',
+            voteAverage: 7.0,
+          ), // Filtered (no poster)
+          Movie(
+            id: 2,
+            title: 'Low Votes',
+            posterPath: '/p.jpg',
+            voteCount: 5,
+            overview: '',
+            voteAverage: 7.0,
+          ), // Filtered in default, kept in search
+          Movie(
+            id: 3,
+            title: 'High Quality Movie',
+            posterPath: '/p.jpg',
+            voteCount: 100,
+            overview: '',
+            voteAverage: 7.0,
+          ), // Kept
+          Movie(
+            id: 4,
+            title: 'Search Border Movie',
+            posterPath: '/p.jpg',
+            voteCount: 4,
+            overview: '',
+            voteAverage: 7.0,
+          ), // Kept in search, filtered in default
+        ];
 
-      final service = TmdbService(client: MockClient((_) async => http.Response('{}', 200)));
+        final service = TmdbService(
+          client: MockClient((_) async => http.Response('{}', 200)),
+        );
 
-      // 1. Default list sanitization (threshold = 15)
-      final defaultList = await service.sanitizeListForTesting(list, isSearch: false);
-      expect(defaultList.map((m) => m.id).toList(), [3]);
+        // 1. Default list sanitization (threshold = 15)
+        final defaultList = await service.sanitizeListForTesting(
+          list,
+          isSearch: false,
+        );
+        expect(defaultList.map((m) => m.id).toList(), [3]);
 
-      // 2. Search list sanitization (threshold = 3)
-      final searchList = await service.sanitizeListForTesting(list, isSearch: true);
-      expect(searchList.map((m) => m.id).toList(), [2, 3, 4]);
-    });
+        // 2. Search list sanitization (threshold = 3)
+        final searchList = await service.sanitizeListForTesting(
+          list,
+          isSearch: true,
+        );
+        expect(searchList.map((m) => m.id).toList(), [2, 3, 4]);
+      },
+    );
   });
 }

@@ -4,17 +4,14 @@ class SpringButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const SpringButton({
-    super.key,
-    required this.child,
-    this.onTap,
-  });
+  const SpringButton({super.key, required this.child, this.onTap});
 
   @override
   State<SpringButton> createState() => _SpringButtonState();
 }
 
-class _SpringButtonState extends State<SpringButton> with SingleTickerProviderStateMixin {
+class _SpringButtonState extends State<SpringButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -25,9 +22,10 @@ class _SpringButtonState extends State<SpringButton> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(milliseconds: 90),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
   }
 
   @override
@@ -46,10 +44,7 @@ class _SpringButtonState extends State<SpringButton> with SingleTickerProviderSt
       onTapUp: (_) => _controller.reverse(),
       onTapCancel: () => _controller.reverse(),
       onTap: widget.onTap,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: widget.child,
-      ),
+      child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
     );
   }
 }

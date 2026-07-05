@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../widgets/pulsing_placeholder.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
+import '../widgets/tonight_pick_card.dart';
 import 'browse/browse_skeleton.dart';
 import 'movie_detail_sheet.dart';
 import 'results_screen.dart';
@@ -128,6 +129,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   final _rng = Random();
   final ScrollController _scrollController = ScrollController();
 
+  Movie? _tonight;
   List<Movie> _personal = [];
   List<Movie> _trending = [];
   List<Movie> _movies = [];
@@ -210,45 +212,42 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       ]).timeout(const Duration(seconds: 20));
       if (!mounted) return;
 
-      // Re-ranking process for "Sana Özel" (Personalized) candidates
+      // ── "Sana Özel" boru hattı (RecommendationEngine) ────────────────────
+      // Recall: tür-bazlı discover + son "Harika"lardan TMDB similar/
+      // recommendations (gerekçe etiketli). Rank: tür + keyword re-rank +
+      // arkadaş sinyali boost'u + çeşitlilik geçişi. En yüksek skor "Bu Gece
+      // Ne İzlesem?" vitrin kartına, kalanı raya gider.
+      final engine = ref.read(recommendationEngineProvider);
       final List<Movie> page1 = List<Movie>.from(results[0]);
       final List<Movie> page2 = List<Movie>.from(results[1]);
-      final Set<int> seenIds = {};
-      final List<Movie> rawCandidates = [];
-      for (final m in [...page1, ...page2]) {
-        if (seenIds.add(m.id)) {
-          rawCandidates.add(m);
+
+      final seedCandidates = await engine.fetchSeedCandidates();
+
+      Map<String, List<String>> friendSignals = const {};
+      if (isAuthenticated) {
+        try {
+          final raw = await ref.read(apiServiceProvider).getFriendSignals();
+          friendSignals = raw.map(
+            (k, v) => MapEntry(
+              k,
+              (v as List<dynamic>).map((e) => e.toString()).toList(),
+            ),
+          );
+        } catch (e) {
+          debugPrint("Friend signals unavailable for browse: $e");
         }
       }
 
-      final userWeights = await PrefsService.getGenreWeights();
-      final List<Map<String, dynamic>> scoredCandidates = [];
+      // Zaten puanlanmış yapımlar vitrine dönmesin — yer israfı.
+      final ratedIds = await PrefsService.getRatedIds();
 
-      for (final m in rawCandidates) {
-        final double similarity = PrefsService.calculateSimilarity(
-          userWeights,
-          m.genreIds,
-        );
-        final double rawScore = 0.7 * similarity + 0.3 * (m.voteAverage / 10.0);
-
-        // Sigmoid normalisation centering around 0.2 (cold start average)
-        // Map raw score to realistic display match percentage [40, 98]
-        final double z = (rawScore - 0.2) * 4.0;
-        final double sigmoid = 1.0 / (1.0 + exp(-z));
-        final int displayScore = (40 + (sigmoid * 58)).round();
-
-        m.personalizedMatchScore = displayScore.clamp(40, 98);
-        scoredCandidates.add({'movie': m, 'score': rawScore});
-      }
-
-      // Sort by raw similarity score descending
-      scoredCandidates.sort(
-        (a, b) => (b['score'] as double).compareTo(a['score'] as double),
+      final ranked = await engine.rankForYou(
+        [...page1, ...page2, ...seedCandidates],
+        excludedKeys: ratedIds,
+        friendSignals: friendSignals,
       );
-      final List<Movie> finalPersonal = scoredCandidates
-          .map((e) => e['movie'] as Movie)
-          .take(20)
-          .toList();
+      final Movie? tonightPick = ranked.isNotEmpty ? ranked.first : null;
+      final List<Movie> finalPersonal = ranked.skip(1).take(20).toList();
 
       final ratingCount = await PrefsService.getRatingCount();
       final bannerDismissed = await PrefsService.isOnboardingBannerDismissed();
@@ -257,6 +256,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
 
       setState(() {
+        _tonight = tonightPick;
         _personal = finalPersonal;
         // "Bu Hafta Trend" sıralı bir listedir — shuffle sırayı bozardı.
         _trending = List<Movie>.from(results[2]);
@@ -274,6 +274,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _tonight = null;
         _personal = [];
         _trending = [];
         _movies = [];
@@ -291,6 +292,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
   void _removeBlockedMovie(Movie movie) {
     setState(() {
+      if (_tonight?.id == movie.id && _tonight?.isTV == movie.isTV) {
+        // Vitrindeki seçim engellendi → rayın ilk adayı vitrine terfi eder.
+        _tonight = _personal.isNotEmpty ? _personal.removeAt(0) : null;
+      }
       _personal.removeWhere((m) => m.id == movie.id && m.isTV == movie.isTV);
       _trending.removeWhere((m) => m.id == movie.id && m.isTV == movie.isTV);
       _movies.removeWhere((m) => m.id == movie.id && m.isTV == movie.isTV);
@@ -351,6 +356,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           decade: mood.decade,
           includeTv: mood.includeTv,
           sortBy: 'vote_average.desc',
+          // Mood bir kısayoldur, sıralaması yine kullanıcının zevkine göre:
+          // aynı "Korku gecesi" iki kullanıcıda farklı dizilir.
+          personalRank: true,
         ),
       ),
     );
@@ -381,8 +389,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     );
   }
 
-
-
   Widget _content() {
     final c = context.c;
     final authState = ref.watch(authProvider);
@@ -390,11 +396,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final isAuthenticated = authState.isAuthenticated;
     if (_personal.isEmpty && _trending.isEmpty && _movies.isEmpty) {
       final errorStr = _error.toString();
-      final isNetworkError = errorStr.contains('No internet connection') ||
-                             errorStr.contains('SocketException') ||
-                             errorStr.contains('Failed host lookup') ||
-                             errorStr.contains('timed out') ||
-                             errorStr.contains('TimeoutException');
+      final isNetworkError =
+          errorStr.contains('No internet connection') ||
+          errorStr.contains('SocketException') ||
+          errorStr.contains('Failed host lookup') ||
+          errorStr.contains('timed out') ||
+          errorStr.contains('TimeoutException');
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -409,7 +416,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             const SizedBox(height: 16),
             Text(
               isNetworkError
-                  ? (AppLocalizations.of(context)?.get('browse_offline_title') ?? 'You are Offline')
+                  ? (AppLocalizations.of(
+                          context,
+                        )?.get('browse_offline_title') ??
+                        'You are Offline')
                   : (_error.toString().contains('401')
                         ? (AppLocalizations.of(
                                 context,
@@ -428,7 +438,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 isNetworkError
-                    ? (AppLocalizations.of(context)?.get('browse_offline_desc') ?? 'Please check your internet connection and try again.')
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('browse_offline_desc') ??
+                          'Please check your internet connection and try again.')
                     : (_error.toString().contains('401')
                           ? (AppLocalizations.of(
                                   context,
@@ -486,420 +499,456 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ),
         slivers: [
           // ── Header ────────────────────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Başlık ─────────────────────────────────────────────────
-                Row(
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)?.get('what_to') ?? 'what to ',
-                      style: TextStyle(
-                        color: c.ink,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                    Text(
-                      AppLocalizations.of(context)?.get('watch') ?? 'watch?',
-                      style: TextStyle(
-                        color: c.ink,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Semantics(
-                      label:
-                          AppLocalizations.of(
-                            context,
-                          )?.get('semantics_refresh') ??
-                          'Refresh recommendations',
-                      button: true,
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.refresh_rounded,
-                          color: c.dim,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          _load();
-                        },
-                        tooltip:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('browse_refresh') ??
-                            'Yenile',
-                        constraints: const BoxConstraints(
-                          minWidth: 44,
-                          minHeight: 44,
-                        ),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.language_rounded,
-                          color: c.dim,
-                          size: 20,
-                        ),
-                        padding: EdgeInsets.zero,
-                        tooltip:
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                                'tr'
-                            ? 'Dil Seçimi'
-                            : 'Change Language',
-                        onSelected: (String langCode) {
-                          HapticFeedback.mediumImpact();
-                          ref.read(localeProvider.notifier).setLocale(langCode);
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem(
-                            value: 'tr',
-                            child: Row(
-                              children: [
-                                const Text(
-                                  '🇹🇷',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Türkçe',
-                                  style: TextStyle(color: c.ink, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'en',
-                            child: Row(
-                              children: [
-                                const Text(
-                                  '🇺🇸',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'English',
-                                  style: TextStyle(color: c.ink, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        offset: const Offset(0, 40),
-                        color: c.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Başlık ─────────────────────────────────────────────────
+                  Row(
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)?.get('what_to') ??
+                            'what to ',
+                        style: TextStyle(
+                          color: c.ink,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w300,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Semantics(
-                      label:
-                          AppLocalizations.of(context)?.get('theme_switch') ??
-                          'Tema',
-                      button: true,
-                      child: IconButton(
-                        icon: Icon(
-                          Theme.of(context).brightness == Brightness.light
-                              ? Icons.dark_mode_rounded
-                              : Icons.light_mode_rounded,
-                          color: c.dim,
-                          size: 20,
+                      Text(
+                        AppLocalizations.of(context)?.get('watch') ?? 'watch?',
+                        style: TextStyle(
+                          color: c.ink,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
                         ),
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(themeModeProvider.notifier).toggle();
-                        },
-                        tooltip:
-                            AppLocalizations.of(context)?.get('theme_switch') ??
-                            'Tema',
-                        constraints: const BoxConstraints(
-                          minWidth: 44,
-                          minHeight: 44,
-                        ),
-                        padding: EdgeInsets.zero,
                       ),
-                    ),
-                    if (isAuthenticated) ...[
-                      const SizedBox(width: 8),
-                      // Hesap/profil kısayolu. Sosyal ağ artık "Birlikte"
-                      // alt sekmesinde; başlık sadeleşti.
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
                       Semantics(
                         label:
-                            AppLocalizations.of(context)?.get('tab_profile') ??
-                            'Profil',
+                            AppLocalizations.of(
+                              context,
+                            )?.get('semantics_refresh') ??
+                            'Refresh recommendations',
                         button: true,
-                        child: GestureDetector(
-                          onTap: () {
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          onPressed: () {
                             HapticFeedback.lightImpact();
-                            widget.onOpenProfile?.call();
+                            _load();
                           },
-                          behavior: HitTestBehavior.opaque,
-                          child: SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: Center(
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: CinemaGradients.crimson,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  _profileInitial(authState),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
+                          tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('browse_refresh') ??
+                              'Yenile',
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.language_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          padding: EdgeInsets.zero,
+                          tooltip:
+                              AppLocalizations.of(
+                                    context,
+                                  )?.locale.languageCode ==
+                                  'tr'
+                              ? 'Dil Seçimi'
+                              : 'Change Language',
+                          onSelected: (String langCode) {
+                            HapticFeedback.mediumImpact();
+                            ref
+                                .read(localeProvider.notifier)
+                                .setLocale(langCode);
+                          },
+                          itemBuilder: (BuildContext context) => [
+                            PopupMenuItem(
+                              value: 'tr',
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    '🇹🇷',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Türkçe',
+                                    style: TextStyle(
+                                      color: c.ink,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'en',
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    '🇺🇸',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'English',
+                                    style: TextStyle(
+                                      color: c.ink,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          offset: const Offset(0, 40),
+                          color: c.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Semantics(
+                        label:
+                            AppLocalizations.of(context)?.get('theme_switch') ??
+                            'Tema',
+                        button: true,
+                        child: IconButton(
+                          icon: Icon(
+                            Theme.of(context).brightness == Brightness.light
+                                ? Icons.dark_mode_rounded
+                                : Icons.light_mode_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(themeModeProvider.notifier).toggle();
+                          },
+                          tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('theme_switch') ??
+                              'Tema',
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      if (isAuthenticated) ...[
+                        const SizedBox(width: 8),
+                        // Hesap/profil kısayolu. Sosyal ağ artık "Birlikte"
+                        // alt sekmesinde; başlık sadeleşti.
+                        Semantics(
+                          label:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('tab_profile') ??
+                              'Profil',
+                          button: true,
+                          child: GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              widget.onOpenProfile?.call();
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: CinemaGradients.crimson,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    _profileInitial(authState),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Bu Akşam Ne İzlesem? CTA Kartı ──────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: SpringButton(
+                onTap: _luckyPick,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE94560), Color(0xFF8B0000)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE94560).withValues(alpha: 0.35),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
                       ),
                     ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // ── Bu Akşam Ne İzlesem? CTA Kartı ──────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-            child: SpringButton(
-              onTap: _luckyPick,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE94560), Color(0xFF8B0000)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFE94560).withValues(alpha: 0.35),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)?.get('browse_cta_title') ?? 'What to Watch Tonight?',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            AppLocalizations.of(context)?.get('browse_cta_subtitle') ?? "Let's roll the dice and pick a random movie matched to your taste.",
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 12.5,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          width: 1.5,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.casino_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // ── Ruh hali ─────────────────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                child: Text(
-                  AppLocalizations.of(context)?.get('browse_mood') ??
-                      'Ruh haline göre',
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 44,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _moods.length,
-                  itemBuilder: (ctx, i) {
-                    final m = _moods[i];
-                    return GestureDetector(
-                      onTap: () => _goMood(m),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.surface,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: c.border, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(m.icon, color: c.red, size: 16),
-                            const SizedBox(width: 8),
                             Text(
-                              AppLocalizations.of(context)?.get(m.label) ??
-                                  m.label,
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('browse_cta_title') ??
+                                  'What to Watch Tonight?',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('browse_cta_subtitle') ??
+                                  "Let's roll the dice and pick a random movie matched to your taste.",
                               style: TextStyle(
-                                color: c.ink,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 12.5,
+                                height: 1.35,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            width: 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.casino_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-
-        // ── Onboarding / Taste Banner Reminder ──────────────────────────────
-        if (_showOnboardingBanner)
-          SliverToBoxAdapter(child: _buildOnboardingBanner(context, c)),
-
-        // ── Sana Özel ─────────────────────────────────────────────────────────
-        if (_personal.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_for_you_personal') ?? '',
-            _personal,
-            showScore: true,
+            ),
           ),
 
-        // ── Arkadaşlarından Son Sinyaller ──────────────────────────────────────────
-        if (isAuthenticated && socialState.activityFeed.isNotEmpty)
-          _friendsActivitySection(socialState.activityFeed),
-
-        // ── Bu Hafta Trend ────────────────────────────────────────────────────
-        if (_trending.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_trending_week') ?? '',
-            _trending,
+          // ── Ruh hali ─────────────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Text(
+                    AppLocalizations.of(context)?.get('browse_mood') ??
+                        'Ruh haline göre',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 44,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _moods.length,
+                    itemBuilder: (ctx, i) {
+                      final m = _moods[i];
+                      return GestureDetector(
+                        onTap: () => _goMood(m),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: c.surface,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: c.border, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(m.icon, color: c.red, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context)?.get(m.label) ??
+                                    m.label,
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
 
-        // ── Sinema'da ─────────────────────────────────────────────────────────
-        if (_nowPlaying.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_now_playing_theaters') ??
-                '',
-            _nowPlaying,
-            badge: '🎬',
-          ),
+          // ── Onboarding / Taste Banner Reminder ──────────────────────────────
+          if (_showOnboardingBanner)
+            SliverToBoxAdapter(child: _buildOnboardingBanner(context, c)),
 
-        // ── Popüler Filmler ───────────────────────────────────────────────────
-        if (_movies.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_popular_movies') ?? '',
-            _movies,
-          ),
+          // ── Bu Gece Ne İzlesem? (motorun en yüksek skorlu seçimi) ────────────
+          if (_tonight != null)
+            SliverToBoxAdapter(
+              child: EntranceFade(
+                child: TonightPickCard(
+                  movie: _tonight!,
+                  onTap: () => _openDetail(_tonight!),
+                ),
+              ),
+            ),
 
-        // ── Bu Gün TV'de ──────────────────────────────────────────────────────
-        if (_airingToday.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_airing_today_tv') ?? '',
-            _airingToday,
-            badge: '📺',
-          ),
+          // ── Sana Özel ─────────────────────────────────────────────────────────
+          if (_personal.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_for_you_personal') ??
+                  '',
+              _personal,
+              showScore: true,
+            ),
 
-        // ── Şu An Yayında ─────────────────────────────────────────────────────
-        if (_onTheAir.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_on_the_air_tv') ?? '',
-            _onTheAir,
-          ),
+          // ── Arkadaşlarından Son Sinyaller ──────────────────────────────────────────
+          if (isAuthenticated && socialState.activityFeed.isNotEmpty)
+            _friendsActivitySection(socialState.activityFeed),
 
-        // ── Popüler Diziler ───────────────────────────────────────────────────
-        if (_shows.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_popular_tvs') ?? '',
-            _shows,
-          ),
+          // ── Bu Hafta Trend ────────────────────────────────────────────────────
+          if (_trending.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_trending_week') ?? '',
+              _trending,
+            ),
 
-        // ── Yakında Gelecekler ────────────────────────────────────────────────
-        if (_upcoming.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_upcoming_coming') ?? '',
-            _upcoming,
-          ),
+          // ── Sinema'da ─────────────────────────────────────────────────────────
+          if (_nowPlaying.isNotEmpty)
+            _section(
+              AppLocalizations.of(
+                    context,
+                  )?.get('browse_now_playing_theaters') ??
+                  '',
+              _nowPlaying,
+              badge: '🎬',
+            ),
 
-        // ── En Yüksek Puanlı ─────────────────────────────────────────────────
-        if (_topRated.isNotEmpty)
-          _section(
-            AppLocalizations.of(context)?.get('browse_top_rated_movies') ?? '',
-            _topRated,
-            // showScore kapalı: buradaki skor kişisel eşleşme değil, ham TMDB
-            // puanı (voteAverage×10) olurdu — yanıltıcı "%92 uyum" gösterirdi.
-            showScore: false,
-          ),
+          // ── Popüler Filmler ───────────────────────────────────────────────────
+          if (_movies.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_popular_movies') ?? '',
+              _movies,
+            ),
+
+          // ── Bu Gün TV'de ──────────────────────────────────────────────────────
+          if (_airingToday.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_airing_today_tv') ?? '',
+              _airingToday,
+              badge: '📺',
+            ),
+
+          // ── Şu An Yayında ─────────────────────────────────────────────────────
+          if (_onTheAir.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_on_the_air_tv') ?? '',
+              _onTheAir,
+            ),
+
+          // ── Popüler Diziler ───────────────────────────────────────────────────
+          if (_shows.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_popular_tvs') ?? '',
+              _shows,
+            ),
+
+          // ── Yakında Gelecekler ────────────────────────────────────────────────
+          if (_upcoming.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_upcoming_coming') ?? '',
+              _upcoming,
+            ),
+
+          // ── En Yüksek Puanlı ─────────────────────────────────────────────────
+          if (_topRated.isNotEmpty)
+            _section(
+              AppLocalizations.of(context)?.get('browse_top_rated_movies') ??
+                  '',
+              _topRated,
+              // showScore kapalı: buradaki skor kişisel eşleşme değil, ham TMDB
+              // puanı (voteAverage×10) olurdu — yanıltıcı "%92 uyum" gösterirdi.
+              showScore: false,
+            ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
@@ -1077,8 +1126,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                                               fit: BoxFit.cover,
                                               placeholder: (context, url) =>
                                                   const PulsingPlaceholder(),
-                                              errorWidget: (context, url, error) =>
-                                                  const PulsingPlaceholder(),
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      const PulsingPlaceholder(),
                                             )
                                           : const PulsingPlaceholder(),
                                     ),
@@ -1093,17 +1143,22 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                                           context: context,
                                           ref: ref,
                                           movie: movie,
-                                          onBlocked: () => _removeBlockedMovie(movie),
+                                          onBlocked: () =>
+                                              _removeBlockedMovie(movie),
                                         );
                                       },
                                       child: Container(
                                         width: 24,
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.6),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.6,
+                                          ),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.15),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.15,
+                                            ),
                                             width: 1,
                                           ),
                                         ),
@@ -1132,10 +1187,14 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                                         width: 24,
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.6),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.6,
+                                          ),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.15),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.15,
+                                            ),
                                             width: 1,
                                           ),
                                         ),
@@ -1271,7 +1330,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalizations.of(context)?.get('personalize_recommendations') ?? 'Personalize Recommendations',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('personalize_recommendations') ??
+                              'Personalize Recommendations',
                           style: TextStyle(
                             color: c.ink,
                             fontSize: 14,
@@ -1280,7 +1342,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          AppLocalizations.of(context)?.get('complete_the_2minute_survey_fo') ?? 'Complete the 2-minute survey for the best matching movies and shows!',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('complete_the_2minute_survey_fo') ??
+                              'Complete the 2-minute survey for the best matching movies and shows!',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11.5,
@@ -1371,7 +1436,7 @@ class _BrowseCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                       Positioned(
+                      Positioned(
                         top: 6,
                         left: 6,
                         child: GestureDetector(
@@ -1490,7 +1555,45 @@ class _BrowseCard extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            Text(movie.year, style: TextStyle(color: c.dim, fontSize: 12.5)),
+            // Gerekçe varsa yılın yerine "neden önerildi" satırı — "seni
+            // tanıyor" hissini kart seviyesine taşır (yıl detayda zaten var).
+            Builder(
+              builder: (context) {
+                final reason = showScore
+                    ? recoReasonLabel(context, movie)
+                    : null;
+                if (reason == null) {
+                  return Text(
+                    movie.year,
+                    style: TextStyle(color: c.dim, fontSize: 12.5),
+                  );
+                }
+                return Row(
+                  children: [
+                    Icon(
+                      movie.recoReasonType == 'friend'
+                          ? Icons.favorite_rounded
+                          : Icons.auto_awesome_rounded,
+                      size: 11,
+                      color: c.goldSoft,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        reason,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: c.goldSoft,
+                          fontSize: 11.5,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),

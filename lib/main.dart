@@ -27,17 +27,21 @@ void main() async {
   );
 
   // Firebase'i arka planda başlat (blokajı kaldır)
-  unawaited(Future(() async {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    } catch (e, st) {
-      // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
-      debugPrint("Firebase background initialization failed: $e\n$st");
-    }
-  }));
+  unawaited(
+    Future(() async {
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
+      } catch (e, st) {
+        // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
+        debugPrint("Firebase background initialization failed: $e\n$st");
+      }
+    }),
+  );
 
   final onboardingDone = await PrefsService.isOnboardingDone();
   runApp(ProviderScope(child: NeIzlesemApp(showOnboarding: !onboardingDone)));

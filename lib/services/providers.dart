@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tmdb_service.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
+import 'recommendation_engine.dart';
 
 class LocaleNotifier extends StateNotifier<Locale> {
   LocaleNotifier() : super(const Locale('en', 'US')) {
@@ -99,14 +100,17 @@ final tmdbServiceProvider = Provider<TmdbService>((ref) {
       tmdbRegion = 'US';
       break;
   }
-  return TmdbService(
-    language: tmdbLang,
-    region: tmdbRegion,
-  );
+  return TmdbService(language: tmdbLang, region: tmdbRegion);
 });
 
 final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
   return DatabaseHelper();
+});
+
+/// Ortak öneri motoru — swipe kuyruğu ve Sana Özel aynı örneği paylaşır ki
+/// keyword zevk vektörü memoization'ı ve invalidation'ı tek yerden yönetilsin.
+final recommendationEngineProvider = Provider<RecommendationEngine>((ref) {
+  return RecommendationEngine(ref.watch(tmdbServiceProvider));
 });
 
 final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
@@ -117,12 +121,17 @@ class OfflineNotifier extends StateNotifier<bool> {
   OfflineNotifier() : super(false) {
     if (Platform.environment.containsKey('FLUTTER_TEST')) return;
     _checkConnectivity();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _checkConnectivity());
+    _timer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkConnectivity(),
+    );
   }
 
   Future<void> _checkConnectivity() async {
     try {
-      final result = await InternetAddress.lookup('example.com').timeout(const Duration(seconds: 3));
+      final result = await InternetAddress.lookup(
+        'example.com',
+      ).timeout(const Duration(seconds: 3));
       final isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       if (mounted) {
         state = !isOnline;

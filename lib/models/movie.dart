@@ -79,6 +79,17 @@ class Movie {
   int get matchScore =>
       personalizedMatchScore ?? (voteAverage * 10).round().clamp(1, 99);
 
+  // ── Öneri motoru atıfları (oturumluk; kalıcı depoya yazılmaz) ──
+  /// UI rozeti için gerekçe: seed film adı ya da arkadaş adı.
+  String? recoReason;
+
+  /// Gerekçe tipi: 'seed' ("X'i beğendiğin için") | 'friend' ("X buna bayıldı").
+  String? recoReasonType;
+
+  /// Adayın geldiği kaynak — isabet telemetrisi için:
+  /// 'discover' | 'seed' | 'friend'.
+  String? recoSource;
+
   Map<String, dynamic> toStorage() => {
     'id': id,
     'title': title,

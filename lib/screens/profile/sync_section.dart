@@ -399,16 +399,14 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
               Text(
                 _mode == AuthMode.login
                     ? (AppLocalizations.of(context)?.get('auth_title_login') ??
-                        'Sign In')
+                          'Sign In')
                     : _mode == AuthMode.register
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('auth_title_register') ??
-                            'Sign Up')
-                        : (AppLocalizations.of(
-                                context,
-                              )?.get('auth_forgot_title') ??
-                            'Forgot Password'),
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_title_register') ??
+                          'Sign Up')
+                    : (AppLocalizations.of(context)?.get('auth_forgot_title') ??
+                          'Forgot Password'),
                 style: TextStyle(
                   color: c.ink,
                   fontSize: 20,
@@ -421,26 +419,26 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                     ? (AppLocalizations.of(
                             context,
                           )?.get('auth_login_subtitle') ??
-                        'Sign in to continue')
+                          'Sign in to continue')
                     : _mode == AuthMode.register
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('auth_register_subtitle') ??
-                            'Create your account')
-                        : _mode == AuthMode.forgotEmail
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_forgot_email_desc') ??
-                                'Enter email to receive reset code')
-                            : _mode == AuthMode.forgotCode
-                                ? (AppLocalizations.of(
-                                        context,
-                                      )?.get('auth_forgot_code_desc') ??
-                                    'Enter 6-digit verification code')
-                                : (AppLocalizations.of(
-                                        context,
-                                      )?.get('auth_forgot_reset_desc') ??
-                                    'Enter your new password'),
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_register_subtitle') ??
+                          'Create your account')
+                    : _mode == AuthMode.forgotEmail
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_email_desc') ??
+                          'Enter email to receive reset code')
+                    : _mode == AuthMode.forgotCode
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_code_desc') ??
+                          'Enter 6-digit verification code')
+                    : (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_reset_desc') ??
+                          'Enter your new password'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.dim, fontSize: 13),
               ),
@@ -456,7 +454,7 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   decoration: InputDecoration(
                     labelText:
                         AppLocalizations.of(context)?.get('auth_email') ??
-                            'Email',
+                        'Email',
                     labelStyle: TextStyle(color: c.dim, fontSize: 13),
                     filled: true,
                     fillColor: c.bg,
@@ -464,13 +462,17 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon:
-                        Icon(Icons.email_outlined, color: c.dim, size: 18),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: c.dim,
+                      size: 18,
+                    ),
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty || !val.contains('@')) {
-                      return AppLocalizations.of(context)
-                              ?.get('auth_forgot_err_email_invalid') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_email_invalid') ??
                           'Enter valid email';
                     }
                     return null;
@@ -484,8 +486,10 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   controller: _nameCtrl,
                   style: TextStyle(color: c.ink, fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)
-                            ?.get('auth_display_name_optional') ??
+                    labelText:
+                        AppLocalizations.of(
+                          context,
+                        )?.get('auth_display_name_optional') ??
                         'Display Name (optional)',
                     labelStyle: TextStyle(color: c.dim, fontSize: 13),
                     filled: true,
@@ -494,8 +498,11 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon:
-                        Icon(Icons.person_outline_rounded, color: c.dim, size: 18),
+                    prefixIcon: Icon(
+                      Icons.person_outline_rounded,
+                      color: c.dim,
+                      size: 18,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -513,10 +520,16 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)
-                            ?.get('auth_forgot_label_code') ??
+                    labelText:
+                        AppLocalizations.of(
+                          context,
+                        )?.get('auth_forgot_label_code') ??
                         '6-Digit Code',
-                    labelStyle: TextStyle(color: c.dim, fontSize: 13, letterSpacing: 0),
+                    labelStyle: TextStyle(
+                      color: c.dim,
+                      fontSize: 13,
+                      letterSpacing: 0,
+                    ),
                     filled: true,
                     fillColor: c.bg,
                     border: OutlineInputBorder(
@@ -526,8 +539,9 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   ),
                   validator: (val) {
                     if (val == null || val.length != 6) {
-                      return AppLocalizations.of(context)
-                              ?.get('auth_forgot_err_code_length') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_code_length') ??
                           'Enter 6 digits';
                     }
                     return null;
@@ -548,9 +562,9 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                         ? (AppLocalizations.of(
                                 context,
                               )?.get('auth_forgot_label_new_pass') ??
-                            'New Password')
+                              'New Password')
                         : (AppLocalizations.of(context)?.get('auth_password') ??
-                            'Password'),
+                              'Password'),
                     labelStyle: TextStyle(color: c.dim, fontSize: 13),
                     filled: true,
                     fillColor: c.bg,
@@ -558,8 +572,11 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon:
-                        Icon(Icons.lock_outline_rounded, color: c.dim, size: 18),
+                    prefixIcon: Icon(
+                      Icons.lock_outline_rounded,
+                      color: c.dim,
+                      size: 18,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePass
@@ -574,8 +591,9 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   ),
                   validator: (val) {
                     if (val == null || val.length < 8) {
-                      return AppLocalizations.of(context)
-                              ?.get('auth_forgot_err_pass_length') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_pass_length') ??
                           'Password must be at least 8 chars';
                     }
                     return null;
@@ -592,8 +610,9 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                     onPressed: () =>
                         setState(() => _mode = AuthMode.forgotEmail),
                     child: Text(
-                      AppLocalizations.of(context)
-                              ?.get('auth_forgot_password_link') ??
+                      AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_password_link') ??
                           'Forgot Password?',
                       style: TextStyle(color: c.gold, fontSize: 12),
                     ),
@@ -628,24 +647,29 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                         )
                       : Text(
                           _mode == AuthMode.login
-                              ? (AppLocalizations.of(context)
-                                      ?.get('auth_button_login') ??
-                                  'Login')
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_button_login') ??
+                                    'Login')
                               : _mode == AuthMode.register
-                                  ? (AppLocalizations.of(context)
-                                          ?.get('auth_button_register') ??
-                                      'Register')
-                                  : _mode == AuthMode.forgotEmail
-                                      ? (AppLocalizations.of(context)
-                                              ?.get('auth_forgot_btn_send_code') ??
-                                          'Send Code')
-                                      : _mode == AuthMode.forgotCode
-                                          ? (AppLocalizations.of(context)
-                                                  ?.get('auth_forgot_btn_verify') ??
-                                              'Verify Code')
-                                          : (AppLocalizations.of(context)
-                                                  ?.get('auth_forgot_btn_reset') ??
-                                              'Update Password'),
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_button_register') ??
+                                    'Register')
+                              : _mode == AuthMode.forgotEmail
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_send_code') ??
+                                    'Send Code')
+                              : _mode == AuthMode.forgotCode
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_verify') ??
+                                    'Verify Code')
+                              : (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_reset') ??
+                                    'Update Password'),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
@@ -666,12 +690,14 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
                   }),
                   child: Text(
                     _mode == AuthMode.register
-                        ? (AppLocalizations.of(context)
-                                ?.get('auth_toggle_to_login') ??
-                            'Already have an account? Sign In')
-                        : (AppLocalizations.of(context)
-                                ?.get('auth_toggle_to_register') ??
-                            "Don't have an account? Sign Up"),
+                        ? (AppLocalizations.of(
+                                context,
+                              )?.get('auth_toggle_to_login') ??
+                              'Already have an account? Sign In')
+                        : (AppLocalizations.of(
+                                context,
+                              )?.get('auth_toggle_to_register') ??
+                              "Don't have an account? Sign Up"),
                     style: TextStyle(color: c.dim, fontWeight: FontWeight.w600),
                   ),
                 ),

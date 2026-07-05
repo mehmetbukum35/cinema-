@@ -44,9 +44,7 @@ class DatabaseHelper {
       _database ??= await _initDatabase();
       return _database;
     } catch (e) {
-      debugPrint(
-        "SQLite initialization failed: $e",
-      );
+      debugPrint("SQLite initialization failed: $e");
       if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
         _useInMemoryMock = true;
         return null;
@@ -298,7 +296,9 @@ class DatabaseHelper {
     if (oldVersion < 5) {
       try {
         await db.execute('ALTER TABLE ratings ADD COLUMN comment TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN is_spoiler INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE ratings ADD COLUMN is_spoiler INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (e) {
         debugPrint("Error migrating database to v5: $e");
       }
@@ -1011,16 +1011,12 @@ class DatabaseHelper {
       });
       return;
     }
-    await db.insert(
-      'tmdb_cache',
-      {
-        'cache_key': key,
-        'payload': payload,
-        'fetched_at': timestamp,
-        'locale': locale,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('tmdb_cache', {
+      'cache_key': key,
+      'payload': payload,
+      'fetched_at': timestamp,
+      'locale': locale,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getTmdbCache(String key) async {

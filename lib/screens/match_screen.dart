@@ -188,13 +188,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           final c = context.c;
           return AlertDialog(
             backgroundColor: c.card,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Text(
-              AppLocalizations.of(context)?.get('no_common_genres') ?? 'No Common Genres',
-              style: TextStyle(color: c.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              AppLocalizations.of(context)?.get('no_common_genres') ??
+                  'No Common Genres',
+              style: TextStyle(
+                color: c.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: Text(
-              AppLocalizations.of(context)?.get('you_have_no_common_genres_sele') ?? 'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
+              AppLocalizations.of(
+                    context,
+                  )?.get('you_have_no_common_genres_sele') ??
+                  'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
               style: TextStyle(color: c.dim, fontSize: 14, height: 1.45),
             ),
             actions: [
@@ -281,9 +291,21 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         Expanded(
                           child: Text(
                             switch (_matchMode) {
-                              0 => (AppLocalizations.of(context)?.get('movie_match') ?? 'Movie Match'),
-                              1 => (AppLocalizations.of(context)?.get('together_couch_title') ?? 'Couch Mode'),
-                              _ => (AppLocalizations.of(context)?.get('together_friend_match_title') ?? 'Friend Match'),
+                              0 =>
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('movie_match') ??
+                                    'Movie Match'),
+                              1 =>
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('together_couch_title') ??
+                                    'Couch Mode'),
+                              _ =>
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('together_friend_match_title') ??
+                                    'Friend Match'),
                             },
                             style: TextStyle(
                               color: c.ink,
@@ -298,66 +320,78 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       const SizedBox(height: 12),
                       // Sliding Segmented Tab Controller
                       LayoutBuilder(
-                      builder: (context, constraints) {
-                        final width = constraints.maxWidth;
-                        final indicatorWidth = (width - 8) / 3;
-                        return Container(
-                          height: 40,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: c.borderSoft),
-                          ),
-                          child: Stack(
-                            children: [
-                              AnimatedPositioned(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeInOutCubic,
-                                left: _matchMode * indicatorWidth,
-                                top: 0,
-                                bottom: 0,
-                                width: indicatorWidth,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: CinemaGradients.crimson,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: CinemaShadows.glow(c.red, strength: 0.3),
+                        builder: (context, constraints) {
+                          final width = constraints.maxWidth;
+                          final indicatorWidth = (width - 8) / 3;
+                          return Container(
+                            height: 40,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: c.card,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: c.borderSoft),
+                            ),
+                            child: Stack(
+                              children: [
+                                AnimatedPositioned(
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeInOutCubic,
+                                  left: _matchMode * indicatorWidth,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: indicatorWidth,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: CinemaGradients.crimson,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: CinemaShadows.glow(
+                                        c.red,
+                                        strength: 0.3,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _segmentedTab(
-                                      0,
-                                      Icons.compare_arrows_rounded,
-                                      AppLocalizations.of(context)?.get('movie_match_alt') ?? 'Movie Match',
-                                      c,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _segmentedTab(
+                                        0,
+                                        Icons.compare_arrows_rounded,
+                                        AppLocalizations.of(
+                                              context,
+                                            )?.get('movie_match_alt') ??
+                                            'Movie Match',
+                                        c,
+                                      ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: _segmentedTab(
-                                      1,
-                                      Icons.people_rounded,
-                                      AppLocalizations.of(context)?.get('together_couch_title') ?? 'Couch Mode',
-                                      c,
+                                    Expanded(
+                                      child: _segmentedTab(
+                                        1,
+                                        Icons.people_rounded,
+                                        AppLocalizations.of(
+                                              context,
+                                            )?.get('together_couch_title') ??
+                                            'Couch Mode',
+                                        c,
+                                      ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: _segmentedTab(
-                                      2,
-                                      Icons.group_add_rounded,
-                                      AppLocalizations.of(context)?.get('with_friend') ?? 'With Friend',
-                                      c,
+                                    Expanded(
+                                      child: _segmentedTab(
+                                        2,
+                                        Icons.group_add_rounded,
+                                        AppLocalizations.of(
+                                              context,
+                                            )?.get('with_friend') ??
+                                            'With Friend',
+                                        c,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ],
@@ -390,8 +424,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           _buildIntroBanner(
             c,
             Icons.movie_filter_rounded,
-            AppLocalizations.of(context)?.get('movie_matcher') ?? 'Movie Matcher',
-            AppLocalizations.of(context)?.get('search_for_a_movie_or_tv_show_') ?? 'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
+            AppLocalizations.of(context)?.get('movie_matcher') ??
+                'Movie Matcher',
+            AppLocalizations.of(
+                  context,
+                )?.get('search_for_a_movie_or_tv_show_') ??
+                'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -702,8 +740,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         _buildIntroBanner(
           c,
           Icons.people_rounded,
-          AppLocalizations.of(context)?.get('couch_mode_matcher') ?? 'Couch Mode Matcher',
-          AppLocalizations.of(context)?.get('pass_the_phone_to_the_person_n') ?? 'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
+          AppLocalizations.of(context)?.get('couch_mode_matcher') ??
+              'Couch Mode Matcher',
+          AppLocalizations.of(context)?.get('pass_the_phone_to_the_person_n') ??
+              'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
         ),
 
         // ── Kişi seçici ────────────────────────────────────────────────────
@@ -742,8 +782,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             duration: const Duration(milliseconds: 200),
             child: Text(
               _activePerson == 1
-                  ? (AppLocalizations.of(context)?.get('player_1_you_select_your_favor') ?? '👉 Player 1 (You): Select your favorite genres...')
-                  : (AppLocalizations.of(context)?.get('player_2_friend_now_its_your_t') ?? '👉 Player 2 (Friend): Now it\'s your turn...'),
+                  ? (AppLocalizations.of(
+                          context,
+                        )?.get('player_1_you_select_your_favor') ??
+                        '👉 Player 1 (You): Select your favorite genres...')
+                  : (AppLocalizations.of(
+                          context,
+                        )?.get('player_2_friend_now_its_your_t') ??
+                        '👉 Player 2 (Friend): Now it\'s your turn...'),
               key: ValueKey<int>(_activePerson),
               style: TextStyle(
                 color: _activePerson == 1 ? c.red : c.blue,
@@ -761,11 +807,21 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _legendItem(c.red, AppLocalizations.of(context)?.get('match_you') ?? 'You'),
+              _legendItem(
+                c.red,
+                AppLocalizations.of(context)?.get('match_you') ?? 'You',
+              ),
               const SizedBox(width: 14),
-              _legendItem(c.blue, AppLocalizations.of(context)?.get('match_friend') ?? 'Friend'),
+              _legendItem(
+                c.blue,
+                AppLocalizations.of(context)?.get('match_friend') ?? 'Friend',
+              ),
               const SizedBox(width: 14),
-              _legendItem(Colors.purple, AppLocalizations.of(context)?.get('common_match') ?? 'Common Match'),
+              _legendItem(
+                Colors.purple,
+                AppLocalizations.of(context)?.get('common_match') ??
+                    'Common Match',
+              ),
             ],
           ),
         ),
@@ -1070,11 +1126,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: active ? Colors.white : c.dim,
-              size: 14,
-            ),
+            Icon(icon, color: active ? Colors.white : c.dim, size: 14),
             const SizedBox(width: 5),
             Text(
               label,
@@ -1091,7 +1143,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 
   Widget _buildIntroBanner(
-      ThemePalette c, IconData icon, String title, String desc) {
+    ThemePalette c,
+    IconData icon,
+    String title,
+    String desc,
+  ) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       padding: const EdgeInsets.all(14),
@@ -1130,11 +1186,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 const SizedBox(height: 4),
                 Text(
                   desc,
-                  style: TextStyle(
-                    color: c.dim,
-                    fontSize: 11.5,
-                    height: 1.35,
-                  ),
+                  style: TextStyle(color: c.dim, fontSize: 11.5, height: 1.35),
                 ),
               ],
             ),
@@ -1152,10 +1204,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         Text(
@@ -1193,7 +1242,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                AppLocalizations.of(context)?.get('authentication_required') ?? 'Authentication Required',
+                AppLocalizations.of(context)?.get('authentication_required') ??
+                    'Authentication Required',
                 style: TextStyle(
                   color: c.ink,
                   fontSize: 16,
@@ -1202,7 +1252,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                AppLocalizations.of(context)?.get('please_sign_in_to_view_watchli') ?? 'Please sign in to view watchlist intersections with your friends.',
+                AppLocalizations.of(
+                      context,
+                    )?.get('please_sign_in_to_view_watchli') ??
+                    'Please sign in to view watchlist intersections with your friends.',
                 style: TextStyle(color: c.dim, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -1221,7 +1274,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: Text(AppLocalizations.of(context)?.get('auth_title_login') ?? 'Sign In'),
+                child: Text(
+                  AppLocalizations.of(context)?.get('auth_title_login') ??
+                      'Sign In',
+                ),
               ),
             ],
           ),
@@ -1259,7 +1315,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  AppLocalizations.of(context)?.get('no_friends_yet') ?? 'No Friends Yet',
+                  AppLocalizations.of(context)?.get('no_friends_yet') ??
+                      'No Friends Yet',
                   style: TextStyle(
                     color: c.ink,
                     fontSize: 16,
@@ -1268,7 +1325,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  AppLocalizations.of(context)?.get('you_must_add_friends_first_to_') ?? 'You must add friends first to match with them.',
+                  AppLocalizations.of(
+                        context,
+                      )?.get('you_must_add_friends_first_to_') ??
+                      'You must add friends first to match with them.',
                   style: TextStyle(color: c.dim, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
@@ -1288,7 +1348,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     ),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)?.get('add_manage_friends') ?? 'Add / Manage Friends',
+                    AppLocalizations.of(context)?.get('add_manage_friends') ??
+                        'Add / Manage Friends',
                   ),
                 ),
               ],
@@ -1303,8 +1364,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           _buildIntroBanner(
             c,
             Icons.group_add_rounded,
-            AppLocalizations.of(context)?.get('online_friend_match') ?? 'Online Friend Match',
-            AppLocalizations.of(context)?.get('select_a_friend_to_find_common') ?? 'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
+            AppLocalizations.of(context)?.get('online_friend_match') ??
+                'Online Friend Match',
+            AppLocalizations.of(
+                  context,
+                )?.get('select_a_friend_to_find_common') ??
+                'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1312,7 +1377,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    AppLocalizations.of(context)?.get('select_a_friend_to_match_with') ?? 'Select a friend to match with:',
+                    AppLocalizations.of(
+                          context,
+                        )?.get('select_a_friend_to_match_with') ??
+                        'Select a friend to match with:',
                     style: TextStyle(
                       color: c.dim,
                       fontSize: 13,
@@ -1325,16 +1393,26 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                     HapticFeedback.lightImpact();
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SocialScreen(initialTab: 0)),
+                      MaterialPageRoute(
+                        builder: (_) => const SocialScreen(initialTab: 0),
+                      ),
                     );
                   },
                   child: Row(
                     children: [
-                      Icon(Icons.manage_accounts_rounded, color: c.red, size: 14),
+                      Icon(
+                        Icons.manage_accounts_rounded,
+                        color: c.red,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         AppLocalizations.of(context)?.get('manage') ?? 'Manage',
-                        style: TextStyle(color: c.red, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: c.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -1492,7 +1570,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          AppLocalizations.of(context)?.get('no_common_movies') ?? 'No Common Movies',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('no_common_movies') ??
+                              'No Common Movies',
                           style: TextStyle(
                             color: c.ink,
                             fontSize: 16,
@@ -1501,7 +1582,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          AppLocalizations.of(context)?.get('neither_of_you_have_added_the_') ?? 'Neither of you have added the same movies to your watchlists.',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('neither_of_you_have_added_the_') ??
+                              'Neither of you have added the same movies to your watchlists.',
                           style: TextStyle(color: c.dim, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
@@ -1518,7 +1602,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         vertical: 8,
                       ),
                       child: Text(
-                        AppLocalizations.of(context)?.get('your_common_watchlist_intersec').replaceAll('{}', '${intersection.length}') ?? 'Your Common Watchlist (${intersection.length} Titles)',
+                        AppLocalizations.of(context)
+                                ?.get('your_common_watchlist_intersec')
+                                .replaceAll('{}', '${intersection.length}') ??
+                            'Your Common Watchlist (${intersection.length} Titles)',
                         style: TextStyle(
                           color: c.gold,
                           fontWeight: FontWeight.w700,
@@ -1624,7 +1711,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          AppLocalizations.of(context)?.get('find_joint_recommendations') ?? 'Find Joint Recommendations',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('find_joint_recommendations') ??
+                              'Find Joint Recommendations',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
@@ -1639,5 +1729,3 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     );
   }
 }
-
-

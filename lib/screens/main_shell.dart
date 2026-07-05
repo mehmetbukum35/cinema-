@@ -29,8 +29,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     (Icons.person_rounded, 'tab_profile'),
   ];
 
-
-
   void _onTabChange(int index) {
     if (index == _tab) {
       if (index == 0) {
@@ -63,10 +61,17 @@ class _MainShellState extends ConsumerState<MainShell> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.cloud_off_rounded, color: Colors.white, size: 14),
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    AppLocalizations.of(context)?.get('you_are_offline_your_changes_w') ?? 'You are offline — Your changes will be synced',
+                    AppLocalizations.of(
+                          context,
+                        )?.get('you_are_offline_your_changes_w') ??
+                        'You are offline — Your changes will be synced',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -84,26 +89,12 @@ class _MainShellState extends ConsumerState<MainShell> {
                 // shimmer vb.) dondurur — kapsamlı pil koruması.
                 TickerMode(
                   enabled: _tab == 0,
-                  child: BrowseScreen(
-                    onOpenProfile: () => _onTabChange(4),
-                  ),
+                  child: BrowseScreen(onOpenProfile: () => _onTabChange(4)),
                 ),
-                TickerMode(
-                  enabled: _tab == 1,
-                  child: const SwipeScreen(),
-                ),
-                TickerMode(
-                  enabled: _tab == 2,
-                  child: const TogetherScreen(),
-                ),
-                TickerMode(
-                  enabled: _tab == 3,
-                  child: const SearchScreen(),
-                ),
-                TickerMode(
-                  enabled: _tab == 4,
-                  child: const ProfileScreen(),
-                ),
+                TickerMode(enabled: _tab == 1, child: const SwipeScreen()),
+                TickerMode(enabled: _tab == 2, child: const TogetherScreen()),
+                TickerMode(enabled: _tab == 3, child: const SearchScreen()),
+                TickerMode(enabled: _tab == 4, child: const ProfileScreen()),
               ],
             ),
           ),

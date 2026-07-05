@@ -76,7 +76,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.get('please_enter_a_username') ?? 'Please enter a username.',
+            AppLocalizations.of(context)?.get('please_enter_a_username') ??
+                'Please enter a username.',
           ),
         ),
       );
@@ -91,7 +92,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.get('profile_updated_successfully') ?? 'Profile updated successfully.',
+            AppLocalizations.of(context)?.get('profile_updated_successfully') ??
+                'Profile updated successfully.',
           ),
         ),
       );
@@ -110,7 +112,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.get('friend_request_sent') ?? 'Friend request sent.',
+            AppLocalizations.of(context)?.get('friend_request_sent') ??
+                'Friend request sent.',
           ),
         ),
       );
@@ -132,7 +135,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         backgroundColor: c.navBg,
         elevation: 0,
         title: Text(
-          AppLocalizations.of(context)?.get('social_network') ?? 'Social Network',
+          AppLocalizations.of(context)?.get('social_network') ??
+              'Social Network',
           style: TextStyle(color: c.ink, fontWeight: FontWeight.w800),
         ),
         actions: [
@@ -142,7 +146,13 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
               onPressed: () {
                 final username = authUser['username'];
                 Share.share(
-                  AppLocalizations.of(context)?.get('share_profile_text').replaceAll('{}', '${ApiService.webProfileBaseUrl}/$username') ?? 'Follow me on What to Watch! Check out my watchlist and favorites here: ${ApiService.webProfileBaseUrl}/$username',
+                  AppLocalizations.of(context)
+                          ?.get('share_profile_text')
+                          .replaceAll(
+                            '{}',
+                            '${ApiService.webProfileBaseUrl}/$username',
+                          ) ??
+                      'Follow me on What to Watch! Check out my watchlist and favorites here: ${ApiService.webProfileBaseUrl}/$username',
                 );
               },
             ),
@@ -159,13 +169,19 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           unselectedLabelColor: c.dim,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: [
-            Tab(text: AppLocalizations.of(context)?.get('together_friends') ?? 'Friends'),
+            Tab(
+              text:
+                  AppLocalizations.of(context)?.get('together_friends') ??
+                  'Friends',
+            ),
             Tab(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context)?.get('requests') ?? 'Requests'),
+                  Text(
+                    AppLocalizations.of(context)?.get('requests') ?? 'Requests',
+                  ),
                   if (socialState.pendingReceived.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -200,7 +216,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context)?.get('activity') ?? 'Activity'),
+                  Text(
+                    AppLocalizations.of(context)?.get('activity') ?? 'Activity',
+                  ),
                   if (socialState.unseenRecommendations > 0) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -289,7 +307,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            AppLocalizations.of(context)?.get('customize_profile') ?? 'Customize Profile',
+            AppLocalizations.of(context)?.get('customize_profile') ??
+                'Customize Profile',
             style: TextStyle(
               color: c.ink,
               fontWeight: FontWeight.w700,
@@ -301,7 +320,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
             controller: _usernameCtrl,
             style: TextStyle(color: c.ink),
             decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)?.get('username_username') ?? 'Username (@username)',
+              labelText:
+                  AppLocalizations.of(context)?.get('username_username') ??
+                  'Username (@username)',
               labelStyle: TextStyle(color: c.dim),
               prefixText: '@',
               prefixStyle: TextStyle(
@@ -316,11 +337,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           const SizedBox(height: 12),
           SwitchListTile(
             title: Text(
-              AppLocalizations.of(context)?.get('public_profile') ?? 'Public Profile',
+              AppLocalizations.of(context)?.get('public_profile') ??
+                  'Public Profile',
               style: TextStyle(color: c.ink, fontSize: 14),
             ),
             subtitle: Text(
-              AppLocalizations.of(context)?.get('when_disabled_your_profile_can') ?? 'When disabled, your profile cannot be viewed on the web.',
+              AppLocalizations.of(
+                    context,
+                  )?.get('when_disabled_your_profile_can') ??
+                  'When disabled, your profile cannot be viewed on the web.',
               style: TextStyle(color: c.dim, fontSize: 11),
             ),
             value: _isPublic,
@@ -339,7 +364,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
               ),
             ),
             child: Text(
-              AppLocalizations.of(context)?.get('save_settings') ?? 'Save Settings',
+              AppLocalizations.of(context)?.get('save_settings') ??
+                  'Save Settings',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -367,7 +393,11 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     controller: _searchCtrl,
                     style: TextStyle(color: c.ink),
                     decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)?.get('username_or_email') ?? 'Username or email...',
+                      hintText:
+                          AppLocalizations.of(
+                            context,
+                          )?.get('username_or_email') ??
+                          'Username or email...',
                       hintStyle: TextStyle(color: c.dim),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -395,7 +425,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           child: state.friends.isEmpty
               ? Center(
                   child: Text(
-                    AppLocalizations.of(context)?.get('no_friends_added_yet') ?? 'No friends added yet.',
+                    AppLocalizations.of(context)?.get('no_friends_added_yet') ??
+                        'No friends added yet.',
                     style: TextStyle(color: c.dim),
                   ),
                 )
@@ -434,132 +465,152 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                         ),
                         child: Row(
                           children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: CinemaGradients.crimson,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              name[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 18,
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: CinemaGradients.crimson,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                name[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: TextStyle(
-                                    color: c.ink,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                if (handle.isNotEmpty)
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    '@$handle',
+                                    name,
                                     style: TextStyle(
-                                      color: c.dim,
-                                      fontSize: 12,
+                                      color: c.ink,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
                                     ),
                                   ),
-                                if (tasteScore != null) ...[
-                                  const SizedBox(height: 6),
-                                  // Zevk uyumu rozeti (0-100)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: c.gold.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: c.gold.withValues(alpha: 0.35),
+                                  if (handle.isNotEmpty)
+                                    Text(
+                                      '@$handle',
+                                      style: TextStyle(
+                                        color: c.dim,
+                                        fontSize: 12,
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.favorite_rounded,
-                                          color: c.gold,
-                                          size: 12,
+                                  if (tasteScore != null) ...[
+                                    const SizedBox(height: 6),
+                                    // Zevk uyumu rozeti (0-100)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: c.gold.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: c.gold.withValues(alpha: 0.35),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          AppLocalizations.of(context)?.get('taste_score_match').replaceAll('{}', '$tasteScore') ?? '$tasteScore% match',
-                                          style: TextStyle(
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.favorite_rounded,
                                             color: c.gold,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
+                                            size: 12,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.person_remove_rounded,
-                              color: c.red.withValues(alpha: 0.7),
-                            ),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  backgroundColor: c.surface,
-                                  title: Text(
-                                    AppLocalizations.of(context)?.get('remove_friend') ?? 'Remove Friend',
-                                  ),
-                                  content: Text(
-                                    AppLocalizations.of(context)?.get('remove_friend_confirm_msg').replaceAll('{}', name) ?? 'Are you sure you want to remove $name from friends?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx),
-                                      child: Text(
-                                        AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
-                                        style: TextStyle(color: c.dim),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        Navigator.pop(ctx);
-                                        final id =
-                                            int.tryParse(f['id'].toString()) ??
-                                            0;
-                                        await ref
-                                            .read(socialProvider.notifier)
-                                            .rejectRequest(id);
-                                      },
-                                      child: Text(
-                                        AppLocalizations.of(context)?.get('remove') ?? 'Remove',
-                                        style: TextStyle(color: c.red),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            AppLocalizations.of(context)
+                                                    ?.get('taste_score_match')
+                                                    .replaceAll(
+                                                      '{}',
+                                                      '$tasteScore',
+                                                    ) ??
+                                                '$tasteScore% match',
+                                            style: TextStyle(
+                                              color: c.gold,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.person_remove_rounded,
+                                color: c.red.withValues(alpha: 0.7),
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    backgroundColor: c.surface,
+                                    title: Text(
+                                      AppLocalizations.of(
+                                            context,
+                                          )?.get('remove_friend') ??
+                                          'Remove Friend',
+                                    ),
+                                    content: Text(
+                                      AppLocalizations.of(context)
+                                              ?.get('remove_friend_confirm_msg')
+                                              .replaceAll('{}', name) ??
+                                          'Are you sure you want to remove $name from friends?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: Text(
+                                          AppLocalizations.of(
+                                                context,
+                                              )?.get('profile_cancel') ??
+                                              'Cancel',
+                                          style: TextStyle(color: c.dim),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(ctx);
+                                          final id =
+                                              int.tryParse(
+                                                f['id'].toString(),
+                                              ) ??
+                                              0;
+                                          await ref
+                                              .read(socialProvider.notifier)
+                                              .rejectRequest(id);
+                                        },
+                                        child: Text(
+                                          AppLocalizations.of(
+                                                context,
+                                              )?.get('remove') ??
+                                              'Remove',
+                                          style: TextStyle(color: c.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
                 ),
         ),
       ],
@@ -570,7 +621,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     if (state.pendingReceived.isEmpty && state.pendingSent.isEmpty) {
       return Center(
         child: Text(
-          AppLocalizations.of(context)?.get('no_pending_requests') ?? 'No pending requests.',
+          AppLocalizations.of(context)?.get('no_pending_requests') ??
+              'No pending requests.',
           style: TextStyle(color: c.dim),
         ),
       );
@@ -581,7 +633,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       children: [
         if (state.pendingReceived.isNotEmpty) ...[
           Text(
-            AppLocalizations.of(context)?.get('received_requests') ?? 'Received Requests',
+            AppLocalizations.of(context)?.get('received_requests') ??
+                'Received Requests',
             style: TextStyle(
               color: c.gold,
               fontWeight: FontWeight.w800,
@@ -643,7 +696,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
 
         if (state.pendingSent.isNotEmpty) ...[
           Text(
-            AppLocalizations.of(context)?.get('sent_requests') ?? 'Sent Requests',
+            AppLocalizations.of(context)?.get('sent_requests') ??
+                'Sent Requests',
             style: TextStyle(
               color: c.dim,
               fontWeight: FontWeight.w800,
@@ -769,7 +823,10 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        AppLocalizations.of(context)?.get('recommended_by_user').replaceAll('{}', fromName) ?? 'Recommended by $fromName',
+                        AppLocalizations.of(context)
+                                ?.get('recommended_by_user')
+                                .replaceAll('{}', fromName) ??
+                            'Recommended by $fromName',
                         style: TextStyle(
                           color: c.gold,
                           fontWeight: FontWeight.w700,
@@ -794,8 +851,12 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 const SizedBox(height: 4),
                 Text(
                   isTv
-                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'TV Show')
-                      : (AppLocalizations.of(context)?.get('onboarding_movie') ?? 'Movie'),
+                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
+                            'TV Show')
+                      : (AppLocalizations.of(
+                              context,
+                            )?.get('onboarding_movie') ??
+                            'Movie'),
                   style: TextStyle(
                     color: c.dim,
                     fontSize: 11,
@@ -827,7 +888,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     if (state.activityFeed.isEmpty && state.recommendations.isEmpty) {
       return Center(
         child: Text(
-          AppLocalizations.of(context)?.get('no_friend_activity_yet') ?? 'No friend activity yet.',
+          AppLocalizations.of(context)?.get('no_friend_activity_yet') ??
+              'No friend activity yet.',
           style: TextStyle(color: c.dim),
         ),
       );
@@ -846,7 +908,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              AppLocalizations.of(context)?.get('recommended_to_you') ?? 'Recommended to You',
+              AppLocalizations.of(context)?.get('recommended_to_you') ??
+                  'Recommended to You',
               style: TextStyle(
                 color: c.gold,
                 fontSize: 13,
@@ -891,8 +954,11 @@ class FriendActivityScreen extends ConsumerWidget {
     final socialState = ref.watch(socialProvider);
 
     final friendActivities = socialState.activityFeed
-        .where((act) =>
-            (int.tryParse(act['friend_id']?.toString() ?? '') ?? 0) == friendId)
+        .where(
+          (act) =>
+              (int.tryParse(act['friend_id']?.toString() ?? '') ?? 0) ==
+              friendId,
+        )
         .toList();
 
     return Scaffold(
@@ -921,10 +987,7 @@ class FriendActivityScreen extends ConsumerWidget {
             ),
             Text(
               '@$friendUsername',
-              style: TextStyle(
-                color: c.dim,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: c.dim, fontSize: 12),
             ),
           ],
         ),
@@ -952,8 +1015,11 @@ class FriendActivityScreen extends ConsumerWidget {
                         color: c.gold.withValues(alpha: 0.15),
                       ),
                       alignment: Alignment.center,
-                      child:
-                          Icon(Icons.favorite_rounded, color: c.gold, size: 22),
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        color: c.gold,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -961,7 +1027,10 @@ class FriendActivityScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppLocalizations.of(context)?.get('cinema_taste_match') ?? 'Cinema Taste Match',
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('cinema_taste_match') ??
+                                'Cinema Taste Match',
                             style: TextStyle(
                               color: c.ink,
                               fontSize: 14,
@@ -970,9 +1039,15 @@ class FriendActivityScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            AppLocalizations.of(context)?.get('friend_taste_match_desc').replaceAll('{}', '$tasteScore') ?? 'You have a $tasteScore% movie taste match with this friend.',
+                            AppLocalizations.of(context)
+                                    ?.get('friend_taste_match_desc')
+                                    .replaceAll('{}', '$tasteScore') ??
+                                'You have a $tasteScore% movie taste match with this friend.',
                             style: TextStyle(
-                                color: c.dim, fontSize: 11.5, height: 1.3),
+                              color: c.dim,
+                              fontSize: 11.5,
+                              height: 1.3,
+                            ),
                           ),
                         ],
                       ),
@@ -1003,12 +1078,18 @@ class FriendActivityScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               color: c.dim.withValues(alpha: 0.1),
                             ),
-                            child: Icon(Icons.history_rounded,
-                                color: c.dim, size: 28),
+                            child: Icon(
+                              Icons.history_rounded,
+                              color: c.dim,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            AppLocalizations.of(context)?.get('no_activity_from_this_friend_y') ?? 'No activity from this friend yet.',
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('no_activity_from_this_friend_y') ??
+                                'No activity from this friend yet.',
                             style: TextStyle(color: c.dim, fontSize: 13),
                           ),
                         ],
@@ -1030,7 +1111,10 @@ class FriendActivityScreen extends ConsumerWidget {
   }
 
   static Widget _buildActivityCard(
-      ThemePalette c, Map<String, dynamic> act, BuildContext context) {
+    ThemePalette c,
+    Map<String, dynamic> act,
+    BuildContext context,
+  ) {
     final friendName = act['friend_name'] ?? act['friend_username'] ?? 'Friend';
     final title = act['title'] ?? 'Movie';
     final ratingVal = act['rating'] is int
@@ -1045,16 +1129,19 @@ class FriendActivityScreen extends ConsumerWidget {
     String badgeText = 'İyi';
     if (ratingVal == 3) {
       badgeColor = c.rHarika;
-      badgeText = AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing';
+      badgeText =
+          AppLocalizations.of(context)?.get('recap_stat_amazing') ?? 'Amazing';
     } else if (ratingVal == 2) {
       badgeColor = c.rIyi;
-      badgeText = AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good';
+      badgeText =
+          AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good';
     } else if (ratingVal == 1) {
       badgeColor = c.rEh;
       badgeText = AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh';
     } else if (ratingVal == 0) {
       badgeColor = c.rBerbat;
-      badgeText = AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful';
+      badgeText =
+          AppLocalizations.of(context)?.get('recap_stat_awful') ?? 'Awful';
     }
 
     return Container(
@@ -1144,8 +1231,12 @@ class FriendActivityScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   isTv
-                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'TV Show')
-                      : (AppLocalizations.of(context)?.get('onboarding_movie') ?? 'Movie'),
+                      ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
+                            'TV Show')
+                      : (AppLocalizations.of(
+                              context,
+                            )?.get('onboarding_movie') ??
+                            'Movie'),
                   style: TextStyle(
                     color: c.dim,
                     fontSize: 11,

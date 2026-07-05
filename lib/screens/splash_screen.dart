@@ -67,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _startPrefetchAndNavigation() async {
     final tmdb = ref.read(tmdbServiceProvider);
-    
+
     // Delete expired cache entries (> 31 days old) in the background to not clip 30-day items
     DatabaseHelper().deleteExpiredTmdbCache(2678400000).catchError((e) {
       debugPrint('Cache eviction failed: $e');
@@ -76,26 +76,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final page = ref.read(browsePopularPageProvider);
 
     // Start prefetching in parallel (trending & popular movie & popular TV)
-    final prefetchFuture = Future.wait([
-      tmdb.getTrending(),
-      tmdb.getPopular(isTV: false, page: page),
-      tmdb.getPopular(isTV: true, page: page),
-    ]).then((results) {
-      if (mounted && results.isNotEmpty) {
-        final list = results[0];
-        // Pre-cache the top 3 movie posters to GPU memory
-        for (var i = 0; i < math.min(3, list.length); i++) {
-          final url = list[i].posterUrl;
-          if (url.isNotEmpty) {
-            precacheImage(CachedNetworkImageProvider(url), context);
-          }
-        }
-      }
-    }).catchError((_) {
-      // Ignore prefetch network errors so splash flow is not blocked
-    });
+    final prefetchFuture =
+        Future.wait([
+              tmdb.getTrending(),
+              tmdb.getPopular(isTV: false, page: page),
+              tmdb.getPopular(isTV: true, page: page),
+            ])
+            .then((results) {
+              if (mounted && results.isNotEmpty) {
+                final list = results[0];
+                // Pre-cache the top 3 movie posters to GPU memory
+                for (var i = 0; i < math.min(3, list.length); i++) {
+                  final url = list[i].posterUrl;
+                  if (url.isNotEmpty) {
+                    precacheImage(CachedNetworkImageProvider(url), context);
+                  }
+                }
+              }
+            })
+            .catchError((_) {
+              // Ignore prefetch network errors so splash flow is not blocked
+            });
 
-    final minDurationFuture = Future.delayed(const Duration(milliseconds: 1800));
+    final minDurationFuture = Future.delayed(
+      const Duration(milliseconds: 1800),
+    );
     final maxWaitFuture = Future.delayed(const Duration(milliseconds: 2500));
 
     // Wait for (prefetch AND 1.8s branding animation) OR (2.5s maximum wait timeout)
@@ -105,13 +110,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     ]);
 
     if (!mounted) return;
-    
+
     // Stop intro animation if it's still running
     _intro.stop();
-    
+
     HapticFeedback.lightImpact();
     await _exit.forward();
-    
+
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

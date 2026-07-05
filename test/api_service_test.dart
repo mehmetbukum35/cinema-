@@ -245,29 +245,32 @@ void main() {
       expect(res['unseen'], 1);
     });
 
-    test('getTitleScore should call score endpoint and parse payload', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.method, 'GET');
-        expect(request.url.path, '/cinema/api/titles/movie/603/score');
-        expect(request.headers['Authorization'], 'Bearer initial_access');
-        return http.Response(
-          jsonEncode({
-            'total': 12,
-            'liked_percent': 83,
-            'enough': true,
-            'threshold': 5,
-            'distribution': {'harika': 6, 'iyi': 4, 'eh': 1, 'berbat': 1},
-          }),
-          200,
-        );
-      });
+    test(
+      'getTitleScore should call score endpoint and parse payload',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/cinema/api/titles/movie/603/score');
+          expect(request.headers['Authorization'], 'Bearer initial_access');
+          return http.Response(
+            jsonEncode({
+              'total': 12,
+              'liked_percent': 83,
+              'enough': true,
+              'threshold': 5,
+              'distribution': {'harika': 6, 'iyi': 4, 'eh': 1, 'berbat': 1},
+            }),
+            200,
+          );
+        });
 
-      final apiService = ApiService(client: mockClient);
-      final res = await apiService.getTitleScore('movie', 603);
+        final apiService = ApiService(client: mockClient);
+        final res = await apiService.getTitleScore('movie', 603);
 
-      expect(res['total'], 12);
-      expect(res['liked_percent'], 83);
-      expect(res['enough'], isTrue);
-    });
+        expect(res['total'], 12);
+        expect(res['liked_percent'], 83);
+        expect(res['enough'], isTrue);
+      },
+    );
   });
 }

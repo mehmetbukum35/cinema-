@@ -49,11 +49,14 @@ class _TrailerPlayerScreenState extends State<TrailerPlayerScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: Colors.white),
-          tooltip: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
+          tooltip:
+              AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
-          widget.title ?? (AppLocalizations.of(context)?.get('detail_trailer') ?? 'Trailer'),
+          widget.title ??
+              (AppLocalizations.of(context)?.get('detail_trailer') ??
+                  'Trailer'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(

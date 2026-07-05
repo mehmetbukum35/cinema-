@@ -49,9 +49,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isRegister
-            ? (AppLocalizations.of(context)?.get('auth_title_register') ?? 'Sign Up')
-            : (AppLocalizations.of(context)?.get('auth_title_login') ?? 'Sign In')),
+        title: Text(
+          _isRegister
+              ? (AppLocalizations.of(context)?.get('auth_title_register') ??
+                    'Sign Up')
+              : (AppLocalizations.of(context)?.get('auth_title_login') ??
+                    'Sign In'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -70,32 +74,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _isRegister
-                          ? (AppLocalizations.of(context)?.get('auth_register_subtitle') ??
-                              'Create your account, keep your taste profile with you on all devices.')
-                          : (AppLocalizations.of(context)?.get('auth_login_subtitle') ??
-                              'Sign in to your account, continue from where you left off.'),
+                          ? (AppLocalizations.of(
+                                  context,
+                                )?.get('auth_register_subtitle') ??
+                                'Create your account, keep your taste profile with you on all devices.')
+                          : (AppLocalizations.of(
+                                  context,
+                                )?.get('auth_login_subtitle') ??
+                                'Sign in to your account, continue from where you left off.'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 28),
-  
+
                     if (_isRegister) ...[
                       TextFormField(
                         controller: _nameCtrl,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.name],
                         decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)?.get('auth_display_name') ?? 'Display Name',
+                          labelText:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('auth_display_name') ??
+                              'Display Name',
                           prefixIcon: const Icon(Icons.person_outline),
                           border: const OutlineInputBorder(),
                         ),
                         validator: (val) => val == null || val.trim().isEmpty
-                            ? (AppLocalizations.of(context)?.get('auth_forgot_err_name_empty') ?? 'Name field cannot be empty.')
+                            ? (AppLocalizations.of(
+                                    context,
+                                  )?.get('auth_forgot_err_name_empty') ??
+                                  'Name field cannot be empty.')
                             : null,
                       ),
                       const SizedBox(height: 16),
                     ],
-  
+
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
@@ -103,20 +118,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       autofillHints: const [AutofillHints.email],
                       autocorrect: false,
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)?.get('auth_email_label') ?? 'Email',
+                        labelText:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('auth_email_label') ??
+                            'Email',
                         prefixIcon: const Icon(Icons.email_outlined),
                         border: const OutlineInputBorder(),
                       ),
                       validator: (v) {
                         final s = (v ?? '').trim();
                         if (s.isEmpty || !s.contains('@') || !s.contains('.')) {
-                          return AppLocalizations.of(context)?.get('auth_forgot_err_email_invalid') ?? 'Enter a valid email.';
+                          return AppLocalizations.of(
+                                context,
+                              )?.get('auth_forgot_err_email_invalid') ??
+                              'Enter a valid email.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-  
+
                     TextFormField(
                       controller: _passCtrl,
                       obscureText: _obscure,
@@ -124,7 +146,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       autofillHints: const [AutofillHints.password],
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)?.get('auth_password_label') ?? 'Password',
+                        labelText:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('auth_password_label') ??
+                            'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -135,10 +161,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       validator: (v) => (v ?? '').length < 8
-                          ? (AppLocalizations.of(context)?.get('auth_forgot_err_pass_length') ?? 'Password must be at least 8 characters.')
+                          ? (AppLocalizations.of(
+                                  context,
+                                )?.get('auth_forgot_err_pass_length') ??
+                                'Password must be at least 8 characters.')
                           : null,
                     ),
-  
+
                     if (auth.error != null) ...[
                       const SizedBox(height: 16),
                       Text(
@@ -147,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ],
-  
+
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: auth.loading ? null : _submit,
@@ -158,11 +187,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? const SizedBox(
                               width: 22,
                               height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.4),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                              ),
                             )
-                          : Text(_isRegister
-                              ? (AppLocalizations.of(context)?.get('auth_button_register') ?? 'Register')
-                              : (AppLocalizations.of(context)?.get('auth_button_login') ?? 'Login')),
+                          : Text(
+                              _isRegister
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_button_register') ??
+                                        'Register')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_button_login') ??
+                                        'Login'),
+                            ),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
@@ -171,8 +210,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : () => setState(() => _isRegister = !_isRegister),
                       child: Text(
                         _isRegister
-                            ? (AppLocalizations.of(context)?.get('auth_toggle_to_login') ?? 'Already have an account? Sign In')
-                            : (AppLocalizations.of(context)?.get('auth_toggle_to_register') ?? "Don't have an account? Sign Up"),
+                            ? (AppLocalizations.of(
+                                    context,
+                                  )?.get('auth_toggle_to_login') ??
+                                  'Already have an account? Sign In')
+                            : (AppLocalizations.of(
+                                    context,
+                                  )?.get('auth_toggle_to_register') ??
+                                  "Don't have an account? Sign Up"),
                       ),
                     ),
                   ],

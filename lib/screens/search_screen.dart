@@ -174,10 +174,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 ),
                                 suffixIcon: _ctrl.text.isNotEmpty
                                     ? Tooltip(
-                                        message: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
+                                        message:
+                                            AppLocalizations.of(
+                                              context,
+                                            )?.get('semantics_close') ??
+                                            'Close',
                                         child: Semantics(
                                           button: true,
-                                          label: AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
+                                          label:
+                                              AppLocalizations.of(
+                                                context,
+                                              )?.get('semantics_close') ??
+                                              'Close',
                                           child: GestureDetector(
                                             onTap: () {
                                               HapticFeedback.lightImpact();
@@ -206,10 +214,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ),
                         const SizedBox(width: 10),
                         Tooltip(
-                          message: AppLocalizations.of(context)?.get('filter') ?? 'Filter',
+                          message:
+                              AppLocalizations.of(context)?.get('filter') ??
+                              'Filter',
                           child: Semantics(
                             button: true,
-                            label: AppLocalizations.of(context)?.get('filter') ?? 'Filter',
+                            label:
+                                AppLocalizations.of(context)?.get('filter') ??
+                                'Filter',
                             child: GestureDetector(
                               onTap: () => _showSearchFilterSheet(context),
                               child: Container(
@@ -266,14 +278,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.wifi_off_rounded,
-              color: c.red,
-              size: 40,
-            ),
+            Icon(Icons.wifi_off_rounded, color: c.red, size: 40),
             const SizedBox(height: 12),
             Text(
-              AppLocalizations.of(context)?.get('search_failed') ?? 'Arama başarısız oldu',
+              AppLocalizations.of(context)?.get('search_failed') ??
+                  'Arama başarısız oldu',
               style: TextStyle(
                 color: c.ink,
                 fontSize: 15,
@@ -284,7 +293,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                AppLocalizations.of(context)?.get('browse_conn_error') ?? 'Bağlantınızı kontrol edip tekrar deneyin.',
+                AppLocalizations.of(context)?.get('browse_conn_error') ??
+                    'Bağlantınızı kontrol edip tekrar deneyin.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.dim, fontSize: 13),
               ),
@@ -473,7 +483,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const ResultsScreen(includeTv: false, isTrending: true),
+                builder: (_) =>
+                    const ResultsScreen(includeTv: false, isTrending: true),
               ),
             ),
           ),
@@ -487,7 +498,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const ResultsScreen(includeMovies: false, isTrending: true),
+                builder: (_) =>
+                    const ResultsScreen(includeMovies: false, isTrending: true),
               ),
             ),
           ),
@@ -564,129 +576,133 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _results.length,
-    itemBuilder: (ctx, i) {
-      final c = ctx.c;
-      final m = _results[i];
-      return GestureDetector(
-        onTap: () => _openDetail(m),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: c.card,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 58,
-                  height: 84,
-                  child: m.posterUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: m.posterUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              ColoredBox(color: c.border),
-                          errorWidget: (context, url, error) =>
-                              ColoredBox(color: c.border),
-                        )
-                      : ColoredBox(color: c.border),
-                ),
+        itemBuilder: (ctx, i) {
+          final c = ctx.c;
+          final m = _results[i];
+          return GestureDetector(
+            onTap: () => _openDetail(m),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: c.ink,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 58,
+                      height: 84,
+                      child: m.posterUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: m.posterUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) =>
+                                  ColoredBox(color: c.border),
+                              errorWidget: (context, url, error) =>
+                                  ColoredBox(color: c.border),
+                            )
+                          : ColoredBox(color: c.border),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: (m.isTV ? c.blue : c.red).withValues(
-                              alpha: 0.15,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            m.isTV
-                                ? (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_tv') ??
-                                      'Dizi')
-                                : (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_movie') ??
-                                      'Film'),
-                            style: TextStyle(
-                              color: m.isTV ? c.blue : c.red,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        if (m.year.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            m.year,
-                            style: TextStyle(color: c.dim, fontSize: 13),
-                          ),
-                        ],
-                        const SizedBox(width: 8),
-                        Icon(Icons.star_rounded, color: c.gold, size: 13.5),
-                        const SizedBox(width: 2),
                         Text(
-                          m.voteAverage.toStringAsFixed(1),
+                          m.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: c.gold,
-                            fontSize: 13,
+                            color: c.ink,
+                            fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (m.isTV ? c.blue : c.red).withValues(
+                                  alpha: 0.15,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                m.isTV
+                                    ? (AppLocalizations.of(
+                                            context,
+                                          )?.get('onboarding_tv') ??
+                                          'Dizi')
+                                    : (AppLocalizations.of(
+                                            context,
+                                          )?.get('onboarding_movie') ??
+                                          'Film'),
+                                style: TextStyle(
+                                  color: m.isTV ? c.blue : c.red,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            if (m.year.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                m.year,
+                                style: TextStyle(color: c.dim, fontSize: 13),
+                              ),
+                            ],
+                            const SizedBox(width: 8),
+                            Icon(Icons.star_rounded, color: c.gold, size: 13.5),
+                            const SizedBox(width: 2),
+                            Text(
+                              m.voteAverage.toStringAsFixed(1),
+                              style: TextStyle(
+                                color: c.gold,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  MovieDetailSheet.confirmBlockMovie(
-                    context: context,
-                    ref: ref,
-                    movie: m,
-                    onBlocked: () {
-                      setState(() {
-                        _results.removeAt(i);
-                      });
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      MovieDetailSheet.confirmBlockMovie(
+                        context: context,
+                        ref: ref,
+                        movie: m,
+                        onBlocked: () {
+                          setState(() {
+                            _results.removeAt(i);
+                          });
+                        },
+                      );
                     },
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(Icons.visibility_off_rounded, color: c.dim, size: 18),
-                ),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.visibility_off_rounded,
+                        color: c.dim,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
+            ),
+          );
         },
       ),
     );
@@ -696,7 +712,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final localizations = AppLocalizations.of(context);
     return {
       'ko': localizations?.get('lang_ko') ?? 'Kore Sineması',
-      'fr|es|de|it|pt|sv|da|no|fi|nl|pl': localizations?.get('lang_eu') ?? 'Avrupa Sineması',
+      'fr|es|de|it|pt|sv|da|no|fi|nl|pl':
+          localizations?.get('lang_eu') ?? 'Avrupa Sineması',
       'en': localizations?.get('lang_en') ?? 'Hollywood',
       'tr': localizations?.get('lang_tr') ?? 'Türk Sineması',
       'ja': localizations?.get('lang_ja') ?? 'Japon Sineması',
@@ -768,7 +785,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Builder(
                           builder: (context) {
                             return Text(
-                              AppLocalizations.of(context)?.get('advanced_filters') ?? 'Advanced Filters',
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('advanced_filters') ??
+                                  'Advanced Filters',
                               style: TextStyle(
                                 color: c.ink,
                                 fontSize: 16,
@@ -807,7 +827,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     Builder(
                       builder: (context) {
                         return Text(
-                          AppLocalizations.of(context)?.get('country_region') ?? 'COUNTRY / REGION',
+                          AppLocalizations.of(context)?.get('country_region') ??
+                              'COUNTRY / REGION',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -825,7 +846,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Builder(
                           builder: (context) {
                             return _filterChip(
-                              label: AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All'),
+                              label:
+                                  AppLocalizations.of(
+                                    context,
+                                  )?.get('lang_all') ??
+                                  (AppLocalizations.of(
+                                        context,
+                                      )?.get('lang_all') ??
+                                      'All'),
                               selected: localLang == null,
                               onTap: () =>
                                   setModalState(() => localLang = null),
@@ -846,7 +874,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     Builder(
                       builder: (context) {
                         return Text(
-                          AppLocalizations.of(context)?.get('platform') ?? 'PLATFORM',
+                          AppLocalizations.of(context)?.get('platform') ??
+                              'PLATFORM',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -864,7 +893,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Builder(
                           builder: (context) {
                             return _filterChip(
-                              label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
+                              label:
+                                  AppLocalizations.of(
+                                    context,
+                                  )?.get('lang_all') ??
+                                  'All',
                               selected: localProv == null,
                               onTap: () =>
                                   setModalState(() => localProv = null),
@@ -885,7 +918,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     Builder(
                       builder: (context) {
                         return Text(
-                          AppLocalizations.of(context)?.get('minimum_tmdb_score') ?? 'MINIMUM TMDB SCORE',
+                          AppLocalizations.of(
+                                context,
+                              )?.get('minimum_tmdb_score') ??
+                              'MINIMUM TMDB SCORE',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 11,
@@ -903,7 +939,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Builder(
                           builder: (context) {
                             return _filterChip(
-                              label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
+                              label:
+                                  AppLocalizations.of(
+                                    context,
+                                  )?.get('lang_all') ??
+                                  'All',
                               selected: localRating == null,
                               onTap: () =>
                                   setModalState(() => localRating = null),
@@ -954,7 +994,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         child: Builder(
                           builder: (context) {
                             return Text(
-                              AppLocalizations.of(context)?.get('filter_and_list') ?? 'Filter and List',
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('filter_and_list') ??
+                                  'Filter and List',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,

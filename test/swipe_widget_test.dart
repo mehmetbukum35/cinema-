@@ -90,39 +90,42 @@ void main() {
       expect(ratedIds.contains('movie_1001'), isTrue);
     });
 
-    testWidgets('SwipeScreen should show gesture guide overlay when not shown before', (
-      WidgetTester tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({});
-      await PrefsService.resetAll();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('swipe_guide_shown', false);
+    testWidgets(
+      'SwipeScreen should show gesture guide overlay when not shown before',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await PrefsService.resetAll();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('swipe_guide_shown', false);
 
-      final client = MockClient((request) async => http.Response('{"results": []}', 200));
-      final mockService = TmdbService(client: client);
+        final client = MockClient(
+          (request) async => http.Response('{"results": []}', 200),
+        );
+        final mockService = TmdbService(client: client);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [tmdbServiceProvider.overrideWithValue(mockService)],
-          child: const MaterialApp(home: SwipeScreen()),
-        ),
-      );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [tmdbServiceProvider.overrideWithValue(mockService)],
+            child: const MaterialApp(home: SwipeScreen()),
+          ),
+        );
 
-      await tester.pump(const Duration(milliseconds: 150));
-      await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump();
 
-      // Gesture guide overlay should be shown
-      expect(find.text('Discovery Gestures'), findsOneWidget);
-      expect(find.text('Swipe Right'), findsOneWidget);
-      expect(find.text('Swipe Left'), findsOneWidget);
+        // Gesture guide overlay should be shown
+        expect(find.text('Discovery Gestures'), findsOneWidget);
+        expect(find.text('Swipe Right'), findsOneWidget);
+        expect(find.text('Swipe Left'), findsOneWidget);
 
-      // Tap on 'Got it, Let's Start!' button
-      await tester.tap(find.text('Got it, Let\'s Start!'));
-      await tester.pump(const Duration(milliseconds: 200));
+        // Tap on 'Got it, Let's Start!' button
+        await tester.tap(find.text('Got it, Let\'s Start!'));
+        await tester.pump(const Duration(milliseconds: 200));
 
-      // Overlay should be dismissed
-      expect(find.text('Discovery Gestures'), findsNothing);
-      expect(await PrefsService.isSwipeGuideShown(), isTrue);
-    });
+        // Overlay should be dismissed
+        expect(find.text('Discovery Gestures'), findsNothing);
+        expect(await PrefsService.isSwipeGuideShown(), isTrue);
+      },
+    );
   });
 }

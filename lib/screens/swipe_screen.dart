@@ -16,6 +16,7 @@ import '../widgets/pulsing_placeholder.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
 import '../widgets/spring_button.dart';
+
 class SwipeScreen extends ConsumerStatefulWidget {
   const SwipeScreen({super.key});
 
@@ -77,7 +78,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context)?.get('error_saving_rating') ?? 'Error saving rating.',
+                AppLocalizations.of(context)?.get('error_saving_rating') ??
+                    'Error saving rating.',
               ),
             ),
           );
@@ -94,7 +96,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context)?.get('error_saving_rating') ?? 'Error saving rating.',
+              AppLocalizations.of(context)?.get('error_saving_rating') ??
+                  'Error saving rating.',
             ),
           ),
         );
@@ -133,7 +136,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context)?.get('error_undoing_rating') ?? 'Error undoing rating.',
+                AppLocalizations.of(context)?.get('error_undoing_rating') ??
+                    'Error undoing rating.',
               ),
             ),
           );
@@ -150,7 +154,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context)?.get('error_undoing_rating') ?? 'Error undoing rating.',
+              AppLocalizations.of(context)?.get('error_undoing_rating') ??
+                  'Error undoing rating.',
             ),
           ),
         );
@@ -166,7 +171,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final localizations = AppLocalizations.of(context);
     return {
       'ko': localizations?.get('lang_ko') ?? 'Kore Sineması',
-      'fr|es|de|it|pt|sv|da|no|fi|nl|pl': localizations?.get('lang_eu') ?? 'Avrupa Sineması',
+      'fr|es|de|it|pt|sv|da|no|fi|nl|pl':
+          localizations?.get('lang_eu') ?? 'Avrupa Sineması',
       'en': localizations?.get('lang_en') ?? 'Hollywood',
       'tr': localizations?.get('lang_tr') ?? 'Türk Sineması',
       'ja': localizations?.get('lang_ja') ?? 'Japon Sineması',
@@ -182,14 +188,20 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   };
 
   String _getLanguageLabel(BuildContext context, String? lang) {
-    if (lang == null) return AppLocalizations.of(context)?.get('lang_all') ?? 'Tümü';
-    return _getLanguages(context)[lang] ?? (AppLocalizations.of(context)?.get('lang_unknown') ?? 'Bilinmeyen');
+    if (lang == null) {
+      return AppLocalizations.of(context)?.get('lang_all') ?? 'Tümü';
+    }
+    return _getLanguages(context)[lang] ??
+        (AppLocalizations.of(context)?.get('lang_unknown') ?? 'Bilinmeyen');
   }
 
   String _getProviderLabel(BuildContext context, int? providerId) {
     final localizations = AppLocalizations.of(context);
-    if (providerId == null) return localizations?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All');
-    return _providers[providerId] ?? (localizations?.get('lang_unknown') ?? (AppLocalizations.of(context)?.get('lang_unknown') ?? 'Unknown'));
+    if (providerId == null) {
+      return localizations?.get('lang_all') ?? 'All';
+    }
+    return _providers[providerId] ??
+        (localizations?.get('lang_unknown') ?? 'Unknown');
   }
 
   void _showFilterSheet(BuildContext context, WidgetRef ref, SwipeState state) {
@@ -250,9 +262,16 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                               final activeCount =
                                   (activeLang != null ? 1 : 0) +
                                   (activeProv != null ? 1 : 0);
-                              final filterTitle = AppLocalizations.of(context)?.get('content_filters') ?? 'Content Filters';
+                              final filterTitle =
+                                  AppLocalizations.of(
+                                    context,
+                                  )?.get('content_filters') ??
+                                  'Content Filters';
                               final activeText = activeCount > 0
-                                  ? (AppLocalizations.of(context)?.get('active_count_label').replaceAll('{}', '$activeCount') ?? ' ($activeCount Active)')
+                                  ? (AppLocalizations.of(context)
+                                            ?.get('active_count_label')
+                                            .replaceAll('{}', '$activeCount') ??
+                                        ' ($activeCount Active)')
                                   : '';
                               return Text(
                                 '$filterTitle$activeText',
@@ -294,7 +313,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                           Builder(
                             builder: (context) {
                               return Text(
-                                AppLocalizations.of(context)?.get('language_region') ?? 'LANGUAGE / REGION',
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('language_region') ??
+                                    'LANGUAGE / REGION',
                                 style: TextStyle(
                                   color: c.dim,
                                   fontSize: 11,
@@ -325,7 +347,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                           Builder(
                             builder: (context) {
                               return _FilterChip(
-                                label: '🌐 ${AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All')}',
+                                label:
+                                    '🌐 ${AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All')}',
                                 selected: activeLang == null,
                                 onTap: () {
                                   HapticFeedback.lightImpact();
@@ -364,7 +387,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                           Builder(
                             builder: (context) {
                               return Text(
-                                AppLocalizations.of(context)?.get('streaming_platforms') ?? 'STREAMING PLATFORMS',
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('streaming_platforms') ??
+                                    'STREAMING PLATFORMS',
                                 style: TextStyle(
                                   color: c.dim,
                                   fontSize: 11,
@@ -395,7 +421,9 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                           Builder(
                             builder: (context) {
                               return _FilterChip(
-                                label: AppLocalizations.of(context)?.get('all') ?? '🎬 All',
+                                label:
+                                    AppLocalizations.of(context)?.get('all') ??
+                                    '🎬 All',
                                 selected: activeProv == null,
                                 onTap: () {
                                   HapticFeedback.lightImpact();
@@ -620,7 +648,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                       Builder(
                         builder: (context) {
                           return Text(
-                            AppLocalizations.of(context)?.get('no_more_content') ?? 'No More Content',
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('no_more_content') ??
+                                'No More Content',
                             style: TextStyle(
                               color: c.ink,
                               fontSize: 18,
@@ -638,8 +669,14 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                               (swipeState.loadingMore ||
                                       (swipeState.languageFilter == null &&
                                           swipeState.providerFilter == null))
-                                  ? (AppLocalizations.of(context)?.get('loading_more') ?? 'Loading more...')
-                                  : (AppLocalizations.of(context)?.get('no_more_content_matches_your_f') ?? 'No more content matches your filters.\\nYou can clear the filters to continue.'),
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('loading_more') ??
+                                        'Loading more...')
+                                  : (AppLocalizations.of(context)?.get(
+                                          'no_more_content_matches_your_f',
+                                        ) ??
+                                        'No more content matches your filters.\\nYou can clear the filters to continue.'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: c.dim,
@@ -823,15 +860,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
               shape: BoxShape.circle,
               color: c.red.withValues(alpha: 0.1),
             ),
-            child: Icon(
-              Icons.wifi_off_rounded,
-              color: c.red,
-              size: 32,
-            ),
+            child: Icon(Icons.wifi_off_rounded, color: c.red, size: 32),
           ),
           const SizedBox(height: 20),
           Text(
-            AppLocalizations.of(context)?.get('swipe_failed') ?? 'Bağlantı kurulamadı',
+            AppLocalizations.of(context)?.get('swipe_failed') ??
+                'Bağlantı kurulamadı',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -842,7 +876,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              AppLocalizations.of(context)?.get('browse_conn_error') ?? 'İnternet bağlantınızı kontrol edip tekrar deneyin.',
+              AppLocalizations.of(context)?.get('browse_conn_error') ??
+                  'İnternet bağlantınızı kontrol edip tekrar deneyin.',
               textAlign: TextAlign.center,
               style: TextStyle(color: c.dim, fontSize: 13),
             ),
@@ -884,13 +919,17 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: c.red.withValues(alpha: 0.15),
-                    border: Border.all(color: c.red.withValues(alpha: 0.3), width: 2),
+                    border: Border.all(
+                      color: c.red.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
                   ),
                   child: Icon(Icons.swipe_rounded, color: c.red, size: 48),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  AppLocalizations.of(context)?.get('discovery_gestures') ?? 'Discovery Gestures',
+                  AppLocalizations.of(context)?.get('discovery_gestures') ??
+                      'Discovery Gestures',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -899,7 +938,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  AppLocalizations.of(context)?.get('swipe_cards_to_train_our_recom') ?? 'Swipe cards to train our recommendation engine!',
+                  AppLocalizations.of(
+                        context,
+                      )?.get('swipe_cards_to_train_our_recom') ??
+                      'Swipe cards to train our recommendation engine!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
@@ -907,22 +949,29 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 _guideRow(
                   Icons.arrow_forward_rounded,
                   c.green,
-                  AppLocalizations.of(context)?.get('swipe_right') ?? 'Swipe Right',
-                  AppLocalizations.of(context)?.get('liked_good_or_amazing') ?? 'Liked (Good or Amazing)',
+                  AppLocalizations.of(context)?.get('swipe_right') ??
+                      'Swipe Right',
+                  AppLocalizations.of(context)?.get('liked_good_or_amazing') ??
+                      'Liked (Good or Amazing)',
                 ),
                 const SizedBox(height: 20),
                 _guideRow(
                   Icons.arrow_back_rounded,
                   c.red,
-                  AppLocalizations.of(context)?.get('swipe_left') ?? 'Swipe Left',
-                  AppLocalizations.of(context)?.get('disliked_meh_or_awful') ?? 'Disliked (Meh or Awful)',
+                  AppLocalizations.of(context)?.get('swipe_left') ??
+                      'Swipe Left',
+                  AppLocalizations.of(context)?.get('disliked_meh_or_awful') ??
+                      'Disliked (Meh or Awful)',
                 ),
                 const SizedBox(height: 20),
                 _guideRow(
                   Icons.touch_app_rounded,
                   c.gold,
                   AppLocalizations.of(context)?.get('tap_card') ?? 'Tap Card',
-                  AppLocalizations.of(context)?.get('view_details_trailer_cast') ?? 'View Details, Trailer & Cast',
+                  AppLocalizations.of(
+                        context,
+                      )?.get('view_details_trailer_cast') ??
+                      'View Details, Trailer & Cast',
                 ),
                 const SizedBox(height: 50),
                 ElevatedButton(
@@ -936,7 +985,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: c.red,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 16,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -944,8 +996,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                     shadowColor: c.red.withValues(alpha: 0.4),
                   ),
                   child: Text(
-                    AppLocalizations.of(context)?.get('got_it_lets_start') ?? 'Got it, Let\'s Start!',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    AppLocalizations.of(context)?.get('got_it_lets_start') ??
+                        'Got it, Let\'s Start!',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -991,10 +1047,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11.5,
-                  ),
+                  style: const TextStyle(color: Colors.white60, fontSize: 11.5),
                 ),
               ],
             ),
@@ -1205,8 +1258,14 @@ class _SwipeCard extends ConsumerWidget {
                         ),
                         child: Text(
                           movie.isTV
-                              ? (AppLocalizations.of(context)?.get('onboarding_tv') ?? 'Dizi')
-                              : (AppLocalizations.of(context)?.get('onboarding_movie') ?? 'Film'),
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('onboarding_tv') ??
+                                    'Dizi')
+                              : (AppLocalizations.of(
+                                      context,
+                                    )?.get('onboarding_movie') ??
+                                    'Film'),
                           style: TextStyle(
                             color: movie.isTV ? c.blue : c.red,
                             fontSize: 11,
@@ -1224,7 +1283,10 @@ class _SwipeCard extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: c.gold.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: CinemaShadows.glow(c.gold, strength: 0.35),
+                            boxShadow: CinemaShadows.glow(
+                              c.gold,
+                              strength: 0.35,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1375,7 +1437,8 @@ class _RatingBtn extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: (color == c.rEh || color == c.rHarika || color == c.rIyi)
+                  color:
+                      (color == c.rEh || color == c.rHarika || color == c.rIyi)
                       ? Colors.black87
                       : Colors.white,
                   fontSize: visualSize > 72

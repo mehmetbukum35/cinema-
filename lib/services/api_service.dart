@@ -307,17 +307,12 @@ class ApiService {
 
   // DELETE /sync (Reset remote sync data)
   Future<void> clearRemoteSyncData() async {
-    final response = await _request(
-      'DELETE',
-      '/sync',
-      requireAuth: true,
-    );
+    final response = await _request('DELETE', '/sync', requireAuth: true);
     if (response.statusCode != 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       throw ApiException(
         statusCode: response.statusCode,
-        message:
-            data['error'] as String? ?? 'Bulut verileri sıfırlanamadı.',
+        message: data['error'] as String? ?? 'Bulut verileri sıfırlanamadı.',
       );
     }
   }

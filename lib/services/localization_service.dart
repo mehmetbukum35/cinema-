@@ -141,8 +141,10 @@ class AppLocalizations {
       'lang_hi': 'Bollywood',
       'lang_all': 'All',
       'lang_unknown': 'Unknown',
-      'auth_register_subtitle': 'Create your account, keep your taste profile with you on all devices.',
-      'auth_login_subtitle': 'Sign in to your account, continue from where you left off.',
+      'auth_register_subtitle':
+          'Create your account, keep your taste profile with you on all devices.',
+      'auth_login_subtitle':
+          'Sign in to your account, continue from where you left off.',
       'auth_display_name_optional': 'Display Name (optional)',
       'auth_email_label': 'Email',
       'auth_password_label': 'Password',
@@ -262,6 +264,10 @@ class AppLocalizations {
       'browse_on_the_air_tv': 'On The Air',
       'browse_upcoming_coming': 'Coming Soon',
       'browse_for_you_personal': 'For You',
+      'tonight_title': 'What to Watch Tonight?',
+      'tonight_match': 'match',
+      'reco_reason_seed': 'Because you liked {x}',
+      'reco_reason_friend': '{x} loved this',
       'browse_trending_week': 'Trending This Week',
       'browse_api_unauthorized_desc':
           'The server is unable to authenticate with the movie service. Please contact support.',
@@ -352,34 +358,46 @@ class AppLocalizations {
       'what_to': 'what to ',
       'watch': 'watch?',
       'personalize_recommendations': 'Personalize Recommendations',
-      'complete_the_2minute_survey_fo': 'Complete the 2-minute survey for the best matching movies and shows!',
-      'you_are_offline_your_changes_w': 'You are offline — Your changes will be synced',
+      'complete_the_2minute_survey_fo':
+          'Complete the 2-minute survey for the best matching movies and shows!',
+      'you_are_offline_your_changes_w':
+          'You are offline — Your changes will be synced',
       'no_common_genres': 'No Common Genres',
-      'you_have_no_common_genres_sele': 'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
+      'you_have_no_common_genres_sele':
+          'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
       'movie_match': 'Movie Match',
       'movie_match_alt': 'Movie Match',
       'with_friend': 'With Friend',
       'movie_matcher': 'Movie Matcher',
-      'search_for_a_movie_or_tv_show_': 'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
+      'search_for_a_movie_or_tv_show_':
+          'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
       'couch_mode_matcher': 'Couch Mode Matcher',
-      'pass_the_phone_to_the_person_n': 'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
-      'player_1_you_select_your_favor': '👉 Player 1 (You): Select your favorite genres...',
-      'player_2_friend_now_its_your_t': '👉 Player 2 (Friend): Now it\'s your turn...',
+      'pass_the_phone_to_the_person_n':
+          'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
+      'player_1_you_select_your_favor':
+          '👉 Player 1 (You): Select your favorite genres...',
+      'player_2_friend_now_its_your_t':
+          '👉 Player 2 (Friend): Now it\'s your turn...',
       'common_match': 'Common Match',
       'authentication_required': 'Authentication Required',
-      'please_sign_in_to_view_watchli': 'Please sign in to view watchlist intersections with your friends.',
+      'please_sign_in_to_view_watchli':
+          'Please sign in to view watchlist intersections with your friends.',
       'no_friends_yet': 'No Friends Yet',
-      'you_must_add_friends_first_to_': 'You must add friends first to match with them.',
+      'you_must_add_friends_first_to_':
+          'You must add friends first to match with them.',
       'add_manage_friends': 'Add / Manage Friends',
       'online_friend_match': 'Online Friend Match',
-      'select_a_friend_to_find_common': 'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
+      'select_a_friend_to_find_common':
+          'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
       'select_a_friend_to_match_with': 'Select a friend to match with:',
       'manage': 'Manage',
       'no_common_movies': 'No Common Movies',
-      'neither_of_you_have_added_the_': 'Neither of you have added the same movies to your watchlists.',
+      'neither_of_you_have_added_the_':
+          'Neither of you have added the same movies to your watchlists.',
       'find_joint_recommendations': 'Find Joint Recommendations',
       'hide_title': 'Hide Title',
-      'are_you_sure_you_want_to_block': 'Are you sure you want to block this title and permanently hide it from all lists?',
+      'are_you_sure_you_want_to_block':
+          'Are you sure you want to block this title and permanently hide it from all lists?',
       'title_hidden_and_removed_from_': 'Title hidden and removed from lists.',
       'hide': 'Hide',
       'undo': 'Undo',
@@ -393,13 +411,17 @@ class AppLocalizations {
       'review_saved_successfully': 'Review saved successfully',
       'saved': 'Saved ✔',
       'filmography': 'FILMOGRAPHY',
-      'do_you_want_to_delete_this_rat': 'Do you want to delete this rating and remove it from your history?',
+      'do_you_want_to_delete_this_rat':
+          'Do you want to delete this rating and remove it from your history?',
       'delete': 'Delete',
       'your_cinema_recap': 'Your Cinema Recap!',
-      'discover_your_cinema_journey_o': 'Discover your cinema journey of the year.',
-      'see_taste_matches_manage_reque': 'See taste matches, manage requests and activity feeds.',
+      'discover_your_cinema_journey_o':
+          'Discover your cinema journey of the year.',
+      'see_taste_matches_manage_reque':
+          'See taste matches, manage requests and activity feeds.',
       'see_all': 'See All',
-      'filters_out_deadpool_euphoria_': 'Filters out Deadpool, Euphoria, and mature R-rated content.',
+      'filters_out_deadpool_euphoria_':
+          'Filters out Deadpool, Euphoria, and mature R-rated content.',
       'active': ' (Active)',
       'filter': 'Filter',
       'year': 'Year',
@@ -419,7 +441,8 @@ class AppLocalizations {
       'customize_profile': 'Customize Profile',
       'username_username': 'Username (@username)',
       'public_profile': 'Public Profile',
-      'when_disabled_your_profile_can': 'When disabled, your profile cannot be viewed on the web.',
+      'when_disabled_your_profile_can':
+          'When disabled, your profile cannot be viewed on the web.',
       'save_settings': 'Save Settings',
       'username_or_email': 'Username or email...',
       'no_friends_added_yet': 'No friends added yet.',
@@ -441,9 +464,11 @@ class AppLocalizations {
       'all': '🎬 All',
       'no_more_content': 'No More Content',
       'loading_more': 'Loading more...',
-      'no_more_content_matches_your_f': 'No more content matches your filters.\nYou can clear the filters to continue.',
+      'no_more_content_matches_your_f':
+          'No more content matches your filters.\nYou can clear the filters to continue.',
       'discovery_gestures': 'Discovery Gestures',
-      'swipe_cards_to_train_our_recom': 'Swipe cards to train our recommendation engine!',
+      'swipe_cards_to_train_our_recom':
+          'Swipe cards to train our recommendation engine!',
       'swipe_right': 'Swipe Right',
       'liked_good_or_amazing': 'Liked (Good or Amazing)',
       'swipe_left': 'Swipe Left',
@@ -457,13 +482,15 @@ class AppLocalizations {
       'title_removed_from_watchlist': '{} removed from watchlist.',
       'synergy_score_match': '{}% Match',
       'error_occurred_msg': 'Error: {}',
-      'share_profile_text': 'Follow me on What to Watch! Check out my watchlist and favorites here: {}',
+      'share_profile_text':
+          'Follow me on What to Watch! Check out my watchlist and favorites here: {}',
       'taste_score_match': '{}% match',
-      'remove_friend_confirm_msg': 'Are you sure you want to remove {} from friends?',
+      'remove_friend_confirm_msg':
+          'Are you sure you want to remove {} from friends?',
       'recommended_by_user': 'Recommended by {}',
-      'friend_taste_match_desc': 'You have a {}% movie taste match with this friend.',
+      'friend_taste_match_desc':
+          'You have a {}% movie taste match with this friend.',
       'active_count_label': ' ({} Active)',
-
     },
     'tr': {
       'app_title': 'Ne İzlesem?',
@@ -581,7 +608,8 @@ class AppLocalizations {
       'lang_hi': 'Bollywood (Hint)',
       'lang_all': 'Tümü',
       'lang_unknown': 'Bilinmeyen',
-      'auth_register_subtitle': 'Hesabını oluştur, zevk profilin her cihazda seninle olsun.',
+      'auth_register_subtitle':
+          'Hesabını oluştur, zevk profilin her cihazda seninle olsun.',
       'auth_login_subtitle': 'Hesabına gir, kaldığın yerden devam et.',
       'auth_display_name_optional': 'Ad (isteğe bağlı)',
       'auth_email_label': 'E-posta',
@@ -629,6 +657,10 @@ class AppLocalizations {
       'swipe_disliked': 'Beğenilmedi',
       'mood_crime': 'Suç & polisiye',
       'browse_for_you_personal': 'Sana Özel',
+      'tonight_title': 'Bu Gece Ne İzlesem?',
+      'tonight_match': 'uyum',
+      'reco_reason_seed': '{x} beğendiğin için',
+      'reco_reason_friend': '{x} buna bayıldı',
       'match_find_suggestions': 'Ortak Önerileri Bul',
       'detail_seasons': 'Sezonlar',
       'mood_fantasy': 'Fantastik dünya',
@@ -779,35 +811,49 @@ class AppLocalizations {
       'what_to': 'ne ',
       'watch': 'izlesem?',
       'personalize_recommendations': 'Önerileri Zevkine Göre Kişiselleştir',
-      'complete_the_2minute_survey_fo': 'Sana en uygun film ve dizileri bulmamız için 2 dakikalık analizi tamamla!',
-      'you_are_offline_your_changes_w': 'Çevrimdışısınız — Değişiklikleriniz senkronize edilecek',
+      'complete_the_2minute_survey_fo':
+          'Sana en uygun film ve dizileri bulmamız için 2 dakikalık analizi tamamla!',
+      'you_are_offline_your_changes_w':
+          'Çevrimdışısınız — Değişiklikleriniz senkronize edilecek',
       'no_common_genres': 'Ortak Tür Bulunamadı',
-      'you_have_no_common_genres_sele': 'İkinizin de seçtiği ortak bir tür bulunmuyor. Ortak bir tavsiye üretebilmemiz için lütfen en az bir ortak tür seçin.',
+      'you_have_no_common_genres_sele':
+          'İkinizin de seçtiği ortak bir tür bulunmuyor. Ortak bir tavsiye üretebilmemiz için lütfen en az bir ortak tür seçin.',
       'movie_match': 'Film Eşleştir',
       'movie_match_alt': 'Film Tabanlı',
       'with_friend': 'Arkadaşımla',
       'movie_matcher': 'Film Tabanlı Eşleştirme',
-      'search_for_a_movie_or_tv_show_': 'Sevdiğiniz bir filmi veya diziyi aratın, o içeriğin benzerlerini ve tür eşleşmelerini analiz edip zevkinize uygun yapımları listeleyelim.',
+      'search_for_a_movie_or_tv_show_':
+          'Sevdiğiniz bir filmi veya diziyi aratın, o içeriğin benzerlerini ve tür eşleşmelerini analiz edip zevkinize uygun yapımları listeleyelim.',
       'couch_mode_matcher': 'Aynı Cihazda Eşleştirme (Koltuk Modu)',
-      'pass_the_phone_to_the_person_n': 'Telefonu sırayla yanınızdaki kişiye verin. İkiniz de en sevdiğiniz film türlerini işaretleyin, ortak beğenebileceğiniz filmleri bulalım.',
-      'player_1_you_select_your_favor': '👉 1. Kişi (Sen): En sevdiğin türleri seç...',
-      'player_2_friend_now_its_your_t': '👉 2. Kişi (Arkadaşın): Şimdi senin sıran...',
+      'pass_the_phone_to_the_person_n':
+          'Telefonu sırayla yanınızdaki kişiye verin. İkiniz de en sevdiğiniz film türlerini işaretleyin, ortak beğenebileceğiniz filmleri bulalım.',
+      'player_1_you_select_your_favor':
+          '👉 1. Kişi (Sen): En sevdiğin türleri seç...',
+      'player_2_friend_now_its_your_t':
+          '👉 2. Kişi (Arkadaşın): Şimdi senin sıran...',
       'common_match': 'Ortak Beğeni',
       'authentication_required': 'Giriş Yapmalısınız',
-      'please_sign_in_to_view_watchli': 'Arkadaşlarınızla ortak film kesişimlerini görebilmek için lütfen giriş yapın.',
+      'please_sign_in_to_view_watchli':
+          'Arkadaşlarınızla ortak film kesişimlerini görebilmek için lütfen giriş yapın.',
       'no_friends_yet': 'Henüz Arkadaş Yok',
-      'you_must_add_friends_first_to_': 'Eşleşebilmek için önce arkadaş eklemelisiniz.',
+      'you_must_add_friends_first_to_':
+          'Eşleşebilmek için önce arkadaş eklemelisiniz.',
       'add_manage_friends': 'Arkadaş Ekle / Yönet',
       'online_friend_match': 'Arkadaşımla Eşleş (Online)',
-      'select_a_friend_to_find_common': 'Eşleşmek istediğiniz bir arkadaşınızı seçin, ikinizin ortak izleme listelerini (watchlist) karşılaştırıp ortak ilgi alanlarınıza göre öneriler çıkaralım.',
-      'select_a_friend_to_match_with': 'Eşleşmek istediğiniz arkadaşınızı seçin:',
+      'select_a_friend_to_find_common':
+          'Eşleşmek istediğiniz bir arkadaşınızı seçin, ikinizin ortak izleme listelerini (watchlist) karşılaştırıp ortak ilgi alanlarınıza göre öneriler çıkaralım.',
+      'select_a_friend_to_match_with':
+          'Eşleşmek istediğiniz arkadaşınızı seçin:',
       'manage': 'Yönet',
       'no_common_movies': 'Ortak İzleme Listesi Boş',
-      'neither_of_you_have_added_the_': 'İkinizin de ortak izleme listesine eklediği film bulunmuyor.',
+      'neither_of_you_have_added_the_':
+          'İkinizin de ortak izleme listesine eklediği film bulunmuyor.',
       'find_joint_recommendations': 'Ortak Tavsiye Bul',
       'hide_title': 'Yapımı Gizle',
-      'are_you_sure_you_want_to_block': 'Bu yapımı engellemek ve tüm listelerden kalıcı olarak gizlemek istediğinize emin misiniz?',
-      'title_hidden_and_removed_from_': 'Yapım gizlendi ve listelerden kaldırıldı.',
+      'are_you_sure_you_want_to_block':
+          'Bu yapımı engellemek ve tüm listelerden kalıcı olarak gizlemek istediğinize emin misiniz?',
+      'title_hidden_and_removed_from_':
+          'Yapım gizlendi ve listelerden kaldırıldı.',
       'hide': 'Gizle',
       'undo': 'Geri Al',
       'block_and_hide_title': 'Yapımı Engelle ve Gizle',
@@ -820,13 +866,16 @@ class AppLocalizations {
       'review_saved_successfully': 'Yorumunuz kaydedildi',
       'saved': 'Kaydedildi ✔',
       'filmography': 'FİLMOGRAFİ',
-      'do_you_want_to_delete_this_rat': 'Bu filmin değerlendirmesini silmek ve geçmişinizden çıkarmak istiyor musunuz?',
+      'do_you_want_to_delete_this_rat':
+          'Bu filmin değerlendirmesini silmek ve geçmişinizden çıkarmak istiyor musunuz?',
       'delete': 'Sil',
       'your_cinema_recap': 'Sinema Özetin Hazır!',
       'discover_your_cinema_journey_o': 'Yılın sinema yolculuğunu keşfet.',
-      'see_taste_matches_manage_reque': 'Zevk uyumunuzu görün, istekleri ve arkadaş akışını yönetin.',
+      'see_taste_matches_manage_reque':
+          'Zevk uyumunuzu görün, istekleri ve arkadaş akışını yönetin.',
       'see_all': 'Tümünü Gör',
-      'filters_out_deadpool_euphoria_': 'Deadpool, Euphoria vb. +18 olgun içerikleri listelerden filtreler.',
+      'filters_out_deadpool_euphoria_':
+          'Deadpool, Euphoria vb. +18 olgun içerikleri listelerden filtreler.',
       'active': ' (Aktif)',
       'filter': 'Filtrele',
       'year': 'Yıl',
@@ -846,7 +895,8 @@ class AppLocalizations {
       'customize_profile': 'Profilini Özelleştir',
       'username_username': 'Kullanıcı Adı (@username)',
       'public_profile': 'Profilim Halka Açık Olsun',
-      'when_disabled_your_profile_can': 'Kapalıyken profiliniz internette paylaşılamaz.',
+      'when_disabled_your_profile_can':
+          'Kapalıyken profiliniz internette paylaşılamaz.',
       'save_settings': 'Kaydet',
       'username_or_email': 'Kullanıcı adı veya e-posta...',
       'no_friends_added_yet': 'Henüz arkadaşınız yok.',
@@ -859,7 +909,8 @@ class AppLocalizations {
       'no_friend_activity_yet': 'Henüz arkadaş aktivitesi yok.',
       'recommended_to_you': 'Sana Önerilenler',
       'cinema_taste_match': 'Sinema Zevki Uyumu',
-      'no_activity_from_this_friend_y': 'Bu arkadaşın henüz bir aktivitesi yok.',
+      'no_activity_from_this_friend_y':
+          'Bu arkadaşın henüz bir aktivitesi yok.',
       'error_saving_rating': 'Puan kaydedilirken hata oluştu.',
       'error_undoing_rating': 'İşlem geri alınırken hata oluştu.',
       'content_filters': 'İçerik Filtreleri',
@@ -868,9 +919,11 @@ class AppLocalizations {
       'all': '🎬 Tümü',
       'no_more_content': 'İçerik Kalmadı',
       'loading_more': 'Daha fazla yükleniyor...',
-      'no_more_content_matches_your_f': 'Filtrenize uygun başka içerik kalmadı.\nFiltreleri temizleyerek devam edebilirsiniz.',
+      'no_more_content_matches_your_f':
+          'Filtrenize uygun başka içerik kalmadı.\nFiltreleri temizleyerek devam edebilirsiniz.',
       'discovery_gestures': 'Keşfetme Hareketleri',
-      'swipe_cards_to_train_our_recom': 'Kartları kaydırarak zevk analizi motorumuzu eğitin!',
+      'swipe_cards_to_train_our_recom':
+          'Kartları kaydırarak zevk analizi motorumuzu eğitin!',
       'swipe_right': 'Sağa Kaydır',
       'liked_good_or_amazing': 'Beğendim (İyi veya Harika)',
       'swipe_left': 'Sola Kaydır',
@@ -884,13 +937,14 @@ class AppLocalizations {
       'title_removed_from_watchlist': '{} izleme listesinden çıkarıldı.',
       'synergy_score_match': '%{} Uyumlu',
       'error_occurred_msg': 'Hata oluştu: {}',
-      'share_profile_text': 'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',
+      'share_profile_text':
+          'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',
       'taste_score_match': '%{} uyum',
-      'remove_friend_confirm_msg': '{} arkadaş listenizden çıkarılacak. Emin misiniz?',
+      'remove_friend_confirm_msg':
+          '{} arkadaş listenizden çıkarılacak. Emin misiniz?',
       'recommended_by_user': '{} önerdi',
       'friend_taste_match_desc': 'Bu arkadaşınızla ortak beğeni oranınız %{}.',
       'active_count_label': ' ({} Aktif)',
-
     },
   };
 

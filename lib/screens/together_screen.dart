@@ -22,9 +22,7 @@ class TogetherScreen extends ConsumerStatefulWidget {
 class _TogetherScreenState extends ConsumerState<TogetherScreen> {
   void _push(Widget screen) {
     HapticFeedback.lightImpact();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -52,7 +50,8 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              tr?.get('together_desc') ?? 'Discover, match and share with friends.',
+              tr?.get('together_desc') ??
+                  'Discover, match and share with friends.',
               style: TextStyle(color: c.dim, fontSize: 13),
             ),
             const SizedBox(height: 20),
@@ -61,7 +60,9 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
             _heroCard(
               c: c,
               title: tr?.get('together_social_title') ?? 'Social & Friends',
-              subtitle: tr?.get('together_social_desc') ?? 'Friends, requests and activity feed',
+              subtitle:
+                  tr?.get('together_social_desc') ??
+                  'Friends, requests and activity feed',
               icon: Icons.groups_rounded,
               badge: socialBadge,
               onTap: () => _push(const SocialScreen()),
@@ -74,8 +75,12 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                 Expanded(
                   child: _gridCard(
                     c: c,
-                    title: tr?.get('together_friend_match_title') ?? 'Friend Match',
-                    subtitle: tr?.get('together_friend_match_desc') ?? 'Live, shared code',
+                    title:
+                        tr?.get('together_friend_match_title') ??
+                        'Friend Match',
+                    subtitle:
+                        tr?.get('together_friend_match_desc') ??
+                        'Live, shared code',
                     icon: Icons.group_add_rounded,
                     accent: c.red,
                     onTap: () => _push(
@@ -104,7 +109,9 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
             _wideCard(
               c: c,
               title: tr?.get('together_similar_title') ?? 'Find Similar',
-              subtitle: tr?.get('together_similar_desc') ?? 'Discover titles similar to one you love',
+              subtitle:
+                  tr?.get('together_similar_desc') ??
+                  'Discover titles similar to one you love',
               icon: Icons.compare_arrows_rounded,
               onTap: () => _push(
                 const MatchScreen(initialMode: 0, hideModeSelector: true),
@@ -151,11 +158,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                   child: Icon(icon, color: c.gold, size: 28),
                 ),
                 if (badge > 0)
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: _badgePill(c, badge),
-                  ),
+                  Positioned(right: -4, top: -4, child: _badgePill(c, badge)),
               ],
             ),
             const SizedBox(width: 16),
@@ -174,11 +177,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      color: c.dim,
-                      fontSize: 12,
-                      height: 1.35,
-                    ),
+                    style: TextStyle(color: c.dim, fontSize: 12, height: 1.35),
                   ),
                 ],
               ),

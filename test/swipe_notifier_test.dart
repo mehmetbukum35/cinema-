@@ -5,6 +5,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
+import 'package:ne_izlesem/services/recommendation_engine.dart';
 import 'package:ne_izlesem/providers/swipe_provider.dart';
 import 'mocks/secure_storage_mock.dart';
 
@@ -67,7 +68,7 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service);
+        final notifier = SwipeNotifier(service, RecommendationEngine(service));
 
         // Wait for async init() to complete
         await Future.delayed(const Duration(milliseconds: 100));
@@ -123,7 +124,7 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service);
+        final notifier = SwipeNotifier(service, RecommendationEngine(service));
 
         await Future.delayed(const Duration(milliseconds: 100));
 
@@ -202,7 +203,7 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service);
+        final notifier = SwipeNotifier(service, RecommendationEngine(service));
 
         // Wait for initial load to finish (which calls loadMore once)
         await Future.delayed(const Duration(milliseconds: 150));
@@ -279,7 +280,7 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service);
+        final notifier = SwipeNotifier(service, RecommendationEngine(service));
 
         await Future.delayed(const Duration(milliseconds: 50));
         expect(notifier.state.queue.isEmpty, isTrue);
@@ -300,7 +301,7 @@ void main() {
         return http.Response(jsonEncode({'results': []}), 200);
       });
       final service = TmdbService(client: client);
-      final notifier = SwipeNotifier(service);
+      final notifier = SwipeNotifier(service, RecommendationEngine(service));
 
       await Future.delayed(const Duration(milliseconds: 50));
       expect(notifier.state.queue, isEmpty);

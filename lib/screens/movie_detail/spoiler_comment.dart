@@ -50,7 +50,8 @@ class _SpoilerCommentState extends State<SpoilerComment> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  tr?.get('review_spoiler_warning') ?? 'Spoiler içeriyor. Görmek için dokunun.',
+                  tr?.get('review_spoiler_warning') ??
+                      'Spoiler içeriyor. Görmek için dokunun.',
                   style: TextStyle(
                     color: c.rBerbat,
                     fontSize: 12,
@@ -73,11 +74,7 @@ class _SpoilerCommentState extends State<SpoilerComment> {
       width: double.infinity,
       child: Text(
         widget.comment,
-        style: TextStyle(
-          color: c.ink,
-          fontSize: 13,
-          height: 1.35,
-        ),
+        style: TextStyle(color: c.ink, fontSize: 13, height: 1.35),
       ),
     );
   }

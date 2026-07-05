@@ -219,6 +219,41 @@ class PrefsService {
     await DatabaseHelper().saveFavorites(shows, true);
   }
 
+  // ─── Öneri isabet telemetrisi ────────────────────────────────────────────────
+  // Kaynak bazında (discover/seed/friend) kaç öneri gösterilip kaçının
+  // İyi/Harika aldığını sayar. Motorun gerçek başarısını ölçmenin tek yolu:
+  // "önerdik → beğendi mi?" dönüşümü. Yalnızca cihazda tutulur.
+
+  static const _keyRecoTelemetry = 'reco_telemetry_v1';
+
+  static Future<void> recordRecoOutcome({
+    required String source,
+    required bool liked,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
+    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+    final Map<String, dynamic> bucket =
+        (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
+    bucket['shown'] = (bucket['shown'] as int) + 1;
+    if (liked) bucket['liked'] = (bucket['liked'] as int) + 1;
+    data[source] = bucket;
+    await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+  }
+
+  /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
+  static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
+    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+    return data.map(
+      (k, v) => MapEntry(
+        k,
+        (v as Map<String, dynamic>).map((k2, v2) => MapEntry(k2, v2 as int)),
+      ),
+    );
+  }
+
   // ─── Ratings ────────────────────────────────────────────────────────────────
 
   static Future<void> saveRating({
@@ -568,7 +603,10 @@ class PrefsService {
   static Future<int?> getMovieRating(int movieId, bool isTV) async {
     final ratings = await DatabaseHelper().getRatings();
     final match = ratings.firstWhere(
-      (r) => r['movie_id'] == movieId && (r['is_tv'] == 1) == isTV && r['deleted'] != 1,
+      (r) =>
+          r['movie_id'] == movieId &&
+          (r['is_tv'] == 1) == isTV &&
+          r['deleted'] != 1,
       orElse: () => <String, dynamic>{},
     );
     return match.isNotEmpty ? match['rating'] as int : null;

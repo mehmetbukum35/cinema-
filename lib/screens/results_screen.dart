@@ -7,6 +7,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/providers.dart';
+import '../services/prefs_service.dart';
+import '../services/recommendation_engine.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import 'movie_detail_sheet.dart';
@@ -26,6 +28,10 @@ class ResultsScreen extends ConsumerStatefulWidget {
   final List<int>? jointGenres;
   final bool isTrending;
 
+  /// true ise her sayfa, kullanıcının tür zevk vektörüyle sıralanır
+  /// (mood kısayolları buradan gelir: "Korku gecesi" bile kişiselleşir).
+  final bool personalRank;
+
   const ResultsScreen({
     super.key,
     this.genreStr,
@@ -41,6 +47,7 @@ class ResultsScreen extends ConsumerStatefulWidget {
     this.includeTv = true,
     this.jointGenres,
     this.isTrending = false,
+    this.personalRank = false,
   });
 
   @override
@@ -174,10 +181,14 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       _hasMore = true;
     });
     try {
-      final batch = await _fetchDiscover(1);
+      final batch = await _personalRankBatch(await _fetchDiscover(1));
       if (!mounted) return;
       setState(() {
-        _movies.addAll(batch.where((m) => _seenIds.add('${m.isTV ? 'tv' : 'movie'}_${m.id}')));
+        _movies.addAll(
+          batch.where(
+            (m) => _seenIds.add('${m.isTV ? 'tv' : 'movie'}_${m.id}'),
+          ),
+        );
         if (batch.isEmpty) _hasMore = false;
         _loading = false;
       });
@@ -191,13 +202,40 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     }
   }
 
+  /// personalRank açıksa sayfayı kullanıcının tür zevkine göre sıralar.
+  /// Sayfa-içi sıralama olduğu için sonsuz kaydırma davranışı bozulmaz;
+  /// kapalıysa (varsayılan) batch olduğu gibi döner.
+  Future<List<Movie>> _personalRankBatch(List<Movie> batch) async {
+    if (!widget.personalRank || batch.length < 2) return batch;
+    try {
+      final weights = await PrefsService.getGenreWeights();
+      if (weights.isEmpty) return batch;
+      final scored = [
+        for (final m in batch)
+          ScoredMovie(
+            m,
+            RecommendationEngine.blend(
+              genreSim: PrefsService.calculateSimilarity(weights, m.genreIds),
+              voteAverage: m.voteAverage,
+            ),
+          ),
+      ]..sort((a, b) => b.score.compareTo(a.score));
+      return scored.map((s) => s.movie).toList();
+    } catch (e, st) {
+      debugPrint("Personal ranking failed, falling back to API order: $e\n$st");
+      return batch;
+    }
+  }
+
   Future<void> _loadMore() async {
     setState(() => _loadingMore = true);
     final nextPage = _page + 1;
     try {
-      final batch = await _fetchDiscover(nextPage);
+      final batch = await _personalRankBatch(await _fetchDiscover(nextPage));
       if (!mounted) return;
-      final fresh = batch.where((m) => _seenIds.add('${m.isTV ? 'tv' : 'movie'}_${m.id}')).toList();
+      final fresh = batch
+          .where((m) => _seenIds.add('${m.isTV ? 'tv' : 'movie'}_${m.id}'))
+          .toList();
       setState(() {
         _page = nextPage;
         _movies.addAll(fresh);
@@ -244,9 +282,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 child: Builder(
                   builder: (context) {
                     final suffix =
-                        (tempLang != null ||
-                            _isYearRangeActive(tempYear))
-                        ? (AppLocalizations.of(context)?.get('active') ?? ' (Active)')
+                        (tempLang != null || _isYearRangeActive(tempYear))
+                        ? (AppLocalizations.of(context)?.get('active') ??
+                              ' (Active)')
                         : '';
                     return Text(
                       '${AppLocalizations.of(context)?.get('filter') ?? 'Filter'}$suffix',
@@ -311,7 +349,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                     Builder(
                       builder: (context) {
                         return Text(
-                          AppLocalizations.of(context)?.get('language') ?? 'LANGUAGE',
+                          AppLocalizations.of(context)?.get('language') ??
+                              'LANGUAGE',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 12,
@@ -343,7 +382,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   Builder(
                     builder: (context) {
                       return _LangChip(
-                        label: AppLocalizations.of(context)?.get('lang_all') ?? 'All',
+                        label:
+                            AppLocalizations.of(context)?.get('lang_all') ??
+                            'All',
                         selected: tempLang == null,
                         onTap: () => setModal(() => tempLang = null),
                       );
@@ -445,9 +486,16 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         title: Text(
           widget.isTrending
               ? ((widget.includeTv && !widget.includeMovies)
-                  ? (AppLocalizations.of(context)?.get('search_trending_shows') ?? 'Trend Diziler')
-                  : (AppLocalizations.of(context)?.get('search_trending_movies') ?? 'Trend Filmler'))
-              : (AppLocalizations.of(context)?.get('results_title') ?? 'Öneriler'),
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('search_trending_shows') ??
+                          'Trend Diziler')
+                    : (AppLocalizations.of(
+                            context,
+                          )?.get('search_trending_movies') ??
+                          'Trend Filmler'))
+              : (AppLocalizations.of(context)?.get('results_title') ??
+                    'Öneriler'),
           style: TextStyle(
             color: c.ink,
             fontSize: 18,
@@ -534,7 +582,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                       ),
                       onDeleted: () {
                         setState(() {
-                          _yearRange = RangeValues(1970, _currentYear.toDouble());
+                          _yearRange = RangeValues(
+                            1970,
+                            _currentYear.toDouble(),
+                          );
                           _loadFirstPage();
                         });
                       },
@@ -577,15 +628,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 shape: BoxShape.circle,
                 color: c.red.withValues(alpha: 0.1),
               ),
-              child: Icon(
-                Icons.wifi_off_rounded,
-                color: c.red,
-                size: 32,
-              ),
+              child: Icon(Icons.wifi_off_rounded, color: c.red, size: 32),
             ),
             const SizedBox(height: 20),
             Text(
-              AppLocalizations.of(context)?.get('browse_error') ?? 'An error occurred',
+              AppLocalizations.of(context)?.get('browse_error') ??
+                  'An error occurred',
               style: TextStyle(
                 color: c.ink,
                 fontSize: 18,
@@ -596,7 +644,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                AppLocalizations.of(context)?.get('browse_conn_error') ?? 'Connection error. Please check your internet.',
+                AppLocalizations.of(context)?.get('browse_conn_error') ??
+                    'Connection error. Please check your internet.',
                 style: TextStyle(color: c.dim, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -651,7 +700,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            AppLocalizations.of(context)?.get('try_different_filters') ?? 'Try different filters',
+            AppLocalizations.of(context)?.get('try_different_filters') ??
+                'Try different filters',
             style: TextStyle(color: c.dim, fontSize: 13),
           ),
         ],
@@ -807,7 +857,10 @@ class _MovieCard extends StatelessWidget {
                   Row(
                     children: [
                       (() {
-                        final jointScore = _calculateJointScore(movie.genreIds, movie.voteAverage);
+                        final jointScore = _calculateJointScore(
+                          movie.genreIds,
+                          movie.voteAverage,
+                        );
                         if (jointScore > 0) {
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),
@@ -823,7 +876,11 @@ class _MovieCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.bolt_rounded, color: c.green, size: 13),
+                                  Icon(
+                                    Icons.bolt_rounded,
+                                    color: c.green,
+                                    size: 13,
+                                  ),
                                   const SizedBox(width: 3),
                                   Text(
                                     '%$jointScore',

@@ -7,11 +7,7 @@ class SimilarCard extends StatelessWidget {
   final Movie movie;
   final VoidCallback onTap;
 
-  const SimilarCard({
-    super.key,
-    required this.movie,
-    required this.onTap,
-  });
+  const SimilarCard({super.key, required this.movie, required this.onTap});
 
   static const _gold = AppColors.gold;
 
@@ -91,9 +87,9 @@ class SimilarCard extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        color: context.c.card,
-        child: Center(
-          child: Icon(Icons.movie_rounded, color: context.c.textFaint, size: 24),
-        ),
-      );
+    color: context.c.card,
+    child: Center(
+      child: Icon(Icons.movie_rounded, color: context.c.textFaint, size: 24),
+    ),
+  );
 }

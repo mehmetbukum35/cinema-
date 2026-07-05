@@ -125,7 +125,10 @@ class ProfileScreen extends ConsumerWidget {
               builder: (ctx) => AlertDialog(
                 backgroundColor: c.surface,
                 title: Text(
-                  AppLocalizations.of(context)?.get('profile_reset_failed_title') ?? 'Sıfırlama Başarısız',
+                  AppLocalizations.of(
+                        context,
+                      )?.get('profile_reset_failed_title') ??
+                      'Sıfırlama Başarısız',
                   style: TextStyle(
                     color: c.ink,
                     fontSize: 16,
@@ -133,7 +136,9 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 content: Text(
-                  AppLocalizations.of(context)?.get('profile_reset_failed_content') ??
+                  AppLocalizations.of(
+                        context,
+                      )?.get('profile_reset_failed_content') ??
                       'Sunucu verileri silinemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
                   style: TextStyle(color: c.dim, fontSize: 14, height: 1.5),
                 ),
@@ -142,7 +147,10 @@ class ProfileScreen extends ConsumerWidget {
                     onPressed: () => Navigator.pop(ctx),
                     child: Text(
                       AppLocalizations.of(context)?.get('ok') ?? 'Tamam',
-                      style: TextStyle(color: c.gold, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: c.gold,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -179,7 +187,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         content: Text(
-          AppLocalizations.of(context)?.get('do_you_want_to_delete_this_rat') ?? 'Do you want to delete this rating and remove it from your history?',
+          AppLocalizations.of(context)?.get('do_you_want_to_delete_this_rat') ??
+              'Do you want to delete this rating and remove it from your history?',
           style: TextStyle(color: c.dim, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -283,175 +292,555 @@ class ProfileScreen extends ConsumerWidget {
         ),
         slivers: [
           // Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Row(
-              children: [
-                Text(
-                  AppLocalizations.of(context)?.get('tab_profile') ??
-                      'Profilim',
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Semantics(
-                  label: AppLocalizations.of(context)?.get('profile_account') ?? 'Account',
-                  button: true,
-                  child: IconButton(
-                    icon: Icon(
-                      ref.watch(authProvider).isLoggedIn
-                          ? Icons.account_circle_rounded
-                          : Icons.account_circle_outlined,
-                      color: ref.watch(authProvider).isLoggedIn ? c.red : c.dim,
-                      size: 22,
-                    ),
-                    onPressed: () => _openAccount(context, ref),
-                    tooltip: AppLocalizations.of(context)?.get('profile_account') ?? 'Account',
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-                Semantics(
-                  label:
-                      AppLocalizations.of(context)?.get('theme_switch') ??
-                      'Temayı değiştir',
-                  button: true,
-                  child: IconButton(
-                    icon: Icon(
-                      Theme.of(context).brightness == Brightness.light
-                          ? Icons.dark_mode_rounded
-                          : Icons.light_mode_rounded,
-                      color: c.dim,
-                      size: 22,
-                    ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ref.read(themeModeProvider.notifier).toggle();
-                    },
-                    tooltip:
-                        AppLocalizations.of(context)?.get('theme_switch') ??
-                        'Temayı değiştir',
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-                Semantics(
-                  label:
-                      AppLocalizations.of(context)?.get('browse_refresh') ??
-                      'Yenile',
-                  button: true,
-                  child: IconButton(
-                    icon: Icon(Icons.refresh_rounded, color: c.dim, size: 22),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ref.invalidate(watchlistProvider);
-                      ref.invalidate(statsProvider);
-                    },
-                    tooltip:
-                        AppLocalizations.of(context)?.get('browse_refresh') ??
-                        'Yenile',
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // ── Wrapped Banner ──────────────────────────────────────────────────
-        if (total >= 3)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: SpringButton(
-                onTap: () {
-                  final username = ref.read(authProvider).user?['username'] as String?;
-                  showGeneralDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    barrierColor: Colors.black,
-                    transitionDuration: const Duration(milliseconds: 300),
-                    pageBuilder: (ctx, anim1, anim2) {
-                      return WrappedModal(
-                        stats: stats,
-                        username: username,
-                      );
-                    },
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF2E93), Color(0xFFFF8A00)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Row(
+                children: [
+                  Text(
+                    AppLocalizations.of(context)?.get('tab_profile') ??
+                        'Profilim',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF2E93).withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizations.of(context)?.get('your_cinema_recap') ?? 'Your Cinema Recap!',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              AppLocalizations.of(context)?.get('discover_your_cinema_journey_o') ?? 'Discover your cinema journey of the year.',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 11.5,
-                              ),
-                            ),
-                          ],
-                        ),
+                  const Spacer(),
+                  Semantics(
+                    label:
+                        AppLocalizations.of(context)?.get('profile_account') ??
+                        'Account',
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(
+                        ref.watch(authProvider).isLoggedIn
+                            ? Icons.account_circle_rounded
+                            : Icons.account_circle_outlined,
+                        color: ref.watch(authProvider).isLoggedIn
+                            ? c.red
+                            : c.dim,
+                        size: 22,
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
-                    ],
+                      onPressed: () => _openAccount(context, ref),
+                      tooltip:
+                          AppLocalizations.of(
+                            context,
+                          )?.get('profile_account') ??
+                          'Account',
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  Semantics(
+                    label:
+                        AppLocalizations.of(context)?.get('theme_switch') ??
+                        'Temayı değiştir',
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(
+                        Theme.of(context).brightness == Brightness.light
+                            ? Icons.dark_mode_rounded
+                            : Icons.light_mode_rounded,
+                        color: c.dim,
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(themeModeProvider.notifier).toggle();
+                      },
+                      tooltip:
+                          AppLocalizations.of(context)?.get('theme_switch') ??
+                          'Temayı değiştir',
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  Semantics(
+                    label:
+                        AppLocalizations.of(context)?.get('browse_refresh') ??
+                        'Yenile',
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(Icons.refresh_rounded, color: c.dim, size: 22),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.invalidate(watchlistProvider);
+                        ref.invalidate(statsProvider);
+                      },
+                      tooltip:
+                          AppLocalizations.of(context)?.get('browse_refresh') ??
+                          'Yenile',
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // ── Wrapped Banner ──────────────────────────────────────────────────
+          if (total >= 3)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: SpringButton(
+                  onTap: () {
+                    final username =
+                        ref.read(authProvider).user?['username'] as String?;
+                    showGeneralDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      barrierColor: Colors.black,
+                      transitionDuration: const Duration(milliseconds: 300),
+                      pageBuilder: (ctx, anim1, anim2) {
+                        return WrappedModal(stats: stats, username: username);
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF2E93), Color(0xFFFF8A00)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF2E93).withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('your_cinema_recap') ??
+                                    'Your Cinema Recap!',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('discover_your_cinema_journey_o') ??
+                                    'Discover your cinema journey of the year.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white70,
+                          size: 14,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+          // Stats card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Total count + top genres
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: c.isLight
+                          ? Border.all(color: c.border, width: 1)
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: c.red.withValues(alpha: 0.15),
+                              ),
+                              child: Icon(
+                                Icons.movie_filter_rounded,
+                                color: c.red,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$total',
+                                  style: TextStyle(
+                                    color: c.ink,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  AppLocalizations.of(
+                                        context,
+                                      )?.get('profile_rating') ??
+                                      'Ratings',
+                                  style: TextStyle(
+                                    color: c.dim,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (topGenres.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('profile_genres') ??
+                                'EN SEVDİĞİN TÜRLER',
+                            style: TextStyle(
+                              color: c.dim,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: topGenres
+                                .map(
+                                  (g) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: c.card,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: c.isLight
+                                          ? Border.all(
+                                              color: c.border,
+                                              width: 1,
+                                            )
+                                          : null,
+                                    ),
+                                    child: Text(
+                                      PrefsService.genreName(g as int),
+                                      style: TextStyle(
+                                        color: c.ink,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Rating distribution
+                  if (total > 0) ...[
+                    const SizedBox(height: 14),
+                    _ratingDistribution(context, stats),
+                  ],
+                ],
+              ),
+            ),
           ),
-        // Stats card
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Total count + top genres
-                Container(
+          // Social card (only if authenticated)
+          if (ref.watch(authProvider).isLoggedIn)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SocialScreen(initialTab: 0),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: c.isLight
+                            ? c.border
+                            : Colors.white.withValues(alpha: 0.05),
+                        width: 1,
+                      ),
+                      boxShadow: CinemaShadows.card,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.gold.withValues(alpha: 0.15),
+                          ),
+                          child: Icon(
+                            Icons.people_alt_rounded,
+                            color: c.gold,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('together_social_title') ??
+                                    'Social & Friends',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                ref.watch(authProvider).user?['username'] !=
+                                        null
+                                    ? '@${ref.watch(authProvider).user!['username']}'
+                                    : (AppLocalizations.of(context)?.get(
+                                            'see_taste_matches_manage_reque',
+                                          ) ??
+                                          'See taste matches, manage requests and activity feeds.'),
+                                style: TextStyle(color: c.dim, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Builder(
+                          builder: (ctx) {
+                            final pendingCount = ref
+                                .watch(socialProvider)
+                                .pendingReceived
+                                .length;
+                            if (pendingCount > 0) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: c.red,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$pendingCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }
+                            return Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: c.dim,
+                              size: 14,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Rated Movies
+          if (stats['ratedMovies'] != null &&
+              (stats['ratedMovies'] as List).isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  AppLocalizations.of(context)?.get('profile_history') ??
+                      'DEĞERLENDİRDİKLERİM',
+                  style: TextStyle(
+                    color: c.dim,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 225,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: (stats['ratedMovies'] as List).length,
+                  itemBuilder: (ctx, i) {
+                    final item =
+                        (stats['ratedMovies'] as List)[i]
+                            as Map<String, dynamic>;
+                    final movie = item['movie'] as Movie;
+                    final rating = item['rating'] as int;
+                    return _RatedMovieCard(
+                      movie: movie,
+                      rating: rating,
+                      onTap: () => _openDetail(context, ref, movie),
+                      onDelete: () => _confirmDeleteRating(context, ref, movie),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+          // Watchlist
+          if (watchlist.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Row(
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.get('profile_watchlist') ??
+                          'İZLEME LİSTESİ',
+                      style: TextStyle(
+                        color: c.dim,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WatchlistScreen(),
+                        ),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context)?.get('see_all') ??
+                            'See All',
+                        style: TextStyle(
+                          color: c.red,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 225,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: watchlist.length,
+                  itemBuilder: (ctx, i) => _WatchlistCard(
+                    movie: watchlist[i],
+                    onTap: () => _openDetail(context, ref, watchlist[i]),
+                    onRemove: () {
+                      ref
+                          .read(watchlistProvider.notifier)
+                          .remove(watchlist[i].id, watchlist[i].isTV);
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+          // Sync Card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: const SyncSection(),
+            ),
+          ),
+          // Family Mode Card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: const _FamilyModeCard(),
+            ),
+          ),
+
+          // Onboarding / Taste analysis redo button
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _restartOnboarding(context);
+                },
+                child: Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: c.surface,
@@ -460,143 +849,17 @@ class ProfileScreen extends ConsumerWidget {
                         ? Border.all(color: c.border, width: 1)
                         : null,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: c.red.withValues(alpha: 0.15),
-                            ),
-                            child: Icon(
-                              Icons.movie_filter_rounded,
-                              color: c.red,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$total',
-                                style: TextStyle(
-                                  color: c.ink,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('profile_rating') ??
-                                    'Ratings',
-                                style: TextStyle(
-                                  color: c.dim,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (topGenres.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context)?.get('profile_genres') ??
-                              'EN SEVDİĞİN TÜRLER',
-                          style: TextStyle(
-                            color: c.dim,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: topGenres
-                              .map(
-                                (g) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: c.card,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: c.isLight
-                                        ? Border.all(color: c.border, width: 1)
-                                        : null,
-                                  ),
-                                  child: Text(
-                                    PrefsService.genreName(g as int),
-                                    style: TextStyle(
-                                      color: c.ink,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Rating distribution
-                if (total > 0) ...[
-                  const SizedBox(height: 14),
-                  _ratingDistribution(context, stats),
-                ],
-              ],
-            ),
-          ),
-        ),
-        // Social card (only if authenticated)
-        if (ref.watch(authProvider).isLoggedIn)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SocialScreen(initialTab: 0),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: c.isLight ? c.border : Colors.white.withValues(alpha: 0.05),
-                      width: 1,
-                    ),
-                    boxShadow: CinemaShadows.card,
-                  ),
                   child: Row(
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: c.gold.withValues(alpha: 0.15),
                         ),
                         child: Icon(
-                          Icons.people_alt_rounded,
+                          Icons.insights_rounded,
                           color: c.gold,
                           size: 22,
                         ),
@@ -607,266 +870,65 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              AppLocalizations.of(context)?.get('together_social_title') ?? 'Social & Friends',
+                              AppLocalizations.of(
+                                        context,
+                                      )?.locale.languageCode ==
+                                      'tr'
+                                  ? 'Zevk Analizini Yeniden Başlat'
+                                  : 'Restart Taste Analysis',
                               style: TextStyle(
                                 color: c.ink,
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(
-                              ref.watch(authProvider).user?['username'] != null
-                                  ? '@${ref.watch(authProvider).user!['username']}'
-                                  : (AppLocalizations.of(context)?.get('see_taste_matches_manage_reque') ?? 'See taste matches, manage requests and activity feeds.'),
+                              AppLocalizations.of(
+                                        context,
+                                      )?.locale.languageCode ==
+                                      'tr'
+                                  ? 'Film & dizi önerilerini zevkine göre ayarla'
+                                  : 'Tune movie & show recommendations to your taste',
                               style: TextStyle(color: c.dim, fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Builder(
-                        builder: (ctx) {
-                          final pendingCount = ref.watch(socialProvider).pendingReceived.length;
-                          if (pendingCount > 0) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: c.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$pendingCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
-                          }
-                          return Icon(Icons.arrow_forward_ios_rounded, color: c.dim, size: 14);
-                        },
-                      ),
+                      Icon(Icons.chevron_right_rounded, color: c.dim),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-
-        // Rated Movies
-        if (stats['ratedMovies'] != null &&
-            (stats['ratedMovies'] as List).isNotEmpty) ...[
+          // Reset button
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                AppLocalizations.of(context)?.get('profile_history') ??
-                    'DEĞERLENDİRDİKLERİM',
-                style: TextStyle(
-                  color: c.dim,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 225,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: (stats['ratedMovies'] as List).length,
-                itemBuilder: (ctx, i) {
-                  final item =
-                      (stats['ratedMovies'] as List)[i] as Map<String, dynamic>;
-                  final movie = item['movie'] as Movie;
-                  final rating = item['rating'] as int;
-                  return _RatedMovieCard(
-                    movie: movie,
-                    rating: rating,
-                    onTap: () => _openDetail(context, ref, movie),
-                    onDelete: () => _confirmDeleteRating(context, ref, movie),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
-        // Watchlist
-        if (watchlist.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Row(
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.get('profile_watchlist') ??
-                        'İZLEME LİSTESİ',
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+              child: GestureDetector(
+                onTap: () => _confirmReset(context, ref),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.border, width: 1),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    AppLocalizations.of(context)?.get('profile_reset_title') ??
+                        'Tüm Verileri Sıfırla',
                     style: TextStyle(
-                      color: c.dim,
-                      fontSize: 11,
+                      color: c.red,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
                     ),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const WatchlistScreen(),
-                      ),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)?.get('see_all') ?? 'See All',
-                      style: TextStyle(
-                        color: c.red,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 225,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: watchlist.length,
-                itemBuilder: (ctx, i) => _WatchlistCard(
-                  movie: watchlist[i],
-                  onTap: () => _openDetail(context, ref, watchlist[i]),
-                  onRemove: () {
-                    ref
-                        .read(watchlistProvider.notifier)
-                        .remove(watchlist[i].id, watchlist[i].isTV);
-                  },
                 ),
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
-        // Sync Card
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: const SyncSection(),
-          ),
-        ),
-        // Family Mode Card
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: const _FamilyModeCard(),
-          ),
-        ),
-
-        // Onboarding / Taste analysis redo button
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                _restartOnboarding(context);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: c.isLight
-                      ? Border.all(color: c.border, width: 1)
-                      : null,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.gold.withValues(alpha: 0.15),
-                      ),
-                      child: Icon(
-                        Icons.insights_rounded,
-                        color: c.gold,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                                    'tr'
-                                ? 'Zevk Analizini Yeniden Başlat'
-                                : 'Restart Taste Analysis',
-                            style: TextStyle(
-                              color: c.ink,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            AppLocalizations.of(context)?.locale.languageCode ==
-                                    'tr'
-                                ? 'Film & dizi önerilerini zevkine göre ayarla'
-                                : 'Tune movie & show recommendations to your taste',
-                            style: TextStyle(color: c.dim, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: c.dim),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Reset button
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-            child: GestureDetector(
-              onTap: () => _confirmReset(context, ref),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: c.border, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  AppLocalizations.of(context)?.get('profile_reset_title') ??
-                      'Tüm Verileri Sıfırla',
-                  style: TextStyle(
-                    color: c.red,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
         ],
       ),
     );
@@ -1251,7 +1313,8 @@ class _FamilyModeCardState extends State<_FamilyModeCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)?.get('profile_family_mode') ?? 'Aile Dostu Mod (PG-13)',
+                  AppLocalizations.of(context)?.get('profile_family_mode') ??
+                      'Aile Dostu Mod (PG-13)',
                   style: TextStyle(
                     color: c.ink,
                     fontSize: 15,
@@ -1260,7 +1323,10 @@ class _FamilyModeCardState extends State<_FamilyModeCard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  AppLocalizations.of(context)?.get('filters_out_deadpool_euphoria_') ?? 'Filters out Deadpool, Euphoria, and mature R-rated content.',
+                  AppLocalizations.of(
+                        context,
+                      )?.get('filters_out_deadpool_euphoria_') ??
+                      'Filters out Deadpool, Euphoria, and mature R-rated content.',
                   style: TextStyle(color: c.dim, fontSize: 11.5, height: 1.25),
                 ),
               ],
