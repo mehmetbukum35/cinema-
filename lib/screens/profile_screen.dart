@@ -16,6 +16,7 @@ import 'watchlist_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'social_screen.dart';
+import 'taste_dna_screen.dart';
 import 'profile/sync_section.dart';
 import '../providers/social_provider.dart';
 import '../widgets/spring_button.dart';
@@ -388,6 +389,86 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+          // ── Sinema DNA Banner ───────────────────────────────────────────────
+          if (total >= 5)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: SpringButton(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const TasteDnaScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          c.gold.withValues(alpha: 0.9),
+                          c.crimson.withValues(alpha: 0.9),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: c.gold.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🧬', style: TextStyle(fontSize: 22)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('dna_title') ??
+                                    'Sinema DNA\'n',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('dna_banner_desc') ??
+                                    'Zevkinin kimliğini keşfet.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white70,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // ── Wrapped Banner ──────────────────────────────────────────────────
           if (total >= 3)
             SliverToBoxAdapter(

@@ -265,6 +265,63 @@ class AppLocalizations {
       'browse_upcoming_coming': 'Coming Soon',
       'browse_for_you_personal': 'For You',
       'tonight_title': 'What to Watch Tonight?',
+      'dna_title': 'Your Cinema DNA',
+      'dna_banner_desc': 'Discover the identity of your taste.',
+      'dna_analyzing': 'Analyzing your taste…',
+      'dna_error': "Couldn't build your DNA",
+      'dna_not_ready': 'Your DNA is still forming',
+      'dna_not_ready_desc':
+          'Rate a few more titles and your taste identity will emerge.',
+      'dna_you_are': 'You are',
+      'dna_themes': 'Your recurring themes',
+      'dna_top_genres': 'Your top genres',
+      'dna_signals': 'Your taste signature',
+      'dna_share': 'Share',
+      'dna_share_button': 'Share your DNA',
+      'dna_arch_dark_chronicler': 'The Dark Chronicler',
+      'dna_arch_emotion_seeker': 'The Emotion Seeker',
+      'dna_arch_world_builder': 'The World Explorer',
+      'dna_arch_adrenaline_junkie': 'The Adrenaline Seeker',
+      'dna_arch_joy_chaser': 'The Joy Chaser',
+      'dna_arch_truth_seeker': 'The Truth Seeker',
+      'dna_arch_eternal_child': 'The Eternal Child',
+      'dna_arch_genre_nomad': 'The Genre Nomad',
+      'dna_ess_dark_chronicler':
+          'You are drawn to shadows, tension and moral grey.',
+      'dna_ess_emotion_seeker':
+          'You chase stories that touch the heart and reveal people.',
+      'dna_ess_world_builder':
+          'New universes and impossible worlds call to you.',
+      'dna_ess_adrenaline_junkie': 'Pace, action and adventure are your fuel.',
+      'dna_ess_joy_chaser': 'Laughter and lightness are your refuge.',
+      'dna_ess_truth_seeker':
+          'True stories and the lessons of the past intrigue you.',
+      'dna_ess_eternal_child':
+          'The child in you never grew up — and that rules.',
+      'dna_ess_genre_nomad': "You don't fit one genre; you taste every color.",
+      'dna_era_modern': "A modern soul — {p} of your loves are post-2015.",
+      'dna_era_classic': 'A classic soul — you chase the magic of old cinema.',
+      'dna_era_traveler': 'A time traveler — you feel at home in every era.',
+      'dna_depth_deep':
+          'A deep-cut hunter — you find the gems the crowd skips.',
+      'dna_depth_zeit':
+          "A zeitgeist rider — you keep your finger on the pulse.",
+      'dna_depth_balanced':
+          'A balanced explorer — you love both blockbusters and hidden gems.',
+      'dna_critic_tough':
+          'A tough critic — only {p} of your ratings are "Great".',
+      'dna_critic_generous':
+          'A generous heart — you\'re never afraid to call it "Great".',
+      'dna_critic_balanced':
+          'A measured critic — your praise and your criticism both land.',
+      'dna_blind': "Your blind spot: {g} — it just doesn't reach you.",
+      'dna_shift': 'Your taste has drifted from {from} to {to}.',
+      'dna_accuracy':
+          'The engine knows you with {p} accuracy — across {n} picks.',
+      'dna_share_header': 'My Cinema DNA: {a}',
+      'dna_share_themes': 'My themes',
+      'dna_share_cta': 'See your DNA',
+      'dna_share_cta_none': 'Discover your own Cinema DNA!',
       'tonight_match': 'match',
       'reco_reason_seed': 'Because you liked {x}',
       'reco_reason_friend': '{x} loved this',
@@ -656,6 +713,63 @@ class AppLocalizations {
       'mood_crime': 'Suç & polisiye',
       'browse_for_you_personal': 'Sana Özel',
       'tonight_title': 'Bu Gece Ne İzlesem?',
+      'dna_title': 'Sinema DNA\'n',
+      'dna_banner_desc': 'Zevkinin kimliğini keşfet.',
+      'dna_analyzing': 'Zevkin analiz ediliyor…',
+      'dna_error': 'DNA oluşturulamadı',
+      'dna_not_ready': 'DNA\'n henüz oluşuyor',
+      'dna_not_ready_desc':
+          'Birkaç film daha oyla, zevk kimliğin ortaya çıksın.',
+      'dna_you_are': 'Sen',
+      'dna_themes': 'Tekrar eden temaların',
+      'dna_top_genres': 'Zirvedeki türlerin',
+      'dna_signals': 'Zevkinin imzası',
+      'dna_share': 'Paylaş',
+      'dna_share_button': 'DNA\'nı paylaş',
+      'dna_arch_dark_chronicler': 'Karanlık Anlatıcı',
+      'dna_arch_emotion_seeker': 'Duygu Avcısı',
+      'dna_arch_world_builder': 'Dünya Kâşifi',
+      'dna_arch_adrenaline_junkie': 'Adrenalin Tutkunu',
+      'dna_arch_joy_chaser': 'Neşe Avcısı',
+      'dna_arch_truth_seeker': 'Gerçeğin Peşinde',
+      'dna_arch_eternal_child': 'Sonsuz Çocuk',
+      'dna_arch_genre_nomad': 'Tür Göçebesi',
+      'dna_ess_dark_chronicler':
+          'Gölgelere, gerilime ve ahlaki griliğe çekiliyorsun.',
+      'dna_ess_emotion_seeker':
+          'Kalbe dokunan, insanı anlatan hikâyelerin peşindesin.',
+      'dna_ess_world_builder':
+          'Yeni evrenler, imkânsız dünyalar seni çağırıyor.',
+      'dna_ess_adrenaline_junkie': 'Tempo, aksiyon ve macera senin yakıtın.',
+      'dna_ess_joy_chaser': 'Kahkaha ve hafiflik senin sığınağın.',
+      'dna_ess_truth_seeker':
+          'Gerçek hikâyeler ve geçmişin dersleri ilgini çekiyor.',
+      'dna_ess_eternal_child': 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
+      'dna_ess_genre_nomad':
+          'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
+      'dna_era_modern':
+          'Modern çağ çocuğu — beğenilerinin {p}\'i 2015 sonrası.',
+      'dna_era_classic': 'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
+      'dna_era_traveler':
+          'Zaman gezgini — her dönemde kendini evinde hissediyorsun.',
+      'dna_depth_deep':
+          'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyorsun.',
+      'dna_depth_zeit': 'Zeitgeist takipçisi — anın nabzını tutuyorsun.',
+      'dna_depth_balanced':
+          'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyorsun.',
+      'dna_critic_tough':
+          'Sert eleştirmen — puanlarının yalnızca {p}\'i "Harika".',
+      'dna_critic_generous':
+          'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
+      'dna_critic_balanced':
+          'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
+      'dna_blind': 'Kör noktan: {g} — sana pek hitap etmiyor.',
+      'dna_shift': 'Zevkin {from}\'dan {to}\'a doğru kaydı.',
+      'dna_accuracy': 'Motor seni {p} isabetle tanıyor — {n} öneri üzerinden.',
+      'dna_share_header': 'Sinema DNA\'m: {a}',
+      'dna_share_themes': 'Temalarım',
+      'dna_share_cta': 'DNA\'na bak',
+      'dna_share_cta_none': 'Sen de Sinema DNA\'nı keşfet!',
       'tonight_match': 'uyum',
       'reco_reason_seed': '{x} beğendiğin için',
       'reco_reason_friend': '{x} buna bayıldı',

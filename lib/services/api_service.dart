@@ -559,6 +559,23 @@ class ApiService {
     }
   }
 
+  // POST /social/dna — Sinema DNA snapshot'ını yayınlar (public web kartı için).
+  Future<void> publishTasteDna(Map<String, dynamic> snapshot) async {
+    final response = await _request(
+      'POST',
+      '/social/dna',
+      body: {'dna': snapshot},
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'DNA yayınlanamadı.',
+      );
+    }
+  }
+
   // GET /social/match/taste/{friend_id}
   Future<Map<String, dynamic>> getTasteMatch(int friendId) async {
     final response = await _request(

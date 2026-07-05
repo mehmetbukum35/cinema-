@@ -8,6 +8,7 @@ import 'tmdb_service.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
 import 'recommendation_engine.dart';
+import 'taste_dna_service.dart';
 
 class LocaleNotifier extends StateNotifier<Locale> {
   LocaleNotifier() : super(const Locale('en', 'US')) {
@@ -110,6 +111,11 @@ final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
 /// keyword zevk vektörü memoization'ı ve invalidation'ı tek yerden yönetilsin.
 final recommendationEngineProvider = Provider<RecommendationEngine>((ref) {
   return RecommendationEngine(ref.watch(tmdbServiceProvider));
+});
+
+/// Sinema DNA motoru — puanlama verisinden zevk kimliği üretir.
+final tasteDnaServiceProvider = Provider<TasteDnaService>((ref) {
+  return TasteDnaService(ref.watch(tmdbServiceProvider));
 });
 
 final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
