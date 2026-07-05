@@ -1,0 +1,16 @@
+# HTTPS'e zorla (paketteki ücretsiz SSL aktifken)
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Tüm istekleri index.php'ye yönlendir (var olmayan dosya/dizinler)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Authorization başlığını PHP'ye geçir (bazı LiteSpeed/Apache kurulumlarında gerekir)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Güvenlik: dizin listelemeyi kapat
+Options -Indexes

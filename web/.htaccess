@@ -1,0 +1,22 @@
+# HTTPS enforcement
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Set the base path to the cinema subdirectory
+RewriteBase /cinema/
+
+# ─── Public Profiles & Downloads ────────────────────────────────────────────
+# Rewrite /cinema/profile/username to the backend API index.php
+# This allows the PHP backend to render the public web profile directly.
+RewriteRule ^profile/([^/]+)/?$ api/index.php [L,QSA]
+
+# Rewrite /cinema/download to the backend API index.php to render the download page.
+RewriteRule ^download/?$ api/index.php [L,QSA]
+
+# ─── Flutter Web Routing ───────────────────────────────────────────────────
+# If the requested file or directory does not exist, rewrite to index.html
+# to let Flutter handle client-side routing.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.html [L]

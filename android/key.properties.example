@@ -1,0 +1,14 @@
+# Release imzalama bilgileri. Bu dosyayı "key.properties" olarak kopyala
+# ve kendi keystore bilgilerinle doldur. key.properties'i ASLA git'e commit etme.
+#
+# Keystore oluşturmak için (bir kez):
+#   keytool -genkey -v -keystore upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# storeFile yolu key.properties dosyasına göre değil, mutlak ya da
+# android/ klasörüne göreli verilebilir (ör. upload-keystore.jks).
+
+storePassword=KEYSTORE_SIFRESI
+keyPassword=ANAHTAR_SIFRESI
+keyAlias=upload
+storeFile=upload-keystore.jks

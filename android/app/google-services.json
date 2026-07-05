@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "925394401867",
+    "project_id": "cinema-6bdc3",
+    "storage_bucket": "cinema-6bdc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:925394401867:android:86d4b03fd3b301c017abce",
+        "android_client_info": {
+          "package_name": "com.mehmet.neizlesem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy09fo_miRIKdyNI4-dT2pGWzzN6grTJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

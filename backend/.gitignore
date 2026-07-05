@@ -1,0 +1,6 @@
+# Gerçek sırlar — ASLA repoya girmesin
+src/Config.php
+src/fcm-service-account.json
+*-service-account.json
+/vendor/
+/.phpunit.cache/

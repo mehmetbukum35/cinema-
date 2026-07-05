@@ -1,0 +1,83 @@
+name: CI
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Check code formatting
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Static analysis
+        run: flutter analyze
+      - name: Run unit/widget tests
+        run: flutter test --coverage
+      - name: Check Dart coverage threshold (≥50% on logic layers)
+        # Yalnız iş mantığını ölç: services / providers / models.
+        # UI ekranları (lib/screens) kasıtlı olarak hariç. Mevcut kapsam ~%55;
+        # eşik %50 (tampon). Test ekledikçe bu sayıyı yukarı çek (ratchet).
+        # gsub ile yol ayracı normalize edilir (Windows '\' / Linux '/').
+        run: |
+          awk '
+            /^SF:/ { f=$0; sub(/^SF:/,"",f); gsub(/\\/,"/",f); keep=(f ~ /lib\/(services|providers|models)\//) }
+            /^LF:/ { if (keep) { split($0,a,":"); lf+=a[2] } }
+            /^LH:/ { if (keep) { split($0,a,":"); lh+=a[2] } }
+            END {
+              if (lf==0) { print "Kapsam verisi yok, atlanıyor."; exit 0 }
+              pct=int(lh*100/lf)
+              printf "Dart mantik katmani kapsami: %d/%d (%d%%)\n", lh, lf, pct
+              if (pct<50) { print "50% esiginin altinda!"; exit 1 }
+            }
+          ' coverage/lcov.info
+      - name: Upload Flutter coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-coverage
+          path: coverage/lcov.info
+          retention-days: 7
+
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, pcov
+          coverage: pcov
+      - name: Install Composer dependencies
+        run: composer install --working-dir=backend
+      - name: Run PHPUnit tests
+        run: backend/vendor/bin/phpunit --configuration backend/phpunit.xml --coverage-clover backend/coverage.xml
+      - name: Check PHP coverage threshold (≥60% lines)
+        run: |
+          LINES=$(grep -oP '(?<=linesValid=")\d+' backend/coverage.xml | head -1)
+          COVERED=$(grep -oP '(?<=linesCovered=")\d+' backend/coverage.xml | head -1)
+          if [ -z "$LINES" ] || [ "$LINES" -eq 0 ]; then
+            echo "Coverage report not found, skipping threshold check."
+          else
+            PCT=$((COVERED * 100 / LINES))
+            echo "PHP line coverage: $COVERED/$LINES ($PCT%)"
+            if [ "$PCT" -lt 60 ]; then
+              echo "Coverage below 60% threshold!"
+              exit 1
+            fi
+          fi
+      - name: Upload PHP coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: php-coverage
+          path: backend/coverage.xml
+          retention-days: 7
