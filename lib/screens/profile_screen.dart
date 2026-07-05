@@ -185,6 +185,21 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  static int? _lastPublishedRatingCount;
+  static String? _lastPublishedUserId;
+
+  void _autoPublishDna(WidgetRef ref) {
+    Future.microtask(() async {
+      try {
+        final dna = await ref.read(tasteDnaServiceProvider).generate();
+        await ref.read(apiServiceProvider).publishTasteDna(dna.toJson());
+        debugPrint("Background DNA auto-publish succeeded!");
+      } catch (e) {
+        debugPrint("Background DNA auto-publish failed: $e");
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
@@ -192,6 +207,16 @@ class ProfileScreen extends ConsumerWidget {
     final statsState = ref.watch(statsProvider);
 
     final loading = watchlistState.isLoading || statsState.isLoading;
+
+    if (!loading && ref.read(authProvider).isAuthenticated) {
+      final total = statsState.value?['total'] as int? ?? 0;
+      final userId = ref.read(authProvider).user?['id']?.toString();
+      if (total >= 5 && (_lastPublishedRatingCount != total || _lastPublishedUserId != userId)) {
+        _lastPublishedRatingCount = total;
+        _lastPublishedUserId = userId;
+        _autoPublishDna(ref);
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
