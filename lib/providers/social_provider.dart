@@ -236,6 +236,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     required Movie movie,
     String? note,
   }) async {
+    state = state.copyWith(error: () => null);
     try {
       await _apiService.recommendToFriend(
         friendId: friendId,

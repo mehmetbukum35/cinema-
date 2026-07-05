@@ -9,12 +9,14 @@ class RecommendSheet extends StatefulWidget {
   final Movie movie;
   final List<dynamic> friends;
   final WidgetRef ref;
+  final BuildContext parentContext;
 
   const RecommendSheet({
     super.key,
     required this.movie,
     required this.friends,
     required this.ref,
+    required this.parentContext,
   });
 
   @override
@@ -134,7 +136,8 @@ class RecommendSheetState extends State<RecommendSheet> {
                   onTap: isAnySending
                       ? null
                       : () async {
-                          final sm = ScaffoldMessenger.of(context);
+                          final parentSm = ScaffoldMessenger.of(widget.parentContext);
+                          final currentSm = ScaffoldMessenger.of(context);
                           final nav = Navigator.of(context);
 
                           setState(() {
@@ -149,26 +152,28 @@ class RecommendSheetState extends State<RecommendSheet> {
                                 note: _noteCtrl.text.trim(),
                               );
 
-                          if (!mounted) return;
-
-                          sm.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? (tr?.get('recommend_sent') ??
-                                          'Öneri gönderildi!')
-                                    : (widget.ref.read(socialProvider).error ??
-                                          'Öneri gönderilemedi.'),
-                              ),
-                            ),
-                          );
-
                           if (ok) {
                             nav.pop();
+                            parentSm.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  tr?.get('recommend_sent') ?? 'Öneri gönderildi!',
+                                ),
+                              ),
+                            );
                           } else {
-                            setState(() {
-                              _sendingToFriendId = null;
-                            });
+                            if (mounted) {
+                              currentSm.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    widget.ref.read(socialProvider).error ?? 'Öneri gönderilemedi.',
+                                  ),
+                                ),
+                              );
+                              setState(() {
+                                _sendingToFriendId = null;
+                              });
+                            }
                           }
                         },
                 );

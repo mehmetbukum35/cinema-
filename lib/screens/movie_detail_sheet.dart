@@ -82,7 +82,12 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => RecommendSheet(movie: movie, friends: friends, ref: ref),
+      builder: (_) => RecommendSheet(
+        movie: movie,
+        friends: friends,
+        ref: ref,
+        parentContext: context,
+      ),
     );
   }
 
