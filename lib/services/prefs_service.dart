@@ -119,11 +119,11 @@ class PrefsService {
   }
 
   // ─── Theme mode ─────────────────────────────────────────────────────────────
-  // Varsayılan 'dark' — kayıt yoksa uygulama mevcut koyu temayla açılır.
+  // Varsayılan 'light' — kayıt yoksa uygulama açık temayla açılır.
 
   static Future<String> getThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyThemeMode) ?? 'dark';
+    return prefs.getString(_keyThemeMode) ?? 'light';
   }
 
   static Future<void> setThemeMode(String mode) async {

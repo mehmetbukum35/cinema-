@@ -37,10 +37,9 @@ final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
   return LocaleNotifier();
 });
 
-/// Tema modu (koyu/açık). Varsayılan koyu; kullanıcı seçimi cihazda saklanır.
-/// Koyu tema mevcut görünümü AYNEN korur — açık tema yalnızca alternatiftir.
+/// Tema modu (koyu/açık). Varsayılan açık; kullanıcı seçimi cihazda saklanır.
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.dark) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     _init();
   }
 
@@ -50,12 +49,12 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 
   static ThemeMode _parse(String s) {
     switch (s) {
-      case 'light':
-        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
       case 'system':
         return ThemeMode.system;
       default:
-        return ThemeMode.dark;
+        return ThemeMode.light;
     }
   }
 

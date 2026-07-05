@@ -12,7 +12,9 @@
       "Bash(grep -n \"_section\\(\\\\s*$\\\\|Widget _section\\\\|MovieDetailSheet.show\\\\|void _openDetail\\\\|_open\\(\" lib/screens/browse_screen.dart)",
       "Bash(dart format *)",
       "Bash(flutter --version)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

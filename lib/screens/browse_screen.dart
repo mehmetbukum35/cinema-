@@ -42,44 +42,48 @@ class _Mood {
   });
 }
 
+// NOT: TMDB with_genres'te virgül VE, pipe VEYA anlamına gelir. Mood'lar
+// niyet olarak VEYA'dır ("gerilim lazım" = gerilim VEYA korku); virgüllü hali
+// kesişim sorguladığı için (üstüne vote_count/minRating filtreleri binince)
+// çoğu zaman boş sayfa döndürüyordu.
 const _moods = [
   _Mood(
     icon: Icons.sentiment_very_satisfied_rounded,
     label: 'mood_funny',
-    genreStr: '35',
+    genreStr: '35|10402',
     includeTv: false,
   ),
   _Mood(
     icon: Icons.psychology_rounded,
     label: 'mood_thrill',
-    genreStr: '53,27',
+    genreStr: '53|27|9648',
     minRating: 7.0,
     includeTv: false,
   ),
   _Mood(
     icon: Icons.sentiment_very_dissatisfied_rounded,
     label: 'mood_cry',
-    genreStr: '18,10749',
+    genreStr: '18|10749',
     minRating: 7.5,
   ),
   _Mood(
     icon: Icons.bolt_rounded,
     label: 'mood_action',
-    genreStr: '28,12',
+    genreStr: '28|12',
     includeTv: false,
   ),
   _Mood(
     icon: Icons.spa_rounded,
     label: 'mood_light',
-    genreStr: '35,16',
+    genreStr: '35|16|10751',
     maxRuntime: 100,
     includeTv: false,
   ),
   _Mood(
     icon: Icons.lightbulb_outline_rounded,
     label: 'mood_thought',
-    genreStr: '18,9648',
-    minRating: 7.8,
+    genreStr: '18|9648|36',
+    minRating: 7.5,
   ),
   _Mood(
     icon: Icons.favorite_rounded,
@@ -110,9 +114,9 @@ const _moods = [
   _Mood(
     icon: Icons.auto_awesome_rounded,
     label: 'mood_fantasy',
-    genreStr: '14,878',
+    genreStr: '14|878',
   ),
-  _Mood(icon: Icons.gavel_rounded, label: 'mood_crime', genreStr: '80,53'),
+  _Mood(icon: Icons.gavel_rounded, label: 'mood_crime', genreStr: '80|53'),
 ];
 
 class BrowseScreen extends ConsumerStatefulWidget {

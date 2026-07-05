@@ -169,7 +169,13 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
       // Öneri Motoru: son "Harika"lar tohum yapılır; adaylar gerekçe/kaynak
       // etiketiyle döner ("X'i beğendiğin için" rozeti + isabet telemetrisi).
-      final similarCandidates = await _engine.fetchSeedCandidates();
+      // Dil/platform filtresi aktifken seed adayları KATILMAZ: TMDB
+      // similar/recommendations uçları filtre parametresi almadığından bu
+      // adaylar filtreyi deler ("Türk sineması" seçiliyken yabancı film
+      // sızması buradan kaynaklanıyordu).
+      final similarCandidates = (startLang == null && startProv == null)
+          ? await _engine.fetchSeedCandidates()
+          : <Movie>[];
 
       // Check if state changed/reset during network call
       if (!mounted ||
