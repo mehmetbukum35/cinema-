@@ -16,7 +16,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(curl -s \"https://foodlabeldetective.com.tr/cinema/api/tmdb/3/discover/movie?language=tr-TR&sort_by=vote_average.desc&include_adult=false&vote_count.gte=100&watch_region=TR&page=1&with_genres=35%7C10402&without_genres=16\")",
-      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('total:', d.get\\('total_results'\\), 'page results:', len\\(d.get\\('results',[]\\)\\)\\)\")"
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('total:', d.get\\('total_results'\\), 'page results:', len\\(d.get\\('results',[]\\)\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(export PYTHONIOENCODING=utf-8)",
+      "Bash(curl -s \"https://foodlabeldetective.com.tr/cinema/api/tmdb/3/discover/movie?language=tr-TR&sort_by=vote_average.desc&include_adult=false&vote_count.gte=100&watch_region=TR&page=1&with_genres=18%7C9648%7C36&without_genres=16&vote_average.gte=7.5\")"
     ]
   }
 }

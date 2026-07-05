@@ -659,13 +659,35 @@ class TmdbService {
     return 604800000; // Default: 7 Days (details, cast, reviews)
   }
 
+  /// Cache anahtarı sürümü. Cevap şekli veya sunucu davranışı değiştiğinde
+  /// (örn. proxy'nin noktalı parametre düzeltmesi) bu sürümü artırmak, eski
+  /// nesil cache'i tek hamlede geçersiz kılar: yeni anahtarlar eskileri
+  /// okumaz, eski satırlar da [_ensureLegacyCachePurged] ile silinir.
+  static const _kCacheVersion = 'v2';
+  static bool _legacyCachePurged = false;
+
+  String _cacheKey(String path, Map<String, String> params) =>
+      '$_kCacheVersion:$path:'
+      '${params.entries.map((e) => "${e.key}=${e.value}").join("&")}'
+      ':locale=$_language';
+
+  Future<void> _ensureLegacyCachePurged() async {
+    if (_legacyCachePurged) return;
+    _legacyCachePurged = true;
+    try {
+      await DatabaseHelper().deleteTmdbCacheNotPrefixed('$_kCacheVersion:');
+    } catch (e) {
+      debugPrint('Legacy TMDB cache purge failed: $e');
+    }
+  }
+
   Future<dynamic> _fetchRawWithCache({
     required String path,
     required Map<String, String> params,
     bool isCacheable = true,
   }) async {
-    final cacheKey =
-        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    await _ensureLegacyCachePurged();
+    final cacheKey = _cacheKey(path, params);
 
     if (isCacheable) {
       try {
@@ -802,8 +824,8 @@ class TmdbService {
     final isCacheable =
         !path.contains('/search/') && !path.contains('/social/');
 
-    final cacheKey =
-        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    await _ensureLegacyCachePurged();
+    final cacheKey = _cacheKey(path, params);
 
     if (isCacheable) {
       try {
@@ -880,8 +902,8 @@ class TmdbService {
     final isCacheable =
         !path.contains('/search/') && !path.contains('/social/');
 
-    final cacheKey =
-        '$path:${params.entries.map((e) => "${e.key}=${e.value}").join("&")}:locale=$_language';
+    await _ensureLegacyCachePurged();
+    final cacheKey = _cacheKey(path, params);
 
     if (isCacheable) {
       try {

@@ -1057,12 +1057,14 @@ class DatabaseHelper {
     await db.delete('tmdb_cache');
   }
 
+  // Anahtarlar artık sürüm önekiyle başladığı için ("v2:/3/...") yol eşleşmesi
+  // startsWith değil contains ile yapılır (bkz. TmdbService._cacheKey).
   Future<void> deleteTmdbCachePaths(List<String> prefixes) async {
     final db = await database;
     if (db == null) {
       _mockTmdbCache.removeWhere((e) {
         final key = e['cache_key'] as String? ?? '';
-        return prefixes.any((pref) => key.startsWith(pref));
+        return prefixes.any((pref) => key.contains(pref));
       });
       return;
     }
@@ -1070,9 +1072,26 @@ class DatabaseHelper {
       await db.delete(
         'tmdb_cache',
         where: 'cache_key LIKE ?',
-        whereArgs: ['$pref%'],
+        whereArgs: ['%$pref%'],
       );
     }
+  }
+
+  /// Verilen önekle BAŞLAMAYAN tüm cache satırlarını siler — cache anahtarı
+  /// sürümü değiştiğinde eski neslin tek seferlik temizliği için.
+  Future<void> deleteTmdbCacheNotPrefixed(String prefix) async {
+    final db = await database;
+    if (db == null) {
+      _mockTmdbCache.removeWhere(
+        (e) => !((e['cache_key'] as String? ?? '').startsWith(prefix)),
+      );
+      return;
+    }
+    await db.delete(
+      'tmdb_cache',
+      where: 'cache_key NOT LIKE ?',
+      whereArgs: ['$prefix%'],
+    );
   }
 
   Future<void> deleteTmdbCacheKeysContaining(List<String> substrings) async {
