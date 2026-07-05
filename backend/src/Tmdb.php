@@ -26,9 +26,36 @@ class Tmdb
     }
 
     /**
+     * PHP, $_GET anahtarlarındaki noktaları alt çizgiye çevirir
+     * ("vote_count.gte" → "vote_count_gte"); TMDB ise noktalı adları bekler
+     * ve bilinmeyen parametreyi sessizce yok sayar. Bu yüzden query string'i
+     * $_GET'e güvenmeden, ham haliyle ve noktaları koruyarak parse ederiz.
+     * Aynı anahtar tekrar gelirse son değer kazanır ($_GET davranışıyla aynı).
+     */
+    public static function parseRawQuery(string $rawQueryString): array
+    {
+        $params = [];
+        foreach (explode('&', $rawQueryString) as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+            $eq = strpos($pair, '=');
+            if ($eq === false) {
+                $params[urldecode($pair)] = '';
+                continue;
+            }
+            $key = urldecode(substr($pair, 0, $eq));
+            $params[$key] = urldecode(substr($pair, $eq + 1));
+        }
+        return $params;
+    }
+
+    /**
      * $path:  TMDB API yolu, örn. "/3/discover/movie" (baştaki /tmdb kaldırılmış halde).
-     * $query: client'tan gelen query string parametreleri ($_GET). İçinde
-     *         api_key varsa yok sayılır; gerçek anahtar burada eklenir.
+     * $query: client'tan gelen query string parametreleri. İçinde api_key
+     *         varsa yok sayılır; gerçek anahtar burada eklenir. Web isteğinde
+     *         noktalı TMDB parametrelerini korumak için $_GET yerine ham
+     *         QUERY_STRING kullanılır (bkz. parseRawQuery).
      */
     public function proxy(string $path, array $query): void
     {
@@ -39,6 +66,11 @@ class Tmdb
         $path = '/' . ltrim($path, '/');
         if (!str_starts_with($path, self::ALLOWED_PREFIX)) {
             fail(400, 'Geçersiz TMDB yolu.');
+        }
+
+        $rawQs = (string) ($_SERVER['QUERY_STRING'] ?? '');
+        if ($rawQs !== '') {
+            $query = self::parseRawQuery($rawQs);
         }
 
         unset($query['api_key']);
