@@ -183,6 +183,7 @@ class PrefsService {
     await prefs.setBool(_keyOnboardingDone, false);
     await prefs.remove(_keyOnboardingSkipTime);
     await prefs.remove(_keyInitialGenres);
+    await prefs.remove(_keyInitialGenresSavedAt);
     await prefs.remove(_keyOnboardingBannerDismissed);
   }
 
@@ -198,9 +199,16 @@ class PrefsService {
 
   // ─── Initial genre preferences ───────────────────────────────────────────────
 
+  static const _keyInitialGenresSavedAt = 'initial_genres_saved_at';
+
   static Future<void> saveInitialGenres(List<int> genreIds) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyInitialGenres, jsonEncode(genreIds));
+    // Anket ağırlığının yavaş decay'i için referans anı (bkz. getGenreWeights).
+    await prefs.setInt(
+      _keyInitialGenresSavedAt,
+      DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   static Future<List<int>> getInitialGenres() async {
@@ -322,13 +330,28 @@ class PrefsService {
     final prefs = await SharedPreferences.getInstance();
     final Map<int, double> weights = {};
 
-    // 1. Onboarding tür tercihleri: +1.0 (zaman aşımı yok)
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // 1. Onboarding tür tercihleri: +1.0, ÇOK yavaş decay (~2 yıl yarı ömür).
+    // Puanlar ~180 günde sönerken anket hiç sönmezse, pasif kullanıcıda ilk
+    // gün işaretlenen kutular zamanla göreli güç kazanıyordu. Yavaş decay
+    // cold-start çıpasını korur (30. günde ~0.97) ama süresiz saltanatı bitirir.
     final initialRaw = prefs.getString(_keyInitialGenres) ?? '[]';
-    for (final id in (jsonDecode(initialRaw) as List<dynamic>)) {
-      weights[id as int] = (weights[id] ?? 0.0) + 1.0;
+    final initialGenres = jsonDecode(initialRaw) as List<dynamic>;
+    if (initialGenres.isNotEmpty) {
+      var savedAt = prefs.getInt(_keyInitialGenresSavedAt);
+      if (savedAt == null) {
+        // Eski kurulum: referans anı yok — bu andan itibaren saymaya başla.
+        savedAt = now;
+        await prefs.setInt(_keyInitialGenresSavedAt, savedAt);
+      }
+      final surveyDays = (now - savedAt) / (24 * 3600 * 1000);
+      final surveyDecay = exp(-0.00095 * surveyDays);
+      for (final id in initialGenres) {
+        weights[id as int] = (weights[id] ?? 0.0) + (1.0 * surveyDecay);
+      }
     }
 
-    final now = DateTime.now().millisecondsSinceEpoch;
     final db = DatabaseHelper();
 
     // 2. Favori film ve diziler: +3.0 (tür başına) * time decay

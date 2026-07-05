@@ -132,28 +132,46 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     });
 
     try {
+      // Üç aday kaynağı: recommendations (davranışsal, birlikte izlenme),
+      // similar (metadata) ve tür-bazlı discover — birleşimi recall'u genişletir.
       final results = await Future.wait([
-        _service.discoverForMatch(movie.genreIds, isTV: movie.isTV),
         _service.getRecommendations(movie.id, isTV: movie.isTV),
+        _service.getSimilar(movie.id, isTV: movie.isTV),
+        _service.discoverForMatch(movie.genreIds, isTV: movie.isTV),
         PrefsService.getRatedIds(),
       ]);
 
-      final discovered = results[0] as List<Movie>;
-      final recommended = results[1] as List<Movie>;
-      final ratedKeys = results[2] as Set<String>;
+      final recommended = results[0] as List<Movie>;
+      final similar = results[1] as List<Movie>;
+      final discovered = results[2] as List<Movie>;
+      final ratedKeys = results[3] as Set<String>;
 
       final movieKey = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
-      final seen = <String>{movieKey, ...ratedKeys};
-      final combined = <Movie>[];
-      for (final m in [...recommended, ...discovered]) {
-        final mKey = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
-        if (seen.add(mKey) && m.voteAverage >= 6.0) combined.add(m);
+      final coVisitKeys = recommended
+          .map((m) => "${m.isTV ? 'tv' : 'movie'}_${m.id}")
+          .toSet();
+
+      // Sıralama artık ham TMDB puanı değil, anchor'a gerçek benzerlik:
+      // keyword örtüşmesi + tür + co-visitation + kalite harmanı.
+      final ranked = await ref
+          .read(recommendationEngineProvider)
+          .rankSimilarTo(
+            movie,
+            candidates: [...recommended, ...similar, ...discovered],
+            excludedKeys: {movieKey, ...ratedKeys},
+            coVisitKeys: coVisitKeys,
+          );
+
+      // Kademeli kalite gevşetme: boş grid göstermektense eşiği düşür.
+      var filtered = ranked.where((m) => m.voteAverage >= 6.0).toList();
+      if (filtered.length < 10) {
+        filtered = ranked.where((m) => m.voteAverage >= 5.0).toList();
       }
-      combined.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
+      if (filtered.length < 10) filtered = ranked;
 
       if (!mounted) return;
       setState(() {
-        _similar = combined.take(20).toList();
+        _similar = filtered.take(20).toList();
         _loadingSimilar = false;
       });
     } catch (e) {

@@ -92,6 +92,17 @@ class RecommendationEngine {
     }
   }
 
+  /// İki id listesinin Jaccard benzerliği: |kesişim| / |birleşim|.
+  /// Tür ve keyword kümeleri için ortak yardımcı.
+  static double jaccard(List<int> a, List<int> b) {
+    if (a.isEmpty || b.isEmpty) return 0.0;
+    final sa = a.toSet();
+    final sb = b.toSet();
+    final inter = sa.intersection(sb).length;
+    final union = sa.union(sb).length;
+    return union == 0 ? 0.0 : inter / union;
+  }
+
   /// MMR-lite çeşitlilik geçişi: her adım en yüksek "ayarlı" skorlu adayı seçer;
   /// ayarlı skor = ham skor − [lambda] × (seçilmişlerle en yüksek tür Jaccard
   /// benzerliği). Böylece art arda aynı tür kombinasyonu dizilmez ama güçlü
@@ -104,15 +115,6 @@ class RecommendationEngine {
     final remaining = List.of(scored)
       ..sort((a, b) => b.score.compareTo(a.score));
     final picked = <ScoredMovie>[];
-
-    double jaccard(List<int> a, List<int> b) {
-      if (a.isEmpty || b.isEmpty) return 0.0;
-      final sa = a.toSet();
-      final sb = b.toSet();
-      final inter = sa.intersection(sb).length;
-      final union = sa.union(sb).length;
-      return union == 0 ? 0.0 : inter / union;
-    }
 
     while (remaining.isNotEmpty) {
       ScoredMovie? best;
@@ -300,5 +302,139 @@ class RecommendationEngine {
     scored.sort((a, b) => b.score.compareTo(a.score));
     final ordered = diversify ? applyDiversity(scored) : scored;
     return ordered.map((s) => s.movie).toList();
+  }
+
+  // ── "Benzer film bul" (anchor-tabanlı benzerlik) ─────────────────────────
+
+  /// Benzerlik harmanı: keyword örtüşmesi lider (tema benzerliği türden
+  /// güçlüdür), tür ikinci, co-visitation (TMDB recommendations'tan gelme)
+  /// davranışsal bonus, TMDB puanı kalite tabanı.
+  static double similarityScore({
+    required double kwJaccard,
+    required double genreJaccard,
+    required bool coVisit,
+    required double voteAverage,
+  }) {
+    return 0.45 * kwJaccard +
+        0.20 * genreJaccard +
+        0.15 * (coVisit ? 1.0 : 0.0) +
+        0.20 * (voteAverage / 10.0);
+  }
+
+  /// Karşılaştırma için başlık normalizasyonu (küçük harf, noktalama sız).
+  static String _normTitle(String t) => t
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9çğıöşü ]'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  /// Skor sırasına dizilmiş listede aynı seriden (birinin normalize başlığı
+  /// diğerinin öneki) yalnızca en iyi skorluyu tutar: "Iron Man" kalır,
+  /// "Iron Man 2/3" elenir. 5 karakterden kısa başlıklar (Up, Se7en gibi
+  /// yanlış pozitif riski) muaftır.
+  static List<Movie> suppressFranchiseDuplicates(List<Movie> ordered) {
+    final kept = <Movie>[];
+    final keptNorms = <String>[];
+    for (final m in ordered) {
+      final n = _normTitle(m.title);
+      final isDup =
+          n.length >= 5 &&
+          keptNorms.any(
+            (k) => k.length >= 5 && (n.startsWith(k) || k.startsWith(n)),
+          );
+      if (!isDup) {
+        kept.add(m);
+        keptNorms.add(n);
+      }
+    }
+    return kept;
+  }
+
+  /// [anchor] filmine benzeyen adayları sıralar ("Benzer film bul").
+  ///
+  /// Boru hattı: tekilleştir + dışla → anchor'ın serisini ele (kullanıcı
+  /// sevdiği filmin devamlarını zaten bilir; keşif istiyor) → ilk [keywordK]
+  /// adayı anchor'ın keyword kümesiyle Jaccard'la puanla → harman skoru →
+  /// seri kopyalarını bastır. [coVisitKeys], recommendations ucundan gelen
+  /// (birlikte izlenme sinyalli) adayların anahtarları.
+  Future<List<Movie>> rankSimilarTo(
+    Movie anchor, {
+    required List<Movie> candidates,
+    Set<String> excludedKeys = const {},
+    Set<String> coVisitKeys = const {},
+    int keywordK = 30,
+  }) async {
+    final anchorNorm = _normTitle(anchor.title);
+    final seen = <String>{};
+    final fresh = <Movie>[];
+    for (final m in candidates) {
+      final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+      if (excludedKeys.contains(key) || !seen.add(key)) continue;
+      // Anchor'ın kendi serisi keşif değildir → ele.
+      final n = _normTitle(m.title);
+      if (anchorNorm.length >= 5 &&
+          n.length >= 5 &&
+          (n.startsWith(anchorNorm) || anchorNorm.startsWith(n))) {
+        continue;
+      }
+      fresh.add(m);
+    }
+    if (fresh.isEmpty) return fresh;
+
+    List<int> anchorKeywords = const [];
+    try {
+      anchorKeywords = await _service.getKeywordIds(
+        anchor.id,
+        isTV: anchor.isTV,
+      );
+    } catch (e) {
+      debugPrint("Anchor keywords unavailable, genre-only similarity: $e");
+    }
+
+    // Keyword isteği pahalı olduğundan yalnız öncü dilime uygulanır; dilim,
+    // ucuz sinyallerle (co-visit + tür + puan) öne çekilerek seçilir.
+    fresh.sort((a, b) {
+      double cheap(Movie m) => similarityScore(
+        kwJaccard: 0,
+        genreJaccard: jaccard(anchor.genreIds, m.genreIds),
+        coVisit: coVisitKeys.contains("${m.isTV ? 'tv' : 'movie'}_${m.id}"),
+        voteAverage: m.voteAverage,
+      );
+      return cheap(b).compareTo(cheap(a));
+    });
+
+    final k = min(keywordK, fresh.length);
+    final kwLists = anchorKeywords.isEmpty
+        ? List<List<int>>.filled(k, const [])
+        : await Future.wait(
+            fresh
+                .take(k)
+                .map(
+                  (m) => _service
+                      .getKeywordIds(m.id, isTV: m.isTV)
+                      .catchError((_) => <int>[]),
+                ),
+          );
+
+    final scored = <ScoredMovie>[];
+    for (var i = 0; i < fresh.length; i++) {
+      final m = fresh[i];
+      final kwSim = i < k && anchorKeywords.isNotEmpty
+          ? jaccard(anchorKeywords, kwLists[i])
+          : 0.0;
+      scored.add(
+        ScoredMovie(
+          m,
+          similarityScore(
+            kwJaccard: kwSim,
+            genreJaccard: jaccard(anchor.genreIds, m.genreIds),
+            coVisit: coVisitKeys.contains("${m.isTV ? 'tv' : 'movie'}_${m.id}"),
+            voteAverage: m.voteAverage,
+          ),
+        ),
+      );
+    }
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    return suppressFranchiseDuplicates(scored.map((s) => s.movie).toList());
   }
 }

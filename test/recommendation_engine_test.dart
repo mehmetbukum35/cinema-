@@ -4,13 +4,14 @@ import 'package:ne_izlesem/services/recommendation_engine.dart';
 
 Movie _movie(
   int id, {
+  String? title,
   List<int> genres = const [28],
   double vote = 7.0,
   bool isTV = false,
 }) {
   return Movie(
     id: id,
-    title: 'Movie $id',
+    title: title ?? 'Movie $id',
     overview: '',
     voteAverage: vote,
     genreIds: genres,
@@ -151,6 +152,74 @@ void main() {
       final ordered = RecommendationEngine.applyDiversity(items);
       expect(ordered.length, items.length);
       expect(ordered.map((s) => s.movie.id).toSet().length, items.length);
+    });
+  });
+
+  group('RecommendationEngine.jaccard', () {
+    test('kesişim/birleşim oranını doğru hesaplar', () {
+      expect(
+        RecommendationEngine.jaccard([1, 2, 3], [2, 3, 4]),
+        closeTo(0.5, 1e-9),
+      );
+      expect(RecommendationEngine.jaccard([1, 2], [1, 2]), 1.0);
+      expect(RecommendationEngine.jaccard([1], [2]), 0.0);
+      expect(RecommendationEngine.jaccard([], [1]), 0.0);
+    });
+  });
+
+  group('RecommendationEngine.similarityScore', () {
+    test('0.45/0.20/0.15/0.20 harmanını uygular', () {
+      final s = RecommendationEngine.similarityScore(
+        kwJaccard: 0.5,
+        genreJaccard: 0.4,
+        coVisit: true,
+        voteAverage: 8.0,
+      );
+      expect(s, closeTo(0.45 * 0.5 + 0.20 * 0.4 + 0.15 + 0.20 * 0.8, 1e-9));
+    });
+
+    test('keyword örtüşmesi co-visit bonusundan güçlüdür', () {
+      final kwOnly = RecommendationEngine.similarityScore(
+        kwJaccard: 0.6,
+        genreJaccard: 0,
+        coVisit: false,
+        voteAverage: 7.0,
+      );
+      final coVisitOnly = RecommendationEngine.similarityScore(
+        kwJaccard: 0,
+        genreJaccard: 0,
+        coVisit: true,
+        voteAverage: 7.0,
+      );
+      expect(kwOnly, greaterThan(coVisitOnly));
+    });
+  });
+
+  group('RecommendationEngine.suppressFranchiseDuplicates', () {
+    test('aynı serinin devamlarını eler, en iyi skorluyu tutar', () {
+      final ordered = [
+        _movie(1, title: 'Iron Man'),
+        _movie(2, title: 'Iron Man 2'),
+        _movie(3, title: 'The Dark Knight'),
+        _movie(4, title: 'Iron Man 3'),
+      ];
+      final kept = RecommendationEngine.suppressFranchiseDuplicates(ordered);
+      expect(kept.map((m) => m.id).toList(), [1, 3]);
+    });
+
+    test('farklı alt başlıklı seri filmleri (prefix değil) korunur', () {
+      final ordered = [
+        _movie(1, title: 'Batman Begins'),
+        _movie(2, title: 'Batman Returns'),
+      ];
+      final kept = RecommendationEngine.suppressFranchiseDuplicates(ordered);
+      expect(kept.length, 2);
+    });
+
+    test('kısa başlıklar (<5 karakter) yanlış pozitiften muaftır', () {
+      final ordered = [_movie(1, title: 'Up'), _movie(2, title: 'Us')];
+      final kept = RecommendationEngine.suppressFranchiseDuplicates(ordered);
+      expect(kept.length, 2);
     });
   });
 }
