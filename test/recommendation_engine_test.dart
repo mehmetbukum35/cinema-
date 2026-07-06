@@ -291,6 +291,65 @@ void main() {
     );
 
     test(
+      '"İzlemedim" (-1) kaydırmaları zevk vektörünü ZEHİRLEMEZ (regresyon)',
+      () async {
+        // Bu bug bir kez geri geldi: -1 else-dalına düşüp Berbat (-2.0) gibi
+        // sayılıyordu. Atlanan filmin keyword'ü vektöre HİÇ girmemeli.
+        await PrefsService.saveRating(
+          movieId: 10,
+          isTV: false,
+          rating: 3,
+          genreIds: [28],
+        );
+        await PrefsService.saveRating(
+          movieId: 30,
+          isTV: false,
+          rating: -1, // İzlemedim — yargı değil
+          genreIds: [35],
+        );
+
+        final client = MockClient((request) async {
+          if (request.url.path.contains('/10/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 100, 'name': 'action'},
+                ],
+              }),
+              200,
+            );
+          } else if (request.url.path.contains('/30/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 300, 'name': 'skipped-theme'},
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final engine = RecommendationEngine(TmdbService(client: client));
+        final vector = await engine.buildUserKeywordVector();
+
+        expect(vector[100], greaterThan(0.0));
+        expect(
+          vector.containsKey(300),
+          isFalse,
+          reason: 'İzlemedim (-1) filminin keyword\'ü vektöre girmemeli',
+        );
+
+        // Negatif seed setleri de -1'i yargı saymamalı: atlanan filmin
+        // benzerleri ceza/engel listelerine GİRMEMELİ.
+        final (berbatKeys, ehKeys) = await engine.fetchNegativeSeedKeys();
+        expect(berbatKeys, isEmpty);
+        expect(ehKeys, isEmpty);
+      },
+    );
+
+    test(
       'rankForYou, Berbat oylanan filmlerin benzerlerini ve devam serilerini filtrelemelidir',
       () async {
         // Berbat oylanan film: "Iron Man" (ID: 50)

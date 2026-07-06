@@ -31,7 +31,8 @@
       "Bash(echo \"check exit: $?\")",
       "Bash(git commit -m 'style: apply dart format across recently edited files *)",
       "Bash(echo \"format gate: $?\")",
-      "Bash(grep -iE \"config\\\\.php$|key\\\\.properties$|\\\\.jks$|service-account|firebase.*\\\\.json\")"
+      "Bash(grep -iE \"config\\\\.php$|key\\\\.properties$|\\\\.jks$|service-account|firebase.*\\\\.json\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

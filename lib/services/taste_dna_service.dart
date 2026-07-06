@@ -356,11 +356,12 @@ class TasteDnaService {
           ? 8
           : (liked.length >= 20 ? 20 : liked.length);
       final seeds = liked.take(seedCount).toList();
-      if (seeds.isEmpty)
+      if (seeds.isEmpty) {
         return (
           themes: const <String>[],
           evidence: const <String, List<DnaMovieRef>>{},
         );
+      }
 
       final lists = await Future.wait(
         seeds.map((r) {
