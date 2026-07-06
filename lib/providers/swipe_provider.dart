@@ -342,7 +342,7 @@ final swipeProvider =
           ref.read(statsProvider.notifier).load();
           final auth = ref.read(authProvider);
           if (auth.isAuthenticated) {
-            ref.read(syncServiceProvider).sync().catchError((e) {
+            ref.read(syncProvider.notifier).performSync().catchError((e) {
               debugPrint("Background sync failed on swipe: $e");
             });
           }

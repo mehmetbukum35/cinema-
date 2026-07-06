@@ -556,6 +556,8 @@ class AppLocalizations {
       'friend_taste_match_desc':
           'You have a {}% movie taste match with this friend.',
       'active_count_label': ' ({} Active)',
+      'sync_error_message': 'Sync failed. Your changes are safe on this device.',
+      'sync_retry': 'Retry',
     },
     'tr': {
       'app_title': 'Ne İzlesem?',
@@ -1074,6 +1076,8 @@ class AppLocalizations {
       'recommended_by_user': '{} önerdi',
       'friend_taste_match_desc': 'Bu arkadaşınızla ortak beğeni oranınız %{}.',
       'active_count_label': ' ({} Aktif)',
+      'sync_error_message': 'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
+      'sync_retry': 'Tekrar Dene',
     },
   };
 

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart' show Locale, ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'app_config.dart';
 import 'tmdb_service.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
@@ -134,15 +136,14 @@ class OfflineNotifier extends StateNotifier<bool> {
 
   Future<void> _checkConnectivity() async {
     try {
-      final result = await InternetAddress.lookup(
-        'example.com',
-      ).timeout(const Duration(seconds: 3));
-      final isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/health');
+      final response = await http.get(uri).timeout(const Duration(seconds: 3));
+      final isOnline = response.statusCode == 200 && response.body.contains('"ok"');
       if (mounted) {
         state = !isOnline;
       }
     } catch (e) {
-      // Lookup başarısız olduysa veya zaman aşımına uğradıysa cihaz çevrimdışıdır.
+      // API erişimi başarısız olduysa veya zaman aşımına uğradıysa cihaz çevrimdışıdır.
       if (mounted) {
         state = true;
       }

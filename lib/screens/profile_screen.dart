@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
 import 'watchlist_screen.dart';
+import '../services/sync_service.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'social_screen.dart';
@@ -408,6 +409,7 @@ class ProfileScreen extends ConsumerWidget {
     final total = stats['total'] as int? ?? 0;
     final topGenres = stats['topGenres'] as List<dynamic>? ?? [];
     final tr = AppLocalizations.of(context);
+    final syncState = ref.watch(syncProvider);
 
     return RefreshIndicator(
       color: c.gold,
@@ -423,6 +425,57 @@ class ProfileScreen extends ConsumerWidget {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
+          if (syncState == SyncStatus.error)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: c.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.red.withOpacity(0.3), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.sync_problem_rounded, color: c.red, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          tr?.get('sync_error_message') ??
+                              'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          ref.read(syncProvider.notifier).performSync().catchError((_) {});
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          tr?.get('sync_retry') ?? 'Tekrar Dene',
+                          style: TextStyle(
+                            color: c.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Header Row
           SliverToBoxAdapter(
             child: Padding(

@@ -9,7 +9,7 @@ import '../services/sync_service.dart';
 class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final Ref ref;
   WatchlistNotifier(this.ref) : super(const AsyncValue.loading()) {
-    load();
+    Future.microtask(() => load());
   }
 
   Future<void> load() async {
@@ -17,10 +17,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         try {
-          await ref.read(syncServiceProvider).sync();
+          await ref.read(syncProvider.notifier).performSync();
           ref.read(recommendationEngineProvider).invalidateCache(isNegativeChange: false);
         } catch (e) {
-          debugPrint("Watchlist background sync failed: $e");
+          // SyncNotifier captures the error state globally
         }
       }
       final list = await PrefsService.getWatchlist();
@@ -85,7 +85,7 @@ final watchlistProvider =
 class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   final Ref ref;
   StatsNotifier(this.ref) : super(const AsyncValue.loading()) {
-    load();
+    Future.microtask(() => load());
   }
 
   Future<void> load() async {
@@ -93,9 +93,9 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         try {
-          await ref.read(syncServiceProvider).sync();
+          await ref.read(syncProvider.notifier).performSync();
         } catch (e) {
-          debugPrint("Stats background sync failed: $e");
+          // SyncNotifier captures the error state globally
         }
       }
       final stats = await PrefsService.getStats();

@@ -259,3 +259,39 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   return SyncService(apiService);
 });
+
+enum SyncStatus { idle, syncing, success, error }
+
+class SyncNotifier extends StateNotifier<SyncStatus> {
+  final SyncService _syncService;
+  Future<void>? _syncFuture;
+
+  SyncNotifier(this._syncService) : super(SyncStatus.idle);
+
+  Future<void> performSync() async {
+    if (_syncFuture != null) {
+      return _syncFuture;
+    }
+    state = SyncStatus.syncing;
+    _syncFuture = _syncService.sync();
+    try {
+      await _syncFuture;
+      state = SyncStatus.success;
+    } catch (e) {
+      debugPrint("SyncNotifier: Sync failed: $e");
+      state = SyncStatus.error;
+      rethrow;
+    } finally {
+      _syncFuture = null;
+    }
+  }
+
+  void resetStatus() {
+    state = SyncStatus.idle;
+  }
+}
+
+final syncProvider = StateNotifierProvider<SyncNotifier, SyncStatus>((ref) {
+  final syncService = ref.watch(syncServiceProvider);
+  return SyncNotifier(syncService);
+});
