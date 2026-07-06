@@ -27,6 +27,16 @@ return [
         'pass' => 'your_smtp_password',
     ],
 
+    // Google Sign-In (POST /auth/google). client_ids: ID token'ın "aud"
+    // claim'inde kabul edilecek OAuth client ID'leri. Flutter'ın serverClientId
+    // olarak kullandığı WEB client ID mutlaka burada olmalı (Google Cloud
+    // Console > Credentials > OAuth 2.0 Client IDs > Web client).
+    'google' => [
+        'client_ids' => [
+            'your_web_client_id.apps.googleusercontent.com',
+        ],
+    ],
+
     // Yalnızca sunucuda tutulur; client'a asla gönderilmez (bkz. src/Tmdb.php).
     'tmdb_api_key' => 'your_tmdb_api_key_here',
     // GET /tmdb/* proxy'si için IP başına dakikalık istek sınırı.

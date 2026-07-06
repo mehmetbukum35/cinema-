@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../services/api_service.dart';
+import '../services/app_config.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
 import '../services/notification_service.dart';
@@ -11,7 +13,7 @@ import 'swipe_provider.dart';
 import 'social_provider.dart';
 import '../services/providers.dart';
 
-enum AuthStatus { success, conflict, error }
+enum AuthStatus { success, conflict, error, cancelled }
 
 enum ConflictResolution { merge, delete }
 
@@ -177,6 +179,75 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  static bool _googleInitialized = false;
+
+  /// Google Sign-In (v7 API): Google kimliği doğrular, ID token'ı backend'e
+  /// gönderir; oturum yine bizim JWT/refresh boru hattımızla kurulur.
+  /// Hesap çakışması olursa e-posta girişindeki AYNI conflict akışı çalışır.
+  Future<AuthResult> signInWithGoogle() async {
+    if (!AppConfig.googleSignInConfigured) {
+      const errMsg = 'Google girişi bu derlemede yapılandırılmamış.';
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
+    }
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final signIn = GoogleSignIn.instance;
+      if (!_googleInitialized) {
+        await signIn.initialize(serverClientId: AppConfig.googleServerClientId);
+        _googleInitialized = true;
+      }
+
+      final GoogleSignInAccount account;
+      try {
+        account = await signIn.authenticate(scopeHint: const ['email']);
+      } on GoogleSignInException catch (e) {
+        // Kullanıcı vazgeçti → hata değil; ekran sessizce devam eder.
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          state = state.copyWith(loading: false);
+          return AuthResult(status: AuthStatus.cancelled);
+        }
+        rethrow;
+      }
+
+      final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw Exception('Google ID token alınamadı (serverClientId doğru mu?)');
+      }
+
+      final data = await _apiService.loginWithGoogle(idToken);
+      final user = data['user'] as Map<String, dynamic>;
+      final tokens = data['tokens'] as Map<String, dynamic>;
+
+      final newUserId = user['id']?.toString();
+      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
+      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
+
+      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
+        state = state.copyWith(loading: false);
+        return AuthResult(
+          status: AuthStatus.conflict,
+          user: user,
+          tokens: tokens,
+        );
+      }
+
+      await completeLogin(
+        user: user,
+        tokens: tokens,
+        resolution: ConflictResolution.merge,
+      );
+      return AuthResult(status: AuthStatus.success);
+    } on ApiException catch (e) {
+      state = state.copyWith(loading: false, error: e.message);
+      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
+    } catch (e) {
+      debugPrint("Google sign-in failed: $e");
+      const errMsg = 'Google ile giriş yapılamadı. Lütfen tekrar deneyin.';
+      state = state.copyWith(loading: false, error: errMsg);
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
+    }
+  }
+
   /// Completes the login process once conflict is resolved or when no conflict is present.
   Future<void> completeLogin({
     required Map<String, dynamic> user,
@@ -250,6 +321,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _apiService.logout();
     } catch (e, st) {
       debugPrint("Auth notifier logout request failed: $e\n$st");
+    }
+    // Google oturumu da kapansın ki sonraki girişte hesap seçici açılsın.
+    if (_googleInitialized) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint("Google sign-out failed (ignored): $e");
+      }
     }
     await _endLocalSession(wipeLocalData: wipeLocalData);
   }

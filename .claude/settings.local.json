@@ -32,7 +32,11 @@
       "Bash(git commit -m 'style: apply dart format across recently edited files *)",
       "Bash(echo \"format gate: $?\")",
       "Bash(grep -iE \"config\\\\.php$|key\\\\.properties$|\\\\.jks$|service-account|firebase.*\\\\.json\")",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(php -l src/GoogleAuth.php)",
+      "Bash(php -l src/Auth.php)",
+      "Bash(php -l api/index.php)",
+      "Bash(flutter pub *)"
     ]
   }
 }

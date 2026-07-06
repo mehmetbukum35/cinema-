@@ -13,6 +13,7 @@ if (!is_dir($SRC)) {
 require_once "$SRC/Helpers.php";
 require_once "$SRC/Db.php";
 require_once "$SRC/Jwt.php";
+require_once "$SRC/GoogleAuth.php";
 require_once "$SRC/Auth.php";
 require_once "$SRC/Sync.php";
 require_once "$SRC/Smtp.php";
@@ -141,6 +142,11 @@ switch (true) {
     case $route === 'POST /auth/login':
         rate_limit('login', (int) $cfg['rate_limit_per_min']);
         $auth->login(read_json());
+        break;
+
+    case $route === 'POST /auth/google':
+        rate_limit('google_login', (int) $cfg['rate_limit_per_min']);
+        $auth->googleLogin(read_json());
         break;
 
     case $route === 'POST /auth/forgot-password':

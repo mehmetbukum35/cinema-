@@ -189,6 +189,27 @@ class ApiService {
     }
   }
 
+  // POST /auth/google — Google ID token'ı ile giriş/kayıt (sunucu doğrular,
+  // hesabı bulur/bağlar/oluşturur ve bizim JWT çiftimizi döner).
+  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+    final response = await _request(
+      'POST',
+      '/auth/google',
+      body: {'id_token': idToken},
+      requireAuth: false,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode == 200) {
+      return data;
+    } else {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Google ile giriş başarısız.',
+      );
+    }
+  }
+
   // POST /auth/logout
   Future<void> logout() async {
     final refreshToken = await PrefsService.getRefreshToken();

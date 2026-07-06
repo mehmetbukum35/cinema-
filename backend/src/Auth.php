@@ -73,6 +73,92 @@ class Auth
         ]);
     }
 
+    // ─── POST /auth/google ──────────────────────────────────────────────────
+    // Google Sign-In: istemcinin gönderdiği ID token doğrulanır, kullanıcı
+    // google_sub ile bulunur; yoksa AYNI e-postalı hesaba bağlanır (Google
+    // e-postayı doğruladığı için güvenli); o da yoksa yeni hesap açılır.
+    // Oturum yine bizim JWT/refresh boru hattımızla yönetilir.
+    // $verifier: testler için enjekte edilebilir (idToken → claims|null).
+    public function googleLogin(array $in, ?callable $verifier = null): void
+    {
+        $idToken = (string) ($in['id_token'] ?? '');
+        if ($idToken === '') {
+            fail(422, 'id_token gerekli.');
+        }
+
+        $clientIds = (array) ($this->cfg['google']['client_ids'] ?? []);
+        if ($clientIds === []) {
+            fail(500, 'Google girişi sunucuda yapılandırılmamış (google.client_ids eksik).');
+        }
+
+        $verifier ??= fn (string $t) => GoogleAuth::verifyIdToken($t, $clientIds);
+        $claims = $verifier($idToken);
+        if ($claims === null) {
+            fail(401, 'Google kimliği doğrulanamadı.');
+        }
+
+        $sub = (string) $claims['sub'];
+        $email = strtolower(trim((string) $claims['email']));
+        $name = isset($claims['name']) ? trim((string) $claims['name']) : null;
+
+        // 1) Daha önce Google ile bağlanmış hesap
+        $st = $this->db->prepare(
+            'SELECT id, email, display_name, username FROM users WHERE google_sub = ?'
+        );
+        $st->execute([$sub]);
+        $u = $st->fetch();
+
+        $isNew = false;
+        if ($u) {
+            $uid = (int) $u['id'];
+            $email = (string) $u['email'];
+            $name = $u['display_name'];
+            $username = $u['username'];
+        } else {
+            // 2) Aynı e-postalı mevcut hesap → Google'ı bağla
+            $st = $this->db->prepare(
+                'SELECT id, display_name, username FROM users WHERE email = ?'
+            );
+            $st->execute([$email]);
+            $u = $st->fetch();
+
+            if ($u) {
+                $uid = (int) $u['id'];
+                $name = $u['display_name'];
+                $username = $u['username'];
+                $up = $this->db->prepare(
+                    'UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?'
+                );
+                $up->execute([$sub, now_ms(), $uid]);
+            } else {
+                // 3) Yeni hesap. Parola alanı boş bırakılmaz: rastgele bir
+                // secret hash'lenir — bilinmediği için parola girişi imkânsız,
+                // kullanıcı isterse "şifremi unuttum" ile parola belirleyebilir.
+                $t = now_ms();
+                $hash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+                $ins = $this->db->prepare(
+                    'INSERT INTO users (email, password_hash, display_name, google_sub, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?)'
+                );
+                $ins->execute([$email, $hash, $name !== '' ? $name : null, $sub, $t, $t]);
+                $uid = (int) $this->db->lastInsertId();
+                $username = null;
+                $isNew = true;
+            }
+        }
+
+        json_out(200, [
+            'user' => [
+                'id' => $uid,
+                'email' => $email,
+                'display_name' => $name,
+                'username' => $username,
+            ],
+            'tokens' => $this->issueTokens($uid),
+            'is_new' => $isNew,
+        ]);
+    }
+
     // ─── POST /auth/refresh ─────────────────────────────────────────────────
     public function refresh(array $in): void
     {

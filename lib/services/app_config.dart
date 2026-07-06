@@ -14,6 +14,17 @@ class AppConfig {
     defaultValue: _defaultWebProfileBaseUrl,
   );
 
+  // Google Sign-In: sunucu doğrulaması için ID token'ın "aud" hedefi olan
+  // WEB client ID (Google Cloud Console > Credentials > OAuth 2.0 > Web).
+  // Backend Config.php'deki google.client_ids ile AYNI değer olmalı.
+  // Boş bırakılırsa login ekranındaki Google butonu gizlenir.
+  static const googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '',
+  );
+
+  static bool get googleSignInConfigured => googleServerClientId.isNotEmpty;
+
   static String get apiBaseUrl => _trimTrailingSlash(_apiBaseUrl);
   static String get webProfileBaseUrl => _trimTrailingSlash(_webProfileBaseUrl);
 

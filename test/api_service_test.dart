@@ -61,6 +61,58 @@ void main() {
       expect(user['user']['username'], 'testuser');
     });
 
+    test('loginWithGoogle should post id_token and return session', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/cinema/api/auth/google');
+        final body = jsonDecode(request.body);
+        expect(body['id_token'], 'google-id-token-x');
+
+        return http.Response(
+          jsonEncode({
+            'user': {
+              'id': 7,
+              'email': 'ali@example.com',
+              'display_name': 'Ali',
+              'username': null,
+            },
+            'tokens': {'access_token': 'acc', 'refresh_token': 'ref'},
+            'is_new': true,
+          }),
+          200,
+        );
+      });
+
+      final apiService = ApiService(client: mockClient);
+      final res = await apiService.loginWithGoogle('google-id-token-x');
+
+      expect(res['user']['id'], 7);
+      expect(res['tokens']['access_token'], 'acc');
+      expect(res['is_new'], isTrue);
+    });
+
+    test(
+      'loginWithGoogle should throw ApiException with server error',
+      () async {
+        // Not: MockClient content-type başlıksız cevabı Latin-1 encode eder;
+        // Türkçe karakter kullanma.
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'error': 'Google auth failed.'}),
+            401,
+          );
+        });
+
+        final apiService = ApiService(client: mockClient);
+        expect(
+          () => apiService.loginWithGoogle('bogus'),
+          throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401),
+          ),
+        );
+      },
+    );
+
     test('getFriends should send GET with Auth header', () async {
       // 1. Arrange: Setup Mock Client
       final mockClient = MockClient((request) async {

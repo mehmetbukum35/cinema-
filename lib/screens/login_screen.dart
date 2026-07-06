@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/app_config.dart';
 import '../services/localization_service.dart';
 import '../widgets/auth_conflict_dialog.dart';
 
@@ -40,20 +41,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             displayName: _nameCtrl.text.trim(),
           )
         : await notifier.login(_emailCtrl.text, _passCtrl.text);
+    await _handleAuthResult(result);
+  }
 
-    if (result.status == AuthStatus.success && mounted) {
+  Future<void> _googleSignIn() async {
+    final result = await ref.read(authProvider.notifier).signInWithGoogle();
+    await _handleAuthResult(result);
+  }
+
+  /// Başarı/çakışma sonucunu tek yerden işler (e-posta ve Google ortak).
+  Future<void> _handleAuthResult(AuthResult result) async {
+    if (!mounted) return;
+    if (result.status == AuthStatus.success) {
       Navigator.of(context).pop();
-    } else if (result.status == AuthStatus.conflict && mounted) {
+    } else if (result.status == AuthStatus.conflict) {
       final resolution = await showAuthConflictDialog(context);
       if (resolution != null && mounted) {
-        await notifier.completeLogin(
-          user: result.user!,
-          tokens: result.tokens!,
-          resolution: resolution,
-        );
+        await ref
+            .read(authProvider.notifier)
+            .completeLogin(
+              user: result.user!,
+              tokens: result.tokens!,
+              resolution: resolution,
+            );
         if (mounted) Navigator.of(context).pop();
       }
     }
+    // error → auth.error zaten ekranda gösteriliyor; cancelled → sessiz.
   }
 
   @override
@@ -217,6 +231,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         'Login'),
                             ),
                     ),
+                    if (AppConfig.googleSignInConfigured) ...[
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              AppLocalizations.of(context)?.get('auth_or') ??
+                                  'veya',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      OutlinedButton.icon(
+                        onPressed: auth.loading ? null : _googleSignIn,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        // Marka görseli eklemeden sade "G" rozeti.
+                        icon: Container(
+                          width: 22,
+                          height: 22,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black12),
+                          ),
+                          child: const Text(
+                            'G',
+                            style: TextStyle(
+                              color: Color(0xFF4285F4),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        label: Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.get('auth_google_button') ??
+                              'Google ile devam et',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: auth.loading

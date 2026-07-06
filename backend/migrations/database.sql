@@ -138,7 +138,8 @@ CREATE TABLE `users` (
   `username` varchar(50) DEFAULT NULL,
   `is_public` tinyint(1) NOT NULL DEFAULT 1,
   `taste_dna` text DEFAULT NULL,
-  `taste_dna_at` bigint(20) NOT NULL DEFAULT 0
+  `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
+  `google_sub` varchar(64) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
