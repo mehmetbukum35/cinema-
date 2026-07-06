@@ -449,4 +449,60 @@ void main() {
       expect(seeds.length, 12);
     });
   });
+
+  group('RecommendationEngine Cache Invalidation Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    test('invalidateCache, veritabanı oylamaları ve keyword vektörü önbelleğini doğru şekilde temizlemelidir', () async {
+      // Mock TMDB Client: film keyword'lerini döner
+      final client = MockClient((request) async {
+        if (request.url.path.contains('/100/keywords')) {
+          return http.Response(jsonEncode({
+            'keywords': [{'id': 10, 'name': 'action'}]
+          }), 200);
+        }
+        if (request.url.path.contains('/200/keywords')) {
+          return http.Response(jsonEncode({
+            'keywords': [{'id': 20, 'name': 'scifi'}]
+          }), 200);
+        }
+        return http.Response(jsonEncode({'keywords': []}), 200);
+      });
+
+      final service = TmdbService(client: client);
+      final engine = RecommendationEngine(service);
+
+      // 1. Birinci filmi oyla (ID: 100)
+      await PrefsService.saveRating(
+        movie: _movie(100, title: 'Action Movie'),
+        rating: 3,
+      );
+
+      // 2. Keyword vektörünü hesapla (bu işlem sonucu önbelleklenir)
+      final vector1 = await engine.buildUserKeywordVector();
+      expect(vector1.containsKey(10), isTrue);
+      expect(vector1.containsKey(20), isFalse);
+
+      // 3. İkinci filmi oyla (ID: 200) ama henüz önbelleği temizleme
+      await PrefsService.saveRating(
+        movie: _movie(200, title: 'Scifi Movie'),
+        rating: 3,
+      );
+
+      // Önbellek temizlenmediği için vektör hala eski değeri dönecektir
+      final vector2 = await engine.buildUserKeywordVector();
+      expect(vector2.containsKey(20), isFalse);
+
+      // 4. Önbelleği temizle (invalidateCache)
+      engine.invalidateCache();
+
+      // Şimdi yeni filmin verileri de yüklenmelidir
+      final vector3 = await engine.buildUserKeywordVector();
+      expect(vector3.containsKey(10), isTrue);
+      expect(vector3.containsKey(20), isTrue);
+    });
+  });
 }

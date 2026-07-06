@@ -97,6 +97,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Trigger initial sync to pull remote data
       _ref.read(watchlistProvider.notifier).load();
       _ref.read(statsProvider.notifier).load();
+      _ref.invalidate(swipeProvider);
 
       // Giriş sonrası FCM token'ını sunucuya kaydet.
       NotificationService.instance.registerToken();
@@ -146,6 +147,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Trigger initial sync
       _ref.read(watchlistProvider.notifier).load();
       _ref.read(statsProvider.notifier).load();
+      _ref.invalidate(swipeProvider);
 
       // Kayıt sonrası FCM token'ını sunucuya kaydet.
       NotificationService.instance.registerToken();

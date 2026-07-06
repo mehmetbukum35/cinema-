@@ -32,12 +32,32 @@ class RecommendationEngine {
   RecommendationEngine(this._service);
 
   /// Kullanıcının anahtar kelime zevk vektörü (keyword_id → ağırlık).
-  /// Beğenilen (İyi/Harika) yapımların keyword'lerinden kurulur, memoize
-  /// edilir; her rate/undo'da [invalidateTasteVector] ile sıfırlanır.
   Map<int, double>? _userKeywordVector;
 
-  /// Zevk profili değişti (puan verildi / geri alındı) — vektör yeniden kurulsun.
-  void invalidateTasteVector() => _userKeywordVector = null;
+  /// Kullanıcı oylama listesinin bellek önbelleği.
+  List<Map<String, dynamic>>? _cachedRatings;
+
+  /// Beğenilmeyen (Eh/Berbat) filmlerin benzer/öneri anahtar kelime önbelleği.
+  (Set<String> berbatKeys, Set<String> ehKeys)? _cachedNegativeKeys;
+
+  /// Zevk profili değişti veya senkronizasyon yapıldı — tüm önbelleği temizle.
+  void invalidateCache() {
+    _userKeywordVector = null;
+    _cachedRatings = null;
+    _cachedNegativeKeys = null;
+  }
+
+  /// Eski çağrılar için geriye dönük uyumluluk metodu.
+  void invalidateTasteVector() => invalidateCache();
+
+  /// Oylamaları bellekten veya veritabanından çeken yardımcı metot.
+  Future<List<Map<String, dynamic>>> _getRatings() async {
+    final cached = _cachedRatings;
+    if (cached != null) return cached;
+    final ratings = await DatabaseHelper().getRatings();
+    _cachedRatings = ratings;
+    return ratings;
+  }
 
   // ── Harman ağırlıkları (tek doğruluk kaynağı) ─────────────────────────────
   /// Keyword sinyali yokken: tür lider, TMDB puanı taban.
@@ -148,7 +168,7 @@ class RecommendationEngine {
 
     final vec = <int, double>{};
     try {
-      final ratings = await DatabaseHelper().getRatings();
+      final ratings = await _getRatings();
       // En son 25 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
       final sortedRatings = ratings.toList()
         ..sort(
@@ -207,7 +227,7 @@ class RecommendationEngine {
     final candidates = <Movie>[];
     try {
       final db = DatabaseHelper();
-      final ratings = await db.getRatings();
+      final ratings = await _getRatings();
 
       int finalSeedCount = seedCount;
       try {
@@ -293,16 +313,22 @@ class RecommendationEngine {
 
   /// Eh/Berbat oylanan yapımların benzerlerini bulup engelleme/ceza seti oluşturur.
   Future<(Set<String> berbatKeys, Set<String> ehKeys)> fetchNegativeSeedKeys() async {
+    final cached = _cachedNegativeKeys;
+    if (cached != null) return cached;
+
     final berbatKeys = <String>{};
     final ehKeys = <String>{};
     try {
-      final ratings = await DatabaseHelper().getRatings();
+      final ratings = await _getRatings();
       final disliked = ratings.where((r) => (r['rating'] as int) <= 1).toList()
         ..sort(
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
         );
       final seeds = disliked.take(3).toList();
-      if (seeds.isEmpty) return (berbatKeys, ehKeys);
+      if (seeds.isEmpty) {
+        _cachedNegativeKeys = (berbatKeys, ehKeys);
+        return _cachedNegativeKeys!;
+      }
 
       final results = await Future.wait(
         seeds.map((s) {
@@ -327,7 +353,8 @@ class RecommendationEngine {
     } catch (e) {
       debugPrint("Failed to fetch negative seeds: $e");
     }
-    return (berbatKeys, ehKeys);
+    _cachedNegativeKeys = (berbatKeys, ehKeys);
+    return _cachedNegativeKeys!;
   }
 
   /// Tam sıralama boru hattı. [candidates] içinden puanlanmış/engellenmişler
@@ -348,7 +375,7 @@ class RecommendationEngine {
     final (berbatKeys, ehKeys) = await fetchNegativeSeedKeys();
 
     // Berbat (0) oylanan filmlerin franchise/seri isimlerini yükle (Prefix bastırma için)
-    final ratings = await DatabaseHelper().getRatings();
+    final ratings = await _getRatings();
     final berbatTitles = ratings
         .where((r) => (r['rating'] as int) == 0)
         .map((r) => _normTitle((r['movie'] as Movie?)?.title ?? ''))

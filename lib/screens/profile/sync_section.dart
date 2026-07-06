@@ -7,6 +7,7 @@ import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/swipe_provider.dart';
 
 enum AuthMode { login, register, forgotEmail, forgotCode, forgotReset }
 
@@ -51,6 +52,7 @@ class _SyncSectionState extends ConsumerState<SyncSection> {
       await ref.read(syncServiceProvider).sync();
       ref.invalidate(watchlistProvider);
       ref.invalidate(statsProvider);
+      ref.invalidate(swipeProvider);
       await _loadSyncTime();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
