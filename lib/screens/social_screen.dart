@@ -775,13 +775,13 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     final title = rec['title'] ?? 'Movie';
     final note = (rec['note'] ?? '').toString();
     final posterPath = rec['poster_path'];
-    final isTv = (rec['is_tv'] ?? 0) == 1;
+    final isTv = _parseIsTv(rec);
     final seen = rec['seen'] == true;
 
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        final movieId = int.tryParse(rec['movie_id']?.toString() ?? '') ?? 0;
+        final movieId = _parseMovieId(rec);
         if (movieId > 0) {
           _openMovieDetail(context, ref, movieId, isTv);
         }
@@ -981,7 +981,7 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
         ? act['rating'] as int
         : (int.tryParse(act['rating']?.toString() ?? '') ?? 3);
     final posterPath = act['poster_path'];
-    final isTv = (act['is_tv'] ?? 0) == 1;
+    final isTv = _parseIsTv(act);
     final comment = act['comment'] as String?;
     final isSpoiler = (act['is_spoiler'] ?? 0) == 1;
 
@@ -1007,7 +1007,7 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        final movieId = int.tryParse(act['movie_id']?.toString() ?? '') ?? 0;
+        final movieId = _parseMovieId(act);
         if (movieId > 0) {
           _openMovieDetail(context, ref, movieId, isTv);
         }
@@ -1328,6 +1328,20 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
       ),
     );
   }
+}
+bool _parseIsTv(dynamic data) {
+  if (data == null) return false;
+  final val = data['is_tv'] ?? data['isTV'] ?? data['isTv'];
+  return val == true ||
+      val == 1 ||
+      val?.toString() == '1' ||
+      val?.toString() == 'true';
+}
+
+int _parseMovieId(dynamic data) {
+  if (data == null) return 0;
+  final val = data['movie_id'] ?? data['id'] ?? data['movieId'];
+  return int.tryParse(val?.toString() ?? '') ?? 0;
 }
 
 Future<void> _openMovieDetail(
