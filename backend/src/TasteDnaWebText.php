@@ -78,6 +78,8 @@ class TasteDnaWebText
         'video game' => 'video oyunu', 'hacker' => 'hacker',
         'cyberpunk' => 'siberpunk', 'noir' => 'kara film', 'satire' => 'hiciv',
         'dark comedy' => 'kara mizah', 'parody' => 'parodi',
+        'sibling relationship' => 'kardeş ilişkisi', 'class' => 'sınıf',
+        'money' => 'para',
     ];
 
     private static function genreName(int $id): string

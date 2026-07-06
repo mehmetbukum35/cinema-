@@ -155,6 +155,9 @@ class TasteDnaPresenter {
     'satire': 'hiciv',
     'dark comedy': 'kara mizah',
     'parody': 'parodi',
+    'sibling relationship': 'kardeş ilişkisi',
+    'class': 'sınıf',
+    'money': 'para',
   };
 
   // ── Arketip ──
