@@ -285,7 +285,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     // Save to local storage (SQLite)
     await PrefsService.saveRating(movie: movie, rating: rating);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
-    _engine.invalidateCache();
+    _engine.invalidateCache(isNegativeChange: rating <= 1);
 
     // İsabet telemetrisi: hangi aday kaynağı gerçekten beğeni üretiyor?
     // (rating>=2 = İyi/Harika → isabet). Best-effort; akışı bloklamaz.
@@ -310,10 +310,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final previousIndex = state.current - 1;
     final movie = state.queue[previousIndex];
 
+    // Get the rating before deleting to check if it was a dislike
+    final ratingRecord = await PrefsService.getRating(movie.id, movie.isTV);
+    final prevRating = ratingRecord?['rating'] as int?;
+
     // Delete the rating from DB
     await PrefsService.deleteRating(movie.id, movie.isTV);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
-    _engine.invalidateCache();
+    _engine.invalidateCache(isNegativeChange: prevRating == null || prevRating <= 1);
 
     // Remove from ratedIds
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";

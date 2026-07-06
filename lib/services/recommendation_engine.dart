@@ -40,11 +40,13 @@ class RecommendationEngine {
   /// Beğenilmeyen (Eh/Berbat) filmlerin benzer/öneri anahtar kelime önbelleği.
   (Set<String> berbatKeys, Set<String> ehKeys)? _cachedNegativeKeys;
 
-  /// Zevk profili değişti veya senkronizasyon yapıldı — tüm önbelleği temizle.
-  void invalidateCache() {
+  /// Zevk profili değişti veya senkronizasyon yapıldı — önbelleği temizle.
+  void invalidateCache({bool isNegativeChange = true}) {
     _userKeywordVector = null;
     _cachedRatings = null;
-    _cachedNegativeKeys = null;
+    if (isNegativeChange) {
+      _cachedNegativeKeys = null;
+    }
   }
 
   /// Eski çağrılar için geriye dönük uyumluluk metodu.

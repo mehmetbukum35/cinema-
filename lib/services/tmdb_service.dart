@@ -51,6 +51,10 @@ class TmdbService {
   final String _language;
   final String _region;
 
+  final Map<String, List<int>> _keywordIdsCache = {};
+  final Map<String, List<Movie>> _similarCache = {};
+  final Map<String, List<Movie>> _recommendationsCache = {};
+
   TmdbService({http.Client? client, String? language, String? region})
     : _client = client ?? http.Client(),
       _language = language ?? 'tr-TR',
@@ -98,22 +102,34 @@ class TmdbService {
 
   // ─── Similar / Recommendations ───────────────────────────────────────────
 
-  Future<List<Movie>> getSimilar(int id, {bool isTV = false}) {
+  Future<List<Movie>> getSimilar(int id, {bool isTV = false}) async {
+    final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
+    if (_similarCache.containsKey(cacheKey)) {
+      return _similarCache[cacheKey]!;
+    }
     final path = isTV ? '/3/tv/$id/similar' : '/3/movie/$id/similar';
-    return _fetchList(path, {
+    final list = await _fetchList(path, {
       'api_key': _apiKey,
       'language': _language,
     }, isTV: isTV);
+    _similarCache[cacheKey] = list;
+    return list;
   }
 
-  Future<List<Movie>> getRecommendations(int id, {bool isTV = false}) {
+  Future<List<Movie>> getRecommendations(int id, {bool isTV = false}) async {
+    final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
+    if (_recommendationsCache.containsKey(cacheKey)) {
+      return _recommendationsCache[cacheKey]!;
+    }
     final path = isTV
         ? '/3/tv/$id/recommendations'
         : '/3/movie/$id/recommendations';
-    return _fetchList(path, {
+    final list = await _fetchList(path, {
       'api_key': _apiKey,
       'language': _language,
     }, isTV: isTV);
+    _recommendationsCache[cacheKey] = list;
+    return list;
   }
 
   // ─── Search ─────────────────────────────────────────────────────────────────
@@ -666,6 +682,10 @@ class TmdbService {
   /// stabil eşleştirme). getKeywords ile AYNI cache girdisini kullanır; ekstra
   /// ağ isteği yapmaz.
   Future<List<int>> getKeywordIds(int id, {bool isTV = false}) async {
+    final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
+    if (_keywordIdsCache.containsKey(cacheKey)) {
+      return _keywordIdsCache[cacheKey]!;
+    }
     final path = isTV ? '/3/tv/$id/keywords' : '/3/movie/$id/keywords';
     final json = await _fetchRawWithCache(
       path: path,
@@ -676,11 +696,13 @@ class TmdbService {
         (json['keywords'] as List<dynamic>?) ??
         (json['results'] as List<dynamic>?) ??
         [];
-    return list
+    final ids = list
         .cast<Map<String, dynamic>>()
         .map((k) => k['id'] as int)
         .take(15)
         .toList();
+    _keywordIdsCache[cacheKey] = ids;
+    return ids;
   }
 
   // ─── Person details (bio, birthday) ──────────────────────────────────────────
