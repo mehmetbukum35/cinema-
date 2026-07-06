@@ -1084,25 +1084,29 @@ class DatabaseHelper {
           _mockWatchedSeasons.any((e) => e['deleted'] != 1);
     }
 
-    final ratingsCount = Sqflite.firstIntValue(
+    final ratingsCount =
+        Sqflite.firstIntValue(
           await db.rawQuery("SELECT COUNT(*) FROM ratings WHERE deleted = 0"),
         ) ??
         0;
     if (ratingsCount > 0) return true;
 
-    final watchlistCount = Sqflite.firstIntValue(
+    final watchlistCount =
+        Sqflite.firstIntValue(
           await db.rawQuery("SELECT COUNT(*) FROM watchlist WHERE deleted = 0"),
         ) ??
         0;
     if (watchlistCount > 0) return true;
 
-    final favoritesCount = Sqflite.firstIntValue(
+    final favoritesCount =
+        Sqflite.firstIntValue(
           await db.rawQuery("SELECT COUNT(*) FROM favorites WHERE deleted = 0"),
         ) ??
         0;
     if (favoritesCount > 0) return true;
 
-    final seasonsCount = Sqflite.firstIntValue(
+    final seasonsCount =
+        Sqflite.firstIntValue(
           await db.rawQuery(
             "SELECT COUNT(*) FROM watched_seasons WHERE deleted = 0",
           ),

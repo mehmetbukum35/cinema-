@@ -1,4 +1,4 @@
-
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
@@ -317,7 +317,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     // Delete the rating from DB
     await PrefsService.deleteRating(movie.id, movie.isTV);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
-    await _engine.invalidateCache(isNegativeChange: prevRating == null || prevRating <= 1);
+    await _engine.invalidateCache(
+      isNegativeChange: prevRating == null || prevRating <= 1,
+    );
 
     // Remove from ratedIds
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
@@ -334,6 +336,12 @@ final swipeProvider =
     StateNotifierProvider.autoDispose<SwipeNotifier, SwipeState>((ref) {
       final service = ref.watch(tmdbServiceProvider);
       final engine = ref.watch(recommendationEngineProvider);
+
+      Timer? syncTimer;
+      ref.onDispose(() {
+        syncTimer?.cancel();
+      });
+
       return SwipeNotifier(
         service,
         engine,
@@ -342,8 +350,11 @@ final swipeProvider =
           ref.read(statsProvider.notifier).load();
           final auth = ref.read(authProvider);
           if (auth.isAuthenticated) {
-            ref.read(syncProvider.notifier).performSync().catchError((e) {
-              debugPrint("Background sync failed on swipe: $e");
+            syncTimer?.cancel();
+            syncTimer = Timer(const Duration(seconds: 5), () {
+              ref.read(syncProvider.notifier).performSync().catchError((e) {
+                debugPrint("Background sync failed on swipe: $e");
+              });
             });
           }
         },

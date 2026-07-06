@@ -20,6 +20,7 @@ import '../models/review.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
+import '../services/providers.dart';
 import 'trailer_player_screen.dart';
 import '../widgets/spring_button.dart';
 
@@ -1726,6 +1727,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                       comment: _commentController.text,
                                       isSpoiler: _isSpoiler ? 1 : 0,
                                     );
+                                    ref
+                                        .read(recommendationEngineProvider)
+                                        .invalidateCache(
+                                          isNegativeChange:
+                                              _currentRating! <= 1,
+                                        )
+                                        .catchError((_) => {});
                                     ref.invalidate(statsProvider);
                                     ref
                                         .read(syncServiceProvider)
@@ -1895,6 +1903,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         HapticFeedback.lightImpact();
         if (active) {
           await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+          ref
+              .read(recommendationEngineProvider)
+              .invalidateCache(isNegativeChange: true)
+              .catchError((_) => {});
           setState(() {
             _currentRating = null;
             _commentController.clear();
@@ -1907,6 +1919,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             comment: _commentController.text,
             isSpoiler: _isSpoiler ? 1 : 0,
           );
+          ref
+              .read(recommendationEngineProvider)
+              .invalidateCache(isNegativeChange: rating <= 1)
+              .catchError((_) => {});
           setState(() {
             _currentRating = rating;
           });

@@ -45,11 +45,7 @@ class AuthConflictDialog extends StatelessWidget {
       content: Text(
         tr?.get('auth_conflict_desc') ??
             'There is local data belonging to another account on this device. How would you like to proceed?',
-        style: TextStyle(
-          color: c.dim,
-          fontSize: 14,
-          height: 1.5,
-        ),
+        style: TextStyle(color: c.dim, fontSize: 14, height: 1.5),
       ),
       actionsAlignment: MainAxisAlignment.end,
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -98,15 +94,15 @@ class AuthConflictDialog extends StatelessWidget {
             TextButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
-                Navigator.of(context).pop(null); // returns null which means cancel
+                Navigator.of(
+                  context,
+                ).pop(null); // returns null which means cancel
               },
               style: TextButton.styleFrom(
                 foregroundColor: c.dim,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Text(
-                tr?.get('auth_conflict_cancel') ?? 'Cancel Login',
-              ),
+              child: Text(tr?.get('auth_conflict_cancel') ?? 'Cancel Login'),
             ),
           ],
         ),

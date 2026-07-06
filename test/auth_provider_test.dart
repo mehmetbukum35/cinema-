@@ -158,18 +158,21 @@ void main() {
       expect(await PrefsService.getRefreshToken(), isNull);
     });
 
-    test('clearSession should clear auth without requiring logout API', () async {
-      final notifier = container.read(authProvider.notifier);
+    test(
+      'clearSession should clear auth without requiring logout API',
+      () async {
+        final notifier = container.read(authProvider.notifier);
 
-      await notifier.login('test@example.com', 'secret123');
-      expect(container.read(authProvider).isAuthenticated, isTrue);
+        await notifier.login('test@example.com', 'secret123');
+        expect(container.read(authProvider).isAuthenticated, isTrue);
 
-      await notifier.clearSession();
+        await notifier.clearSession();
 
-      expect(container.read(authProvider).isAuthenticated, isFalse);
-      expect(await PrefsService.getAccessToken(), isNull);
-      expect(mockApi.logoutCalled, isFalse);
-    });
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+        expect(await PrefsService.getAccessToken(), isNull);
+        expect(mockApi.logoutCalled, isFalse);
+      },
+    );
 
     test('changePassword should end session locally', () async {
       final notifier = container.read(authProvider.notifier);
@@ -215,68 +218,86 @@ void main() {
       expect(mockApi.forgotPasswordCalled, isTrue);
     });
 
-    test('should trigger conflict when different user logins and local data exists', () async {
-      final notifier = container.read(authProvider.notifier);
+    test(
+      'should trigger conflict when different user logins and local data exists',
+      () async {
+        final notifier = container.read(authProvider.notifier);
 
-      // Set last authenticated user id to '1'
-      await PrefsService.setLastAuthenticatedUserId('1');
-      // Mock ratings data in DatabaseHelper to simulate local data
-      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        // Set last authenticated user id to '1'
+        await PrefsService.setLastAuthenticatedUserId('1');
+        // Mock ratings data in DatabaseHelper to simulate local data
+        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
 
-      // Attempt to login as user id '2' (MockApiService register returns id: 2)
-      final result = await notifier.register('reg@example.com', 'secret123');
+        // Attempt to login as user id '2' (MockApiService register returns id: 2)
+        final result = await notifier.register('reg@example.com', 'secret123');
 
-      // Should be conflict
-      expect(result.status, AuthStatus.conflict);
-      expect(container.read(authProvider).isAuthenticated, isFalse);
+        // Should be conflict
+        expect(result.status, AuthStatus.conflict);
+        expect(container.read(authProvider).isAuthenticated, isFalse);
 
-      // Complete login with resolution Merge
-      await notifier.completeLogin(
-        user: result.user!,
-        tokens: result.tokens!,
-        resolution: ConflictResolution.merge,
-      );
+        // Complete login with resolution Merge
+        await notifier.completeLogin(
+          user: result.user!,
+          tokens: result.tokens!,
+          resolution: ConflictResolution.merge,
+        );
 
-      expect(container.read(authProvider).isAuthenticated, isTrue);
-      expect(await PrefsService.getLastAuthenticatedUserId(), '2');
-      expect(await DatabaseHelper().hasAnyLocalData(), isTrue); // rating remains
-    });
+        expect(container.read(authProvider).isAuthenticated, isTrue);
+        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect(
+          await DatabaseHelper().hasAnyLocalData(),
+          isTrue,
+        ); // rating remains
+      },
+    );
 
-    test('completeLogin with delete resolution should wipe local data', () async {
-      final notifier = container.read(authProvider.notifier);
+    test(
+      'completeLogin with delete resolution should wipe local data',
+      () async {
+        final notifier = container.read(authProvider.notifier);
 
-      // Set last authenticated user id to '1'
-      await PrefsService.setLastAuthenticatedUserId('1');
-      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        // Set last authenticated user id to '1'
+        await PrefsService.setLastAuthenticatedUserId('1');
+        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
 
-      final result = await notifier.register('reg@example.com', 'secret123');
-      expect(result.status, AuthStatus.conflict);
+        final result = await notifier.register('reg@example.com', 'secret123');
+        expect(result.status, AuthStatus.conflict);
 
-      // Complete login with resolution Delete
-      await notifier.completeLogin(
-        user: result.user!,
-        tokens: result.tokens!,
-        resolution: ConflictResolution.delete,
-      );
+        // Complete login with resolution Delete
+        await notifier.completeLogin(
+          user: result.user!,
+          tokens: result.tokens!,
+          resolution: ConflictResolution.delete,
+        );
 
-      expect(container.read(authProvider).isAuthenticated, isTrue);
-      expect(await PrefsService.getLastAuthenticatedUserId(), '2');
-      expect(await DatabaseHelper().hasAnyLocalData(), isFalse); // ratings wiped
-    });
+        expect(container.read(authProvider).isAuthenticated, isTrue);
+        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect(
+          await DatabaseHelper().hasAnyLocalData(),
+          isFalse,
+        ); // ratings wiped
+      },
+    );
 
-    test('should trigger conflict when guest registers and local data exists', () async {
-      final notifier = container.read(authProvider.notifier);
+    test(
+      'should trigger conflict when guest registers and local data exists',
+      () async {
+        final notifier = container.read(authProvider.notifier);
 
-      // Set last authenticated user id to null (guest mode)
-      await PrefsService.setLastAuthenticatedUserId(null);
-      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        // Set last authenticated user id to null (guest mode)
+        await PrefsService.setLastAuthenticatedUserId(null);
+        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
 
-      // Attempt to register
-      final result = await notifier.register('guest_reg@example.com', 'secret123');
+        // Attempt to register
+        final result = await notifier.register(
+          'guest_reg@example.com',
+          'secret123',
+        );
 
-      // Should be conflict because hasLocalData is true, and lastUserId is null (guest)
-      expect(result.status, AuthStatus.conflict);
-      expect(container.read(authProvider).isAuthenticated, isFalse);
-    });
+        // Should be conflict because hasLocalData is true, and lastUserId is null (guest)
+        expect(result.status, AuthStatus.conflict);
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+      },
+    );
   });
 }

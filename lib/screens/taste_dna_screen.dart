@@ -45,7 +45,9 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
     });
     try {
       final userId = ref.read(authProvider).user?['id']?.toString();
-      final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
+      final dna = await ref
+          .read(tasteDnaServiceProvider)
+          .generate(userId: userId);
       // Snapshot'ı arka planda backend'e yayınla (public web kartı için).
       // Best-effort: başarısızsa ekran yine de görünür.
       if (ref.read(authProvider).isAuthenticated) {
@@ -467,7 +469,11 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
     );
   }
 
-  Widget _themeEvidenceRow(ThemePalette c, String theme, List<DnaMovieRef> movies) {
+  Widget _themeEvidenceRow(
+    ThemePalette c,
+    String theme,
+    List<DnaMovieRef> movies,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -476,13 +482,14 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: c.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: c.gold.withValues(alpha: 0.4),
-                  ),
+                  border: Border.all(color: c.gold.withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   theme,
@@ -524,8 +531,10 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
                           ? CachedNetworkImage(
                               imageUrl: m.posterUrl,
                               fit: BoxFit.cover,
-                              placeholder: (ctx, url) => ColoredBox(color: c.surface),
-                              errorWidget: (ctx, url, err) => ColoredBox(color: c.surface),
+                              placeholder: (ctx, url) =>
+                                  ColoredBox(color: c.surface),
+                              errorWidget: (ctx, url, err) =>
+                                  ColoredBox(color: c.surface),
                             )
                           : ColoredBox(color: c.surface),
                     ),

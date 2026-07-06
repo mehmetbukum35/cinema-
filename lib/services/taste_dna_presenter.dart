@@ -162,29 +162,41 @@ class TasteDnaPresenter {
   String get archetypeName {
     final primary = _t('dna_arch_${dna.archetypeKey}', _archetypeFallback);
     if (dna.secondaryArchetypeKey != null) {
-      final secondary = _t('dna_arch_${dna.secondaryArchetypeKey!}', _secondaryFallback);
+      final secondary = _t(
+        'dna_arch_${dna.secondaryArchetypeKey!}',
+        _secondaryFallback,
+      );
       return "$primary + $secondary";
     }
     return primary;
   }
+
   String get archetypeEmoji => _archetypeEmoji[dna.archetypeKey] ?? '🎬';
   String get archetypeEssence {
     final primary = _t('dna_ess_${dna.archetypeKey}', _essenceFallback);
     if (dna.secondaryArchetypeKey != null) {
-      final secondary = _t('dna_ess_sec_${dna.secondaryArchetypeKey!}', _secondaryEssenceFallback(dna.secondaryArchetypeKey!));
+      final secondary = _t(
+        'dna_ess_sec_${dna.secondaryArchetypeKey!}',
+        _secondaryEssenceFallback(dna.secondaryArchetypeKey!),
+      );
       return "$primary $secondary";
     }
     return primary;
   }
 
   String _secondaryEssenceFallback(String key) => switch (key) {
-    'dark_chronicler' => 'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
-    'emotion_seeker' => 'Duygusal derinlik ve insani hikâyeler de seni cezbediyor.',
-    'world_builder' => 'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgini çekiyor.',
-    'adrenaline_junkie' => 'Tempo, aksiyon ve macera da senin heyecan kaynağın.',
+    'dark_chronicler' =>
+      'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
+    'emotion_seeker' =>
+      'Duygusal derinlik ve insani hikâyeler de seni cezbediyor.',
+    'world_builder' =>
+      'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgini çekiyor.',
+    'adrenaline_junkie' =>
+      'Tempo, aksiyon ve macera da senin heyecan kaynağın.',
     'joy_chaser' => 'Hafiflik, neşe ve komedi de sığındığın limanlar arasında.',
     'truth_seeker' => 'Gerçek hikâyeler ve yaşanmışlıklar da radarında.',
-    'eternal_child' => 'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
+    'eternal_child' =>
+      'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
     _ => 'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
   };
 
@@ -211,7 +223,9 @@ class TasteDnaPresenter {
   };
 
   String get _archetypeFallback => _fallbackNameFor(dna.archetypeKey);
-  String get _secondaryFallback => dna.secondaryArchetypeKey != null ? _fallbackNameFor(dna.secondaryArchetypeKey!) : '';
+  String get _secondaryFallback => dna.secondaryArchetypeKey != null
+      ? _fallbackNameFor(dna.secondaryArchetypeKey!)
+      : '';
 
   String get _essenceFallback => switch (dna.archetypeKey) {
     'dark_chronicler' => 'Gölgelere, gerilime ve ahlaki griliğe çekiliyorsun.',

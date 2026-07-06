@@ -193,7 +193,9 @@ class ProfileScreen extends ConsumerWidget {
     Future.microtask(() async {
       try {
         final userId = ref.read(authProvider).user?['id']?.toString();
-        final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
+        final dna = await ref
+            .read(tasteDnaServiceProvider)
+            .generate(userId: userId);
 
         final cachedData = await PrefsService.getCachedDna();
         final currentHash = cachedData?['hash'];
@@ -204,7 +206,9 @@ class ProfileScreen extends ConsumerWidget {
           await PrefsService.setLastPublishedDnaHash(currentHash);
           debugPrint("Background DNA auto-publish succeeded!");
         } else {
-          debugPrint("Background DNA auto-publish skipped (already up to date).");
+          debugPrint(
+            "Background DNA auto-publish skipped (already up to date).",
+          );
         }
       } catch (e) {
         debugPrint("Background DNA auto-publish failed: $e");
@@ -443,11 +447,17 @@ class ProfileScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: c.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: c.red.withValues(alpha: 0.3), width: 1),
+                    border: Border.all(
+                      color: c.red.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -468,10 +478,16 @@ class ProfileScreen extends ConsumerWidget {
                       TextButton(
                         onPressed: () {
                           HapticFeedback.lightImpact();
-                          ref.read(syncProvider.notifier).performSync().catchError((_) {});
+                          ref
+                              .read(syncProvider.notifier)
+                              .performSync()
+                              .catchError((_) {});
                         },
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),

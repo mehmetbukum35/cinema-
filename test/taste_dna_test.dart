@@ -160,10 +160,7 @@ void main() {
 
     test('yetersiz örneklemde eraKey null olur', () {
       final dna = TasteDnaService.compute(
-        ratings: [
-          _r(rating: 3, year: 2020),
-          _r(rating: 3, year: 2018),
-        ],
+        ratings: [_r(rating: 3, year: 2020), _r(rating: 3, year: 2018)],
         themes: const [],
         accuracy: null,
         accuracySample: 0,
@@ -357,9 +354,7 @@ void main() {
 
     test('toplam oylama < 8 ise criticKey null olur', () {
       final dna = TasteDnaService.compute(
-        ratings: [
-          for (var i = 0; i < 7; i++) _r(rating: 3),
-        ],
+        ratings: [for (var i = 0; i < 7; i++) _r(rating: 3)],
         themes: const [],
         accuracy: null,
         accuracySample: 0,
@@ -379,8 +374,13 @@ void main() {
         themes: const ['intikam', 'distopya'],
         themeEvidence: {
           'intikam': [
-            DnaMovieRef(id: 101, title: 'Oldboy', posterPath: '/old.jpg', isTV: false),
-          ]
+            DnaMovieRef(
+              id: 101,
+              title: 'Oldboy',
+              posterPath: '/old.jpg',
+              isTV: false,
+            ),
+          ],
         },
         eraKey: 'modern',
         modernShare: 0.75,
@@ -400,7 +400,10 @@ void main() {
       expect(round.topGenres, dna.topGenres);
       expect(round.themes, dna.themes);
       expect(round.themeEvidence['intikam']?.first.title, 'Oldboy');
-      expect(round.themeEvidence['intikam']?.first.posterUrl, contains('/old.jpg'));
+      expect(
+        round.themeEvidence['intikam']?.first.posterUrl,
+        contains('/old.jpg'),
+      );
       expect(round.eraKey, dna.eraKey);
       expect(round.depthKey, dna.depthKey);
       expect(round.criticKey, dna.criticKey);

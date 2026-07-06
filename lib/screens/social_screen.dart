@@ -1329,6 +1329,7 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
     );
   }
 }
+
 bool _parseIsTv(dynamic data) {
   if (data == null) return false;
   final val = data['is_tv'] ?? data['isTV'] ?? data['isTv'];

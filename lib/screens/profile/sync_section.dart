@@ -344,7 +344,11 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
         }
       }
     } else if (_mode == AuthMode.register) {
-      final result = await notifier.register(email, password, displayName: name);
+      final result = await notifier.register(
+        email,
+        password,
+        displayName: name,
+      );
       if (result.status == AuthStatus.success) {
         success = true;
         if (mounted) {

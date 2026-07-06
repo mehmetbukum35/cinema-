@@ -2,7 +2,13 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'dart:io';
 import 'dart:async';
-import 'package:flutter/material.dart' show Locale, ThemeMode;
+import 'package:flutter/material.dart'
+    show
+        Locale,
+        ThemeMode,
+        WidgetsBinding,
+        WidgetsBindingObserver,
+        AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'app_config.dart';
@@ -122,23 +128,32 @@ final tasteDnaServiceProvider = Provider<TasteDnaService>((ref) {
 
 final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
 
-class OfflineNotifier extends StateNotifier<bool> {
+class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
   Timer? _timer;
 
   OfflineNotifier() : super(false) {
     if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    WidgetsBinding.instance.addObserver(this);
     _checkConnectivity();
     _timer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 30),
       (_) => _checkConnectivity(),
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkConnectivity();
+    }
   }
 
   Future<void> _checkConnectivity() async {
     try {
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/health');
       final response = await http.get(uri).timeout(const Duration(seconds: 3));
-      final isOnline = response.statusCode == 200 && response.body.contains('"ok"');
+      final isOnline =
+          response.statusCode == 200 && response.body.contains('"ok"');
       if (mounted) {
         state = !isOnline;
       }
@@ -152,6 +167,7 @@ class OfflineNotifier extends StateNotifier<bool> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }

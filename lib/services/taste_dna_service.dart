@@ -271,7 +271,13 @@ class TasteDnaService {
 
     // Hash check
     final ratingCount = raw.length;
-    final maxUpdatedAt = raw.fold<int>(0, (maxVal, r) => max(maxVal, (r['updated_at'] as int? ?? r['created_at'] as int? ?? 0)));
+    final maxUpdatedAt = raw.fold<int>(
+      0,
+      (maxVal, r) => max(
+        maxVal,
+        (r['updated_at'] as int? ?? r['created_at'] as int? ?? 0),
+      ),
+    );
     final inputHash = "$ratingCount|$maxUpdatedAt|${userId ?? ''}|$shown";
 
     final cachedData = await PrefsService.getCachedDna();
@@ -297,7 +303,9 @@ class TasteDnaService {
         year = int.tryParse(yrStr);
         pop = ((movie as dynamic).popularity as num?)?.toDouble() ?? 0.0;
       } else {
-        final relDate = r['release_date'] as String? ?? r['movie']?['releaseDate'] as String?;
+        final relDate =
+            r['release_date'] as String? ??
+            r['movie']?['releaseDate'] as String?;
         if (relDate != null && relDate.length >= 4) {
           year = int.tryParse(relDate.substring(0, 4));
         }
@@ -335,19 +343,24 @@ class TasteDnaService {
 
   /// En yeni beğenilerin keyword isimlerini frekansa göre toplar; gürültü
   /// keyword'leri elenir, en güçlü 5 tema döner. Keyword uçları cache'li.
-  Future<({List<String> themes, Map<String, List<DnaMovieRef>> evidence})> _aggregateThemes(
-    List<Map<String, dynamic>> rawRatings,
-  ) async {
+  Future<({List<String> themes, Map<String, List<DnaMovieRef>> evidence})>
+  _aggregateThemes(List<Map<String, dynamic>> rawRatings) async {
     try {
       final liked = rawRatings.where((r) => (r['rating'] as int) >= 2).toList()
         ..sort(
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
         );
-      
+
       // Adaptif seed: Beğeni sayısına göre 8 ile 20 arası.
-      final seedCount = (liked.length <= 8) ? 8 : (liked.length >= 20 ? 20 : liked.length);
+      final seedCount = (liked.length <= 8)
+          ? 8
+          : (liked.length >= 20 ? 20 : liked.length);
       final seeds = liked.take(seedCount).toList();
-      if (seeds.isEmpty) return (themes: const <String>[], evidence: const <String, List<DnaMovieRef>>{});
+      if (seeds.isEmpty)
+        return (
+          themes: const <String>[],
+          evidence: const <String, List<DnaMovieRef>>{},
+        );
 
       final lists = await Future.wait(
         seeds.map((r) {
@@ -415,7 +428,10 @@ class TasteDnaService {
       return (themes: topThemes, evidence: evidence);
     } catch (e, st) {
       debugPrint("Theme aggregation failed: $e\n$st");
-      return (themes: const <String>[], evidence: const <String, List<DnaMovieRef>>{});
+      return (
+        themes: const <String>[],
+        evidence: const <String, List<DnaMovieRef>>{},
+      );
     }
   }
 }

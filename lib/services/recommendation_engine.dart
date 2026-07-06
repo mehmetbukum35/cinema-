@@ -179,7 +179,7 @@ class RecommendationEngine {
         ..sort(
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
         );
-      final seeds = sortedRatings.take(25).toList();
+      final seeds = sortedRatings.take(15).toList();
       final nowMs = DateTime.now().millisecondsSinceEpoch;
 
       final kwLists = await Future.wait(
@@ -203,8 +203,10 @@ class RecommendationEngine {
           base = 1.0;
         } else if (rating == 1) {
           base = -1.0;
-        } else {
+        } else if (rating == 0) {
           base = -2.0;
+        } else {
+          continue;
         }
 
         final createdAt = r['created_at'] as int;
@@ -238,23 +240,36 @@ class RecommendationEngine {
       try {
         final telemetry = await PrefsService.getRecoTelemetry();
         final seedBucket = telemetry['seed'] ?? {'shown': 0, 'liked': 0};
-        final discoverBucket = telemetry['discover'] ?? {'shown': 0, 'liked': 0};
-        
-        final double crSeed = (seedBucket['liked']! + 1) / (seedBucket['shown']! + 2);
-        final double crDiscover = (discoverBucket['liked']! + 1) / (discoverBucket['shown']! + 2);
-        
-        finalSeedCount = (seedCount * (crSeed / crDiscover)).round().clamp(2, 6);
+        final discoverBucket =
+            telemetry['discover'] ?? {'shown': 0, 'liked': 0};
+
+        final double crSeed =
+            (seedBucket['liked']! + 1) / (seedBucket['shown']! + 2);
+        final double crDiscover =
+            (discoverBucket['liked']! + 1) / (discoverBucket['shown']! + 2);
+
+        finalSeedCount = (seedCount * (crSeed / crDiscover)).round().clamp(
+          2,
+          6,
+        );
       } catch (e) {
         debugPrint("Failed to calculate adaptive seedCount from telemetry: $e");
       }
 
       // 1. Oylamalardan tohumlar: Harika (3) ve İyi (2)
       final harikaSeeds = ratings.where((r) => r['rating'] == 3).toList()
-        ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
+        ..sort(
+          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
+        );
       final iyiSeeds = ratings.where((r) => r['rating'] == 2).toList()
-        ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
+        ..sort(
+          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
+        );
 
-      final List<Map<String, dynamic>> ratingSeeds = [...harikaSeeds, ...iyiSeeds];
+      final List<Map<String, dynamic>> ratingSeeds = [
+        ...harikaSeeds,
+        ...iyiSeeds,
+      ];
       final seedItems = <({int id, bool isTV, String title})>[];
 
       for (final r in ratingSeeds) {
@@ -267,8 +282,12 @@ class RecommendationEngine {
 
       // 2. Eksik kalırsa Favorilerden tohum ekle
       if (seedItems.length < finalSeedCount) {
-        final favMovies = await db.getFavorites(false).catchError((_) => <Movie>[]);
-        final favShows = await db.getFavorites(true).catchError((_) => <Movie>[]);
+        final favMovies = await db
+            .getFavorites(false)
+            .catchError((_) => <Movie>[]);
+        final favShows = await db
+            .getFavorites(true)
+            .catchError((_) => <Movie>[]);
         final allFavs = [...favMovies, ...favShows];
         for (final m in allFavs) {
           if (seedItems.length >= finalSeedCount) break;
@@ -292,8 +311,12 @@ class RecommendationEngine {
       final results = await Future.wait(
         seedItems.map((s) {
           return Future.wait([
-            _service.getRecommendations(s.id, isTV: s.isTV).catchError((_) => <Movie>[]),
-            _service.getSimilar(s.id, isTV: s.isTV).catchError((_) => <Movie>[]),
+            _service
+                .getRecommendations(s.id, isTV: s.isTV)
+                .catchError((_) => <Movie>[]),
+            _service
+                .getSimilar(s.id, isTV: s.isTV)
+                .catchError((_) => <Movie>[]),
           ]);
         }),
       );
@@ -317,7 +340,8 @@ class RecommendationEngine {
   }
 
   /// Eh/Berbat oylanan yapımların benzerlerini bulup engelleme/ceza seti oluşturur.
-  Future<(Set<String> berbatKeys, Set<String> ehKeys)> fetchNegativeSeedKeys() async {
+  Future<(Set<String> berbatKeys, Set<String> ehKeys)>
+  fetchNegativeSeedKeys() async {
     final cached = _cachedNegativeKeys;
     if (cached != null) return cached;
 
@@ -325,10 +349,14 @@ class RecommendationEngine {
     final ehKeys = <String>{};
     try {
       final ratings = await _getRatings();
-      final disliked = ratings.where((r) => (r['rating'] as int) <= 1).toList()
-        ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
-        );
+      final disliked =
+          ratings.where((r) {
+            final rating = r['rating'] as int;
+            return rating == 0 || rating == 1;
+          }).toList()..sort(
+            (a, b) =>
+                (b['created_at'] as int).compareTo(a['created_at'] as int),
+          );
       final seeds = disliked.take(3).toList();
       if (seeds.isEmpty) {
         _cachedNegativeKeys = (berbatKeys, ehKeys);
@@ -340,7 +368,9 @@ class RecommendationEngine {
           final int id = s['id'] as int;
           final bool isTV = s['isTV'] as bool? ?? false;
           return Future.wait([
-            _service.getRecommendations(id, isTV: isTV).catchError((_) => <Movie>[]),
+            _service
+                .getRecommendations(id, isTV: isTV)
+                .catchError((_) => <Movie>[]),
             _service.getSimilar(id, isTV: isTV).catchError((_) => <Movie>[]),
           ]);
         }),
@@ -392,7 +422,7 @@ class RecommendationEngine {
     final fresh = <Movie>[];
     for (final m in candidates) {
       final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
-      
+
       // Hard filter: Zaten oylananlar veya sırada olanlar
       if (excludedKeys.contains(key)) continue;
 
@@ -401,7 +431,8 @@ class RecommendationEngine {
 
       // Hard filter: Berbat oylanan bir filmin devamı/serisi olanlar
       final n = _normTitle(m.title);
-      if (n.length >= 5 && berbatTitles.any((bt) => n.startsWith(bt) || bt.startsWith(n))) {
+      if (n.length >= 5 &&
+          berbatTitles.any((bt) => n.startsWith(bt) || bt.startsWith(n))) {
         continue;
       }
 
@@ -418,7 +449,7 @@ class RecommendationEngine {
         userWeights,
         m.genreIds,
       );
-      
+
       // Soft filter: Eh (1) oylanan filmin recommendations/similar havuzunda olanlara puan cezası (-0.25)
       final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
       double penalty = 0.0;
@@ -426,7 +457,8 @@ class RecommendationEngine {
         penalty = -0.25;
       }
 
-      final raw = blend(genreSim: genreSim, voteAverage: m.voteAverage) + penalty;
+      final raw =
+          blend(genreSim: genreSim, voteAverage: m.voteAverage) + penalty;
       m.personalizedMatchScore = toDisplayScore(raw);
       m.recoSource ??= 'discover';
       scored.add(ScoredMovie(m, raw));
@@ -452,7 +484,7 @@ class RecommendationEngine {
           m.genreIds,
         );
         final kwSim = PrefsService.calculateSimilarity(kwVector, kwLists[i]);
-        
+
         // Soft filter penalty check again in re-rank phase
         final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
         double penalty = 0.0;
@@ -460,11 +492,13 @@ class RecommendationEngine {
           penalty = -0.25;
         }
 
-        final raw = blend(
-          genreSim: genreSim,
-          kwSim: kwSim,
-          voteAverage: m.voteAverage,
-        ) + penalty;
+        final raw =
+            blend(
+              genreSim: genreSim,
+              kwSim: kwSim,
+              voteAverage: m.voteAverage,
+            ) +
+            penalty;
         m.personalizedMatchScore = toDisplayScore(raw);
         top[i].score = raw;
       }

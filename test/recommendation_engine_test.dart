@@ -239,100 +239,117 @@ void main() {
       await PrefsService.resetAll();
     });
 
-    test('buildUserKeywordVector, Berbat (0) ve Eh (1) oylarına negatif ağırlık vermelidir', () async {
-      // Mock ratings: ID 10 (Harika=3), ID 20 (Berbat=0)
-      await PrefsService.saveRating(
-        movieId: 10,
-        isTV: false,
-        rating: 3,
-        genreIds: [28],
-      );
-      await PrefsService.saveRating(
-        movieId: 20,
-        isTV: false,
-        rating: 0,
-        genreIds: [35],
-      );
+    test(
+      'buildUserKeywordVector, Berbat (0) ve Eh (1) oylarına negatif ağırlık vermelidir',
+      () async {
+        // Mock ratings: ID 10 (Harika=3), ID 20 (Berbat=0)
+        await PrefsService.saveRating(
+          movieId: 10,
+          isTV: false,
+          rating: 3,
+          genreIds: [28],
+        );
+        await PrefsService.saveRating(
+          movieId: 20,
+          isTV: false,
+          rating: 0,
+          genreIds: [35],
+        );
 
-      final client = MockClient((request) async {
-        if (request.url.path.contains('/10/keywords')) {
-          return http.Response(jsonEncode({
-            'keywords': [{'id': 100, 'name': 'action'}]
-          }), 200);
-        } else if (request.url.path.contains('/20/keywords')) {
-          return http.Response(jsonEncode({
-            'keywords': [{'id': 200, 'name': 'comedy'}]
-          }), 200);
-        }
-        return http.Response('Not Found', 404);
-      });
+        final client = MockClient((request) async {
+          if (request.url.path.contains('/10/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 100, 'name': 'action'},
+                ],
+              }),
+              200,
+            );
+          } else if (request.url.path.contains('/20/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 200, 'name': 'comedy'},
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
 
-      final service = TmdbService(client: client);
-      final engine = RecommendationEngine(service);
+        final service = TmdbService(client: client);
+        final engine = RecommendationEngine(service);
 
-      final vector = await engine.buildUserKeywordVector();
+        final vector = await engine.buildUserKeywordVector();
 
-      // Harika olanın keywordü pozitif olmalı, Berbat olanınki negatif
-      expect(vector[100], greaterThan(0.0));
-      expect(vector[200], lessThan(0.0));
-    });
+        // Harika olanın keywordü pozitif olmalı, Berbat olanınki negatif
+        expect(vector[100], greaterThan(0.0));
+        expect(vector[200], lessThan(0.0));
+      },
+    );
 
-    test('rankForYou, Berbat oylanan filmlerin benzerlerini ve devam serilerini filtrelemelidir', () async {
-      // Berbat oylanan film: "Iron Man" (ID: 50)
-      await PrefsService.saveRating(
-        movieId: 50,
-        isTV: false,
-        rating: 0,
-        genreIds: [28],
-        comment: 'bad',
-      );
-      // Biz "Iron Man" filminin title'ını test veritabanında kaydetmek için saveRating'e movie nesnesini de vermeliyiz.
-      // DatabaseHelper mock'u `movie` parametresi verilirse başlığı oradan çeker:
-      final movieObj = _movie(50, title: 'Iron Man');
-      await PrefsService.saveRating(
-        movie: movieObj,
-        rating: 0,
-      );
+    test(
+      'rankForYou, Berbat oylanan filmlerin benzerlerini ve devam serilerini filtrelemelidir',
+      () async {
+        // Berbat oylanan film: "Iron Man" (ID: 50)
+        await PrefsService.saveRating(
+          movieId: 50,
+          isTV: false,
+          rating: 0,
+          genreIds: [28],
+          comment: 'bad',
+        );
+        // Biz "Iron Man" filminin title'ını test veritabanında kaydetmek için saveRating'e movie nesnesini de vermeliyiz.
+        // DatabaseHelper mock'u `movie` parametresi verilirse başlığı oradan çeker:
+        final movieObj = _movie(50, title: 'Iron Man');
+        await PrefsService.saveRating(movie: movieObj, rating: 0);
 
-      final client = MockClient((request) async {
-        // Berbat filmin similar/recommendation isteklerine ID: 51'i dönelim (similar to Iron Man)
-        if (request.url.path.contains('/50/recommendations') || request.url.path.contains('/50/similar')) {
-          return http.Response(jsonEncode({
-            'results': [
-              {
-                'id': 51,
-                'title': 'Iron Man Similar',
-                'vote_average': 7.5,
-                'genre_ids': [28],
-                'poster_path': '/p.jpg',
-                'vote_count': 100
-              }
-            ]
-          }), 200);
-        }
-        // Boş keyword dön
-        return http.Response(jsonEncode({'keywords': []}), 200);
-      });
+        final client = MockClient((request) async {
+          // Berbat filmin similar/recommendation isteklerine ID: 51'i dönelim (similar to Iron Man)
+          if (request.url.path.contains('/50/recommendations') ||
+              request.url.path.contains('/50/similar')) {
+            return http.Response(
+              jsonEncode({
+                'results': [
+                  {
+                    'id': 51,
+                    'title': 'Iron Man Similar',
+                    'vote_average': 7.5,
+                    'genre_ids': [28],
+                    'poster_path': '/p.jpg',
+                    'vote_count': 100,
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          // Boş keyword dön
+          return http.Response(jsonEncode({'keywords': []}), 200);
+        });
 
-      final service = TmdbService(client: client);
-      final engine = RecommendationEngine(service);
+        final service = TmdbService(client: client);
+        final engine = RecommendationEngine(service);
 
-      // Adaylar:
-      // 1. Movie 99 (Alakasız film)
-      // 2. Movie 51 (Iron Man'in benzeri -> berbatKeys içinde filtrelenmeli)
-      // 3. Movie 102 (Başlığı "Iron Man 2" -> franchise filtresi ile elenmeli)
-      final candidates = [
-        _movie(99, title: 'Inception'),
-        _movie(51, title: 'Iron Man Similar'),
-        _movie(102, title: 'Iron Man 2'),
-      ];
+        // Adaylar:
+        // 1. Movie 99 (Alakasız film)
+        // 2. Movie 51 (Iron Man'in benzeri -> berbatKeys içinde filtrelenmeli)
+        // 3. Movie 102 (Başlığı "Iron Man 2" -> franchise filtresi ile elenmeli)
+        final candidates = [
+          _movie(99, title: 'Inception'),
+          _movie(51, title: 'Iron Man Similar'),
+          _movie(102, title: 'Iron Man 2'),
+        ];
 
-      final ranked = await engine.rankForYou(candidates);
+        final ranked = await engine.rankForYou(candidates);
 
-      // Sadece 'Inception' (99) kalmalı
-      expect(ranked.length, 1);
-      expect(ranked.first.id, 99);
-    });
+        // Sadece 'Inception' (99) kalmalı
+        expect(ranked.length, 1);
+        expect(ranked.first.id, 99);
+      },
+    );
   });
 
   group('RecommendationEngine Fallback Seeds Integration Tests', () {
@@ -341,63 +358,74 @@ void main() {
       await PrefsService.resetAll();
     });
 
-    test('fetchSeedCandidates, oylama yoksa sırasıyla Favoriler ve Watchlist tohumlarını kullanmalıdır', () async {
-      // 1. Favorilere "Fav Movie" (ID: 200) ekle
-      final favMovie = _movie(200, title: 'Fav Movie');
-      await PrefsService.saveFavoriteMovies([favMovie]);
+    test(
+      'fetchSeedCandidates, oylama yoksa sırasıyla Favoriler ve Watchlist tohumlarını kullanmalıdır',
+      () async {
+        // 1. Favorilere "Fav Movie" (ID: 200) ekle
+        final favMovie = _movie(200, title: 'Fav Movie');
+        await PrefsService.saveFavoriteMovies([favMovie]);
 
-      // 2. Watchlist'e "Watchlist Movie" (ID: 300) ekle
-      final watchMovie = _movie(300, title: 'Watchlist Movie');
-      await PrefsService.addToWatchlist(watchMovie);
+        // 2. Watchlist'e "Watchlist Movie" (ID: 300) ekle
+        final watchMovie = _movie(300, title: 'Watchlist Movie');
+        await PrefsService.addToWatchlist(watchMovie);
 
-      final client = MockClient((request) async {
-        // ID 200 ve 300 için mock responses
-        if (request.url.path.contains('/200/recommendations') || request.url.path.contains('/200/similar')) {
-          return http.Response(jsonEncode({
-            'results': [
-              {
-                'id': 201,
-                'title': 'Fav Movie Similar',
-                'vote_average': 8.0,
-                'genre_ids': [28],
-                'poster_path': '/fav.jpg',
-                'vote_count': 100
-              }
-            ]
-          }), 200);
-        }
-        if (request.url.path.contains('/300/recommendations') || request.url.path.contains('/300/similar')) {
-          return http.Response(jsonEncode({
-            'results': [
-              {
-                'id': 301,
-                'title': 'Watchlist Movie Similar',
-                'vote_average': 7.0,
-                'genre_ids': [28],
-                'poster_path': '/watch.jpg',
-                'vote_count': 100
-              }
-            ]
-          }), 200);
-        }
-        return http.Response(jsonEncode({'results': []}), 200);
-      });
+        final client = MockClient((request) async {
+          // ID 200 ve 300 için mock responses
+          if (request.url.path.contains('/200/recommendations') ||
+              request.url.path.contains('/200/similar')) {
+            return http.Response(
+              jsonEncode({
+                'results': [
+                  {
+                    'id': 201,
+                    'title': 'Fav Movie Similar',
+                    'vote_average': 8.0,
+                    'genre_ids': [28],
+                    'poster_path': '/fav.jpg',
+                    'vote_count': 100,
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          if (request.url.path.contains('/300/recommendations') ||
+              request.url.path.contains('/300/similar')) {
+            return http.Response(
+              jsonEncode({
+                'results': [
+                  {
+                    'id': 301,
+                    'title': 'Watchlist Movie Similar',
+                    'vote_average': 7.0,
+                    'genre_ids': [28],
+                    'poster_path': '/watch.jpg',
+                    'vote_count': 100,
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(jsonEncode({'results': []}), 200);
+        });
 
-      final service = TmdbService(client: client);
-      final engine = RecommendationEngine(service);
+        final service = TmdbService(client: client);
+        final engine = RecommendationEngine(service);
 
-      // seedCount: 2 veriyoruz. İlk tohum favori (200), ikinci tohum watchlist (300) olmalı.
-      final seeds = await engine.fetchSeedCandidates(seedCount: 2);
+        // seedCount: 2 veriyoruz. İlk tohum favori (200), ikinci tohum watchlist (300) olmalı.
+        final seeds = await engine.fetchSeedCandidates(seedCount: 2);
 
-      // Toplamda 4 aday (200 için similarity + recommendations, 300 için similarity + recommendations)
-      // Ancak bizim mock client her istek için 1 film dönüyor. Yani her tohum için 2 film. Toplam 4 film olmalı.
-      expect(seeds.length, 4);
+        // Toplamda 4 aday (200 için similarity + recommendations, 300 için similarity + recommendations)
+        // Ancak bizim mock client her istek için 1 film dönüyor. Yani her tohum için 2 film. Toplam 4 film olmalı.
+        expect(seeds.length, 4);
 
-      // Gerekçeleri kontrol et: en az bir tanesi favori, diğeri watchlist başlığı olmalı.
-      final reasons = seeds.map((m) => m.recoReason).toSet();
-      expect(reasons.contains('Fav Movie'), isTrue);
-      expect(reasons.contains('Watchlist Movie'), isTrue);
-    });
+        // Gerekçeleri kontrol et: en az bir tanesi favori, diğeri watchlist başlığı olmalı.
+        final reasons = seeds.map((m) => m.recoReason).toSet();
+        expect(reasons.contains('Fav Movie'), isTrue);
+        expect(reasons.contains('Watchlist Movie'), isTrue);
+      },
+    );
   });
 
   group('RecommendationEngine Adaptive Telemetry Integration Tests', () {
@@ -406,48 +434,54 @@ void main() {
       await PrefsService.resetAll();
     });
 
-    test('fetchSeedCandidates, tohum telemetrisi iyi ise tohum sayısını dinamik olarak artırmalıdır (6ya kadar)', () async {
-      // 1. Telemetriyi mock SharedPreferences'a kaydet (seed=8/10, discover=2/10)
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('reco_telemetry_v1', jsonEncode({
-        'seed': {'shown': 10, 'liked': 8},
-        'discover': {'shown': 10, 'liked': 2}
-      }));
-
-      // 2. Ratings veritabanına 6 tane "Harika" film kaydet
-      for (int i = 1; i <= 6; i++) {
-        final movie = _movie(100 + i, title: 'Seed Movie $i');
-        await PrefsService.saveRating(
-          movie: movie,
-          rating: 3,
+    test(
+      'fetchSeedCandidates, tohum telemetrisi iyi ise tohum sayısını dinamik olarak artırmalıdır (6ya kadar)',
+      () async {
+        // 1. Telemetriyi mock SharedPreferences'a kaydet (seed=8/10, discover=2/10)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reco_telemetry_v1',
+          jsonEncode({
+            'seed': {'shown': 10, 'liked': 8},
+            'discover': {'shown': 10, 'liked': 2},
+          }),
         );
-      }
 
-      final client = MockClient((request) async {
-        // Her tohum isteğine 1 adet film dön
-        return http.Response(jsonEncode({
-          'results': [
-            {
-              'id': 999,
-              'title': 'Recommendation',
-              'vote_average': 7.0,
-              'genre_ids': [28],
-              'poster_path': '/p.jpg',
-              'vote_count': 100
-            }
-          ]
-        }), 200);
-      });
+        // 2. Ratings veritabanına 6 tane "Harika" film kaydet
+        for (int i = 1; i <= 6; i++) {
+          final movie = _movie(100 + i, title: 'Seed Movie $i');
+          await PrefsService.saveRating(movie: movie, rating: 3);
+        }
 
-      final service = TmdbService(client: client);
-      final engine = RecommendationEngine(service);
+        final client = MockClient((request) async {
+          // Her tohum isteğine 1 adet film dön
+          return http.Response(
+            jsonEncode({
+              'results': [
+                {
+                  'id': 999,
+                  'title': 'Recommendation',
+                  'vote_average': 7.0,
+                  'genre_ids': [28],
+                  'poster_path': '/p.jpg',
+                  'vote_count': 100,
+                },
+              ],
+            }),
+            200,
+          );
+        });
 
-      // seedCount normalde 3 ama telemetriye göre 6'ya genişlemeli
-      final seeds = await engine.fetchSeedCandidates(seedCount: 3);
+        final service = TmdbService(client: client);
+        final engine = RecommendationEngine(service);
 
-      // 6 tohum * 2 istek (recommendations + similar) * 1 film = 12 aday
-      expect(seeds.length, 12);
-    });
+        // seedCount normalde 3 ama telemetriye göre 6'ya genişlemeli
+        final seeds = await engine.fetchSeedCandidates(seedCount: 3);
+
+        // 6 tohum * 2 istek (recommendations + similar) * 1 film = 12 aday
+        expect(seeds.length, 12);
+      },
+    );
   });
 
   group('RecommendationEngine Cache Invalidation Tests', () {
@@ -456,53 +490,66 @@ void main() {
       await PrefsService.resetAll();
     });
 
-    test('invalidateCache, veritabanı oylamaları ve keyword vektörü önbelleğini doğru şekilde temizlemelidir', () async {
-      // Mock TMDB Client: film keyword'lerini döner
-      final client = MockClient((request) async {
-        if (request.url.path.contains('/100/keywords')) {
-          return http.Response(jsonEncode({
-            'keywords': [{'id': 10, 'name': 'action'}]
-          }), 200);
-        }
-        if (request.url.path.contains('/200/keywords')) {
-          return http.Response(jsonEncode({
-            'keywords': [{'id': 20, 'name': 'scifi'}]
-          }), 200);
-        }
-        return http.Response(jsonEncode({'keywords': []}), 200);
-      });
+    test(
+      'invalidateCache, veritabanı oylamaları ve keyword vektörü önbelleğini doğru şekilde temizlemelidir',
+      () async {
+        // Mock TMDB Client: film keyword'lerini döner
+        final client = MockClient((request) async {
+          if (request.url.path.contains('/100/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 10, 'name': 'action'},
+                ],
+              }),
+              200,
+            );
+          }
+          if (request.url.path.contains('/200/keywords')) {
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  {'id': 20, 'name': 'scifi'},
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(jsonEncode({'keywords': []}), 200);
+        });
 
-      final service = TmdbService(client: client);
-      final engine = RecommendationEngine(service);
+        final service = TmdbService(client: client);
+        final engine = RecommendationEngine(service);
 
-      // 1. Birinci filmi oyla (ID: 100)
-      await PrefsService.saveRating(
-        movie: _movie(100, title: 'Action Movie'),
-        rating: 3,
-      );
+        // 1. Birinci filmi oyla (ID: 100)
+        await PrefsService.saveRating(
+          movie: _movie(100, title: 'Action Movie'),
+          rating: 3,
+        );
 
-      // 2. Keyword vektörünü hesapla (bu işlem sonucu önbelleklenir)
-      final vector1 = await engine.buildUserKeywordVector();
-      expect(vector1.containsKey(10), isTrue);
-      expect(vector1.containsKey(20), isFalse);
+        // 2. Keyword vektörünü hesapla (bu işlem sonucu önbelleklenir)
+        final vector1 = await engine.buildUserKeywordVector();
+        expect(vector1.containsKey(10), isTrue);
+        expect(vector1.containsKey(20), isFalse);
 
-      // 3. İkinci filmi oyla (ID: 200) ama henüz önbelleği temizleme
-      await PrefsService.saveRating(
-        movie: _movie(200, title: 'Scifi Movie'),
-        rating: 3,
-      );
+        // 3. İkinci filmi oyla (ID: 200) ama henüz önbelleği temizleme
+        await PrefsService.saveRating(
+          movie: _movie(200, title: 'Scifi Movie'),
+          rating: 3,
+        );
 
-      // Önbellek temizlenmediği için vektör hala eski değeri dönecektir
-      final vector2 = await engine.buildUserKeywordVector();
-      expect(vector2.containsKey(20), isFalse);
+        // Önbellek temizlenmediği için vektör hala eski değeri dönecektir
+        final vector2 = await engine.buildUserKeywordVector();
+        expect(vector2.containsKey(20), isFalse);
 
-      // 4. Önbelleği temizle (invalidateCache)
-      engine.invalidateCache();
+        // 4. Önbelleği temizle (invalidateCache)
+        engine.invalidateCache();
 
-      // Şimdi yeni filmin verileri de yüklenmelidir
-      final vector3 = await engine.buildUserKeywordVector();
-      expect(vector3.containsKey(10), isTrue);
-      expect(vector3.containsKey(20), isTrue);
-    });
+        // Şimdi yeni filmin verileri de yüklenmelidir
+        final vector3 = await engine.buildUserKeywordVector();
+        expect(vector3.containsKey(10), isTrue);
+        expect(vector3.containsKey(20), isTrue);
+      },
+    );
   });
 }

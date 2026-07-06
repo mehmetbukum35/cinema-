@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+if (php_sapi_name() !== 'cli') {
+    exit("This script can only be run from the command line.\n");
+}
+
 echo "========================================================\n";
 echo "       FIREBASE CLOUD MESSAGING (FCM) TEST ARACI\n";
 echo "========================================================\n\n";

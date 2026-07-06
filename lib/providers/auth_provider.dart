@@ -11,16 +11,9 @@ import 'swipe_provider.dart';
 import 'social_provider.dart';
 import '../services/providers.dart';
 
-enum AuthStatus {
-  success,
-  conflict,
-  error,
-}
+enum AuthStatus { success, conflict, error }
 
-enum ConflictResolution {
-  merge,
-  delete,
-}
+enum ConflictResolution { merge, delete }
 
 class AuthResult {
   final AuthStatus status;
@@ -28,12 +21,7 @@ class AuthResult {
   final Map<String, dynamic>? tokens;
   final String? errorMessage;
 
-  AuthResult({
-    required this.status,
-    this.user,
-    this.tokens,
-    this.errorMessage,
-  });
+  AuthResult({required this.status, this.user, this.tokens, this.errorMessage});
 }
 
 class AuthState {
@@ -281,7 +269,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: AppLocalizations.of(context)?.get('auth_title_login') ?? 'Giriş Yap',
+          label:
+              AppLocalizations.of(context)?.get('auth_title_login') ??
+              'Giriş Yap',
           textColor: Colors.white,
           onPressed: () {
             if (context.mounted) {

@@ -247,7 +247,9 @@ switch (true) {
 
     // ── Sinema DNA ──────────────────────────────────────────────────────────
     case $route === 'POST /social/dna':
-        $social->publishTasteDna($auth->requireUser(), read_json());
+        $uid = $auth->requireUser();
+        rate_limit('social_dna', (int) $cfg['rate_limit_per_min']);
+        $social->publishTasteDna($uid, read_json());
         break;
 
     // ── Arkadaşa Öneri ──────────────────────────────────────────────────────
