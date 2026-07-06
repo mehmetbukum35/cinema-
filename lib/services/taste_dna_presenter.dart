@@ -168,8 +168,25 @@ class TasteDnaPresenter {
     return primary;
   }
   String get archetypeEmoji => _archetypeEmoji[dna.archetypeKey] ?? '🎬';
-  String get archetypeEssence =>
-      _t('dna_ess_${dna.archetypeKey}', _essenceFallback);
+  String get archetypeEssence {
+    final primary = _t('dna_ess_${dna.archetypeKey}', _essenceFallback);
+    if (dna.secondaryArchetypeKey != null) {
+      final secondary = _t('dna_ess_sec_${dna.secondaryArchetypeKey!}', _secondaryEssenceFallback(dna.secondaryArchetypeKey!));
+      return "$primary $secondary";
+    }
+    return primary;
+  }
+
+  String _secondaryEssenceFallback(String key) => switch (key) {
+    'dark_chronicler' => 'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
+    'emotion_seeker' => 'Duygusal derinlik ve insani hikâyeler de seni cezbediyor.',
+    'world_builder' => 'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgini çekiyor.',
+    'adrenaline_junkie' => 'Tempo, aksiyon ve macera da senin heyecan kaynağın.',
+    'joy_chaser' => 'Hafiflik, neşe ve komedi de sığındığın limanlar arasında.',
+    'truth_seeker' => 'Gerçek hikâyeler ve yaşanmışlıklar da radarında.',
+    'eternal_child' => 'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
+    _ => 'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
+  };
 
   static const _archetypeEmoji = {
     'dark_chronicler': '🕯️',
@@ -203,7 +220,7 @@ class TasteDnaPresenter {
     'adrenaline_junkie' => 'Tempo, aksiyon ve macera senin yakıtın.',
     'joy_chaser' => 'Kahkaha ve hafiflik senin sığınağın.',
     'truth_seeker' => 'Gerçek hikâyeler ve geçmişin dersleri ilgini çekiyor.',
-    'eternal_child' => 'İçindeki child hiç büyümedi — ve bu çok iyi.',
+    'eternal_child' => 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
     _ => 'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
   };
 
@@ -212,25 +229,27 @@ class TasteDnaPresenter {
     final out = <TasteDnaSignal>[];
 
     // Çağ imzası
-    out.add(
-      TasteDnaSignal(
-        icon: 'era',
-        text: switch (dna.eraKey) {
-          'modern' => _t(
-            'dna_era_modern',
-            'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
-          ).replaceFirst('{p}', _pctPossessive(dna.modernShare)),
-          'classic_soul' => _t(
-            'dna_era_classic',
-            'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
-          ),
-          _ => _t(
-            'dna_era_traveler',
-            'Zaman gezgini — her dönemde kendini evinde hissediyorsun.',
-          ),
-        },
-      ),
-    );
+    if (dna.eraKey != null) {
+      out.add(
+        TasteDnaSignal(
+          icon: 'era',
+          text: switch (dna.eraKey!) {
+            'modern' => _t(
+              'dna_era_modern',
+              'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
+            ).replaceFirst('{p}', _pctPossessive(dna.modernShare)),
+            'classic_soul' => _t(
+              'dna_era_classic',
+              'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
+            ),
+            _ => _t(
+              'dna_era_traveler',
+              'Zaman gezgini — her dönemde kendini evinde hissediyorsun.',
+            ),
+          },
+        ),
+      );
+    }
 
     // Derinlik
     if (dna.depthKey != null) {
@@ -331,7 +350,7 @@ class TasteDnaPresenter {
     if (acc == null) return null;
     return _t(
           'dna_accuracy',
-          'Motor seni {p} isabetle tanıyor — {n} öneri üzerinden.',
+          'Son önerilerdeki uyum oranınız: {p} — {n} öneri üzerinden.',
         )
         .replaceFirst('{p}', _pct(acc))
         .replaceFirst('{n}', dna.accuracySample.toString());

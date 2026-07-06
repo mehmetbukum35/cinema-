@@ -127,8 +127,8 @@ class TasteDnaService {
         .map((r) => r.year!)
         .toList();
     double modernShare = 0;
-    String eraKey = 'time_traveler';
-    if (likedYears.isNotEmpty) {
+    String? eraKey;
+    if (likedYears.length >= 3) {
       modernShare =
           likedYears.where((y) => y >= 2015).length / likedYears.length;
       final classicShare =
@@ -137,6 +137,8 @@ class TasteDnaService {
         eraKey = 'modern';
       } else if (classicShare >= 0.4) {
         eraKey = 'classic_soul';
+      } else {
+        eraKey = 'time_traveler';
       }
     }
 
@@ -288,12 +290,19 @@ class TasteDnaService {
     final ratings = <DnaRating>[];
     for (final r in raw) {
       final movie = r['movie'];
-      final year = (movie != null && (movie as dynamic).year is String)
-          ? int.tryParse((movie).year as String)
-          : null;
-      final pop = (movie != null)
-          ? ((movie as dynamic).popularity as num?)?.toDouble() ?? 0.0
-          : 0.0;
+      int? year;
+      double pop = 0.0;
+      if (movie != null) {
+        final yrStr = (movie as dynamic).year as String? ?? '';
+        year = int.tryParse(yrStr);
+        pop = ((movie as dynamic).popularity as num?)?.toDouble() ?? 0.0;
+      } else {
+        final relDate = r['release_date'] as String? ?? r['movie']?['releaseDate'] as String?;
+        if (relDate != null && relDate.length >= 4) {
+          year = int.tryParse(relDate.substring(0, 4));
+        }
+        pop = (r['popularity'] as num?)?.toDouble() ?? 0.0;
+      }
       ratings.add((
         rating: r['rating'] as int,
         genreIds:
@@ -357,13 +366,27 @@ class TasteDnaService {
         final r = seeds[i];
         final kws = lists[i];
         final movie = r['movie'] as Movie?;
-        if (movie == null) continue;
-        final ref = DnaMovieRef(
-          id: movie.id,
-          title: movie.title,
-          posterPath: movie.posterPath,
-          isTV: movie.isTV,
-        );
+        final DnaMovieRef ref;
+        if (movie != null) {
+          ref = DnaMovieRef(
+            id: movie.id,
+            title: movie.title,
+            posterPath: movie.posterPath,
+            isTV: movie.isTV,
+          );
+        } else {
+          final id = r['id'] as int? ?? r['movie_id'] as int? ?? 0;
+          final title = r['title'] as String? ?? '';
+          final posterPath = r['poster_path'] as String?;
+          final isTV = r['isTV'] as bool? ?? ((r['is_tv'] as int?) == 1);
+          if (id == 0 || title.isEmpty) continue;
+          ref = DnaMovieRef(
+            id: id,
+            title: title,
+            posterPath: posterPath,
+            isTV: isTV,
+          );
+        }
 
         for (final raw in kws) {
           final name = raw.toLowerCase().trim();

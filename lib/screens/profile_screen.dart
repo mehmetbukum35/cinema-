@@ -220,17 +220,19 @@ class ProfileScreen extends ConsumerWidget {
 
     final loading = watchlistState.isLoading || statsState.isLoading;
 
-    if (!loading && ref.read(authProvider).isAuthenticated) {
-      final total = statsState.value?['total'] as int? ?? 0;
-      final userId = ref.read(authProvider).user?['id']?.toString();
-      if (total >= 5 &&
-          (_lastPublishedRatingCount != total ||
-              _lastPublishedUserId != userId)) {
-        _lastPublishedRatingCount = total;
-        _lastPublishedUserId = userId;
-        _autoPublishDna(ref);
+    ref.listen<AsyncValue<Map<String, dynamic>>>(statsProvider, (prev, next) {
+      if (next.hasValue && ref.read(authProvider).isAuthenticated) {
+        final total = next.value?['total'] as int? ?? 0;
+        final userId = ref.read(authProvider).user?['id']?.toString();
+        if (total >= 5 &&
+            (_lastPublishedRatingCount != total ||
+                _lastPublishedUserId != userId)) {
+          _lastPublishedRatingCount = total;
+          _lastPublishedUserId = userId;
+          _autoPublishDna(ref);
+        }
       }
-    }
+    });
 
     return Scaffold(
       backgroundColor: Colors.transparent,

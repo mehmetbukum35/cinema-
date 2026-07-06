@@ -130,12 +130,14 @@ class TasteDnaWebText
         $archKey = (string) ($dna['archetype'] ?? 'genre_nomad');
         $arch = self::ARCHETYPES[$archKey] ?? self::ARCHETYPES['genre_nomad'];
         $archetypeName = $arch[1];
+        $essence = $arch[2];
 
         if (!empty($dna['secondary_archetype'])) {
             $secKey = (string) $dna['secondary_archetype'];
             $secArch = self::ARCHETYPES[$secKey] ?? null;
             if ($secArch) {
                 $archetypeName .= ' + ' . $secArch[1];
+                $essence .= ' ' . self::secondaryEssence($secKey);
             }
         }
 
@@ -164,13 +166,15 @@ class TasteDnaWebText
         // Sinyal cümleleri
         $signals = [];
 
-        $era = (string) ($dna['era'] ?? 'time_traveler');
-        $modernShare = (float) ($dna['modern_share'] ?? 0);
-        $signals[] = match ($era) {
-            'modern' => 'Modern çağ çocuğu — beğenilerinin ' . self::pctPossessive($modernShare) . ' 2015 sonrası.',
-            'classic_soul' => 'Klasik ruh — eski sinemanın büyüsünü kovalıyor.',
-            default => 'Zaman gezgini — her dönemde kendini evinde hissediyor.',
-        };
+        $era = isset($dna['era']) && $dna['era'] !== null ? (string) $dna['era'] : null;
+        if ($era !== null) {
+            $modernShare = (float) ($dna['modern_share'] ?? 0);
+            $signals[] = match ($era) {
+                'modern' => 'Modern çağ çocuğu — beğenilerinin ' . self::pctPossessive($modernShare) . ' 2015 sonrası.',
+                'classic_soul' => 'Klasik ruh — eski sinemanın büyüsünü kovalıyor.',
+                default => 'Zaman gezgini — her dönemde kendini evinde hissediyor.',
+            };
+        }
 
         $depth = isset($dna['depth']) && $dna['depth'] !== null ? (string) $dna['depth'] : null;
         if ($depth !== null) {
@@ -206,8 +210,8 @@ class TasteDnaWebText
         $accuracy = null;
         if (isset($dna['accuracy']) && $dna['accuracy'] !== null) {
             $sample = (int) ($dna['accuracy_sample'] ?? 0);
-            $accuracy = 'Öneri motoru onu ' . self::pct((float) $dna['accuracy'])
-                . ' isabetle tanıyor — ' . $sample . ' öneri üzerinden.';
+            $accuracy = 'Son önerilerdeki uyum oranı: ' . self::pct((float) $dna['accuracy'])
+                . ' — ' . $sample . ' öneri üzerinden.';
         }
 
         // Temalar ve kanıt filmleri
@@ -227,12 +231,26 @@ class TasteDnaWebText
         return [
             'emoji' => $arch[0],
             'archetype' => $archetypeName,
-            'essence' => $arch[2],
+            'essence' => $essence,
             'themes' => array_slice($themes, 0, 5),
             'genres' => array_slice($genres, 0, 3),
             'signals' => $signals,
             'accuracy' => $accuracy,
             'themes_with_evidence' => $themesWithEvidence,
         ];
+    }
+
+    private static function secondaryEssence(string $key): string
+    {
+        return match ($key) {
+            'dark_chronicler' => 'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
+            'emotion_seeker' => 'Duygusal derinlik ve insani hikâyeler de onu cezbediyor.',
+            'world_builder' => 'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgisini çekiyor.',
+            'adrenaline_junkie' => 'Tempo, aksiyon ve macera da onun heyecan kaynağı.',
+            'joy_chaser' => 'Hafiflik, neşe ve komedi de sığındığı limanlar arasında.',
+            'truth_seeker' => 'Gerçek hikâyeler ve yaşanmışlıklar da onun radarında.',
+            'eternal_child' => 'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
+            default => 'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
+        };
     }
 }

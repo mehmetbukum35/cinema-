@@ -119,7 +119,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final lastUserId = await PrefsService.getLastAuthenticatedUserId();
       final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
-      if (lastUserId != null && lastUserId != newUserId && hasLocalData) {
+      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
         state = state.copyWith(loading: false);
         return AuthResult(
           status: AuthStatus.conflict,
@@ -164,7 +164,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final lastUserId = await PrefsService.getLastAuthenticatedUserId();
       final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
-      if (lastUserId != null && lastUserId != newUserId && hasLocalData) {
+      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
         state = state.copyWith(loading: false);
         return AuthResult(
           status: AuthStatus.conflict,
@@ -230,16 +230,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _ref.read(watchlistProvider.notifier).load(),
       _ref.read(statsProvider.notifier).load(),
     ]);
-    _ref.read(recommendationEngineProvider).invalidateCache();
+    await _ref.read(recommendationEngineProvider).invalidateCache();
     _ref.invalidate(swipeProvider);
   }
 
-  void _invalidateGuestProviders() {
+  Future<void> _invalidateGuestProviders() async {
     _ref.invalidate(watchlistProvider);
     _ref.invalidate(statsProvider);
     _ref.invalidate(swipeProvider);
     _ref.invalidate(socialProvider);
-    _ref.read(recommendationEngineProvider).invalidateCache();
+    await _ref.read(recommendationEngineProvider).invalidateCache();
   }
 
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
@@ -250,7 +250,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await PrefsService.setLastAuthenticatedUserId(null);
     }
     state = AuthState();
-    _invalidateGuestProviders();
+    await _invalidateGuestProviders();
   }
 
   // POST /auth/logout

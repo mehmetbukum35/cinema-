@@ -184,9 +184,10 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           _sectionLabel(c, tr?.get('dna_themes') ?? 'Tekrar eden temaların'),
           const SizedBox(height: 10),
           if (dna.themeEvidence.isNotEmpty)
-            ...dna.themes.map((t) {
-              final idx = dna.themes.indexOf(t);
-              if (idx < 0 || idx >= p.themeChips.length) return const SizedBox.shrink();
+            ...dna.themes.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final t = entry.value;
+              if (idx >= p.themeChips.length) return const SizedBox.shrink();
               final localizedTheme = p.themeChips[idx];
               final movies = dna.themeEvidence[t] ?? [];
               if (movies.isEmpty) return const SizedBox.shrink();

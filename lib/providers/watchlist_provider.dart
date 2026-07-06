@@ -17,7 +17,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       if (auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
-          ref.read(recommendationEngineProvider).invalidateCache(isNegativeChange: false);
+          await ref.read(recommendationEngineProvider).invalidateCache(isNegativeChange: false);
         } catch (e) {
           // SyncNotifier captures the error state globally
         }

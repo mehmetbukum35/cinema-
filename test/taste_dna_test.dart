@@ -157,6 +157,20 @@ void main() {
       );
       expect(dna.eraKey, 'classic_soul');
     });
+
+    test('yetersiz örneklemde eraKey null olur', () {
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: 3, year: 2020),
+          _r(rating: 3, year: 2018),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.eraKey, isNull);
+    });
   });
 
   group('TasteDnaService.compute — eleştirmen profili', () {

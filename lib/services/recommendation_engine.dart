@@ -41,17 +41,19 @@ class RecommendationEngine {
   (Set<String> berbatKeys, Set<String> ehKeys)? _cachedNegativeKeys;
 
   /// Zevk profili değişti veya senkronizasyon yapıldı — önbelleği temizle.
-  void invalidateCache({bool isNegativeChange = true}) {
+  Future<void> invalidateCache({bool isNegativeChange = true}) async {
     _userKeywordVector = null;
     _cachedRatings = null;
     if (isNegativeChange) {
       _cachedNegativeKeys = null;
     }
-    PrefsService.clearDnaCache();
+    await PrefsService.clearDnaCache();
   }
 
   /// Eski çağrılar için geriye dönük uyumluluk metodu.
-  void invalidateTasteVector() => invalidateCache();
+  Future<void> invalidateTasteVector() async {
+    await invalidateCache();
+  }
 
   /// Oylamaları bellekten veya veritabanından çeken yardımcı metot.
   Future<List<Map<String, dynamic>>> _getRatings() async {

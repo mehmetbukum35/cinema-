@@ -53,8 +53,8 @@ class TasteDna {
   final Map<String, List<DnaMovieRef>> themeEvidence;
 
   /// Çağ imzası: 'modern' (çoğunlukla yeni), 'classic_soul' (eski),
-  /// 'time_traveler' (dengeli).
-  final String eraKey;
+  /// 'time_traveler' (dengeli). Yetersiz veri durumunda null.
+  final String? eraKey;
 
   /// 2015 sonrası beğenilerin oranı [0,1] — eraKey'i besleyen ham sinyal.
   final double modernShare;
@@ -92,7 +92,7 @@ class TasteDna {
     required this.blindSpotGenre,
     required this.themes,
     this.themeEvidence = const {},
-    required this.eraKey,
+    this.eraKey,
     required this.modernShare,
     this.depthKey,
     this.criticKey,
@@ -151,7 +151,7 @@ class TasteDna {
               ),
             ) ??
             const {},
-        eraKey: json['era'] as String? ?? 'time_traveler',
+        eraKey: json['era'] as String?,
         modernShare: (json['modern_share'] as num?)?.toDouble() ?? 0.0,
         depthKey: json['depth'] as String?,
         criticKey: json['critic'] as String?,

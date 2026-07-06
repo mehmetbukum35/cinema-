@@ -263,5 +263,20 @@ void main() {
       expect(await PrefsService.getLastAuthenticatedUserId(), '2');
       expect(await DatabaseHelper().hasAnyLocalData(), isFalse); // ratings wiped
     });
+
+    test('should trigger conflict when guest registers and local data exists', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      // Set last authenticated user id to null (guest mode)
+      await PrefsService.setLastAuthenticatedUserId(null);
+      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+
+      // Attempt to register
+      final result = await notifier.register('guest_reg@example.com', 'secret123');
+
+      // Should be conflict because hasLocalData is true, and lastUserId is null (guest)
+      expect(result.status, AuthStatus.conflict);
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+    });
   });
 }
