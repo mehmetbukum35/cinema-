@@ -102,6 +102,26 @@ void main() {
       );
       expect(dna.blindSpotGenre, isNull);
     });
+
+    test('"İzlemedim" (-1) kaydırmaları kör noktayı ZEHİRLEMEZ', () {
+      // Kullanıcı komedileri izlemediği için atlıyor (yargı değil!) ama
+      // izlediği tek komediye Harika demiş → komedi kör nokta OLMAMALI.
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: -1, genres: [35]),
+          _r(rating: -1, genres: [35]),
+          _r(rating: -1, genres: [35]),
+          _r(rating: -1, genres: [35]),
+          _r(rating: 3, genres: [35]),
+          _r(rating: 3, genres: [18]),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.blindSpotGenre, isNull);
+    });
   });
 
   group('TasteDnaService.compute — çağ imzası', () {

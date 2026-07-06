@@ -117,6 +117,8 @@
             font-weight: 700;
             letter-spacing: 3px;
             margin-top: 12px;
+            /* lang="tr" sayesinde i→İ doğru; PHP'de uppercase entity bozar. */
+            text-transform: uppercase;
         }
         .dna-name {
             font-size: 30px;
@@ -314,7 +316,7 @@
         <?php if (!empty($dna)): ?>
             <div class="dna">
                 <div class="dna-emoji"><?php echo $dna['emoji']; ?></div>
-                <div class="dna-label"><?php echo htmlspecialchars(mb_strtoupper($displayName, 'UTF-8')); ?></div>
+                <div class="dna-label"><?php echo $displayName; ?></div>
                 <div class="dna-name"><?php echo htmlspecialchars($dna['archetype']); ?></div>
                 <div class="dna-essence"><?php echo htmlspecialchars($dna['essence']); ?></div>
 

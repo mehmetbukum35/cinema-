@@ -747,8 +747,7 @@ class AppLocalizations {
       'dna_ess_eternal_child': 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
       'dna_ess_genre_nomad':
           'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
-      'dna_era_modern':
-          'Modern çağ çocuğu — beğenilerinin {p}\'i 2015 sonrası.',
+      'dna_era_modern': 'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
       'dna_era_classic': 'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
       'dna_era_traveler':
           'Zaman gezgini — her dönemde kendini evinde hissediyorsun.',
@@ -758,13 +757,13 @@ class AppLocalizations {
       'dna_depth_balanced':
           'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyorsun.',
       'dna_critic_tough':
-          'Sert eleştirmen — puanlarının yalnızca {p}\'i "Harika".',
+          'Sert eleştirmen — puanlarının yalnızca {p} "Harika".',
       'dna_critic_generous':
           'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
       'dna_critic_balanced':
           'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
       'dna_blind': 'Kör noktan: {g} — sana pek hitap etmiyor.',
-      'dna_shift': 'Zevkin {from}\'dan {to}\'a doğru kaydı.',
+      'dna_shift': 'Zevkinin rotası: {from} → {to}.',
       'dna_accuracy': 'Motor seni {p} isabetle tanıyor — {n} öneri üzerinden.',
       'dna_share_header': 'Sinema DNA\'m: {a}',
       'dna_share_themes': 'Temalarım',

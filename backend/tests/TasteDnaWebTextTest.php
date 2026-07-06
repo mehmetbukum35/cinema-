@@ -30,8 +30,19 @@ class TasteDnaWebTextTest extends TestCase
         $this->assertNotNull($view);
         $this->assertSame('Karanlık Anlatıcı', $view['archetype']);
         $this->assertSame('🕯️', $view['emoji']);
-        $this->assertSame(['Revenge', 'Dystopia'], $view['themes']);
+        // Temalar TR sözlüğünden çevrilir; baş harf Türkçe kurala göre (İ).
+        $this->assertSame(['İntikam', 'Distopya'], $view['themes']);
         $this->assertSame(['Korku', 'Gerilim'], $view['genres']);
+    }
+
+    public function testUnknownThemeStaysEnglishCapitalized(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'themes' => ['obscurekeyword'],
+        ]);
+        $this->assertSame(['Obscurekeyword'], $view['themes']);
     }
 
     public function testEmbedsPercentagesInSignals(): void
@@ -46,8 +57,21 @@ class TasteDnaWebTextTest extends TestCase
         ]);
 
         $joined = implode(' | ', $view['signals']);
-        $this->assertStringContainsString('%75', $joined);
-        $this->assertStringContainsString('%10', $joined);
+        // Türkçe iyelik eki sayının okunuşuna göre: %75'i (beş-i), %10'u (on-u).
+        $this->assertStringContainsString("%75'i", $joined);
+        $this->assertStringContainsString("%10'u", $joined);
+    }
+
+    public function testTurkishPossessiveSuffixMatchesPronunciation(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'critic' => 'tough',
+            'harika_share' => 0.12,
+        ]);
+        $joined = implode(' | ', $view['signals']);
+        $this->assertStringContainsString("%12'si", $joined); // %12'i DEĞİL
     }
 
     public function testBlindSpotAndShiftUseGenreNames(): void
@@ -62,8 +86,9 @@ class TasteDnaWebTextTest extends TestCase
 
         $joined = implode(' | ', $view['signals']);
         $this->assertStringContainsString('Komedi', $joined); // kör nokta
-        $this->assertStringContainsString('Aksiyon', $joined); // kayma from
-        $this->assertStringContainsString('Dram', $joined);    // kayma to
+        // Kayma ek-siz ok biçiminde (hâl eki dilbilgisi riski taşır).
+        $this->assertStringContainsString('Aksiyon → Dram', $joined);
+        $this->assertStringNotContainsString("'dan", $joined);
     }
 
     public function testAccuracyOnlyWhenPresent(): void

@@ -88,7 +88,9 @@ class TasteDnaService {
           genreWeight[g] =
               (genreWeight[g] ?? 0) + (r.rating == 3 ? 2.0 : 1.0) * decay;
           genreLiked[g] = (genreLiked[g] ?? 0) + 1;
-        } else if (r.rating <= 1) {
+        } else if (r.rating == 0 || r.rating == 1) {
+          // Yalnızca gerçek beğenmeme (Berbat/Eh). "İzlemedim" (-1) bir yargı
+          // DEĞİLDİR — sayılırsa çok atlanan türler sahte kör nokta üretir.
           genreDisliked[g] = (genreDisliked[g] ?? 0) + 1;
         }
       }

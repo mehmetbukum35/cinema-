@@ -55,13 +55,25 @@ void main() {
       expect(era.text, contains('%75'));
     });
 
-    test('sert eleştirmen sinyali Harika oranını gömer', () {
+    test('sert eleştirmen sinyali Harika oranını DOĞRU ekle gömer', () {
       final p = TasteDnaPresenter(
         null,
-        _dna(critic: 'tough', harikaShare: 0.1),
+        _dna(critic: 'tough', harikaShare: 0.12),
       );
       final critic = p.signals.firstWhere((s) => s.icon == 'critic');
-      expect(critic.text, contains('%10'));
+      expect(critic.text, contains("%12'si")); // %12'i DEĞİL
+    });
+
+    test('Türkçe iyelik eki sayının okunuşuna göre seçilir', () {
+      String sfx(int n) => TasteDnaPresenter.trNumberPossessiveSuffix(n);
+      expect(sfx(75), "'i"); // yetmiş beş-i
+      expect(sfx(12), "'si"); // on iki-si
+      expect(sfx(10), "'u"); // on-u
+      expect(sfx(40), "'ı"); // kırk-ı
+      expect(sfx(6), "'sı"); // altı-sı
+      expect(sfx(100), "'ü"); // yüz-ü
+      expect(sfx(90), "'ı"); // doksan-ı
+      expect(sfx(0), "'ı"); // sıfır-ı
     });
 
     test('kör nokta yoksa sinyal listesinde yok', () {
@@ -75,11 +87,11 @@ void main() {
       expect(blind.text, contains('Komedi'));
     });
 
-    test('zevk kayması iki tür adını gömer', () {
+    test('zevk kayması ek-siz ok biçimini kullanır (dilbilgisi güvenli)', () {
       final p = TasteDnaPresenter(null, _dna(shiftFrom: 28, shiftTo: 18));
       final shift = p.signals.firstWhere((s) => s.icon == 'shift');
-      expect(shift.text, contains('Aksiyon'));
-      expect(shift.text, contains('Dram'));
+      expect(shift.text, contains('Aksiyon → Dram'));
+      expect(shift.text, isNot(contains("'dan"))); // hâl eki takılmıyor
     });
   });
 
@@ -100,9 +112,12 @@ void main() {
   });
 
   group('TasteDnaPresenter — çipler ve paylaşım', () {
-    test('tema çiplerinin baş harfi büyür (TMDB keyword\'leri İngilizce)', () {
-      final p = TasteDnaPresenter(null, _dna(themes: ['revenge', 'dystopia']));
-      expect(p.themeChips, ['Revenge', 'Dystopia']);
+    test('temalar TR sözlüğünden çevrilir; eşleşmeyen İngilizce kalır', () {
+      final p = TasteDnaPresenter(
+        null,
+        _dna(themes: ['revenge', 'dystopia', 'obscurekeyword']),
+      );
+      expect(p.themeChips, ['İntikam', 'Distopya', 'Obscurekeyword']);
     });
 
     test('paylaşım metni arketip + link içerir', () {

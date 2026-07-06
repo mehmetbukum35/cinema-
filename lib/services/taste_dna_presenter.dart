@@ -13,11 +13,149 @@ class TasteDnaPresenter {
 
   String _t(String key, String fallback) => l10n?.get(key) ?? fallback;
 
+  bool get _isEn => l10n?.locale.languageCode == 'en';
+
   /// Yüzde biçimi dile göre: TR "%75", EN "75%".
   String _pct(double v) {
     final n = (v * 100).round();
-    return l10n?.locale.languageCode == 'en' ? '$n%' : '%$n';
+    return _isEn ? '$n%' : '%$n';
   }
+
+  /// TR iyelik ekli yüzde: "%75'i", "%12'si", "%10'u", "%40'ı" — ek, sayının
+  /// OKUNUŞUNA göre seçilir (yetmiş beş-İ, on iki-Sİ, on-U). EN'de düz "75%".
+  String _pctPossessive(double v) {
+    final n = (v * 100).round();
+    if (_isEn) return '$n%';
+    return '%$n${trNumberPossessiveSuffix(n)}';
+  }
+
+  /// 0-100 arası sayının Türkçe iyelik eki ("'i/'si/'u/..."). Son söylenen
+  /// basamağa göre: birler basamağı doluysa o, değilse onlar; 100 → yüz.
+  static String trNumberPossessiveSuffix(int n) {
+    const units = {
+      1: "'i", 2: "'si", 3: "'ü", 4: "'ü", 5: "'i",
+      6: "'sı", 7: "'si", 8: "'i", 9: "'u", //
+    };
+    const tens = {
+      10: "'u", 20: "'si", 30: "'u", 40: "'ı", 50: "'si",
+      60: "'ı", 70: "'i", 80: "'i", 90: "'ı", //
+    };
+    if (n == 0) return "'ı"; // sıfır-ı
+    if (n % 100 == 0) return "'ü"; // yüz-ü
+    if (n % 10 != 0) return units[n % 10]!;
+    return tens[n % 100]!;
+  }
+
+  /// TMDB keyword'leri yalnızca İngilizce döner; sık temalar için TR sözlüğü.
+  /// PHP karşılığı: backend/src/TasteDnaWebText.php — ikisi senkron tutulmalı.
+  static const Map<String, String> themeTr = {
+    'revenge': 'intikam',
+    'dystopia': 'distopya',
+    'time travel': 'zaman yolculuğu',
+    'heist': 'soygun',
+    'serial killer': 'seri katil',
+    'based on true story': 'gerçek hikâye',
+    'love': 'aşk',
+    'friendship': 'dostluk',
+    'betrayal': 'ihanet',
+    'survival': 'hayatta kalma',
+    'space': 'uzay',
+    'alien': 'uzaylı',
+    'artificial intelligence': 'yapay zekâ',
+    'artificial intelligence (a.i.)': 'yapay zekâ',
+    'superhero': 'süper kahraman',
+    'magic': 'büyü',
+    'vampire': 'vampir',
+    'zombie': 'zombi',
+    'ghost': 'hayalet',
+    'haunted house': 'perili ev',
+    'murder': 'cinayet',
+    'detective': 'dedektif',
+    'police': 'polis',
+    'mafia': 'mafya',
+    'gangster': 'gangster',
+    'prison': 'hapishane',
+    'escape': 'kaçış',
+    'war': 'savaş',
+    'world war ii': '2. Dünya Savaşı',
+    'soldier': 'asker',
+    'spy': 'casus',
+    'espionage': 'casusluk',
+    'assassin': 'suikastçı',
+    'martial arts': 'dövüş sanatları',
+    'road trip': 'yol hikâyesi',
+    'coming of age': 'büyüme hikâyesi',
+    'high school': 'lise',
+    'family': 'aile',
+    'father son relationship': 'baba-oğul ilişkisi',
+    'mother daughter relationship': 'anne-kız ilişkisi',
+    'marriage': 'evlilik',
+    'divorce': 'boşanma',
+    'wedding': 'düğün',
+    'childhood': 'çocukluk',
+    'memory': 'hafıza',
+    'dream': 'rüya',
+    'nightmare': 'kâbus',
+    'parallel world': 'paralel evren',
+    'post-apocalyptic future': 'kıyamet sonrası',
+    'apocalypse': 'kıyamet',
+    'virus': 'virüs',
+    'pandemic': 'pandemi',
+    'monster': 'canavar',
+    'dragon': 'ejderha',
+    'kingdom': 'krallık',
+    'medieval': 'ortaçağ',
+    'pirate': 'korsan',
+    'treasure': 'hazine',
+    'island': 'ada',
+    'ocean': 'okyanus',
+    'desert': 'çöl',
+    'jungle': 'orman',
+    'small town': 'kasaba',
+    'new york city': 'New York',
+    'london, england': 'Londra',
+    'paris, france': 'Paris',
+    'robbery': 'soygun',
+    'kidnapping': 'kaçırılma',
+    'conspiracy': 'komplo',
+    'corruption': 'yolsuzluk',
+    'investigation': 'soruşturma',
+    'courtroom': 'mahkeme',
+    'lawyer': 'avukat',
+    'journalist': 'gazeteci',
+    'boxing': 'boks',
+    'football (soccer)': 'futbol',
+    'basketball': 'basketbol',
+    'music': 'müzik',
+    'musician': 'müzisyen',
+    'dance': 'dans',
+    'cooking': 'yemek',
+    'chef': 'şef',
+    'romance': 'romantizm',
+    'forbidden love': 'yasak aşk',
+    'love triangle': 'aşk üçgeni',
+    'loss': 'kayıp',
+    'grief': 'yas',
+    'redemption': 'kefaret',
+    'identity': 'kimlik',
+    'loneliness': 'yalnızlık',
+    'obsession': 'takıntı',
+    'addiction': 'bağımlılık',
+    'mental illness': 'ruh sağlığı',
+    'psychopath': 'psikopat',
+    'cult': 'tarikat',
+    'religion': 'din',
+    'mythology': 'mitoloji',
+    'fairy tale': 'masal',
+    'anime': 'anime',
+    'video game': 'video oyunu',
+    'hacker': 'hacker',
+    'cyberpunk': 'siberpunk',
+    'noir': 'kara film',
+    'satire': 'hiciv',
+    'dark comedy': 'kara mizah',
+    'parody': 'parodi',
+  };
 
   // ── Arketip ──
   String get archetypeName =>
@@ -70,8 +208,8 @@ class TasteDnaPresenter {
         text: switch (dna.eraKey) {
           'modern' => _t(
             'dna_era_modern',
-            'Modern çağ çocuğu — beğenilerinin {p}\'i 2015 sonrası.',
-          ).replaceFirst('{p}', _pct(dna.modernShare)),
+            'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
+          ).replaceFirst('{p}', _pctPossessive(dna.modernShare)),
           'classic_soul' => _t(
             'dna_era_classic',
             'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
@@ -112,8 +250,8 @@ class TasteDnaPresenter {
         text: switch (dna.criticKey) {
           'tough' => _t(
             'dna_critic_tough',
-            'Sert eleştirmen — puanlarının yalnızca {p}\'i "Harika".',
-          ).replaceFirst('{p}', _pct(dna.harikaShare)),
+            'Sert eleştirmen — puanlarının yalnızca {p} "Harika".',
+          ).replaceFirst('{p}', _pctPossessive(dna.harikaShare)),
           'generous' => _t(
             'dna_critic_generous',
             'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
@@ -139,12 +277,13 @@ class TasteDnaPresenter {
       );
     }
 
-    // Zevk kayması
+    // Zevk kayması — tür adlarına Türkçe hâl eki takmak (Komedi'den,
+    // Gerilim'e...) hataya açık; ok'lu biçim hem dilbilgisi-güvenli hem net.
     if (dna.shiftFromGenre != null && dna.shiftToGenre != null) {
       out.add(
         TasteDnaSignal(
           icon: 'shift',
-          text: _t('dna_shift', 'Zevkin {from}\'dan {to}\'a doğru kaydı.')
+          text: _t('dna_shift', 'Zevkinin rotası: {from} → {to}.')
               .replaceFirst(
                 '{from}',
                 PrefsService.genreName(dna.shiftFromGenre!),
@@ -157,10 +296,16 @@ class TasteDnaPresenter {
     return out;
   }
 
-  // ── Tema çipleri (baş harf büyütülmüş) ──
-  List<String> get themeChips => dna.themes
-      .map((t) => t.isEmpty ? t : '${t[0].toUpperCase()}${t.substring(1)}')
-      .toList();
+  // ── Tema çipleri: TR'de sözlükten çevrilir, EN'de olduğu gibi;
+  //    eşleşme yoksa İngilizce kalır (baş harf büyütülmüş).
+  List<String> get themeChips => dna.themes.map((t) {
+    final raw = _isEn ? t : (themeTr[t.toLowerCase().trim()] ?? t);
+    if (raw.isEmpty) return raw;
+    // Dart toUpperCase() İngilizce kural uygular ('i'→'I'); Türkçe kelimede
+    // baş harf 'i' → 'İ' olmalı (intikam → İntikam).
+    final first = !_isEn && raw[0] == 'i' ? 'İ' : raw[0].toUpperCase();
+    return '$first${raw.substring(1)}';
+  }).toList();
 
   // ── Tür çipleri ──
   List<String> get genreChips =>
