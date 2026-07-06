@@ -5,7 +5,11 @@
       "name": "cinema+",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main.dart"
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define",
+        "GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com"
+      ]
     }
   ]
 }
