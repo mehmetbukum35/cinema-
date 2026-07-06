@@ -86,12 +86,16 @@ class MockApiService implements ApiService {
   int? recommendedFriendId;
   String? recommendedNote;
   int? loadedIntersectionFriendId;
+  int? loadedActivityFriendId;
 
   @override
   Future<Map<String, dynamic>> getFriends() async => friendsResponse;
 
   @override
-  Future<List<dynamic>> getActivityFeed() async => activityResponse;
+  Future<List<dynamic>> getActivityFeed({int? friendId}) async {
+    loadedActivityFriendId = friendId;
+    return activityResponse;
+  }
 
   @override
   Future<List<dynamic>> getWatchlistIntersection(int friendId) async {
@@ -330,5 +334,19 @@ void main() {
         expect(state.intersection[0].title, 'Common Movie');
       },
     );
+
+    test('loadFriendActivity should fetch and update friendActivities cache', () async {
+      final notifier = container.read(socialProvider.notifier);
+
+      expect(container.read(socialProvider).friendActivities[10], isNull);
+
+      await notifier.loadFriendActivity(10);
+
+      expect(mockApi.loadedActivityFriendId, 10);
+      final state = container.read(socialProvider);
+      expect(state.friendActivities[10], hasLength(1));
+      expect(state.friendActivities[10]![0]['movie_id'], 101);
+      expect(state.friendActivities[10]![0]['friend_username'], 'testfriend');
+    });
   });
 }

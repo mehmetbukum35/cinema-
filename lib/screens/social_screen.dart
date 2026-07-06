@@ -946,7 +946,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   }
 }
 
-class FriendActivityScreen extends ConsumerWidget {
+class FriendActivityScreen extends ConsumerStatefulWidget {
   final int friendId;
   final String friendName;
   final String friendUsername;
@@ -961,166 +961,7 @@ class FriendActivityScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    final socialState = ref.watch(socialProvider);
-
-    final friendActivities = socialState.activityFeed
-        .where(
-          (act) =>
-              (int.tryParse(act['friend_id']?.toString() ?? '') ?? 0) ==
-              friendId,
-        )
-        .toList();
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: c.ink,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              friendName,
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              '@$friendUsername',
-              style: TextStyle(color: c.dim, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-      body: CinematicBackground(
-        child: Column(
-          children: [
-            if (tasteScore != null) ...[
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: c.borderSoft),
-                  boxShadow: CinemaShadows.card,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.gold.withValues(alpha: 0.15),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.favorite_rounded,
-                        color: c.gold,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(
-                                  context,
-                                )?.get('cinema_taste_match') ??
-                                'Cinema Taste Match',
-                            style: TextStyle(
-                              color: c.ink,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            AppLocalizations.of(context)
-                                    ?.get('friend_taste_match_desc')
-                                    .replaceAll('{}', '$tasteScore') ??
-                                'You have a $tasteScore% movie taste match with this friend.',
-                            style: TextStyle(
-                              color: c.dim,
-                              fontSize: 11.5,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '%$tasteScore',
-                      style: TextStyle(
-                        color: c.gold,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            Expanded(
-              child: friendActivities.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: c.dim.withValues(alpha: 0.1),
-                            ),
-                            child: Icon(
-                              Icons.history_rounded,
-                              color: c.dim,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            AppLocalizations.of(
-                                  context,
-                                )?.get('no_activity_from_this_friend_y') ??
-                                'No activity from this friend yet.',
-                            style: TextStyle(color: c.dim, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: friendActivities.length,
-                      itemBuilder: (ctx, i) {
-                        return _buildActivityCard(c, friendActivities[i], ctx, ref);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  ConsumerState<FriendActivityScreen> createState() => _FriendActivityScreenState();
 
   static Widget _buildActivityCard(
     ThemePalette c,
@@ -1306,6 +1147,176 @@ class FriendActivityScreen extends ConsumerWidget {
     );
   }
 }
+
+class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(socialProvider.notifier).loadFriendActivity(widget.friendId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final socialState = ref.watch(socialProvider);
+
+    final friendActivities = socialState.friendActivities[widget.friendId] ?? [];
+    final isLoading = socialState.loading && friendActivities.isEmpty;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: c.ink,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.pop(context);
+          },
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.friendName,
+              style: TextStyle(
+                color: c.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              '@${widget.friendUsername}',
+              style: TextStyle(color: c.dim, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+      body: CinematicBackground(
+        child: Column(
+          children: [
+            if (widget.tasteScore != null) ...[
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: c.borderSoft),
+                  boxShadow: CinemaShadows.card,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: c.gold.withValues(alpha: 0.15),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        color: c.gold,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('cinema_taste_match') ??
+                                'Cinema Taste Match',
+                            style: TextStyle(
+                              color: c.ink,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            AppLocalizations.of(context)
+                                    ?.get('friend_taste_match_desc')
+                                    .replaceAll('{}', '${widget.tasteScore}') ??
+                                'You have a ${widget.tasteScore}% movie taste match with this friend.',
+                            style: TextStyle(
+                              color: c.dim,
+                              fontSize: 11.5,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '%${widget.tasteScore}',
+                      style: TextStyle(
+                        color: c.gold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator(color: c.gold))
+                  : friendActivities.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: c.dim.withValues(alpha: 0.1),
+                                ),
+                                child: Icon(
+                                  Icons.history_rounded,
+                                  color: c.dim,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('no_activity_from_this_friend_y') ??
+                                    'No activity from this friend yet.',
+                                style: TextStyle(color: c.dim, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: friendActivities.length,
+                          itemBuilder: (ctx, i) {
+                            return FriendActivityScreen._buildActivityCard(c, friendActivities[i], ctx, ref);
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 Future<void> _openMovieDetail(BuildContext context, WidgetRef ref, int movieId, bool isTv) async {
   final service = ref.read(tmdbServiceProvider);

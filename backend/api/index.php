@@ -237,7 +237,8 @@ switch (true) {
         break;
 
     case $route === 'GET /social/friends/activity':
-        $social->getActivityFeed($auth->requireUser());
+        $friendId = isset($_GET['friend_id']) ? (int) $_GET['friend_id'] : null;
+        $social->getActivityFeed($auth->requireUser(), $friendId);
         break;
 
     case $route === 'GET /social/friends/signals':

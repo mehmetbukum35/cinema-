@@ -21,6 +21,9 @@ class SocialState {
   final List<dynamic> recommendations;
   final int unseenRecommendations;
 
+  /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
+  final Map<int, List<dynamic>> friendActivities;
+
   final bool loading;
   final String? error;
 
@@ -34,6 +37,7 @@ class SocialState {
     this.tasteScores = const {},
     this.recommendations = const [],
     this.unseenRecommendations = 0,
+    this.friendActivities = const {},
     this.loading = false,
     this.error,
   });
@@ -48,6 +52,7 @@ class SocialState {
     Map<int, int>? tasteScores,
     List<dynamic>? recommendations,
     int? unseenRecommendations,
+    Map<int, List<dynamic>>? friendActivities,
     bool? loading,
     String? Function()? error,
   }) {
@@ -62,6 +67,7 @@ class SocialState {
       recommendations: recommendations ?? this.recommendations,
       unseenRecommendations:
           unseenRecommendations ?? this.unseenRecommendations,
+      friendActivities: friendActivities ?? this.friendActivities,
       loading: loading ?? this.loading,
       error: error != null ? error() : this.error,
     );
@@ -108,6 +114,20 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final feed = await _apiService.getActivityFeed();
       state = state.copyWith(activityFeed: feed, loading: false);
+    } on ApiException catch (e) {
+      state = state.copyWith(loading: false, error: () => e.message);
+    } catch (e) {
+      state = state.copyWith(loading: false, error: () => e.toString());
+    }
+  }
+
+  Future<void> loadFriendActivity(int friendId) async {
+    state = state.copyWith(loading: true, error: () => null);
+    try {
+      final feed = await _apiService.getActivityFeed(friendId: friendId);
+      final map = Map<int, List<dynamic>>.from(state.friendActivities);
+      map[friendId] = feed;
+      state = state.copyWith(friendActivities: map, loading: false);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {

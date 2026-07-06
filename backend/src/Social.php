@@ -304,26 +304,33 @@ class Social
     }
 
     // ─── GET /social/friends/activity ───────────────────────────────────────
-    public function getActivityFeed(int $uid): void
+    public function getActivityFeed(int $uid, ?int $friendId = null): void
     {
-        // Arkadaşların son yaptığı değerlendirmeleri çek (olumlu değerlendirmeler VEYA yorumlu olanlar)
-        $st = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, r.rating, r.title, r.poster_path, r.updated_at, r.comment, r.is_spoiler,
-                    u.id as friend_id, u.display_name as friend_name, u.username as friend_username
-             FROM friends f
-             JOIN users u ON f.friend_id = u.id
-             JOIN ratings r ON f.friend_id = r.user_id
-             WHERE f.user_id = ? AND f.status = \'accepted\' 
-               AND (r.rating >= 2 OR (r.comment IS NOT NULL AND r.comment <> \'\'))
-               AND r.deleted = 0
-             ORDER BY r.updated_at DESC
-             LIMIT 50'
-        );
-        $st->execute([$uid]);
+        $sql = 'SELECT r.movie_id, r.is_tv, r.rating, r.title, r.poster_path, r.updated_at, r.comment, r.is_spoiler,
+                       u.id as friend_id, u.display_name as friend_name, u.username as friend_username
+                FROM friends f
+                JOIN users u ON f.friend_id = u.id
+                JOIN ratings r ON f.friend_id = r.user_id
+                WHERE f.user_id = ? AND f.status = \'accepted\'';
+        
+        $params = [$uid];
+        if ($friendId !== null) {
+            $sql .= ' AND f.friend_id = ?';
+            $params[] = $friendId;
+        }
+
+        $sql .= ' AND (r.rating >= 2 OR (r.comment IS NOT NULL AND r.comment <> \'\'))
+                  AND r.deleted = 0
+                ORDER BY r.updated_at DESC
+                LIMIT 50';
+
+        $st = $this->db->prepare($sql);
+        $st->execute($params);
         $feed = $st->fetchAll();
 
         json_out(200, ['activity' => $feed]);
     }
+
 
     // ─── GET /social/match/watchlist-intersection/{friend_id} ───────────────
     public function getWatchlistIntersection(int $uid, int $friendId): void

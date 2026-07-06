@@ -506,10 +506,13 @@ class ApiService {
   }
 
   // GET /social/friends/activity
-  Future<List<dynamic>> getActivityFeed() async {
+  Future<List<dynamic>> getActivityFeed({int? friendId}) async {
+    final path = friendId != null
+        ? '/social/friends/activity?friend_id=$friendId'
+        : '/social/friends/activity';
     final response = await _request(
       'GET',
-      '/social/friends/activity',
+      path,
       requireAuth: true,
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;

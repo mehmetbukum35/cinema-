@@ -371,6 +371,41 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame(0, (int) $community[0]['is_spoiler']);
     }
 
+    public function testActivityFeedFiltersByFriendId(): void
+    {
+        // 1. Setup friendship between 1 & 2 and 1 & 3
+        $this->acceptFriendship(1, 2);
+        $this->acceptFriendship(1, 3);
+
+        $now = now_ms();
+        // Friend 2 rates movie 101 as 3
+        $this->insertRating(2, 101, 0, 3, 'Movie 101', $now);
+        // Friend 3 rates movie 102 as 3
+        $this->insertRating(3, 102, 0, 3, 'Movie 102', $now + 100);
+
+        // Fetch activity feed for User 1 without friendId -> should contain both
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1);
+        $feed = TestHelperRegistry::$lastBody['activity'];
+        $this->assertCount(2, $feed);
+
+        // Fetch activity feed for User 1 specifying friendId = 2 -> should only contain 101
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1, 2);
+        $feedBob = TestHelperRegistry::$lastBody['activity'];
+        $this->assertCount(1, $feedBob);
+        $this->assertSame(101, (int) $feedBob[0]['movie_id']);
+        $this->assertSame('Movie 101', $feedBob[0]['title']);
+
+        // Fetch activity feed for User 1 specifying friendId = 3 -> should only contain 102
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1, 3);
+        $feedCarol = TestHelperRegistry::$lastBody['activity'];
+        $this->assertCount(1, $feedCarol);
+        $this->assertSame(102, (int) $feedCarol[0]['movie_id']);
+        $this->assertSame('Movie 102', $feedCarol[0]['title']);
+    }
+
     public function testTitleScoreAggregatesLikedPercentAcrossAllMembers(): void
     {
         // Aynı filme (555) farklı üyeler farklı puanlar verir; arkadaşlık gerekmez.
