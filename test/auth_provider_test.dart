@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
+import 'package:ne_izlesem/services/db_helper.dart';
 import 'mocks/secure_storage_mock.dart';
 
 class MockApiService implements ApiService {
@@ -108,9 +109,9 @@ void main() {
       expect(container.read(authProvider).isAuthenticated, isFalse);
       expect(container.read(authProvider).user, isNull);
 
-      final success = await notifier.login('test@example.com', 'secret123');
+      final result = await notifier.login('test@example.com', 'secret123');
 
-      expect(success, isTrue);
+      expect(result.status, AuthStatus.success);
       final state = container.read(authProvider);
       expect(state.isAuthenticated, isTrue);
       expect(state.user, isNotNull);
@@ -125,13 +126,13 @@ void main() {
       () async {
         final notifier = container.read(authProvider.notifier);
 
-        final success = await notifier.register(
+        final result = await notifier.register(
           'reg@example.com',
           'secret123',
           displayName: 'Reg User',
         );
 
-        expect(success, isTrue);
+        expect(result.status, AuthStatus.success);
         final state = container.read(authProvider);
         expect(state.isAuthenticated, isTrue);
         expect(state.user!['email'], 'reg@example.com');
@@ -212,6 +213,55 @@ void main() {
 
       expect(success, isTrue);
       expect(mockApi.forgotPasswordCalled, isTrue);
+    });
+
+    test('should trigger conflict when different user logins and local data exists', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      // Set last authenticated user id to '1'
+      await PrefsService.setLastAuthenticatedUserId('1');
+      // Mock ratings data in DatabaseHelper to simulate local data
+      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+
+      // Attempt to login as user id '2' (MockApiService register returns id: 2)
+      final result = await notifier.register('reg@example.com', 'secret123');
+
+      // Should be conflict
+      expect(result.status, AuthStatus.conflict);
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+
+      // Complete login with resolution Merge
+      await notifier.completeLogin(
+        user: result.user!,
+        tokens: result.tokens!,
+        resolution: ConflictResolution.merge,
+      );
+
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+      expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+      expect(await DatabaseHelper().hasAnyLocalData(), isTrue); // rating remains
+    });
+
+    test('completeLogin with delete resolution should wipe local data', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      // Set last authenticated user id to '1'
+      await PrefsService.setLastAuthenticatedUserId('1');
+      await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+
+      final result = await notifier.register('reg@example.com', 'secret123');
+      expect(result.status, AuthStatus.conflict);
+
+      // Complete login with resolution Delete
+      await notifier.completeLogin(
+        user: result.user!,
+        tokens: result.tokens!,
+        resolution: ConflictResolution.delete,
+      );
+
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+      expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+      expect(await DatabaseHelper().hasAnyLocalData(), isFalse); // ratings wiped
     });
   });
 }

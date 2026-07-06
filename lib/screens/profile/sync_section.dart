@@ -9,6 +9,7 @@ import '../../providers/watchlist_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/swipe_provider.dart';
 import '../../widgets/logout_confirm_dialog.dart';
+import '../../widgets/auth_conflict_dialog.dart';
 
 enum AuthMode { login, register, forgotEmail, forgotCode, forgotReset }
 
@@ -320,17 +321,48 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
 
     bool success = false;
     final notifier = ref.read(authProvider.notifier);
-    final authState = ref.read(authProvider);
 
     if (_mode == AuthMode.login) {
-      success = await notifier.login(email, password);
-      if (success && mounted) {
-        Navigator.pop(context);
+      final result = await notifier.login(email, password);
+      if (result.status == AuthStatus.success) {
+        success = true;
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else if (result.status == AuthStatus.conflict && mounted) {
+        final resolution = await showAuthConflictDialog(context);
+        if (resolution != null && mounted) {
+          await notifier.completeLogin(
+            user: result.user!,
+            tokens: result.tokens!,
+            resolution: resolution,
+          );
+          success = true;
+          if (mounted) Navigator.pop(context);
+        } else {
+          return; // Cancelled, stay on page
+        }
       }
     } else if (_mode == AuthMode.register) {
-      success = await notifier.register(email, password, displayName: name);
-      if (success && mounted) {
-        Navigator.pop(context);
+      final result = await notifier.register(email, password, displayName: name);
+      if (result.status == AuthStatus.success) {
+        success = true;
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else if (result.status == AuthStatus.conflict && mounted) {
+        final resolution = await showAuthConflictDialog(context);
+        if (resolution != null && mounted) {
+          await notifier.completeLogin(
+            user: result.user!,
+            tokens: result.tokens!,
+            resolution: resolution,
+          );
+          success = true;
+          if (mounted) Navigator.pop(context);
+        } else {
+          return; // Cancelled, stay on page
+        }
       }
     } else if (_mode == AuthMode.forgotEmail) {
       success = await notifier.forgotPassword(email);
@@ -358,7 +390,7 @@ class _AuthSheetState extends ConsumerState<AuthSheet> {
     }
 
     if (!success && mounted) {
-      final err = authState.error ?? 'Bir hata oluştu';
+      final err = ref.read(authProvider).error ?? 'Bir hata oluştu';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(err), backgroundColor: context.c.red),
       );

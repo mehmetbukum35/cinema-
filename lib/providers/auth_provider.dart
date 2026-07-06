@@ -1,13 +1,40 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
 import '../services/notification_service.dart';
+import '../services/localization_service.dart';
+import '../screens/login_screen.dart';
 import 'watchlist_provider.dart';
 import 'swipe_provider.dart';
 import 'social_provider.dart';
 import '../services/providers.dart';
+
+enum AuthStatus {
+  success,
+  conflict,
+  error,
+}
+
+enum ConflictResolution {
+  merge,
+  delete,
+}
+
+class AuthResult {
+  final AuthStatus status;
+  final Map<String, dynamic>? user;
+  final Map<String, dynamic>? tokens;
+  final String? errorMessage;
+
+  AuthResult({
+    required this.status,
+    this.user,
+    this.tokens,
+    this.errorMessage,
+  });
+}
 
 class AuthState {
   final bool loading;
@@ -61,6 +88,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         // Oturum geri yüklendi → bu cihazın FCM token'ını sunucuya kaydet.
         NotificationService.instance.registerToken();
+
+        // Migration: Ensure last_authenticated_user_id is set
+        final currentUserId = userData['id']?.toString();
+        if (currentUserId != null) {
+          await PrefsService.setLastAuthenticatedUserId(currentUserId);
+        }
+
         _ref.read(watchlistProvider.notifier).load();
         _ref.read(statsProvider.notifier).load();
       } else {
@@ -74,48 +108,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   // POST /auth/login
-  Future<bool> login(String email, String password) async {
+  Future<AuthResult> login(String email, String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
       final data = await _apiService.login(email: email, password: password);
       final user = data['user'] as Map<String, dynamic>;
       final tokens = data['tokens'] as Map<String, dynamic>;
 
-      await PrefsService.saveTokens(
-        accessToken: tokens['access_token'] as String,
-        refreshToken: tokens['refresh_token'] as String,
-      );
-      await PrefsService.saveUserData(user);
+      final newUserId = user['id']?.toString();
+      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
+      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
-      // Reset local sync timestamp to 0 so we fetch all server data on first sync
-      await PrefsService.setLastSyncTime(0);
+      if (lastUserId != null && lastUserId != newUserId && hasLocalData) {
+        state = state.copyWith(loading: false);
+        return AuthResult(
+          status: AuthStatus.conflict,
+          user: user,
+          tokens: tokens,
+        );
+      }
 
-      state = state.copyWith(
-        accessToken: tokens['access_token'] as String,
+      await completeLogin(
         user: user,
-        loading: false,
+        tokens: tokens,
+        resolution: ConflictResolution.merge,
       );
-
-      await _postAuthSessionRestore();
-
-      // Giriş sonrası FCM token'ını sunucuya kaydet.
-      NotificationService.instance.registerToken();
-
-      return true;
+      return AuthResult(status: AuthStatus.success);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
-      return false;
+      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
-      state = state.copyWith(
-        loading: false,
-        error: 'Giriş yapılamadı. Lütfen bağlantınızı kontrol edin.',
-      );
-      return false;
+      const errMsg = 'Giriş yapılamadı. Lütfen bağlantınızı kontrol edin.';
+      state = state.copyWith(loading: false, error: errMsg);
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
   }
 
   // POST /auth/register
-  Future<bool> register(
+  Future<AuthResult> register(
     String email,
     String password, {
     String? displayName,
@@ -130,35 +160,68 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = data['user'] as Map<String, dynamic>;
       final tokens = data['tokens'] as Map<String, dynamic>;
 
-      await PrefsService.saveTokens(
-        accessToken: tokens['access_token'] as String,
-        refreshToken: tokens['refresh_token'] as String,
-      );
-      await PrefsService.saveUserData(user);
-      await PrefsService.setLastSyncTime(0);
+      final newUserId = user['id']?.toString();
+      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
+      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
-      state = state.copyWith(
-        accessToken: tokens['access_token'] as String,
+      if (lastUserId != null && lastUserId != newUserId && hasLocalData) {
+        state = state.copyWith(loading: false);
+        return AuthResult(
+          status: AuthStatus.conflict,
+          user: user,
+          tokens: tokens,
+        );
+      }
+
+      await completeLogin(
         user: user,
-        loading: false,
+        tokens: tokens,
+        resolution: ConflictResolution.merge,
       );
-
-      await _postAuthSessionRestore();
-
-      // Kayıt sonrası FCM token'ını sunucuya kaydet.
-      NotificationService.instance.registerToken();
-
-      return true;
+      return AuthResult(status: AuthStatus.success);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
-      return false;
+      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
-      state = state.copyWith(
-        loading: false,
-        error: 'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.',
-      );
-      return false;
+      const errMsg = 'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.';
+      state = state.copyWith(loading: false, error: errMsg);
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
+  }
+
+  /// Completes the login process once conflict is resolved or when no conflict is present.
+  Future<void> completeLogin({
+    required Map<String, dynamic> user,
+    required Map<String, dynamic> tokens,
+    required ConflictResolution resolution,
+  }) async {
+    state = state.copyWith(loading: true);
+
+    if (resolution == ConflictResolution.delete) {
+      await DatabaseHelper().hardClearAllData();
+    }
+    // Set sync timestamp to 0 so we fetch/push appropriately on new login session
+    await PrefsService.setLastSyncTime(0);
+
+    await PrefsService.saveTokens(
+      accessToken: tokens['access_token'] as String,
+      refreshToken: tokens['refresh_token'] as String,
+    );
+    await PrefsService.saveUserData(user);
+
+    final newUserId = user['id']?.toString();
+    await PrefsService.setLastAuthenticatedUserId(newUserId);
+
+    state = state.copyWith(
+      accessToken: tokens['access_token'] as String,
+      user: user,
+      loading: false,
+    );
+
+    await _postAuthSessionRestore();
+
+    // Giriş sonrası FCM token'ını sunucuya kaydet.
+    NotificationService.instance.registerToken();
   }
 
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
@@ -184,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
       await DatabaseHelper().hardClearAllData();
+      await PrefsService.setLastAuthenticatedUserId(null);
     }
     state = AuthState();
     _invalidateGuestProviders();
@@ -202,9 +266,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _endLocalSession(wipeLocalData: wipeLocalData);
   }
 
-  /// Token süresi doldu / refresh başarısız — yerel veri korunur.
   Future<void> clearSession() async {
     await _endLocalSession(wipeLocalData: false);
+
+    final context = NotificationService.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)?.get('session_expired_message') ??
+              'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: AppLocalizations.of(context)?.get('auth_title_login') ?? 'Giriş Yap',
+          textColor: Colors.white,
+          onPressed: () {
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 
   // DELETE /me

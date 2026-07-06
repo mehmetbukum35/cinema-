@@ -95,6 +95,12 @@ class AppLocalizations {
       'auth_logout_confirm':
           'Sign out of your account? Your ratings and lists stay on this device.',
       'auth_logout_wipe_local': 'Also remove data from this device',
+      'session_expired_message': 'Your session has expired. Your data is safe on this device. Please sign in again.',
+      'auth_conflict_title': 'Account Conflict',
+      'auth_conflict_desc': 'There is local data belonging to another account on this device. How would you like to proceed?',
+      'auth_conflict_merge': 'Merge with this Account',
+      'auth_conflict_delete': 'Delete Local Data & Load Cloud Data',
+      'auth_conflict_cancel': 'Cancel Login',
       'auth_delete_account': 'Delete Account',
       'auth_delete_confirm':
           'This will permanently delete your account and all associated cloud data. Are you sure?',
@@ -622,6 +628,12 @@ class AppLocalizations {
       'auth_logout_confirm':
           'Hesabınızdan çıkış yapmak istiyor musunuz? Puanlarınız ve listeleriniz bu cihazda kalır.',
       'auth_logout_wipe_local': 'Bu cihazdaki verileri de sil',
+      'session_expired_message': 'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
+      'auth_conflict_title': 'Hesap Çakışması',
+      'auth_conflict_desc': 'Bu cihazda başka bir hesaba ait yerel veri bulunuyor. Nasıl devam etmek istersiniz?',
+      'auth_conflict_merge': 'Bu Hesapla Birleştir',
+      'auth_conflict_delete': 'Cihazdakileri Sil & Buluttan Yükle',
+      'auth_conflict_cancel': 'Girişi İptal Et',
       'auth_delete_account': 'Hesabı Sil',
       'auth_delete_confirm':
           'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',

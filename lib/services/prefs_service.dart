@@ -634,6 +634,22 @@ class PrefsService {
     await prefs.setString(_keyUserData, jsonEncode(userData));
   }
 
+  static const _keyLastAuthenticatedUserId = 'last_authenticated_user_id';
+
+  static Future<String?> getLastAuthenticatedUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyLastAuthenticatedUserId);
+  }
+
+  static Future<void> setLastAuthenticatedUserId(String? userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (userId == null) {
+      await prefs.remove(_keyLastAuthenticatedUserId);
+    } else {
+      await prefs.setString(_keyLastAuthenticatedUserId, userId);
+    }
+  }
+
   static Future<void> clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
     await _secureStorage.delete(key: _keyAccessToken);

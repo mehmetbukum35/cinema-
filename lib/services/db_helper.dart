@@ -1073,6 +1073,44 @@ class DatabaseHelper {
   // Keeping original clearAllData for backwards compatibility in tests
   Future<void> clearAllData() async => hardClearAllData();
 
+  Future<bool> hasAnyLocalData() async {
+    final db = await database;
+    if (db == null) {
+      return _mockWatchlist.any((e) => e['deleted'] != 1) ||
+          _mockRatings.any((e) => e['deleted'] != 1) ||
+          _mockFavorites.any((e) => e['deleted'] != 1) ||
+          _mockWatchedSeasons.any((e) => e['deleted'] != 1);
+    }
+
+    final ratingsCount = Sqflite.firstIntValue(
+          await db.rawQuery("SELECT COUNT(*) FROM ratings WHERE deleted = 0"),
+        ) ??
+        0;
+    if (ratingsCount > 0) return true;
+
+    final watchlistCount = Sqflite.firstIntValue(
+          await db.rawQuery("SELECT COUNT(*) FROM watchlist WHERE deleted = 0"),
+        ) ??
+        0;
+    if (watchlistCount > 0) return true;
+
+    final favoritesCount = Sqflite.firstIntValue(
+          await db.rawQuery("SELECT COUNT(*) FROM favorites WHERE deleted = 0"),
+        ) ??
+        0;
+    if (favoritesCount > 0) return true;
+
+    final seasonsCount = Sqflite.firstIntValue(
+          await db.rawQuery(
+            "SELECT COUNT(*) FROM watched_seasons WHERE deleted = 0",
+          ),
+        ) ??
+        0;
+    if (seasonsCount > 0) return true;
+
+    return false;
+  }
+
   // ─── TMDB Cache Operations ──────────────────────────────────────────────────
 
   Future<void> saveTmdbCache(String key, String payload, String locale) async {

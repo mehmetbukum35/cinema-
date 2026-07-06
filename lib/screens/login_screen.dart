@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
+import '../widgets/auth_conflict_dialog.dart';
 
 /// Giriş + Kayıt ekranı (tek ekranda mod değiştirir).
 /// Mevcut akışı bozmaz; istediğin yerden (ör. Profil) buraya yönlendir:
@@ -32,14 +33,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(authProvider.notifier);
-    final ok = _isRegister
+    final result = _isRegister
         ? await notifier.register(
             _emailCtrl.text,
             _passCtrl.text,
             displayName: _nameCtrl.text.trim(),
           )
         : await notifier.login(_emailCtrl.text, _passCtrl.text);
-    if (ok && mounted) Navigator.of(context).pop();
+
+    if (result.status == AuthStatus.success && mounted) {
+      Navigator.of(context).pop();
+    } else if (result.status == AuthStatus.conflict && mounted) {
+      final resolution = await showAuthConflictDialog(context);
+      if (resolution != null && mounted) {
+        await notifier.completeLogin(
+          user: result.user!,
+          tokens: result.tokens!,
+          resolution: resolution,
+        );
+        if (mounted) Navigator.of(context).pop();
+      }
+    }
   }
 
   @override
