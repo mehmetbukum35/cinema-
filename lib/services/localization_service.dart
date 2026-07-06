@@ -130,6 +130,8 @@ class AppLocalizations {
       'auth_forgot_err_pass_length': 'Password must be at least 8 characters.',
       'auth_forgot_success_reset':
           'Your password has been successfully reset. You can now sign in with your new password.',
+      'profile_guest': 'Guest User',
+      'profile_not_logged_in': 'Cloud sync is not active',
       'profile_watchlist': 'Watchlist',
       'profile_stats': 'Stats',
       'profile_history': 'History',
@@ -687,6 +689,8 @@ class AppLocalizations {
       'auth_forgot_err_pass_length': 'Parola en az 8 karakter olmalıdır.',
       'auth_forgot_success_reset':
           'Şifreniz başarıyla sıfırlandı. Yeni şifrenizle giriş yapabilirsiniz.',
+      'profile_guest': 'Misafir Kullanıcı',
+      'profile_not_logged_in': 'Bulut eşitleme aktif değil',
       'profile_watchlist': 'İzleme Listesi',
       'profile_stats': 'İstatistikler',
       'profile_history': 'Geçmiş',

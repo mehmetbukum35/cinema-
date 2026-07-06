@@ -23,6 +23,8 @@ import '../providers/social_provider.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
+import '../widgets/auth_conflict_dialog.dart';
+import '../services/app_config.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -118,6 +120,46 @@ class ProfileScreen extends ConsumerWidget {
       ref.invalidate(watchlistProvider);
       ref.invalidate(statsProvider);
       ref.invalidate(swipeProvider);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
+    final c = context.c;
+    try {
+      final result = await ref.read(authProvider.notifier).signInWithGoogle();
+      if (!context.mounted) return;
+
+      if (result.status == AuthStatus.success) {
+        ref.invalidate(watchlistProvider);
+        ref.invalidate(statsProvider);
+      } else if (result.status == AuthStatus.conflict) {
+        final resolution = await showAuthConflictDialog(context);
+        if (resolution != null && context.mounted) {
+          await ref.read(authProvider.notifier).completeLogin(
+            user: result.user!,
+            tokens: result.tokens!,
+            resolution: resolution,
+          );
+          ref.invalidate(watchlistProvider);
+          ref.invalidate(statsProvider);
+        }
+      } else if (result.status == AuthStatus.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage ?? 'Giriş başarısız.'),
+            backgroundColor: c.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata oluştu: $e'),
+            backgroundColor: c.red,
+          ),
+        );
+      }
     }
   }
 
@@ -320,96 +362,168 @@ class ProfileScreen extends ConsumerWidget {
           border: c.isLight ? Border.all(color: c.border, width: 1) : null,
           boxShadow: c.cardShadow,
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: isLoggedIn ? CinemaGradients.gold : null,
-                color: isLoggedIn
-                    ? null
-                    : (c.isLight ? c.borderSoft : c.border),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                isLoggedIn ? initial : '👤',
-                style: TextStyle(
-                  fontSize: isLoggedIn ? 20 : 18,
-                  fontWeight: FontWeight.w800,
-                  color: isLoggedIn ? Colors.black : c.dim,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isLoggedIn
-                        ? displayName
-                        : (tr?.get('profile_guest') ?? 'Misafir Kullanıcı'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isLoggedIn ? CinemaGradients.gold : null,
+                    color: isLoggedIn
+                        ? null
+                        : (c.isLight ? c.borderSoft : c.border),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isLoggedIn ? initial : '👤',
                     style: TextStyle(
-                      color: c.ink,
-                      fontSize: 16,
+                      fontSize: isLoggedIn ? 20 : 18,
                       fontWeight: FontWeight.w800,
+                      color: isLoggedIn ? Colors.black : c.dim,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isLoggedIn
-                        ? email
-                        : (tr?.get('profile_not_logged_in') ??
-                              'Bulut eşitleme aktif değil'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: c.dim, fontSize: 12),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isLoggedIn
+                            ? displayName
+                            : (tr?.get('profile_guest') ?? 'Misafir Kullanıcı'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: c.ink,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isLoggedIn
+                            ? email
+                            : (tr?.get('profile_not_logged_in') ??
+                                  'Bulut eşitleme aktif değil'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: c.dim, fontSize: 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 10),
+                if (isLoggedIn)
+                  IconButton(
+                    icon: Icon(Icons.logout_rounded, color: c.red, size: 20),
+                    onPressed: () => showLogoutConfirmDialog(context, ref),
+                    tooltip: tr?.get('auth_logout') ?? 'Çıkış Yap',
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    padding: EdgeInsets.zero,
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: c.red,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: Text(
+                      tr?.get('auth_title_login') ?? 'Giriş Yap',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(width: 10),
-            if (isLoggedIn)
-              IconButton(
-                icon: Icon(Icons.logout_rounded, color: c.red, size: 20),
-                onPressed: () => showLogoutConfirmDialog(context, ref),
-                tooltip: tr?.get('auth_logout') ?? 'Çıkış Yap',
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                padding: EdgeInsets.zero,
-              )
-            else
-              ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.red,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
+            if (!isLoggedIn && AppConfig.googleSignInConfigured) ...[
+              const SizedBox(height: 16),
+              Divider(
+                color: c.isLight ? c.borderSoft : Colors.white.withValues(alpha: 0.08),
+                height: 1,
+              ),
+              const SizedBox(height: 14),
+              SpringButton(
+                onTap: auth.loading
+                    ? null
+                    : () => _handleGoogleSignIn(context, ref),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: c.isLight ? Colors.white : Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: c.isLight ? c.border : Colors.white.withValues(alpha: 0.12),
+                      width: 1,
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                ),
-                child: Text(
-                  tr?.get('auth_title_login') ?? 'Giriş Yap',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  child: auth.loading
+                      ? Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.dim,
+                            ),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 18,
+                              height: 18,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                'G',
+                                style: TextStyle(
+                                  color: Color(0xFF4285F4),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              tr?.get('auth_google_button') ?? 'Google ile devam et',
+                              style: TextStyle(
+                                color: c.ink,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
+            ],
           ],
         ),
       ),
