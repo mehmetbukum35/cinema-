@@ -21,6 +21,7 @@ import 'profile/sync_section.dart';
 import '../providers/social_provider.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
+import '../widgets/logout_confirm_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -274,49 +275,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _logoutConfirm(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.surface,
-        title: Text(
-          AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
-          style: TextStyle(
-            color: c.ink,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          AppLocalizations.of(context)?.get('locale') == 'tr'
-              ? 'Hesabınızdan çıkış yapmak istediğinize emin misiniz?'
-              : 'Are you sure you want to log out of your account?',
-          style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
-              style: TextStyle(color: c.dim),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(authProvider.notifier).logout();
-            },
-            child: Text(
-              AppLocalizations.of(context)?.get('auth_logout') ?? 'Çıkış Yap',
-              style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _userHeaderCard(BuildContext context, WidgetRef ref, ThemePalette c) {
     final auth = ref.watch(authProvider);
     final isLoggedIn = auth.isLoggedIn;
@@ -400,7 +358,7 @@ class ProfileScreen extends ConsumerWidget {
             if (isLoggedIn)
               IconButton(
                 icon: Icon(Icons.logout_rounded, color: c.red, size: 20),
-                onPressed: () => _logoutConfirm(context, ref),
+                onPressed: () => showLogoutConfirmDialog(context, ref),
                 tooltip: tr?.get('auth_logout') ?? 'Çıkış Yap',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 padding: EdgeInsets.zero,

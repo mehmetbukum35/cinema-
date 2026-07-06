@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
+import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
 
@@ -17,6 +18,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       if (auth.isAuthenticated) {
         try {
           await ref.read(syncServiceProvider).sync();
+          ref.read(recommendationEngineProvider).invalidateCache();
         } catch (e) {
           debugPrint("Watchlist background sync failed: $e");
         }

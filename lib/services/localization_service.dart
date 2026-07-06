@@ -92,6 +92,9 @@ class AppLocalizations {
       'sync_success': 'Synchronized successfully',
       'sync_last': 'Last synced: ',
       'auth_logout': 'Sign Out',
+      'auth_logout_confirm':
+          'Sign out of your account? Your ratings and lists stay on this device.',
+      'auth_logout_wipe_local': 'Also remove data from this device',
       'auth_delete_account': 'Delete Account',
       'auth_delete_confirm':
           'This will permanently delete your account and all associated cloud data. Are you sure?',
@@ -616,6 +619,9 @@ class AppLocalizations {
       'sync_success': 'Başarıyla senkronize edildi',
       'sync_last': 'Son eşitleme: ',
       'auth_logout': 'Çıkış Yap',
+      'auth_logout_confirm':
+          'Hesabınızdan çıkış yapmak istiyor musunuz? Puanlarınız ve listeleriniz bu cihazda kalır.',
+      'auth_logout_wipe_local': 'Bu cihazdaki verileri de sil',
       'auth_delete_account': 'Hesabı Sil',
       'auth_delete_confirm':
           'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',

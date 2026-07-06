@@ -6,6 +6,8 @@ import '../services/db_helper.dart';
 import '../services/notification_service.dart';
 import 'watchlist_provider.dart';
 import 'swipe_provider.dart';
+import 'social_provider.dart';
+import '../services/providers.dart';
 
 class AuthState {
   final bool loading;
@@ -94,10 +96,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         loading: false,
       );
 
-      // Trigger initial sync to pull remote data
-      _ref.read(watchlistProvider.notifier).load();
-      _ref.read(statsProvider.notifier).load();
-      _ref.invalidate(swipeProvider);
+      await _postAuthSessionRestore();
 
       // Giriş sonrası FCM token'ını sunucuya kaydet.
       NotificationService.instance.registerToken();
@@ -144,10 +143,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         loading: false,
       );
 
-      // Trigger initial sync
-      _ref.read(watchlistProvider.notifier).load();
-      _ref.read(statsProvider.notifier).load();
-      _ref.invalidate(swipeProvider);
+      await _postAuthSessionRestore();
 
       // Kayıt sonrası FCM token'ını sunucuya kaydet.
       NotificationService.instance.registerToken();
@@ -165,35 +161,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
+  Future<void> _postAuthSessionRestore() async {
+    await Future.wait([
+      _ref.read(watchlistProvider.notifier).load(),
+      _ref.read(statsProvider.notifier).load(),
+    ]);
+    _ref.read(recommendationEngineProvider).invalidateCache();
+    _ref.invalidate(swipeProvider);
+  }
+
+  void _invalidateGuestProviders() {
+    _ref.invalidate(watchlistProvider);
+    _ref.invalidate(statsProvider);
+    _ref.invalidate(swipeProvider);
+    _ref.invalidate(socialProvider);
+    _ref.read(recommendationEngineProvider).invalidateCache();
+  }
+
+  /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
+  Future<void> _endLocalSession({required bool wipeLocalData}) async {
+    await PrefsService.clearAuthData();
+    if (wipeLocalData) {
+      await DatabaseHelper().hardClearAllData();
+    }
+    state = AuthState();
+    _invalidateGuestProviders();
+  }
+
   // POST /auth/logout
-  Future<void> logout() async {
+  /// [wipeLocalData]: kullanıcı "bu cihazdaki verileri de sil" seçtiyse true.
+  Future<void> logout({bool wipeLocalData = false}) async {
     state = state.copyWith(loading: true);
-    // Çıkmadan önce bu cihazın token'ını sunucudan sil (artık bildirim almasın).
     await NotificationService.instance.unregisterToken();
     try {
       await _apiService.logout();
     } catch (e, st) {
       debugPrint("Auth notifier logout request failed: $e\n$st");
     }
-    await PrefsService.clearAuthData();
-    await DatabaseHelper().hardClearAllData();
-    state = AuthState(); // Reset auth state to defaults
-
-    // Refresh UI providers to update content
-    _ref.invalidate(watchlistProvider);
-    _ref.invalidate(statsProvider);
-    _ref.invalidate(swipeProvider);
+    await _endLocalSession(wipeLocalData: wipeLocalData);
   }
 
+  /// Token süresi doldu / refresh başarısız — yerel veri korunur.
   Future<void> clearSession() async {
-    await PrefsService.clearAuthData();
-    await DatabaseHelper().hardClearAllData();
-    state = AuthState(); // Reset auth state to defaults
-
-    // Refresh UI providers to update content
-    _ref.invalidate(watchlistProvider);
-    _ref.invalidate(statsProvider);
-    _ref.invalidate(swipeProvider);
+    await _endLocalSession(wipeLocalData: false);
   }
 
   // DELETE /me
@@ -201,12 +212,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(loading: true, error: null);
     try {
       await _apiService.deleteAccount();
-      await DatabaseHelper().hardClearAllData();
-      state = AuthState();
-
-      _ref.invalidate(watchlistProvider);
-      _ref.invalidate(statsProvider);
-      _ref.invalidate(swipeProvider);
+      await _endLocalSession(wipeLocalData: true);
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
@@ -229,12 +235,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         oldPassword: oldPassword,
         newPassword: newPassword,
       );
-      await DatabaseHelper().hardClearAllData();
-      state = AuthState();
-
-      _ref.invalidate(watchlistProvider);
-      _ref.invalidate(statsProvider);
-      _ref.invalidate(swipeProvider);
+      // Sunucu tüm oturumları düşürür; api_service clearAuthData çağırır.
+      // Yerel SQLite korunur — yeniden girişte sync birleştirir.
+      await _endLocalSession(wipeLocalData: false);
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);

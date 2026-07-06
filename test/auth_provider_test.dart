@@ -138,14 +138,14 @@ void main() {
       },
     );
 
-    test('logout should invoke API, clear storage and clear state', () async {
+    test('logout should invoke API, clear auth and clear state', () async {
       final notifier = container.read(authProvider.notifier);
 
       // Authenticate first
       await notifier.login('test@example.com', 'secret123');
       expect(container.read(authProvider).isAuthenticated, isTrue);
 
-      // Logout
+      // Logout (default: keep local data)
       await notifier.logout();
 
       expect(mockApi.logoutCalled, isTrue);
@@ -155,6 +155,32 @@ void main() {
 
       expect(await PrefsService.getAccessToken(), isNull);
       expect(await PrefsService.getRefreshToken(), isNull);
+    });
+
+    test('clearSession should clear auth without requiring logout API', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      await notifier.login('test@example.com', 'secret123');
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+
+      await notifier.clearSession();
+
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+      expect(await PrefsService.getAccessToken(), isNull);
+      expect(mockApi.logoutCalled, isFalse);
+    });
+
+    test('changePassword should end session locally', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      await notifier.login('test@example.com', 'secret123');
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+
+      final success = await notifier.changePassword('old123', 'new123');
+
+      expect(success, isTrue);
+      expect(mockApi.changePasswordCalled, isTrue);
+      expect(container.read(authProvider).isAuthenticated, isFalse);
     });
 
     test('deleteAccount should invoke API and clear session', () async {
@@ -170,7 +196,7 @@ void main() {
       expect(container.read(authProvider).isAuthenticated, isFalse);
     });
 
-    test('changePassword should invoke API', () async {
+    test('changePassword should invoke API when logged out', () async {
       final notifier = container.read(authProvider.notifier);
 
       final success = await notifier.changePassword('old123', 'new123');

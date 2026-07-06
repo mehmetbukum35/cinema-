@@ -1050,7 +1050,7 @@ class DatabaseHelper {
     await db.update('favorites', {'deleted': 1, 'updated_at': now});
   }
 
-  // Hard delete all data (on logout / fresh clean)
+  // Hard delete all user data (account deletion, user-initiated wipe, resetAll).
   Future<void> hardClearAllData() async {
     final db = await database;
     if (db == null) {

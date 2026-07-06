@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/swipe_provider.dart';
+import '../../widgets/logout_confirm_dialog.dart';
 
 enum AuthMode { login, register, forgotEmail, forgotCode, forgotReset }
 
@@ -184,7 +185,7 @@ class _SyncSectionState extends ConsumerState<SyncSection> {
                 TextButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    ref.read(authProvider.notifier).logout();
+                    showLogoutConfirmDialog(context, ref);
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: c.red,
