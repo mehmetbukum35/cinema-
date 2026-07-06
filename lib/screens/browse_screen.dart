@@ -334,7 +334,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         builder: (ctx) => AlertDialog(
           backgroundColor: c.surface,
           title: Text(
-            tr?.locale.languageCode == 'tr' ? 'Şanslı Seçim 🎲' : 'Lucky Pick 🎲',
+            tr?.locale.languageCode == 'tr'
+                ? 'Şanslı Seçim 🎲'
+                : 'Lucky Pick 🎲',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,

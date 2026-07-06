@@ -1740,12 +1740,21 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                       setState(() {
                                         _justSavedComment = true;
                                       });
-                                      final isGuest = !ref.read(authProvider).isLoggedIn;
-                                      final baseMsg = AppLocalizations.of(context)?.get('review_saved_successfully') ?? 'Review saved successfully';
+                                      final isGuest = !ref
+                                          .read(authProvider)
+                                          .isLoggedIn;
+                                      final baseMsg =
+                                          AppLocalizations.of(
+                                            context,
+                                          )?.get('review_saved_successfully') ??
+                                          'Review saved successfully';
                                       final suffix = isGuest
-                                          ? (AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                              ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
-                                              : ' (Saved locally, will sync when logged in.)')
+                                          ? (AppLocalizations.of(
+                                                      context,
+                                                    )?.locale.languageCode ==
+                                                    'tr'
+                                                ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
+                                                : ' (Saved locally, will sync when logged in.)')
                                           : '';
 
                                       ScaffoldMessenger.of(

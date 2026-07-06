@@ -212,7 +212,9 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.gold.withValues(alpha: c.isLight ? 0.20 : 0.35)),
+        border: Border.all(
+          color: c.gold.withValues(alpha: c.isLight ? 0.20 : 0.35),
+        ),
         boxShadow: c.cardShadow,
       ),
       child: Column(
@@ -355,7 +357,9 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       decoration: BoxDecoration(
         color: c.green.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.green.withValues(alpha: c.isLight ? 0.25 : 0.40)),
+        border: Border.all(
+          color: c.green.withValues(alpha: c.isLight ? 0.25 : 0.40),
+        ),
       ),
       child: Row(
         children: [

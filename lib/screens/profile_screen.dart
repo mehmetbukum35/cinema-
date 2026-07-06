@@ -27,7 +27,6 @@ class ProfileScreen extends ConsumerWidget {
 
   static const _ratingLabels = ['Berbat', 'Eh', 'İyi', 'Harika'];
 
-
   Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
     final c = context.c;
     final confirmed = await showDialog<bool>(
@@ -211,7 +210,9 @@ class ProfileScreen extends ConsumerWidget {
     if (!loading && ref.read(authProvider).isAuthenticated) {
       final total = statsState.value?['total'] as int? ?? 0;
       final userId = ref.read(authProvider).user?['id']?.toString();
-      if (total >= 5 && (_lastPublishedRatingCount != total || _lastPublishedUserId != userId)) {
+      if (total >= 5 &&
+          (_lastPublishedRatingCount != total ||
+              _lastPublishedUserId != userId)) {
         _lastPublishedRatingCount = total;
         _lastPublishedUserId = userId;
         _autoPublishDna(ref);
@@ -321,12 +322,15 @@ class ProfileScreen extends ConsumerWidget {
     final isLoggedIn = auth.isLoggedIn;
     final user = auth.user;
 
-    final String displayName = user?['display_name'] as String? ??
+    final String displayName =
+        user?['display_name'] as String? ??
         user?['username'] as String? ??
         user?['email'] as String? ??
         '';
     final String email = user?['email'] as String? ?? '';
-    final String initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    final String initial = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : '?';
 
     final tr = AppLocalizations.of(context);
 
@@ -348,7 +352,9 @@ class ProfileScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: isLoggedIn ? CinemaGradients.gold : null,
-                color: isLoggedIn ? null : (c.isLight ? c.borderSoft : c.border),
+                color: isLoggedIn
+                    ? null
+                    : (c.isLight ? c.borderSoft : c.border),
               ),
               alignment: Alignment.center,
               child: Text(
@@ -366,7 +372,9 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isLoggedIn ? displayName : (tr?.get('profile_guest') ?? 'Misafir Kullanıcı'),
+                    isLoggedIn
+                        ? displayName
+                        : (tr?.get('profile_guest') ?? 'Misafir Kullanıcı'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -377,13 +385,13 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    isLoggedIn ? email : (tr?.get('profile_not_logged_in') ?? 'Bulut eşitleme aktif değil'),
+                    isLoggedIn
+                        ? email
+                        : (tr?.get('profile_not_logged_in') ??
+                              'Bulut eşitleme aktif değil'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: c.dim,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: c.dim, fontSize: 12),
                   ),
                 ],
               ),
@@ -413,11 +421,17 @@ class ProfileScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                 ),
                 child: Text(
                   tr?.get('auth_title_login') ?? 'Giriş Yap',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
           ],
@@ -482,7 +496,10 @@ class ProfileScreen extends ConsumerWidget {
                         ref.read(themeModeProvider.notifier).toggle();
                       },
                       tooltip: tr?.get('theme_switch') ?? 'Temayı değiştir',
-                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -497,7 +514,10 @@ class ProfileScreen extends ConsumerWidget {
                         ref.invalidate(statsProvider);
                       },
                       tooltip: tr?.get('browse_refresh') ?? 'Yenile',
-                      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -507,9 +527,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           // 1. User Header Card
-          SliverToBoxAdapter(
-            child: _userHeaderCard(context, ref, c),
-          ),
+          SliverToBoxAdapter(child: _userHeaderCard(context, ref, c)),
 
           // 2. Taste Identity Section
           SliverToBoxAdapter(
@@ -528,7 +546,9 @@ class ProfileScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: c.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                    border: c.isLight
+                        ? Border.all(color: c.border, width: 1)
+                        : null,
                     boxShadow: c.cardShadow,
                   ),
                   child: Row(
@@ -628,7 +648,8 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                tr?.get('dna_banner_desc') ?? 'Zevkinin kimliğini keşfet.',
+                                tr?.get('dna_banner_desc') ??
+                                    'Zevkinin kimliğini keşfet.',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.85),
                                   fontSize: 11.5,
@@ -654,7 +675,8 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: SpringButton(
                   onTap: () {
-                    final username = ref.read(authProvider).user?['username'] as String?;
+                    final username =
+                        ref.read(authProvider).user?['username'] as String?;
                     showGeneralDialog(
                       context: context,
                       barrierDismissible: false,
@@ -679,7 +701,9 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF2E93).withValues(alpha: 0.25),
+                          color: const Color(
+                            0xFFFF2E93,
+                          ).withValues(alpha: 0.25),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -698,7 +722,8 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                tr?.get('your_cinema_recap') ?? 'Your Cinema Recap!',
+                                tr?.get('your_cinema_recap') ??
+                                    'Your Cinema Recap!',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -707,7 +732,8 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                tr?.get('discover_your_cinema_journey_o') ?? 'Discover your cinema journey of the year.',
+                                tr?.get('discover_your_cinema_journey_o') ??
+                                    'Discover your cinema journey of the year.',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.85),
                                   fontSize: 11.5,
@@ -729,7 +755,9 @@ class ProfileScreen extends ConsumerWidget {
             ),
 
           // 3. Movie Library Section
-          if (watchlist.isNotEmpty || (stats['ratedMovies'] != null && (stats['ratedMovies'] as List).isNotEmpty)) ...[
+          if (watchlist.isNotEmpty ||
+              (stats['ratedMovies'] != null &&
+                  (stats['ratedMovies'] as List).isNotEmpty)) ...[
             SliverToBoxAdapter(
               child: _sectionHeader(
                 context,
@@ -795,7 +823,8 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
-            if (stats['ratedMovies'] != null && (stats['ratedMovies'] as List).isNotEmpty) ...[
+            if (stats['ratedMovies'] != null &&
+                (stats['ratedMovies'] as List).isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -819,14 +848,17 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: (stats['ratedMovies'] as List).length,
                     itemBuilder: (ctx, i) {
-                      final item = (stats['ratedMovies'] as List)[i] as Map<String, dynamic>;
+                      final item =
+                          (stats['ratedMovies'] as List)[i]
+                              as Map<String, dynamic>;
                       final movie = item['movie'] as Movie;
                       final rating = item['rating'] as int;
                       return _RatedMovieCard(
                         movie: movie,
                         rating: rating,
                         onTap: () => _openDetail(context, ref, movie),
-                        onDelete: () => _confirmDeleteRating(context, ref, movie),
+                        onDelete: () =>
+                            _confirmDeleteRating(context, ref, movie),
                       );
                     },
                   ),
@@ -856,7 +888,9 @@ class ProfileScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: c.surface,
                         borderRadius: BorderRadius.circular(14),
-                        border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                        border: c.isLight
+                            ? Border.all(color: c.border, width: 1)
+                            : null,
                         boxShadow: c.cardShadow,
                       ),
                       child: Column(
@@ -985,7 +1019,9 @@ class ProfileScreen extends ConsumerWidget {
                       color: c.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: c.isLight ? c.border : Colors.white.withValues(alpha: 0.05),
+                        color: c.isLight
+                            ? c.border
+                            : Colors.white.withValues(alpha: 0.05),
                         width: 1,
                       ),
                       boxShadow: c.cardShadow,
@@ -1011,7 +1047,8 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                tr?.get('together_social_title') ?? 'Social & Friends',
+                                tr?.get('together_social_title') ??
+                                    'Social & Friends',
                                 style: TextStyle(
                                   color: c.ink,
                                   fontSize: 16,
@@ -1020,10 +1057,13 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                ref.watch(authProvider).user?['username'] != null
+                                ref.watch(authProvider).user?['username'] !=
+                                        null
                                     ? '@${ref.watch(authProvider).user!['username']}'
-                                    : (tr?.get('see_taste_matches_manage_reque') ??
-                                        'See taste matches, manage requests and activity feeds.'),
+                                    : (tr?.get(
+                                            'see_taste_matches_manage_reque',
+                                          ) ??
+                                          'See taste matches, manage requests and activity feeds.'),
                                 style: TextStyle(color: c.dim, fontSize: 12),
                               ),
                             ],
@@ -1032,7 +1072,10 @@ class ProfileScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Builder(
                           builder: (ctx) {
-                            final pendingCount = ref.watch(socialProvider).pendingReceived.length;
+                            final pendingCount = ref
+                                .watch(socialProvider)
+                                .pendingReceived
+                                .length;
                             if (pendingCount > 0) {
                               return Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1101,7 +1144,9 @@ class ProfileScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: c.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: c.isLight ? Border.all(color: c.border, width: 1) : null,
+                    border: c.isLight
+                        ? Border.all(color: c.border, width: 1)
+                        : null,
                     boxShadow: c.cardShadow,
                   ),
                   child: Row(
@@ -1181,6 +1226,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
   Widget _ratingDistribution(BuildContext context, Map<String, dynamic> stats) {
     final c = context.c;
     final ratingColors = [c.rBerbat, c.rEh, c.rIyi, c.rHarika];

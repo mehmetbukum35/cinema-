@@ -510,11 +510,7 @@ class ApiService {
     final path = friendId != null
         ? '/social/friends/activity?friend_id=$friendId'
         : '/social/friends/activity';
-    final response = await _request(
-      'GET',
-      path,
-      requireAuth: true,
-    );
+    final response = await _request('GET', path, requireAuth: true);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
       return data['activity'] as List<dynamic>;

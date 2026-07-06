@@ -131,8 +131,12 @@ class TmdbService {
       if (year != null) {
         // Strip the year and any surrounding parentheses/brackets
         var cleanQuery = query.replaceAll(yearStr, '').trim();
-        cleanQuery = cleanQuery.replaceAll(RegExp(r'\(\s*\)|\[\s*\]'), '').trim();
-        cleanQuery = cleanQuery.replaceAll(RegExp(r'^[\(\[,\-\s]+|[\)\]\s,\-\s]+$'), '').trim();
+        cleanQuery = cleanQuery
+            .replaceAll(RegExp(r'\(\s*\)|\[\s*\]'), '')
+            .trim();
+        cleanQuery = cleanQuery
+            .replaceAll(RegExp(r'^[\(\[,\-\s]+|[\)\]\s,\-\s]+$'), '')
+            .trim();
 
         if (cleanQuery.isNotEmpty) {
           try {

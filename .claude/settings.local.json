@@ -24,7 +24,13 @@
       "Bash(php -l src/SocialWebRenderer.php)",
       "Bash(php -l src/templates/profile.template.php)",
       "Bash(rm -f /c/Users/mehme/AppData/Local/Temp/claude/E--cinema-/5a206882-f670-487e-a473-248cd2681617/scratchpad/dna_render.php)",
-      "Bash(php -r ' *)"
+      "Bash(php -r ' *)",
+      "Bash(echo \"format exit: $?\")",
+      "Bash(git ls-remote *)",
+      "Bash(echo \"write exit: $?\")",
+      "Bash(echo \"check exit: $?\")",
+      "Bash(git commit -m 'style: apply dart format across recently edited files *)",
+      "Bash(echo \"format gate: $?\")"
     ]
   }
 }

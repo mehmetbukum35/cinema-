@@ -809,7 +809,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                     ? CachedNetworkImage(
                         imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const PulsingPlaceholder(),
+                        placeholder: (context, url) =>
+                            const PulsingPlaceholder(),
                         errorWidget: (context, url, error) => Container(
                           color: c.border,
                           alignment: Alignment.center,
@@ -830,7 +831,11 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.card_giftcard_rounded, color: c.gold, size: 16),
+                      Icon(
+                        Icons.card_giftcard_rounded,
+                        color: c.gold,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -961,7 +966,8 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<FriendActivityScreen> createState() => _FriendActivityScreenState();
+  ConsumerState<FriendActivityScreen> createState() =>
+      _FriendActivityScreenState();
 
   static Widget _buildActivityCard(
     ThemePalette c,
@@ -1027,7 +1033,8 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
                     ? CachedNetworkImage(
                         imageUrl: 'https://image.tmdb.org/t/p/w200$posterPath',
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const PulsingPlaceholder(),
+                        placeholder: (context, url) =>
+                            const PulsingPlaceholder(),
                         errorWidget: (context, url, error) => Container(
                           color: c.border,
                           alignment: Alignment.center,
@@ -1162,7 +1169,8 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
     final c = context.c;
     final socialState = ref.watch(socialProvider);
 
-    final friendActivities = socialState.friendActivities[widget.friendId] ?? [];
+    final friendActivities =
+        socialState.friendActivities[widget.friendId] ?? [];
     final isLoading = socialState.loading && friendActivities.isEmpty;
 
     return Scaffold(
@@ -1273,42 +1281,47 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
               child: isLoading
                   ? Center(child: CircularProgressIndicator(color: c.gold))
                   : friendActivities.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: c.dim.withValues(alpha: 0.1),
-                                ),
-                                child: Icon(
-                                  Icons.history_rounded,
-                                  color: c.dim,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('no_activity_from_this_friend_y') ??
-                                    'No activity from this friend yet.',
-                                style: TextStyle(color: c.dim, fontSize: 13),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: c.dim.withValues(alpha: 0.1),
+                            ),
+                            child: Icon(
+                              Icons.history_rounded,
+                              color: c.dim,
+                              size: 28,
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: friendActivities.length,
-                          itemBuilder: (ctx, i) {
-                            return FriendActivityScreen._buildActivityCard(c, friendActivities[i], ctx, ref);
-                          },
-                        ),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('no_activity_from_this_friend_y') ??
+                                'No activity from this friend yet.',
+                            style: TextStyle(color: c.dim, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: friendActivities.length,
+                      itemBuilder: (ctx, i) {
+                        return FriendActivityScreen._buildActivityCard(
+                          c,
+                          friendActivities[i],
+                          ctx,
+                          ref,
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -1317,17 +1330,20 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
   }
 }
 
-
-Future<void> _openMovieDetail(BuildContext context, WidgetRef ref, int movieId, bool isTv) async {
+Future<void> _openMovieDetail(
+  BuildContext context,
+  WidgetRef ref,
+  int movieId,
+  bool isTv,
+) async {
   final service = ref.read(tmdbServiceProvider);
   final c = context.c;
 
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (dialogCtx) => Center(
-      child: CircularProgressIndicator(color: c.gold),
-    ),
+    builder: (dialogCtx) =>
+        Center(child: CircularProgressIndicator(color: c.gold)),
   );
 
   try {
@@ -1357,9 +1373,9 @@ Future<void> _openMovieDetail(BuildContext context, WidgetRef ref, int movieId, 
   } catch (e) {
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Hata: $e')));
     }
   }
 }

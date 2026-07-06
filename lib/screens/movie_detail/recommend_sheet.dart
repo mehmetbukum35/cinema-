@@ -136,7 +136,9 @@ class RecommendSheetState extends State<RecommendSheet> {
                   onTap: isAnySending
                       ? null
                       : () async {
-                          final parentSm = ScaffoldMessenger.of(widget.parentContext);
+                          final parentSm = ScaffoldMessenger.of(
+                            widget.parentContext,
+                          );
                           final nav = Navigator.of(context);
 
                           setState(() {
@@ -159,7 +161,8 @@ class RecommendSheetState extends State<RecommendSheet> {
                                 behavior: SnackBarBehavior.floating,
                                 backgroundColor: Colors.green,
                                 content: Text(
-                                  tr?.get('recommend_sent') ?? 'Öneri gönderildi!',
+                                  tr?.get('recommend_sent') ??
+                                      'Öneri gönderildi!',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
@@ -175,7 +178,10 @@ class RecommendSheetState extends State<RecommendSheet> {
                                   backgroundColor: c.surface,
                                   title: Row(
                                     children: [
-                                      Icon(Icons.error_outline_rounded, color: c.red),
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        color: c.red,
+                                      ),
                                       const SizedBox(width: 10),
                                       Text(
                                         tr?.get('error') ?? 'Hata',
@@ -184,7 +190,8 @@ class RecommendSheetState extends State<RecommendSheet> {
                                     ],
                                   ),
                                   content: Text(
-                                    widget.ref.read(socialProvider).error ?? 'Öneri gönderilemedi.',
+                                    widget.ref.read(socialProvider).error ??
+                                        'Öneri gönderilemedi.',
                                     style: TextStyle(color: c.dim),
                                   ),
                                   actions: [
@@ -192,7 +199,10 @@ class RecommendSheetState extends State<RecommendSheet> {
                                       onPressed: () => Navigator.pop(dialogCtx),
                                       child: Text(
                                         tr?.get('ok') ?? 'Tamam',
-                                        style: TextStyle(color: c.gold, fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                          color: c.gold,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],

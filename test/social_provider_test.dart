@@ -335,18 +335,21 @@ void main() {
       },
     );
 
-    test('loadFriendActivity should fetch and update friendActivities cache', () async {
-      final notifier = container.read(socialProvider.notifier);
+    test(
+      'loadFriendActivity should fetch and update friendActivities cache',
+      () async {
+        final notifier = container.read(socialProvider.notifier);
 
-      expect(container.read(socialProvider).friendActivities[10], isNull);
+        expect(container.read(socialProvider).friendActivities[10], isNull);
 
-      await notifier.loadFriendActivity(10);
+        await notifier.loadFriendActivity(10);
 
-      expect(mockApi.loadedActivityFriendId, 10);
-      final state = container.read(socialProvider);
-      expect(state.friendActivities[10], hasLength(1));
-      expect(state.friendActivities[10]![0]['movie_id'], 101);
-      expect(state.friendActivities[10]![0]['friend_username'], 'testfriend');
-    });
+        expect(mockApi.loadedActivityFriendId, 10);
+        final state = container.read(socialProvider);
+        expect(state.friendActivities[10], hasLength(1));
+        expect(state.friendActivities[10]![0]['movie_id'], 101);
+        expect(state.friendActivities[10]![0]['friend_username'], 'testfriend');
+      },
+    );
   });
 }
