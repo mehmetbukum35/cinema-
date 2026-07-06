@@ -177,6 +177,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
       'tr': localizations?.get('lang_tr') ?? 'Türk Sineması',
       'ja': localizations?.get('lang_ja') ?? 'Japon Sineması',
       'hi': localizations?.get('lang_hi') ?? 'Bollywood',
+      'fa': localizations?.get('lang_fa') ?? 'İran Sineması',
     };
   }
 

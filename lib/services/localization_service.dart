@@ -139,6 +139,7 @@ class AppLocalizations {
       'lang_tr': 'Turkish Cinema',
       'lang_ja': 'Japanese Cinema',
       'lang_hi': 'Bollywood',
+      'lang_fa': 'Iranian Cinema',
       'lang_all': 'All',
       'lang_unknown': 'Unknown',
       'auth_register_subtitle':
@@ -661,6 +662,7 @@ class AppLocalizations {
       'lang_tr': 'Türk Sineması',
       'lang_ja': 'Japon Sineması',
       'lang_hi': 'Bollywood (Hint)',
+      'lang_fa': 'İran Sineması',
       'lang_all': 'Tümü',
       'lang_unknown': 'Bilinmeyen',
       'auth_register_subtitle':
