@@ -1,4 +1,4 @@
-import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
@@ -6,8 +6,10 @@ import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../services/recommendation_engine.dart';
+import '../services/db_helper.dart';
 import 'watchlist_provider.dart';
 import 'auth_provider.dart';
+import 'social_provider.dart';
 import '../services/sync_service.dart';
 
 class SwipeState {
@@ -65,9 +67,10 @@ class SwipeState {
 class SwipeNotifier extends StateNotifier<SwipeState> {
   final TmdbService _service;
   final RecommendationEngine _engine;
+  final Ref? ref;
   final void Function()? onRated;
 
-  SwipeNotifier(this._service, this._engine, {this.onRated})
+  SwipeNotifier(this._service, this._engine, {this.ref, this.onRated})
     : super(
         SwipeState(
           queue: [],
@@ -129,20 +132,45 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       final likedGenres = await PrefsService.getLikedGenreIds();
       final genreStr = likedGenres.isNotEmpty ? likedGenres.join('|') : null;
 
+      // Kullanıcının dizi/film zevk oranını hesapla (Movie/TV ratio bias)
+      double tvRatio = 0.5;
+      bool includeMovies = true;
+      bool includeTv = true;
+      try {
+        final ratings = await DatabaseHelper().getRatings();
+        if (ratings.length >= 5) {
+          final tvCount = ratings.where((r) => r['isTV'] == true).length;
+          tvRatio = tvCount / ratings.length;
+          includeMovies = tvRatio <= 0.75;
+          includeTv = tvRatio >= 0.25;
+        }
+      } catch (e) {
+        debugPrint("Failed to calculate tvRatio from history: $e");
+      }
+
       final List<Movie> merged;
       if (startLang != null || startProv != null) {
         merged = await _service.discover(
           genreStr: genreStr,
           originalLanguage: startLang,
           providerId: startProv,
+          includeMovies: includeMovies,
+          includeTv: includeTv,
           page: startPage,
         );
       } else {
         if (likedGenres.isNotEmpty) {
           final results = await Future.wait([
-            _service.discover(genreStr: genreStr, page: startPage),
             _service.discover(
               genreStr: genreStr,
+              includeMovies: includeMovies,
+              includeTv: includeTv,
+              page: startPage,
+            ),
+            _service.discover(
+              genreStr: genreStr,
+              includeMovies: includeMovies,
+              includeTv: includeTv,
               page: startPage,
               sortBy: 'vote_average.desc',
             ),
@@ -153,12 +181,22 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
             return seen.add(key);
           }).toList();
         } else {
-          final results = await Future.wait([
-            _service.getPopular(isTV: false, page: startPage),
-            _service.getPopular(isTV: true, page: startPage),
-          ]);
-          final movies = results[0];
-          final shows = results[1];
+          final List<Movie> movies;
+          final List<Movie> shows;
+          if (tvRatio >= 0.75) {
+            movies = const [];
+            shows = await _service.getPopular(isTV: true, page: startPage);
+          } else if (tvRatio <= 0.25) {
+            movies = await _service.getPopular(isTV: false, page: startPage);
+            shows = const [];
+          } else {
+            final results = await Future.wait([
+              _service.getPopular(isTV: false, page: startPage),
+              _service.getPopular(isTV: true, page: startPage),
+            ]);
+            movies = results[0];
+            shows = results[1];
+          }
           merged = <Movie>[];
           for (var i = 0; i < movies.length || i < shows.length; i++) {
             if (i < movies.length) merged.add(movies[i]);
@@ -167,12 +205,6 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         }
       }
 
-      // Öneri Motoru: son "Harika"lar tohum yapılır; adaylar gerekçe/kaynak
-      // etiketiyle döner ("X'i beğendiğin için" rozeti + isabet telemetrisi).
-      // Dil/platform filtresi aktifken seed adayları KATILMAZ: TMDB
-      // similar/recommendations uçları filtre parametresi almadığından bu
-      // adaylar filtreyi deler ("Türk sineması" seçiliyken yabancı film
-      // sızması buradan kaynaklanıyordu).
       final similarCandidates = (startLang == null && startProv == null)
           ? await _engine.fetchSeedCandidates()
           : <Movie>[];
@@ -185,106 +217,44 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         return;
       }
 
-      // Filter out already-rated movies AND movies already in queue AND duplicates
+      final allCandidates = [...merged, ...similarCandidates];
+
+      // Load friend signals from socialProvider state
+      Map<String, List<String>> friendSignals = const {};
+      final refInstance = ref;
+      if (refInstance != null) {
+        try {
+          final rawSignals = refInstance.read(socialProvider).signals;
+          friendSignals = rawSignals.map(
+            (k, v) => MapEntry(
+              k,
+              (v as List<dynamic>).map((e) => e.toString()).toList(),
+            ),
+          );
+        } catch (e) {
+          debugPrint("Failed to read friend signals from provider: $e");
+        }
+      }
+
       final queueKeys = state.queue
           .map((m) => "${m.isTV ? 'tv' : 'movie'}_${m.id}")
           .toSet();
 
-      final allCandidates = [...merged, ...similarCandidates];
-      final seenKeys = <String>{};
-      final freshUnsorted = <Movie>[];
+      final excludedKeys = {...state.ratedIds, ...queueKeys};
 
-      for (final m in allCandidates) {
-        final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
-        if (!state.ratedIds.contains(key) &&
-            !queueKeys.contains(key) &&
-            seenKeys.add(key)) {
-          freshUnsorted.add(m);
-        }
-      }
-
-      // Cosine similarity and jittered ranking
-      final userWeights = await PrefsService.getGenreWeights();
-      final random = Random();
-      final List<Map<String, dynamic>> scoredFresh = [];
-
-      for (final m in freshUnsorted) {
-        final double similarity = PrefsService.calculateSimilarity(
-          userWeights,
-          m.genreIds,
-        );
-        final double rawScore = RecommendationEngine.blend(
-          genreSim: similarity,
-          voteAverage: m.voteAverage,
-        );
-        m.personalizedMatchScore = RecommendationEngine.toDisplayScore(
-          rawScore,
-        );
-        m.recoSource ??= 'discover';
-
-        // Add jitter (±0.08 noise) to dynamically change queue order each time
-        final double jitteredScore =
-            rawScore + (random.nextDouble() * 0.16 - 0.08);
-        scoredFresh.add({'movie': m, 'score': jitteredScore});
-      }
-
-      scoredFresh.sort(
-        (a, b) => (b['score'] as double).compareTo(a['score'] as double),
+      final fresh = await _engine.rankForYou(
+        allCandidates,
+        excludedKeys: excludedKeys,
+        friendSignals: friendSignals,
+        diversify: true,
+        jitter: 0.08,
+        suppressFranchises: true,
       );
-      var fresh = scoredFresh.map((e) => e['movie'] as Movie).toList();
 
-      // ─── Keyword re-rank fazı (ucuz recall → hassas precision) ──────────────
-      // Tür-tabanlı sıralama zaten yapıldı; şimdi görünecek ilk dilimi
-      // (top-K) kullanıcının keyword zevk vektörüyle yeniden puanlayıp
-      // sıralıyoruz. Böylece "seni tanıyor" hissi sıralama seviyesine çıkıyor,
-      // maliyet ise K adet (cache'li) keyword isteğiyle sınırlı kalıyor.
-      final userKwVector = await _engine.buildUserKeywordVector();
-      if (userKwVector.isNotEmpty && fresh.isNotEmpty) {
-        const kRerank = 15;
-        final topSlice = fresh.take(kRerank).toList();
-        final rest = fresh.skip(kRerank).toList();
-
-        final kwLists = await Future.wait(
-          topSlice.map(
-            (m) => _service
-                .getKeywordIds(m.id, isTV: m.isTV)
-                .catchError((_) => <int>[]),
-          ),
-        );
-
-        // Durum re-rank sırasında değiştiyse bu partiyi atla.
-        if (mounted &&
-            state.page == startPage &&
-            state.languageFilter == startLang &&
-            state.providerFilter == startProv) {
-          final reranked = <Map<String, dynamic>>[];
-          for (var i = 0; i < topSlice.length; i++) {
-            final m = topSlice[i];
-            final genreSim = PrefsService.calculateSimilarity(
-              userWeights,
-              m.genreIds,
-            );
-            final kwSim = PrefsService.calculateSimilarity(
-              userKwVector,
-              kwLists[i],
-            );
-            // Harman: tür lider, keyword güçlü ikinci sinyal, TMDB puanı taban.
-            final double raw = RecommendationEngine.blend(
-              genreSim: genreSim,
-              kwSim: kwSim,
-              voteAverage: m.voteAverage,
-            );
-            m.personalizedMatchScore = RecommendationEngine.toDisplayScore(raw);
-            reranked.add({'movie': m, 'score': raw});
-          }
-          reranked.sort(
-            (a, b) => (b['score'] as double).compareTo(a['score'] as double),
-          );
-          fresh = [...reranked.map((e) => e['movie'] as Movie), ...rest];
-        }
-      }
-
-      if (mounted) {
+      if (mounted &&
+          state.page == startPage &&
+          state.languageFilter == startLang &&
+          state.providerFilter == startProv) {
         state = state.copyWith(
           queue: [...state.queue, ...fresh],
           page: state.page + 1,
@@ -363,6 +333,7 @@ final swipeProvider =
       return SwipeNotifier(
         service,
         engine,
+        ref: ref,
         onRated: () {
           ref.read(statsProvider.notifier).load();
           final auth = ref.read(authProvider);

@@ -149,11 +149,12 @@ class RecommendationEngine {
     final vec = <int, double>{};
     try {
       final ratings = await DatabaseHelper().getRatings();
-      final liked = ratings.where((r) => (r['rating'] as int) >= 2).toList()
+      // En son 25 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
+      final sortedRatings = ratings.toList()
         ..sort(
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
         );
-      final seeds = liked.take(15).toList();
+      final seeds = sortedRatings.take(25).toList();
       final nowMs = DateTime.now().millisecondsSinceEpoch;
 
       final kwLists = await Future.wait(
@@ -169,7 +170,18 @@ class RecommendationEngine {
       for (var i = 0; i < seeds.length; i++) {
         final r = seeds[i];
         final rating = r['rating'] as int;
-        final base = rating == 3 ? 2.0 : 1.0; // Harika daha güçlü
+        // Harika -> +2.0, İyi -> +1.0, Eh -> -1.0, Berbat -> -2.0
+        final double base;
+        if (rating == 3) {
+          base = 2.0;
+        } else if (rating == 2) {
+          base = 1.0;
+        } else if (rating == 1) {
+          base = -1.0;
+        } else {
+          base = -2.0;
+        }
+
         final createdAt = r['created_at'] as int;
         final days = (nowMs - createdAt) / 86400000.0;
         final decay = exp(-0.00385 * days);
@@ -187,38 +199,87 @@ class RecommendationEngine {
     return vec;
   }
 
-  /// Son [seedCount] "Harika" (rating=3) yapımı tohum yapıp TMDB
-  /// recommendations + similar uçlarından aday toplar. Her adaya gerekçe
-  /// olarak tohumun adı yazılır ("X'i beğendiğin için").
+  /// Son [seedCount] tohum yapımı (öncelik sırasıyla Harika(3) -> İyi(2) -> Favoriler -> Watchlist)
+  /// tohum yapıp TMDB recommendations + similar uçlarından aday toplar.
+  /// Her adaya gerekçe olarak tohumun adı yazılır ("X'i beğendiğin için").
+  /// Tohum adedi, telemetri verilerine göre dinamik olarak genişletilip daraltılır (Adaptive).
   Future<List<Movie>> fetchSeedCandidates({int seedCount = 3}) async {
     final candidates = <Movie>[];
     try {
-      final ratings = await DatabaseHelper().getRatings();
-      final highRated = ratings.where((r) => r['rating'] == 3).toList()
-        ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
-        );
-      final seeds = highRated.take(seedCount).toList();
-      if (seeds.isEmpty) return candidates;
+      final db = DatabaseHelper();
+      final ratings = await db.getRatings();
+
+      int finalSeedCount = seedCount;
+      try {
+        final telemetry = await PrefsService.getRecoTelemetry();
+        final seedBucket = telemetry['seed'] ?? {'shown': 0, 'liked': 0};
+        final discoverBucket = telemetry['discover'] ?? {'shown': 0, 'liked': 0};
+        
+        final double crSeed = (seedBucket['liked']! + 1) / (seedBucket['shown']! + 2);
+        final double crDiscover = (discoverBucket['liked']! + 1) / (discoverBucket['shown']! + 2);
+        
+        finalSeedCount = (seedCount * (crSeed / crDiscover)).round().clamp(2, 6);
+      } catch (e) {
+        debugPrint("Failed to calculate adaptive seedCount from telemetry: $e");
+      }
+
+      // 1. Oylamalardan tohumlar: Harika (3) ve İyi (2)
+      final harikaSeeds = ratings.where((r) => r['rating'] == 3).toList()
+        ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
+      final iyiSeeds = ratings.where((r) => r['rating'] == 2).toList()
+        ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
+
+      final List<Map<String, dynamic>> ratingSeeds = [...harikaSeeds, ...iyiSeeds];
+      final seedItems = <({int id, bool isTV, String title})>[];
+
+      for (final r in ratingSeeds) {
+        if (seedItems.length >= finalSeedCount) break;
+        final movie = r['movie'] as Movie?;
+        if (movie != null) {
+          seedItems.add((id: movie.id, isTV: movie.isTV, title: movie.title));
+        }
+      }
+
+      // 2. Eksik kalırsa Favorilerden tohum ekle
+      if (seedItems.length < finalSeedCount) {
+        final favMovies = await db.getFavorites(false).catchError((_) => <Movie>[]);
+        final favShows = await db.getFavorites(true).catchError((_) => <Movie>[]);
+        final allFavs = [...favMovies, ...favShows];
+        for (final m in allFavs) {
+          if (seedItems.length >= finalSeedCount) break;
+          if (seedItems.any((s) => s.id == m.id && s.isTV == m.isTV)) continue;
+          seedItems.add((id: m.id, isTV: m.isTV, title: m.title));
+        }
+      }
+
+      // 3. Hala eksik kalırsa Watchlist'ten tohum ekle
+      if (seedItems.length < finalSeedCount) {
+        final watchlist = await db.getWatchlist().catchError((_) => <Movie>[]);
+        for (final m in watchlist) {
+          if (seedItems.length >= finalSeedCount) break;
+          if (seedItems.any((s) => s.id == m.id && s.isTV == m.isTV)) continue;
+          seedItems.add((id: m.id, isTV: m.isTV, title: m.title));
+        }
+      }
+
+      if (seedItems.isEmpty) return candidates;
 
       final results = await Future.wait(
-        seeds.map((s) {
-          final int id = s['id'] as int;
-          final bool isTV = s['isTV'] as bool? ?? false;
+        seedItems.map((s) {
           return Future.wait([
-            _service.getRecommendations(id, isTV: isTV),
-            _service.getSimilar(id, isTV: isTV),
+            _service.getRecommendations(s.id, isTV: s.isTV).catchError((_) => <Movie>[]),
+            _service.getSimilar(s.id, isTV: s.isTV).catchError((_) => <Movie>[]),
           ]);
         }),
       );
 
-      for (var i = 0; i < seeds.length; i++) {
-        final seedTitle = (seeds[i]['movie'] as Movie?)?.title ?? '';
+      for (var i = 0; i < seedItems.length; i++) {
+        final seed = seedItems[i];
         for (final list in results[i]) {
           for (final m in list) {
             m
-              ..recoReason = seedTitle.isNotEmpty ? seedTitle : null
-              ..recoReasonType = seedTitle.isNotEmpty ? 'seed' : null
+              ..recoReason = seed.title.isNotEmpty ? seed.title : null
+              ..recoReasonType = seed.title.isNotEmpty ? 'seed' : null
               ..recoSource = 'seed';
             candidates.add(m);
           }
@@ -228,6 +289,45 @@ class RecommendationEngine {
       debugPrint("Failed to load similar/recommendation seeds: $e\n$st");
     }
     return candidates;
+  }
+
+  /// Eh/Berbat oylanan yapımların benzerlerini bulup engelleme/ceza seti oluşturur.
+  Future<(Set<String> berbatKeys, Set<String> ehKeys)> fetchNegativeSeedKeys() async {
+    final berbatKeys = <String>{};
+    final ehKeys = <String>{};
+    try {
+      final ratings = await DatabaseHelper().getRatings();
+      final disliked = ratings.where((r) => (r['rating'] as int) <= 1).toList()
+        ..sort(
+          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
+        );
+      final seeds = disliked.take(3).toList();
+      if (seeds.isEmpty) return (berbatKeys, ehKeys);
+
+      final results = await Future.wait(
+        seeds.map((s) {
+          final int id = s['id'] as int;
+          final bool isTV = s['isTV'] as bool? ?? false;
+          return Future.wait([
+            _service.getRecommendations(id, isTV: isTV).catchError((_) => <Movie>[]),
+            _service.getSimilar(id, isTV: isTV).catchError((_) => <Movie>[]),
+          ]);
+        }),
+      );
+
+      for (var i = 0; i < seeds.length; i++) {
+        final rating = seeds[i]['rating'] as int;
+        final targetSet = rating == 0 ? berbatKeys : ehKeys;
+        for (final list in results[i]) {
+          for (final m in list) {
+            targetSet.add("${m.isTV ? 'tv' : 'movie'}_${m.id}");
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Failed to fetch negative seeds: $e");
+    }
+    return (berbatKeys, ehKeys);
   }
 
   /// Tam sıralama boru hattı. [candidates] içinden puanlanmış/engellenmişler
@@ -241,13 +341,39 @@ class RecommendationEngine {
     Map<String, List<String>> friendSignals = const {},
     int rerankK = 20,
     bool diversify = true,
+    double jitter = 0.0,
+    bool suppressFranchises = false,
   }) async {
+    // Negatif sinyalleri yükle (similar / recommendations)
+    final (berbatKeys, ehKeys) = await fetchNegativeSeedKeys();
+
+    // Berbat (0) oylanan filmlerin franchise/seri isimlerini yükle (Prefix bastırma için)
+    final ratings = await DatabaseHelper().getRatings();
+    final berbatTitles = ratings
+        .where((r) => (r['rating'] as int) == 0)
+        .map((r) => _normTitle((r['movie'] as Movie?)?.title ?? ''))
+        .where((t) => t.length >= 5)
+        .toList();
+
     // Tekilleştir + dışlananları ele.
     final seen = <String>{};
     final fresh = <Movie>[];
     for (final m in candidates) {
       final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
-      if (!excludedKeys.contains(key) && seen.add(key)) fresh.add(m);
+      
+      // Hard filter: Zaten oylananlar veya sırada olanlar
+      if (excludedKeys.contains(key)) continue;
+
+      // Hard filter: Berbat oylanan filmin recommendations/similar havuzunda olanlar
+      if (berbatKeys.contains(key)) continue;
+
+      // Hard filter: Berbat oylanan bir filmin devamı/serisi olanlar
+      final n = _normTitle(m.title);
+      if (n.length >= 5 && berbatTitles.any((bt) => n.startsWith(bt) || bt.startsWith(n))) {
+        continue;
+      }
+
+      if (seen.add(key)) fresh.add(m);
     }
     if (fresh.isEmpty) return fresh;
 
@@ -260,7 +386,15 @@ class RecommendationEngine {
         userWeights,
         m.genreIds,
       );
-      final raw = blend(genreSim: genreSim, voteAverage: m.voteAverage);
+      
+      // Soft filter: Eh (1) oylanan filmin recommendations/similar havuzunda olanlara puan cezası (-0.25)
+      final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+      double penalty = 0.0;
+      if (ehKeys.contains(key)) {
+        penalty = -0.25;
+      }
+
+      final raw = blend(genreSim: genreSim, voteAverage: m.voteAverage) + penalty;
       m.personalizedMatchScore = toDisplayScore(raw);
       m.recoSource ??= 'discover';
       scored.add(ScoredMovie(m, raw));
@@ -286,11 +420,19 @@ class RecommendationEngine {
           m.genreIds,
         );
         final kwSim = PrefsService.calculateSimilarity(kwVector, kwLists[i]);
+        
+        // Soft filter penalty check again in re-rank phase
+        final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+        double penalty = 0.0;
+        if (ehKeys.contains(key)) {
+          penalty = -0.25;
+        }
+
         final raw = blend(
           genreSim: genreSim,
           kwSim: kwSim,
           voteAverage: m.voteAverage,
-        );
+        ) + penalty;
         m.personalizedMatchScore = toDisplayScore(raw);
         top[i].score = raw;
       }
@@ -299,9 +441,21 @@ class RecommendationEngine {
     // Sosyal kanıt: arkadaş sinyali olan adayları yükselt + gerekçele.
     applyFriendSignals(scored, friendSignals);
 
+    // Keşif için jitter (gürültü) ekle (yalnızca swipe kuyruğunda kullanılabilir)
+    if (jitter > 0.0) {
+      final random = Random();
+      for (final s in scored) {
+        s.score += (random.nextDouble() * 2 * jitter) - jitter;
+      }
+    }
+
     scored.sort((a, b) => b.score.compareTo(a.score));
     final ordered = diversify ? applyDiversity(scored) : scored;
-    return ordered.map((s) => s.movie).toList();
+    var result = ordered.map((s) => s.movie).toList();
+    if (suppressFranchises) {
+      result = suppressFranchiseDuplicates(result);
+    }
+    return result;
   }
 
   // ── "Benzer film bul" (anchor-tabanlı benzerlik) ─────────────────────────

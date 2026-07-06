@@ -1,6 +1,13 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
+import 'package:ne_izlesem/services/tmdb_service.dart';
+import 'package:ne_izlesem/services/prefs_service.dart';
+import 'mocks/secure_storage_mock.dart';
 
 Movie _movie(
   int id, {
@@ -20,6 +27,9 @@ Movie _movie(
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setupSecureStorageMock();
+
   group('RecommendationEngine.blend', () {
     test('keyword yokken 0.7/0.3 tür+puan harmanı uygular', () {
       final raw = RecommendationEngine.blend(genreSim: 0.5, voteAverage: 8.0);
@@ -220,6 +230,223 @@ void main() {
       final ordered = [_movie(1, title: 'Up'), _movie(2, title: 'Us')];
       final kept = RecommendationEngine.suppressFranchiseDuplicates(ordered);
       expect(kept.length, 2);
+    });
+  });
+
+  group('RecommendationEngine Negative Signals Integration Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    test('buildUserKeywordVector, Berbat (0) ve Eh (1) oylarına negatif ağırlık vermelidir', () async {
+      // Mock ratings: ID 10 (Harika=3), ID 20 (Berbat=0)
+      await PrefsService.saveRating(
+        movieId: 10,
+        isTV: false,
+        rating: 3,
+        genreIds: [28],
+      );
+      await PrefsService.saveRating(
+        movieId: 20,
+        isTV: false,
+        rating: 0,
+        genreIds: [35],
+      );
+
+      final client = MockClient((request) async {
+        if (request.url.path.contains('/10/keywords')) {
+          return http.Response(jsonEncode({
+            'keywords': [{'id': 100, 'name': 'action'}]
+          }), 200);
+        } else if (request.url.path.contains('/20/keywords')) {
+          return http.Response(jsonEncode({
+            'keywords': [{'id': 200, 'name': 'comedy'}]
+          }), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final service = TmdbService(client: client);
+      final engine = RecommendationEngine(service);
+
+      final vector = await engine.buildUserKeywordVector();
+
+      // Harika olanın keywordü pozitif olmalı, Berbat olanınki negatif
+      expect(vector[100], greaterThan(0.0));
+      expect(vector[200], lessThan(0.0));
+    });
+
+    test('rankForYou, Berbat oylanan filmlerin benzerlerini ve devam serilerini filtrelemelidir', () async {
+      // Berbat oylanan film: "Iron Man" (ID: 50)
+      await PrefsService.saveRating(
+        movieId: 50,
+        isTV: false,
+        rating: 0,
+        genreIds: [28],
+        comment: 'bad',
+      );
+      // Biz "Iron Man" filminin title'ını test veritabanında kaydetmek için saveRating'e movie nesnesini de vermeliyiz.
+      // DatabaseHelper mock'u `movie` parametresi verilirse başlığı oradan çeker:
+      final movieObj = _movie(50, title: 'Iron Man');
+      await PrefsService.saveRating(
+        movie: movieObj,
+        rating: 0,
+      );
+
+      final client = MockClient((request) async {
+        // Berbat filmin similar/recommendation isteklerine ID: 51'i dönelim (similar to Iron Man)
+        if (request.url.path.contains('/50/recommendations') || request.url.path.contains('/50/similar')) {
+          return http.Response(jsonEncode({
+            'results': [
+              {
+                'id': 51,
+                'title': 'Iron Man Similar',
+                'vote_average': 7.5,
+                'genre_ids': [28],
+                'poster_path': '/p.jpg',
+                'vote_count': 100
+              }
+            ]
+          }), 200);
+        }
+        // Boş keyword dön
+        return http.Response(jsonEncode({'keywords': []}), 200);
+      });
+
+      final service = TmdbService(client: client);
+      final engine = RecommendationEngine(service);
+
+      // Adaylar:
+      // 1. Movie 99 (Alakasız film)
+      // 2. Movie 51 (Iron Man'in benzeri -> berbatKeys içinde filtrelenmeli)
+      // 3. Movie 102 (Başlığı "Iron Man 2" -> franchise filtresi ile elenmeli)
+      final candidates = [
+        _movie(99, title: 'Inception'),
+        _movie(51, title: 'Iron Man Similar'),
+        _movie(102, title: 'Iron Man 2'),
+      ];
+
+      final ranked = await engine.rankForYou(candidates);
+
+      // Sadece 'Inception' (99) kalmalı
+      expect(ranked.length, 1);
+      expect(ranked.first.id, 99);
+    });
+  });
+
+  group('RecommendationEngine Fallback Seeds Integration Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    test('fetchSeedCandidates, oylama yoksa sırasıyla Favoriler ve Watchlist tohumlarını kullanmalıdır', () async {
+      // 1. Favorilere "Fav Movie" (ID: 200) ekle
+      final favMovie = _movie(200, title: 'Fav Movie');
+      await PrefsService.saveFavoriteMovies([favMovie]);
+
+      // 2. Watchlist'e "Watchlist Movie" (ID: 300) ekle
+      final watchMovie = _movie(300, title: 'Watchlist Movie');
+      await PrefsService.addToWatchlist(watchMovie);
+
+      final client = MockClient((request) async {
+        // ID 200 ve 300 için mock responses
+        if (request.url.path.contains('/200/recommendations') || request.url.path.contains('/200/similar')) {
+          return http.Response(jsonEncode({
+            'results': [
+              {
+                'id': 201,
+                'title': 'Fav Movie Similar',
+                'vote_average': 8.0,
+                'genre_ids': [28],
+                'poster_path': '/fav.jpg',
+                'vote_count': 100
+              }
+            ]
+          }), 200);
+        }
+        if (request.url.path.contains('/300/recommendations') || request.url.path.contains('/300/similar')) {
+          return http.Response(jsonEncode({
+            'results': [
+              {
+                'id': 301,
+                'title': 'Watchlist Movie Similar',
+                'vote_average': 7.0,
+                'genre_ids': [28],
+                'poster_path': '/watch.jpg',
+                'vote_count': 100
+              }
+            ]
+          }), 200);
+        }
+        return http.Response(jsonEncode({'results': []}), 200);
+      });
+
+      final service = TmdbService(client: client);
+      final engine = RecommendationEngine(service);
+
+      // seedCount: 2 veriyoruz. İlk tohum favori (200), ikinci tohum watchlist (300) olmalı.
+      final seeds = await engine.fetchSeedCandidates(seedCount: 2);
+
+      // Toplamda 4 aday (200 için similarity + recommendations, 300 için similarity + recommendations)
+      // Ancak bizim mock client her istek için 1 film dönüyor. Yani her tohum için 2 film. Toplam 4 film olmalı.
+      expect(seeds.length, 4);
+
+      // Gerekçeleri kontrol et: en az bir tanesi favori, diğeri watchlist başlığı olmalı.
+      final reasons = seeds.map((m) => m.recoReason).toSet();
+      expect(reasons.contains('Fav Movie'), isTrue);
+      expect(reasons.contains('Watchlist Movie'), isTrue);
+    });
+  });
+
+  group('RecommendationEngine Adaptive Telemetry Integration Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    test('fetchSeedCandidates, tohum telemetrisi iyi ise tohum sayısını dinamik olarak artırmalıdır (6ya kadar)', () async {
+      // 1. Telemetriyi mock SharedPreferences'a kaydet (seed=8/10, discover=2/10)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reco_telemetry_v1', jsonEncode({
+        'seed': {'shown': 10, 'liked': 8},
+        'discover': {'shown': 10, 'liked': 2}
+      }));
+
+      // 2. Ratings veritabanına 6 tane "Harika" film kaydet
+      for (int i = 1; i <= 6; i++) {
+        final movie = _movie(100 + i, title: 'Seed Movie $i');
+        await PrefsService.saveRating(
+          movie: movie,
+          rating: 3,
+        );
+      }
+
+      final client = MockClient((request) async {
+        // Her tohum isteğine 1 adet film dön
+        return http.Response(jsonEncode({
+          'results': [
+            {
+              'id': 999,
+              'title': 'Recommendation',
+              'vote_average': 7.0,
+              'genre_ids': [28],
+              'poster_path': '/p.jpg',
+              'vote_count': 100
+            }
+          ]
+        }), 200);
+      });
+
+      final service = TmdbService(client: client);
+      final engine = RecommendationEngine(service);
+
+      // seedCount normalde 3 ama telemetriye göre 6'ya genişlemeli
+      final seeds = await engine.fetchSeedCandidates(seedCount: 3);
+
+      // 6 tohum * 2 istek (recommendations + similar) * 1 film = 12 aday
+      expect(seeds.length, 12);
     });
   });
 }
