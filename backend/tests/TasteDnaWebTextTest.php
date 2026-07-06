@@ -108,4 +108,46 @@ class TasteDnaWebTextTest extends TestCase
         $this->assertStringContainsString('%78', $with['accuracy']);
         $this->assertStringContainsString('20', $with['accuracy']);
     }
+
+    public function testHandlesSecondaryArchetype(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'dark_chronicler',
+            'secondary_archetype' => 'world_builder',
+            'total_rated' => 20,
+        ]);
+        $this->assertNotNull($view);
+        $this->assertSame('Karanlık Anlatıcı + Dünya Kâşifi', $view['archetype']);
+    }
+
+    public function testHandlesNullableDepthAndCritic(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'depth' => null,
+            'critic' => null,
+        ]);
+        $this->assertNotNull($view);
+        $this->assertCount(1, $view['signals']); // Era signal is still there, depth and critic are omitted
+        $this->assertStringContainsString('Zaman gezgini', $view['signals'][0]);
+    }
+
+    public function testBuildsThemesWithEvidence(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'themes' => ['revenge'],
+            'theme_evidence' => [
+                'revenge' => [
+                    ['id' => 101, 'title' => 'Oldboy', 'poster_path' => '/old.jpg']
+                ]
+            ]
+        ]);
+        $this->assertNotNull($view);
+        $this->assertCount(1, $view['themes_with_evidence']);
+        $this->assertSame('İntikam', $view['themes_with_evidence'][0]['name']);
+        $this->assertSame('Oldboy', $view['themes_with_evidence'][0]['movies'][0]['title']);
+    }
 }

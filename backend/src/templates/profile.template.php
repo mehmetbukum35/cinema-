@@ -147,6 +147,51 @@
             color: var(--ink);
             border-color: var(--border);
         }
+        .dna-themes-evidence {
+            margin-top: 24px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .dna-theme-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .dna-theme-row .theme-name {
+            align-self: flex-start;
+        }
+        .dna-theme-posters {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .dna-theme-poster-wrapper {
+            position: relative;
+            width: 50px;
+            height: 75px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            background-color: var(--surface);
+        }
+        .dna-theme-poster {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .dna-theme-poster.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--dim);
+        }
         .dna-signals {
             text-align: left;
             margin-top: 22px;
@@ -320,7 +365,26 @@
                 <div class="dna-name"><?php echo htmlspecialchars($dna['archetype']); ?></div>
                 <div class="dna-essence"><?php echo htmlspecialchars($dna['essence']); ?></div>
 
-                <?php if (!empty($dna['themes'])): ?>
+                <?php if (!empty($dna['themes_with_evidence'])): ?>
+                    <div class="dna-themes-evidence">
+                        <?php foreach ($dna['themes_with_evidence'] as $item): ?>
+                            <div class="dna-theme-row">
+                                <span class="dna-chip theme-name"><?php echo htmlspecialchars($item['name']); ?></span>
+                                <div class="dna-theme-posters">
+                                    <?php foreach ($item['movies'] as $m): ?>
+                                        <div class="dna-theme-poster-wrapper" title="<?php echo htmlspecialchars($m['title']); ?>">
+                                            <?php if (!empty($m['poster_path'])): ?>
+                                                <img class="dna-theme-poster" src="https://image.tmdb.org/t/p/w92<?php echo htmlspecialchars($m['poster_path']); ?>" alt="<?php echo htmlspecialchars($m['title']); ?>">
+                                            <?php else: ?>
+                                                <div class="dna-theme-poster empty">🎬</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php elseif (!empty($dna['themes'])): ?>
                     <div class="dna-chips">
                         <?php foreach ($dna['themes'] as $t): ?>
                             <span class="dna-chip"><?php echo htmlspecialchars($t); ?></span>

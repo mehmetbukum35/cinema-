@@ -192,9 +192,20 @@ class ProfileScreen extends ConsumerWidget {
   void _autoPublishDna(WidgetRef ref) {
     Future.microtask(() async {
       try {
-        final dna = await ref.read(tasteDnaServiceProvider).generate();
-        await ref.read(apiServiceProvider).publishTasteDna(dna.toJson());
-        debugPrint("Background DNA auto-publish succeeded!");
+        final userId = ref.read(authProvider).user?['id']?.toString();
+        final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
+
+        final cachedData = await PrefsService.getCachedDna();
+        final currentHash = cachedData?['hash'];
+        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+
+        if (currentHash != null && currentHash != lastPublishedHash) {
+          await ref.read(apiServiceProvider).publishTasteDna(dna.toJson());
+          await PrefsService.setLastPublishedDnaHash(currentHash);
+          debugPrint("Background DNA auto-publish succeeded!");
+        } else {
+          debugPrint("Background DNA auto-publish skipped (already up to date).");
+        }
       } catch (e) {
         debugPrint("Background DNA auto-publish failed: $e");
       }

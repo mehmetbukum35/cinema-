@@ -47,6 +47,7 @@ class RecommendationEngine {
     if (isNegativeChange) {
       _cachedNegativeKeys = null;
     }
+    PrefsService.clearDnaCache();
   }
 
   /// Eski çağrılar için geriye dönük uyumluluk metodu.

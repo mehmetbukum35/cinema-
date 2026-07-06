@@ -460,6 +460,7 @@ class DatabaseHelper {
           'rating': m['rating'] as int,
           'genreIds': genreIdsList,
           'created_at': m['created_at'] as int,
+          'updated_at': m['updated_at'] as int? ?? m['created_at'] as int,
           'movie': Movie(
             id: m['movie_id'] as int,
             title: m['title'] as String? ?? '',
@@ -491,6 +492,7 @@ class DatabaseHelper {
         'rating': m['rating'] as int,
         'genreIds': genreIdsList,
         'created_at': m['created_at'] as int,
+        'updated_at': m['updated_at'] as int,
         'movie': Movie(
           id: m['movie_id'] as int,
           title: m['title'] as String? ?? '',

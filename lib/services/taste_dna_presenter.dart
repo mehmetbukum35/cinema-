@@ -158,8 +158,15 @@ class TasteDnaPresenter {
   };
 
   // ── Arketip ──
-  String get archetypeName =>
-      _t('dna_arch_${dna.archetypeKey}', _archetypeFallback);
+  // ── Arketip ──
+  String get archetypeName {
+    final primary = _t('dna_arch_${dna.archetypeKey}', _archetypeFallback);
+    if (dna.secondaryArchetypeKey != null) {
+      final secondary = _t('dna_arch_${dna.secondaryArchetypeKey!}', _secondaryFallback);
+      return "$primary + $secondary";
+    }
+    return primary;
+  }
   String get archetypeEmoji => _archetypeEmoji[dna.archetypeKey] ?? '🎬';
   String get archetypeEssence =>
       _t('dna_ess_${dna.archetypeKey}', _essenceFallback);
@@ -175,7 +182,7 @@ class TasteDnaPresenter {
     'genre_nomad': '🧭',
   };
 
-  String get _archetypeFallback => switch (dna.archetypeKey) {
+  String _fallbackNameFor(String key) => switch (key) {
     'dark_chronicler' => 'Karanlık Anlatıcı',
     'emotion_seeker' => 'Duygu Avcısı',
     'world_builder' => 'Dünya Kâşifi',
@@ -186,6 +193,9 @@ class TasteDnaPresenter {
     _ => 'Tür Göçebesi',
   };
 
+  String get _archetypeFallback => _fallbackNameFor(dna.archetypeKey);
+  String get _secondaryFallback => dna.secondaryArchetypeKey != null ? _fallbackNameFor(dna.secondaryArchetypeKey!) : '';
+
   String get _essenceFallback => switch (dna.archetypeKey) {
     'dark_chronicler' => 'Gölgelere, gerilime ve ahlaki griliğe çekiliyorsun.',
     'emotion_seeker' => 'Kalbe dokunan, insanı anlatan hikâyelerin peşindesin.',
@@ -193,7 +203,7 @@ class TasteDnaPresenter {
     'adrenaline_junkie' => 'Tempo, aksiyon ve macera senin yakıtın.',
     'joy_chaser' => 'Kahkaha ve hafiflik senin sığınağın.',
     'truth_seeker' => 'Gerçek hikâyeler ve geçmişin dersleri ilgini çekiyor.',
-    'eternal_child' => 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
+    'eternal_child' => 'İçindeki child hiç büyümedi — ve bu çok iyi.',
     _ => 'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
   };
 
@@ -223,46 +233,50 @@ class TasteDnaPresenter {
     );
 
     // Derinlik
-    out.add(
-      TasteDnaSignal(
-        icon: 'depth',
-        text: switch (dna.depthKey) {
-          'deep_digger' => _t(
-            'dna_depth_deep',
-            'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyorsun.',
-          ),
-          'zeitgeist' => _t(
-            'dna_depth_zeit',
-            'Zeitgeist takipçisi — anın nabzını tutuyorsun.',
-          ),
-          _ => _t(
-            'dna_depth_balanced',
-            'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyorsun.',
-          ),
-        },
-      ),
-    );
+    if (dna.depthKey != null) {
+      out.add(
+        TasteDnaSignal(
+          icon: 'depth',
+          text: switch (dna.depthKey!) {
+            'deep_digger' => _t(
+              'dna_depth_deep',
+              'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyorsun.',
+            ),
+            'zeitgeist' => _t(
+              'dna_depth_zeit',
+              'Zeitgeist takipçisi — anın nabzını tutuyorsun.',
+            ),
+            _ => _t(
+              'dna_depth_balanced',
+              'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyorsun.',
+            ),
+          },
+        ),
+      );
+    }
 
     // Eleştirmen profili
-    out.add(
-      TasteDnaSignal(
-        icon: 'critic',
-        text: switch (dna.criticKey) {
-          'tough' => _t(
-            'dna_critic_tough',
-            'Sert eleştirmen — puanlarının yalnızca {p} "Harika".',
-          ).replaceFirst('{p}', _pctPossessive(dna.harikaShare)),
-          'generous' => _t(
-            'dna_critic_generous',
-            'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
-          ),
-          _ => _t(
-            'dna_critic_balanced',
-            'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
-          ),
-        },
-      ),
-    );
+    if (dna.criticKey != null) {
+      out.add(
+        TasteDnaSignal(
+          icon: 'critic',
+          text: switch (dna.criticKey!) {
+            'tough' => _t(
+              'dna_critic_tough',
+              'Sert eleştirmen — puanlarının yalnızca {p} "Harika".',
+            ).replaceFirst('{p}', _pctPossessive(dna.harikaShare)),
+            'generous' => _t(
+              'dna_critic_generous',
+              'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
+            ),
+            _ => _t(
+              'dna_critic_balanced',
+              'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
+            ),
+          },
+        ),
+      );
+    }
 
     // Kör nokta
     if (dna.blindSpotGenre != null) {

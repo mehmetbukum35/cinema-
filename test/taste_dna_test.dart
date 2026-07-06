@@ -282,26 +282,114 @@ void main() {
     });
   });
 
-  group('TasteDna serileştirme', () {
-    test('toJson/fromJson round-trip', () {
+  group('TasteDnaService.compute — cluster ağırlık harmanlama (arketip)', () {
+    test('ikincil arketip tespiti', () {
+      // Dark (27, Korku) ağırlığı: 3.0. World (878, Bilim Kurgu) ağırlığı: 2.0.
+      // Her ikisi de 1.5 barajını geçer ve oran 2.0 / 3.0 = 66% (> 40% barajı).
+      // Dolayısıyla primary = dark_chronicler, secondary = world_builder olmalıdır.
       final dna = TasteDnaService.compute(
         ratings: [
-          _r(rating: 3, genres: [27], year: 2020, popularity: 10),
-          _r(rating: 3, genres: [53], year: 2019, popularity: 15),
-          _r(rating: 2, genres: [27], year: 2021, popularity: 20),
-          _r(rating: 0, genres: [35]),
+          _r(rating: 3, genres: [27]), // Korku (+2.0)
+          _r(rating: 2, genres: [27]), // Korku (+1.0)
+          _r(rating: 3, genres: [878]), // B.Kurgu (+2.0)
+          _r(rating: 1, genres: [35]), // Komedi (beğenilmedi, 0)
           _r(rating: 1, genres: [35]),
         ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.archetypeKey, 'dark_chronicler');
+      expect(dna.secondaryArchetypeKey, 'world_builder');
+    });
+
+    test('zayıf ikincil arketip elenir', () {
+      // Dark ağırlığı: 3.0. World ağırlığı: 1.0 (baraj altı).
+      // Dolayısıyla secondaryArchetypeKey = null olmalıdır.
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: 3, genres: [27]),
+          _r(rating: 2, genres: [27]),
+          _r(rating: 2, genres: [878]),
+          _r(rating: 1, genres: [35]),
+          _r(rating: 1, genres: [35]),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.archetypeKey, 'dark_chronicler');
+      expect(dna.secondaryArchetypeKey, isNull);
+    });
+  });
+
+  group('TasteDnaService.compute — yetersiz veri durumunda sinyal gizleme', () {
+    test('popülerlik örneklemi < 4 ise depthKey null olur', () {
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: 3, popularity: 10),
+          _r(rating: 3, popularity: 10),
+          _r(rating: 3, popularity: 10),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.depthKey, isNull);
+    });
+
+    test('toplam oylama < 8 ise criticKey null olur', () {
+      final dna = TasteDnaService.compute(
+        ratings: [
+          for (var i = 0; i < 7; i++) _r(rating: 3),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        nowMs: _now,
+      );
+      expect(dna.criticKey, isNull);
+    });
+  });
+
+  group('TasteDna serileştirme', () {
+    test('toJson/fromJson round-trip', () {
+      final dna = TasteDna(
+        archetypeKey: 'dark_chronicler',
+        secondaryArchetypeKey: 'world_builder',
+        topGenres: const [27, 53],
+        blindSpotGenre: 35,
         themes: const ['intikam', 'distopya'],
+        themeEvidence: {
+          'intikam': [
+            DnaMovieRef(id: 101, title: 'Oldboy', posterPath: '/old.jpg', isTV: false),
+          ]
+        },
+        eraKey: 'modern',
+        modernShare: 0.75,
+        depthKey: 'deep_digger',
+        criticKey: 'tough',
+        harikaShare: 0.12,
+        shiftFromGenre: 28,
+        shiftToGenre: 18,
         accuracy: 0.75,
         accuracySample: 12,
-        nowMs: _now,
+        totalRated: 20,
+        generatedAt: _now,
       );
       final round = TasteDna.fromJson(dna.toJson());
       expect(round.archetypeKey, dna.archetypeKey);
+      expect(round.secondaryArchetypeKey, dna.secondaryArchetypeKey);
       expect(round.topGenres, dna.topGenres);
       expect(round.themes, dna.themes);
+      expect(round.themeEvidence['intikam']?.first.title, 'Oldboy');
+      expect(round.themeEvidence['intikam']?.first.posterUrl, contains('/old.jpg'));
       expect(round.eraKey, dna.eraKey);
+      expect(round.depthKey, dna.depthKey);
+      expect(round.criticKey, dna.criticKey);
       expect(round.accuracy, dna.accuracy);
       expect(round.totalRated, dna.totalRated);
       expect(round.isReady, isTrue);

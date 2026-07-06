@@ -658,6 +658,7 @@ class PrefsService {
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyUserData);
     await prefs.remove(_keyLastSyncTime);
+    await clearDnaCache();
   }
 
   static Future<int?> getMovieRating(int movieId, bool isTV) async {
@@ -670,6 +671,48 @@ class PrefsService {
       orElse: () => <String, dynamic>{},
     );
     return match.isNotEmpty ? match['rating'] as int : null;
+  }
+
+  // ─── DNA Caching ─────────────────────────────────────────────────────────────
+  static const _keyLastDnaJson = 'last_dna_json';
+  static const _keyLastDnaInputHash = 'last_dna_input_hash';
+  static const _keyLastPublishedDnaHash = 'last_published_dna_hash';
+
+  static Future<Map<String, String>?> getCachedDna() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_keyLastDnaJson);
+    final hash = prefs.getString(_keyLastDnaInputHash);
+    if (json != null && hash != null) {
+      return {'json': json, 'hash': hash};
+    }
+    return null;
+  }
+
+  static Future<void> cacheDna(String json, String hash) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLastDnaJson, json);
+    await prefs.setString(_keyLastDnaInputHash, hash);
+  }
+
+  static Future<String?> getLastPublishedDnaHash() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyLastPublishedDnaHash);
+  }
+
+  static Future<void> setLastPublishedDnaHash(String? hash) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (hash == null) {
+      await prefs.remove(_keyLastPublishedDnaHash);
+    } else {
+      await prefs.setString(_keyLastPublishedDnaHash, hash);
+    }
+  }
+
+  static Future<void> clearDnaCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyLastDnaJson);
+    await prefs.remove(_keyLastDnaInputHash);
+    await prefs.remove(_keyLastPublishedDnaHash);
   }
 
   static Future<bool> isSwipeGuideShown() async {

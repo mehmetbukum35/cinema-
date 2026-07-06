@@ -129,6 +129,15 @@ class TasteDnaWebText
 
         $archKey = (string) ($dna['archetype'] ?? 'genre_nomad');
         $arch = self::ARCHETYPES[$archKey] ?? self::ARCHETYPES['genre_nomad'];
+        $archetypeName = $arch[1];
+
+        if (!empty($dna['secondary_archetype'])) {
+            $secKey = (string) $dna['secondary_archetype'];
+            $secArch = self::ARCHETYPES[$secKey] ?? null;
+            if ($secArch) {
+                $archetypeName .= ' + ' . $secArch[1];
+            }
+        }
 
         // Temalar: sözlükten Türkçeye çevrilir; eşleşme yoksa İngilizce kalır.
         $themes = [];
@@ -163,20 +172,24 @@ class TasteDnaWebText
             default => 'Zaman gezgini — her dönemde kendini evinde hissediyor.',
         };
 
-        $depth = (string) ($dna['depth'] ?? 'balanced');
-        $signals[] = match ($depth) {
-            'deep_digger' => 'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyor.',
-            'zeitgeist' => 'Zeitgeist takipçisi — anın nabzını tutuyor.',
-            default => 'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyor.',
-        };
+        $depth = isset($dna['depth']) && $dna['depth'] !== null ? (string) $dna['depth'] : null;
+        if ($depth !== null) {
+            $signals[] = match ($depth) {
+                'deep_digger' => 'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyor.',
+                'zeitgeist' => 'Zeitgeist takipçisi — anın nabzını tutuyor.',
+                default => 'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyor.',
+            };
+        }
 
-        $critic = (string) ($dna['critic'] ?? 'balanced');
-        $harikaShare = (float) ($dna['harika_share'] ?? 0);
-        $signals[] = match ($critic) {
-            'tough' => 'Sert eleştirmen — puanlarının yalnızca ' . self::pctPossessive($harikaShare) . ' "Harika".',
-            'generous' => 'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyor.',
-            default => 'Ölçülü eleştirmen — övgüsü de eleştirisi de yerini biliyor.',
-        };
+        $critic = isset($dna['critic']) && $dna['critic'] !== null ? (string) $dna['critic'] : null;
+        if ($critic !== null) {
+            $harikaShare = (float) ($dna['harika_share'] ?? 0);
+            $signals[] = match ($critic) {
+                'tough' => 'Sert eleştirmen — puanlarının yalnızca ' . self::pctPossessive($harikaShare) . ' "Harika".',
+                'generous' => 'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyor.',
+                default => 'Ölçülü eleştirmen — övgüsü de eleştirisi de yerini biliyor.',
+            };
+        }
 
         if (isset($dna['blind_spot']) && $dna['blind_spot'] !== null) {
             $signals[] = 'Kör noktası: ' . self::genreName((int) $dna['blind_spot']) . ' — pek hitap etmiyor.';
@@ -197,14 +210,29 @@ class TasteDnaWebText
                 . ' isabetle tanıyor — ' . $sample . ' öneri üzerinden.';
         }
 
+        // Temalar ve kanıt filmleri
+        $themesWithEvidence = [];
+        if (isset($dna['theme_evidence']) && is_array($dna['theme_evidence'])) {
+            foreach ($themes as $i => $themeName) {
+                $engKey = $dna['themes'][$i] ?? null;
+                if ($engKey && isset($dna['theme_evidence'][$engKey])) {
+                    $themesWithEvidence[] = [
+                        'name' => $themeName,
+                        'movies' => $dna['theme_evidence'][$engKey],
+                    ];
+                }
+            }
+        }
+
         return [
             'emoji' => $arch[0],
-            'archetype' => $arch[1],
+            'archetype' => $archetypeName,
             'essence' => $arch[2],
             'themes' => array_slice($themes, 0, 5),
             'genres' => array_slice($genres, 0, 3),
             'signals' => $signals,
             'accuracy' => $accuracy,
+            'themes_with_evidence' => $themesWithEvidence,
         ];
     }
 }

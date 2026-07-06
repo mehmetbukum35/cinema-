@@ -1,17 +1,21 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../models/movie.dart';
 import '../models/taste_dna.dart';
 import '../services/api_service.dart';
 import '../services/localization_service.dart';
+import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../services/taste_dna_presenter.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
+import 'movie_detail_sheet.dart';
 
 /// "Sinema DNA'n" — gizli öneri motorunu kullanıcının görebileceği, kişisel ve
 /// paylaşılabilir bir kimliğe çeviren görsel eser. Uygulamanın "seni tanıyorum"
@@ -40,14 +44,22 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       _error = null;
     });
     try {
-      final dna = await ref.read(tasteDnaServiceProvider).generate();
+      final userId = ref.read(authProvider).user?['id']?.toString();
+      final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
       // Snapshot'ı arka planda backend'e yayınla (public web kartı için).
       // Best-effort: başarısızsa ekran yine de görünür.
       if (ref.read(authProvider).isAuthenticated) {
-        ref
-            .read(apiServiceProvider)
-            .publishTasteDna(dna.toJson())
-            .catchError((e) => debugPrint('DNA publish failed: $e'));
+        final cachedData = await PrefsService.getCachedDna();
+        final currentHash = cachedData?['hash'];
+        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+
+        if (currentHash != null && currentHash != lastPublishedHash) {
+          ref
+              .read(apiServiceProvider)
+              .publishTasteDna(dna.toJson())
+              .then((_) => PrefsService.setLastPublishedDnaHash(currentHash))
+              .catchError((e) => debugPrint('DNA publish failed: $e'));
+        }
       }
       if (!mounted) return;
       setState(() {
@@ -171,7 +183,17 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           const SizedBox(height: 20),
           _sectionLabel(c, tr?.get('dna_themes') ?? 'Tekrar eden temaların'),
           const SizedBox(height: 10),
-          _chips(c, p.themeChips, accent: true),
+          if (dna.themeEvidence.isNotEmpty)
+            ...dna.themes.map((t) {
+              final idx = dna.themes.indexOf(t);
+              if (idx < 0 || idx >= p.themeChips.length) return const SizedBox.shrink();
+              final localizedTheme = p.themeChips[idx];
+              final movies = dna.themeEvidence[t] ?? [];
+              if (movies.isEmpty) return const SizedBox.shrink();
+              return _themeEvidenceRow(c, localizedTheme, movies);
+            })
+          else
+            _chips(c, p.themeChips, accent: true),
         ],
         if (p.genreChips.isNotEmpty) ...[
           const SizedBox(height: 20),
@@ -420,6 +442,98 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openMovieDetail(BuildContext context, DnaMovieRef movieRef) {
+    final movie = Movie(
+      id: movieRef.id,
+      title: movieRef.title,
+      posterPath: movieRef.posterPath,
+      isTV: movieRef.isTV,
+      overview: '',
+      voteAverage: 0,
+    );
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => MovieDetailSheet(
+        movie: movie,
+        service: ref.read(tmdbServiceProvider),
+      ),
+    );
+  }
+
+  Widget _themeEvidenceRow(ThemePalette c, String theme, List<DnaMovieRef> movies) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: c.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: c.gold.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  theme,
+                  style: TextStyle(
+                    color: c.goldDeep,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 90,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: movies.length,
+              itemBuilder: (context, index) {
+                final m = movies[index];
+                return GestureDetector(
+                  onTap: () => _openMovieDetail(context, m),
+                  child: Container(
+                    width: 60,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: m.posterUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: m.posterUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (ctx, url) => ColoredBox(color: c.surface),
+                              errorWidget: (ctx, url, err) => ColoredBox(color: c.surface),
+                            )
+                          : ColoredBox(color: c.surface),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
