@@ -144,6 +144,7 @@ class AppLocalizations {
       'profile_rated_movies': 'Last Rated Items',
       'profile_clear_confirm': 'Clear all data',
       'profile_family_mode': 'Family Friendly Mode (PG-13)',
+      'settings_title': 'Settings & Preferences',
       'lang_ko': 'Korean Cinema',
       'lang_eu': 'European Cinema',
       'lang_en': 'Hollywood',
@@ -311,6 +312,22 @@ class AppLocalizations {
       'dna_ess_eternal_child':
           'The child in you never grew up — and that rules.',
       'dna_ess_genre_nomad': "You don't fit one genre; you taste every color.",
+      'dna_ess_sec_dark_chronicler':
+          'Shadows, suspense and moral ambiguity also feed your taste.',
+      'dna_ess_sec_emotion_seeker':
+          'Emotional depth and human stories also captivate you.',
+      'dna_ess_sec_world_builder':
+          'Extraordinary universes and highly imaginative worlds also draw your interest.',
+      'dna_ess_sec_adrenaline_junkie':
+          'Pace, action and adventure are also sources of excitement for you.',
+      'dna_ess_sec_joy_chaser':
+          'Lightness, joy and comedy are also among your safe havens.',
+      'dna_ess_sec_truth_seeker':
+          'True stories and real-life experiences are also on your radar.',
+      'dna_ess_sec_eternal_child':
+          'The child in you that never grows up also finds its place in stories.',
+      'dna_ess_sec_genre_nomad':
+          'Colors of different genres also show themselves in your taste.',
       'dna_era_modern': "A modern soul — {p} of your loves are post-2015.",
       'dna_era_classic': 'A classic soul — you chase the magic of old cinema.',
       'dna_era_traveler': 'A time traveler — you feel at home in every era.',
@@ -681,6 +698,7 @@ class AppLocalizations {
       'profile_rated_movies': 'Son Değerlendirilenler',
       'profile_clear_confirm': 'Tüm verileri temizle',
       'profile_family_mode': 'Aile Dostu Mod (PG-13)',
+      'settings_title': 'Ayarlar & Tercihler',
       'lang_ko': 'Kore Sineması',
       'lang_eu': 'Avrupa Sineması',
       'lang_en': 'Hollywood',
@@ -774,6 +792,22 @@ class AppLocalizations {
       'dna_ess_eternal_child': 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
       'dna_ess_genre_nomad':
           'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
+      'dna_ess_sec_dark_chronicler':
+          'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
+      'dna_ess_sec_emotion_seeker':
+          'Duygusal derinlik ve insani hikâyeler de seni cezbediyor.',
+      'dna_ess_sec_world_builder':
+          'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgini çekiyor.',
+      'dna_ess_sec_adrenaline_junkie':
+          'Tempo, aksiyon ve macera da senin heyecan kaynağın.',
+      'dna_ess_sec_joy_chaser':
+          'Hafiflik, neşe ve komedi de sığındığın limanlar arasında.',
+      'dna_ess_sec_truth_seeker':
+          'Gerçek hikâyeler ve yaşanmışlıklar da radarında.',
+      'dna_ess_sec_eternal_child':
+          'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
+      'dna_ess_sec_genre_nomad':
+          'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
       'dna_era_modern': 'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
       'dna_era_classic': 'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
       'dna_era_traveler':

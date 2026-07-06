@@ -38,6 +38,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
 
   Future<void> setLocale(String langCode) async {
     await PrefsService.setSelectedLanguage(langCode);
+    PrefsService.activeLanguageCode = langCode;
     state = Locale(langCode);
   }
 }
