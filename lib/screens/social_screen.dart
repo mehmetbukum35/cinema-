@@ -31,7 +31,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _usernameCtrl = TextEditingController();
   bool _isPublic = true;
-  bool _showProfileSetup = false;
 
   @override
   void initState() {
@@ -59,7 +58,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         setState(() {
           _usernameCtrl.text = auth.user!['username'] ?? '';
           _isPublic = (auth.user!['is_public'] ?? 1) == 1;
-          _showProfileSetup = (auth.user!['username'] == null);
         });
       }
     });
@@ -71,36 +69,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     _searchCtrl.dispose();
     _usernameCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _setupProfile() async {
-    final username = _usernameCtrl.text.trim().toLowerCase();
-    if (username.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)?.get('please_enter_a_username') ??
-                'Please enter a username.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    final success = await ref
-        .read(socialProvider.notifier)
-        .setupProfile(username, _isPublic);
-    if (success && mounted) {
-      setState(() => _showProfileSetup = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)?.get('profile_updated_successfully') ??
-                'Profile updated successfully.',
-          ),
-        ),
-      );
-    }
   }
 
   Future<void> _sendFriendRequest() async {
@@ -161,8 +129,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
             ),
           IconButton(
             icon: Icon(Icons.settings_rounded, color: c.dim),
-            onPressed: () =>
-                setState(() => _showProfileSetup = !_showProfileSetup),
+            onPressed: () => _openProfileSettingsSheet(context),
           ),
         ],
         bottom: TabBar(
@@ -254,125 +221,273 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           ],
         ),
       ),
-      body:
-          socialState.loading &&
-              socialState.friends.isEmpty &&
-              socialState.activityFeed.isEmpty
-          ? Center(child: CircularProgressIndicator(color: c.gold))
-          : Column(
-              children: [
-                if (socialState.error != null)
-                  Container(
-                    width: double.infinity,
-                    color: c.red.withValues(alpha: 0.15),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 16,
-                    ),
-                    child: Text(
-                      socialState.error!,
-                      style: TextStyle(
-                        color: c.red,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+      body: authUser == null || authUser['username'] == null
+          ? _buildProfileSetupPlaceholder(c)
+          : (socialState.loading &&
+                  socialState.friends.isEmpty &&
+                  socialState.activityFeed.isEmpty
+              ? Center(child: CircularProgressIndicator(color: c.gold))
+              : Column(
+                  children: [
+                    if (socialState.error != null)
+                      Container(
+                        width: double.infinity,
+                        color: c.red.withValues(alpha: 0.15),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 16,
+                        ),
+                        child: Text(
+                          socialState.error!,
+                          style: TextStyle(
+                            color: c.red,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
+
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildFriendsTab(c, socialState, isTr),
+                          _buildRequestsTab(c, socialState, isTr),
+                          _buildActivityTab(c, socialState, isTr),
+                        ],
+                      ),
                     ),
-                  ),
-
-                if (_showProfileSetup) _buildProfileSetupPanel(c, isTr),
-
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildFriendsTab(c, socialState, isTr),
-                      _buildRequestsTab(c, socialState, isTr),
-                      _buildActivityTab(c, socialState, isTr),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                  ],
+                )),
     );
   }
 
-  Widget _buildProfileSetupPanel(ThemePalette c, bool isTr) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            AppLocalizations.of(context)?.get('customize_profile') ??
-                'Customize Profile',
-            style: TextStyle(
-              color: c.ink,
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _usernameCtrl,
-            style: TextStyle(color: c.ink),
-            decoration: InputDecoration(
-              labelText:
-                  AppLocalizations.of(context)?.get('username_username') ??
-                  'Username (@username)',
-              labelStyle: TextStyle(color: c.dim),
-              prefixText: '@',
-              prefixStyle: TextStyle(
-                color: c.gold,
-                fontWeight: FontWeight.w700,
+  void _openProfileSettingsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final c = context.c;
+        return Consumer(
+          builder: (context, ref, child) {
+            return StatefulBuilder(
+              builder: (ctx, setModalState) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: c.border,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          AppLocalizations.of(context)?.get('customize_profile') ??
+                              'Customize Profile',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _usernameCtrl,
+                          style: TextStyle(color: c.ink, fontSize: 14),
+                          decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(context)?.get('username_username') ??
+                                'Username (@username)',
+                            labelStyle: TextStyle(color: c.dim, fontSize: 13),
+                            prefixText: '@',
+                            prefixStyle: TextStyle(
+                              color: c.gold,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            filled: true,
+                            fillColor: c.bg,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Material(
+                          color: Colors.transparent,
+                          child: SwitchListTile(
+                            title: Text(
+                              AppLocalizations.of(context)?.get('public_profile') ??
+                                  'Public Profile',
+                              style: TextStyle(color: c.ink, fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('when_disabled_your_profile_can') ??
+                                  'When disabled, your profile cannot be viewed on the web.',
+                              style: TextStyle(color: c.dim, fontSize: 11),
+                            ),
+                            value: _isPublic,
+                            activeThumbColor: c.gold,
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (val) => setModalState(() {
+                              _isPublic = val;
+                              setState(() {}); // sync with parent
+                            }),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final username = _usernameCtrl.text.trim().toLowerCase();
+                            if (username.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(context)?.get('please_enter_a_username') ??
+                                        'Please enter a username.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final success = await ref
+                                .read(socialProvider.notifier)
+                                .setupProfile(username, _isPublic);
+                            if (success && context.mounted) {
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(context)?.get('profile_updated_successfully') ??
+                                        'Profile updated successfully.',
+                                  ),
+                                  backgroundColor: c.gold,
+                                ),
+                              );
+                            } else if (context.mounted) {
+                              final err = ref.read(socialProvider).error ?? 'Bir hata oluştu';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(err),
+                                  backgroundColor: c.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: c.gold,
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            AppLocalizations.of(context)?.get('save_settings') ??
+                                'Save Settings',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileSetupPlaceholder(ThemePalette c) {
+    final tr = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.gold.withValues(alpha: 0.15),
               ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: c.gold),
+              child: Icon(Icons.people_alt_rounded, color: c.gold, size: 40),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              tr?.get('customize_profile') ?? 'Customize Profile',
+              style: TextStyle(
+                color: c.ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            title: Text(
-              AppLocalizations.of(context)?.get('public_profile') ??
-                  'Public Profile',
-              style: TextStyle(color: c.ink, fontSize: 14),
+            const SizedBox(height: 8),
+            Text(
+              tr?.locale.languageCode == 'tr'
+                  ? 'Arkadaşlarınızı eklemek ve sinema uyumunuzu görmek için bir kullanıcı adı belirleyin.'
+                  : 'Choose a username to add friends and see your cinema harmony.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.dim, fontSize: 14, height: 1.4),
             ),
-            subtitle: Text(
-              AppLocalizations.of(
-                    context,
-                  )?.get('when_disabled_your_profile_can') ??
-                  'When disabled, your profile cannot be viewed on the web.',
-              style: TextStyle(color: c.dim, fontSize: 11),
-            ),
-            value: _isPublic,
-            activeThumbColor: c.gold,
-            contentPadding: EdgeInsets.zero,
-            onChanged: (val) => setState(() => _isPublic = val),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _setupProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: c.gold,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => _openProfileSettingsSheet(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.gold,
+                foregroundColor: Colors.black,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+              ),
+              child: Text(
+                tr?.locale.languageCode == 'tr'
+                    ? 'Kullanıcı Adı Belirle'
+                    : 'Set Username',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
               ),
             ),
-            child: Text(
-              AppLocalizations.of(context)?.get('save_settings') ??
-                  'Save Settings',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
