@@ -66,8 +66,21 @@ class Sync
 
     // ─── POST /sync ─────────────────────────────────────────────────────────
     // İstemcideki değişiklikleri uygular. Çakışma: en yüksek updated_at kazanır.
+    // Tek istekte tablo başına kabul edilen azami kayıt. Meşru delta sync'ler
+    // bunun çok altında kalır; sınır, kimlikli bir istemcinin depoyu sınırsız
+    // şişirmesini ve upsert döngüsünün transaction'ı kilitlemesini önler.
+    private const MAX_ITEMS_PER_TABLE = 10000;
+
     public function push(int $uid, array $in): void
     {
+        // Sınır kontrolü transaction'a girmeden yapılır.
+        foreach (self::TABLES as $table => $def) {
+            $items = $in[$table] ?? null;
+            if (is_array($items) && count($items) > self::MAX_ITEMS_PER_TABLE) {
+                fail(413, "Çok fazla kayıt: $table (tek istekte en fazla " . self::MAX_ITEMS_PER_TABLE . ').');
+            }
+        }
+
         $applied = 0;
         $this->db->beginTransaction();
         try {
@@ -82,6 +95,7 @@ class Sync
             $this->db->commit();
         } catch (Throwable $e) {
             $this->db->rollBack();
+            cinema_error('Sync push failed: ' . $e->getMessage(), $uid);
             fail(500, 'Senkronizasyon uygulanamadı.');
         }
         json_out(200, ['server_time' => now_ms(), 'applied' => $applied]);
@@ -114,6 +128,7 @@ class Sync
             json_out(200, ['ok' => true]);
         } catch (Throwable $e) {
             $this->db->rollBack();
+            cinema_error('Sync reset failed: ' . $e->getMessage(), $uid);
             fail(500, 'Veriler sunucudan temizlenemedi.');
         }
     }

@@ -101,7 +101,7 @@ class AppLocalizations {
           'Your session has expired. Your data is safe on this device. Please sign in again.',
       'auth_conflict_title': 'Account Conflict',
       'auth_conflict_desc':
-          'There is local data belonging to another account on this device. How would you like to proceed?',
+          'This device has local data (ratings, lists) that is not yet linked to the account you are signing into — it may have been created as a guest or with another account. "Delete Local Data" will permanently erase it from this device. How would you like to proceed?',
       'auth_conflict_merge': 'Merge with this Account',
       'auth_conflict_delete': 'Delete Local Data & Load Cloud Data',
       'auth_conflict_cancel': 'Cancel Login',
@@ -672,7 +672,7 @@ class AppLocalizations {
           'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
       'auth_conflict_title': 'Hesap Çakışması',
       'auth_conflict_desc':
-          'Bu cihazda başka bir hesaba ait yerel veri bulunuyor. Nasıl devam etmek istersiniz?',
+          'Bu cihazda, giriş yaptığınız hesaba henüz bağlı olmayan yerel veriler (puanlar, listeler) var — misafir olarak ya da başka bir hesapla oluşturulmuş olabilir. "Cihazdakileri Sil" seçeneği bu verileri cihazdan kalıcı olarak siler. Nasıl devam etmek istersiniz?',
       'auth_conflict_merge': 'Bu Hesapla Birleştir',
       'auth_conflict_delete': 'Cihazdakileri Sil & Buluttan Yükle',
       'auth_conflict_cancel': 'Girişi İptal Et',

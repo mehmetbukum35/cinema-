@@ -44,7 +44,7 @@ class AuthConflictDialog extends StatelessWidget {
       ),
       content: Text(
         tr?.get('auth_conflict_desc') ??
-            'There is local data belonging to another account on this device. How would you like to proceed?',
+            'This device has local data (ratings, lists) that is not yet linked to the account you are signing into — it may have been created as a guest or with another account. "Delete Local Data" will permanently erase it from this device. How would you like to proceed?',
         style: TextStyle(color: c.dim, fontSize: 14, height: 1.5),
       ),
       actionsAlignment: MainAxisAlignment.end,

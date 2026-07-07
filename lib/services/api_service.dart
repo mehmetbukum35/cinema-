@@ -5,12 +5,20 @@ import 'package:http/http.dart' as http;
 import 'app_config.dart';
 import 'prefs_service.dart';
 
+/// Refresh denemesinin sonucu:
+/// - [success]: yeni token çifti alındı, istek yeniden denenebilir.
+/// - [denied]: sunucu refresh token'ı REDDETTİ (401/403/422) → oturum gerçekten
+///   bitti, yerel oturum temizlenmeli.
+/// - [transient]: ağ/sunucu hatası (timeout, 5xx…) → token hâlâ geçerli
+///   olabilir; oturum ASLA düşürülmez, istek başarısız bırakılır.
+enum RefreshOutcome { success, denied, transient }
+
 class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
   final http.Client _client;
   void Function()? onSessionExpired;
-  Future<bool>? _refreshFuture;
+  Future<RefreshOutcome>? _refreshFuture;
 
   ApiService({http.Client? client, this.onSessionExpired})
     : _client = client ?? http.Client();
@@ -58,8 +66,8 @@ class ApiService {
     // If unauthorized, attempt to silent refresh and retry once
     if (response.statusCode == 401 && requireAuth) {
       debugPrint("Access token expired (401). Attempting silent refresh...");
-      final refreshSuccess = await _attemptTokenRefresh();
-      if (refreshSuccess) {
+      final outcome = await _attemptTokenRefresh();
+      if (outcome == RefreshOutcome.success) {
         // Retry the request with the new access token
         final newHeaders = await _getHeaders(requireAuth: true);
         if (method == 'POST') {
@@ -77,11 +85,15 @@ class ApiService {
         } else {
           response = await _client.get(url, headers: newHeaders);
         }
-      } else {
-        debugPrint("Silent refresh failed. User needs to re-authenticate.");
+      } else if (outcome == RefreshOutcome.denied) {
+        debugPrint("Refresh token rejected by server. Ending local session.");
         // Clear local auth session so the app returns to logged-out state
         await PrefsService.clearAuthData();
         onSessionExpired?.call();
+      } else {
+        // Geçici hata: oturuma DOKUNMA. Refresh token büyük olasılıkla hâlâ
+        // geçerli; bu isteği 401 olarak döndürüp bir sonraki denemeye bırak.
+        debugPrint("Refresh failed transiently; keeping session intact.");
       }
     }
 
@@ -89,7 +101,7 @@ class ApiService {
   }
 
   // Attempts to refresh access token using the stored refresh token
-  Future<bool> _attemptTokenRefresh() async {
+  Future<RefreshOutcome> _attemptTokenRefresh() async {
     if (_refreshFuture != null) {
       debugPrint(
         "Token refresh already in progress, awaiting existing future...",
@@ -97,13 +109,13 @@ class ApiService {
       return _refreshFuture!;
     }
 
-    final completer = Completer<bool>();
+    final completer = Completer<RefreshOutcome>();
     _refreshFuture = completer.future;
 
     try {
       final refreshToken = await PrefsService.getRefreshToken();
       if (refreshToken == null) {
-        completer.complete(false);
+        completer.complete(RefreshOutcome.denied);
       } else {
         final url = Uri.parse('$baseUrl/auth/refresh');
         final response = await _client.post(
@@ -119,14 +131,20 @@ class ApiService {
             accessToken: tokens['access_token'] as String,
             refreshToken: tokens['refresh_token'] as String,
           );
-          completer.complete(true);
+          completer.complete(RefreshOutcome.success);
+        } else if (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 422) {
+          // Sunucu token'ı tanımadı/reddetti → oturum gerçekten geçersiz.
+          completer.complete(RefreshOutcome.denied);
         } else {
-          completer.complete(false);
+          // 5xx vb. → sunucu tarafı sorun; oturumu düşürme.
+          completer.complete(RefreshOutcome.transient);
         }
       }
     } catch (e) {
       debugPrint("Token refresh call failed: $e");
-      completer.complete(false);
+      completer.complete(RefreshOutcome.transient);
     } finally {
       _refreshFuture = null;
     }
@@ -227,6 +245,22 @@ class ApiService {
       }
     }
     await PrefsService.clearAuthData();
+  }
+
+  /// Henüz yerel oturuma dönüşmemiş bir token çiftini sunucuda iptal eder
+  /// (çakışma diyaloğunda "Girişi İptal Et" seçilirse yetim refresh token
+  /// kalmasın diye). Best-effort: hata yutulur.
+  Future<void> revokeRefreshToken(String refreshToken) async {
+    try {
+      await _request(
+        'POST',
+        '/auth/logout',
+        body: {'refresh_token': refreshToken},
+        requireAuth: false,
+      );
+    } catch (e) {
+      debugPrint("Refresh token revoke failed (ignored): $e");
+    }
   }
 
   // DELETE /me (Delete Account)

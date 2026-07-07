@@ -58,7 +58,13 @@ class Auth
         $st->execute([$email]);
         $u = $st->fetch();
 
-        if (!$u || !password_verify($pass, $u['password_hash'])) {
+        if (!$u) {
+            // Zamanlama farkıyla e-posta varlığı sızmasın diye kullanıcı yokken
+            // de bcrypt maliyeti ödenir (sahte hash ile doğrulama).
+            password_verify($pass, '$2y$10$abcdefghijklmnopqrstuv0123456789012345678901234567890');
+            fail(401, 'E-posta veya parola hatalı.');
+        }
+        if (!password_verify($pass, $u['password_hash'])) {
             fail(401, 'E-posta veya parola hatalı.');
         }
         $uid = (int) $u['id'];
@@ -210,9 +216,14 @@ class Auth
         }
         $uid = (int) $row['user_id'];
 
-        // Rotasyon: eski refresh'i sil, yenilerini ver.
-        $del = $this->db->prepare('DELETE FROM refresh_tokens WHERE token_hash = ?');
-        $del->execute([$hash]);
+        // Rotasyon + grace penceresi: eski refresh HEMEN silinmez; ömrü 60
+        // saniyeye kısaltılır. Yanıt istemciye ulaşamadan uygulama kapanırsa
+        // (mobilde olağan) eski token'la bir kez daha yenileme yapılabilir;
+        // aksi halde oturum kalıcı düşerdi. 60 sn sonra token kendiliğinden
+        // geçersizleşir (yukarıdaki expires_at kontrolü).
+        $graceExpires = min((int) $row['expires_at'], time() + 60);
+        $up = $this->db->prepare('UPDATE refresh_tokens SET expires_at = ? WHERE token_hash = ?');
+        $up->execute([$graceExpires, $hash]);
 
         json_out(200, ['tokens' => $this->issueTokens($uid)]);
     }
@@ -308,6 +319,12 @@ class Auth
         $codeHash = password_hash($code, PASSWORD_BCRYPT);
 
         try {
+            // Fırsatçı temizlik: süresi dolan sıfırlama kodları birikmesin.
+            if (mt_rand(1, 20) === 1) {
+                $this->db->prepare('DELETE FROM password_resets WHERE expires_at < ?')
+                         ->execute([now_ms()]);
+            }
+
             $sel = $this->db->prepare('SELECT 1 FROM password_resets WHERE email = ?');
             $sel->execute([$email]);
             $exists = $sel->fetchColumn();
@@ -350,7 +367,9 @@ class Auth
     // ─── POST /auth/verify-reset-code ────────────────────────────────────────
     public function verifyResetCode(array $in): void
     {
-        $email = trim((string) ($in['email'] ?? ''));
+        // forgotPassword e-postayı lowercase kaydeder; burada da normalize
+        // edilmezse case-sensitive collation'larda (ör. SQLite) kod bulunamaz.
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
         $code = trim((string) ($in['code'] ?? ''));
 
         if ($email === '' || $code === '') {
@@ -390,7 +409,8 @@ class Auth
     // ─── POST /auth/reset-password ───────────────────────────────────────────
     public function resetPassword(array $in): void
     {
-        $email = trim((string) ($in['email'] ?? ''));
+        // Bkz. verifyResetCode: e-posta lowercase normalize edilir.
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
         $code = trim((string) ($in['code'] ?? ''));
         $newPass = (string) ($in['new_password'] ?? '');
 
@@ -446,6 +466,18 @@ class Auth
     private function issueTokens(int $uid): array
     {
         $now = time();
+
+        // Fırsatçı temizlik: süresi dolan refresh token'lar başka hiçbir yerde
+        // silinmiyordu → tablo sınırsız büyüyordu. ~%5 olasılıkla, 1 günden
+        // uzun süredir geçersiz olanlar silinir (grace penceresini etkilemez).
+        if (mt_rand(1, 20) === 1) {
+            try {
+                $this->db->prepare('DELETE FROM refresh_tokens WHERE expires_at < ?')
+                         ->execute([$now - 86400]);
+            } catch (Throwable $e) {
+                cinema_error('refresh_tokens cleanup failed: ' . $e->getMessage());
+            }
+        }
         $access = Jwt::encode([
             'sub' => $uid,
             'typ' => 'access',

@@ -89,10 +89,13 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
     Future.microtask(() => load());
   }
 
-  Future<void> load() async {
+  /// [skipSync] true ise yalnızca yerel istatistikler yenilenir; sunucu sync'i
+  /// tetiklenmez. Yüksek frekanslı çağrılarda (ör. her swipe sonrası) kullanılır —
+  /// swipe akışı zaten kendi debounce'lu sync'ini planlıyor.
+  Future<void> load({bool skipSync = false}) async {
     try {
       final auth = ref.read(authProvider);
-      if (auth.isAuthenticated) {
+      if (!skipSync && auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
         } catch (e) {

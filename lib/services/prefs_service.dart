@@ -563,6 +563,7 @@ class PrefsService {
 
   static Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
+    _cachedAccessToken = null;
     await prefs.clear();
     await _secureStorage.deleteAll();
     await DatabaseHelper().clearAllData();
@@ -572,12 +573,22 @@ class PrefsService {
   static const _keyAccessToken = 'auth_access_token';
   static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyLastSyncTime = 'sync_last_time';
+  static const _keyLastPushTime = 'sync_last_push_time';
   static const _keyUserData = 'auth_user_data';
 
+  // Secure storage okumak (özellikle Android Keystore) her HTTP isteğinde
+  // pahalı; access token bellekte cache'lenir. saveTokens/clearAuthData günceller.
+  static String? _cachedAccessToken;
+
   static Future<String?> getAccessToken() async {
+    if (_cachedAccessToken != null) return _cachedAccessToken;
+
     // Try secure storage first
     String? token = await _secureStorage.read(key: _keyAccessToken);
-    if (token != null) return token;
+    if (token != null) {
+      _cachedAccessToken = token;
+      return token;
+    }
 
     // Migration fallback
     final prefs = await SharedPreferences.getInstance();
@@ -585,6 +596,7 @@ class PrefsService {
     if (token != null) {
       await _secureStorage.write(key: _keyAccessToken, value: token);
       await prefs.remove(_keyAccessToken);
+      _cachedAccessToken = token;
     }
     return token;
   }
@@ -595,6 +607,7 @@ class PrefsService {
   }) async {
     await _secureStorage.write(key: _keyAccessToken, value: accessToken);
     await _secureStorage.write(key: _keyRefreshToken, value: refreshToken);
+    _cachedAccessToken = accessToken;
   }
 
   static Future<String?> getRefreshToken() async {
@@ -620,6 +633,19 @@ class PrefsService {
   static Future<void> setLastSyncTime(int time) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyLastSyncTime, time);
+  }
+
+  /// Push imleci: CİHAZ saatiyle tutulur (pull imleci ise sunucu saatiyle).
+  /// Eski kurulumlarda anahtar yoksa mevcut davranışı korumak için
+  /// sync_last_time'a düşer.
+  static Future<int> getLastPushTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyLastPushTime) ?? prefs.getInt(_keyLastSyncTime) ?? 0;
+  }
+
+  static Future<void> setLastPushTime(int time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastPushTime, time);
   }
 
   static Future<Map<String, dynamic>?> getUserData() async {
@@ -652,12 +678,14 @@ class PrefsService {
 
   static Future<void> clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
+    _cachedAccessToken = null;
     await _secureStorage.delete(key: _keyAccessToken);
     await _secureStorage.delete(key: _keyRefreshToken);
     await prefs.remove(_keyAccessToken);
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyUserData);
     await prefs.remove(_keyLastSyncTime);
+    await prefs.remove(_keyLastPushTime);
     await clearDnaCache();
   }
 

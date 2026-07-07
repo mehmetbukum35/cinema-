@@ -347,7 +347,9 @@ final swipeProvider =
         engine,
         ref: ref,
         onRated: () {
-          ref.read(statsProvider.notifier).load();
+          // skipSync: her swipe'ta anlık sync tetiklememek için — push zaten
+          // aşağıdaki debounce'lu timer ile 5 sn içinde yapılıyor.
+          ref.read(statsProvider.notifier).load(skipSync: true);
           final auth = ref.read(authProvider);
           if (auth.isAuthenticated) {
             syncTimer?.cancel();

@@ -17,10 +17,13 @@ function fail(int $status, string $msg): void
     json_out($status, ['error' => $msg]);
 }
 
-/** İstek gövdesini JSON olarak okur. */
-function read_json(): array
+/** İstek gövdesini JSON olarak okur. Aşırı büyük gövdeler 413 ile reddedilir. */
+function read_json(int $maxBytes = 4 * 1024 * 1024): array
 {
     $raw = file_get_contents('php://input') ?: '';
+    if (strlen($raw) > $maxBytes) {
+        fail(413, 'İstek gövdesi çok büyük.');
+    }
     $data = json_decode($raw, true);
     return is_array($data) ? $data : [];
 }

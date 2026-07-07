@@ -164,11 +164,16 @@ switch (true) {
         $auth->resetPassword(read_json());
         break;
 
+    // Refresh/logout: kimliksiz uçlar, DoS ve DB yazma florasına karşı IP bazlı
+    // sınırlanır. CGNAT arkasındaki meşru kullanıcıları boğmamak için limit
+    // login'den daha cömerttir (token yenileme zaten seyrek bir işlemdir).
     case $route === 'POST /auth/refresh':
+        rate_limit('refresh', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60));
         $auth->refresh(read_json());
         break;
 
     case $route === 'POST /auth/logout':
+        rate_limit('logout', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60));
         $auth->logout(read_json());
         break;
 
@@ -192,13 +197,17 @@ switch (true) {
         break;
 
     // ── Senkronizasyon (ana akış) ──────────────────────────────────────────
+    // Kullanıcı bazlı sınır (IP değil): CGNAT arkasındaki farklı kullanıcılar
+    // birbirini etkilemez; tek bir hesabın sync'i floodlaması engellenir.
     case $route === 'GET /sync':
         $uid = $auth->requireUser();
+        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120));
         $sync->pull($uid, (int) ($_GET['since'] ?? 0));
         break;
 
     case $route === 'POST /sync':
         $uid = $auth->requireUser();
+        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120));
         $sync->push($uid, read_json());
         break;
 

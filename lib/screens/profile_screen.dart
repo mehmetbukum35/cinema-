@@ -141,6 +141,12 @@ class ProfileScreen extends ConsumerWidget {
           );
           ref.invalidate(watchlistProvider);
           ref.invalidate(statsProvider);
+        } else {
+          // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
+          // sunucuda iptal et ki yetim refresh token kalmasın.
+          await ref
+              .read(authProvider.notifier)
+              .cancelPendingLogin(result.tokens);
         }
       } else if (result.status == AuthStatus.error) {
         final errKey = result.errorMessage ?? 'auth_err_login_failed';

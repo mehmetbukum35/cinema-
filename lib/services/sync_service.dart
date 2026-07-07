@@ -28,13 +28,23 @@ class SyncService {
   }
 
   Future<void> _performSync() async {
-    final lastSync = await PrefsService.getLastSyncTime();
+    // İki ayrı imleç tutulur:
+    //  - lastPull: sunucu saatiyle (server_time) — pull "since" parametresi.
+    //  - lastPush: CİHAZ saatiyle — push adayları yerel updated_at ile seçilir.
+    // Tek imleç kullanılırsa cihaz saati sunucudan gerideyken sync sonrası
+    // yapılan değişiklikler updated_at < server_time kaldığı için asla push
+    // edilmez (sessiz veri kaybı).
+    final lastPull = await PrefsService.getLastSyncTime();
+    final lastPush = await PrefsService.getLastPushTime();
+    // Watermark, SELECT'ten ÖNCE alınır: sync sürerken yazılan kayıtlar bir
+    // sonraki turda yeniden seçilir (upsert idempotent olduğundan zararsız).
+    final pushWatermark = DateTime.now().millisecondsSinceEpoch;
     final db = await DatabaseHelper().database;
     if (db == null) {
       return; // Silent return if db is mock (e.g. on unsupported platforms/tests)
     }
 
-    debugPrint("Starting sync since timestamp: $lastSync");
+    debugPrint("Starting sync. pull since: $lastPull, push since: $lastPush");
 
     // 1. Build and PUSH local changes
     final payload = <String, dynamic>{};
@@ -43,7 +53,7 @@ class SyncService {
     final localRatings = await db.query(
       'ratings',
       where: 'updated_at > ?',
-      whereArgs: [lastSync],
+      whereArgs: [lastPush],
     );
     payload['ratings'] = localRatings
         .map(
@@ -72,7 +82,7 @@ class SyncService {
     final localWatchlist = await db.query(
       'watchlist',
       where: 'updated_at > ?',
-      whereArgs: [lastSync],
+      whereArgs: [lastPush],
     );
     payload['watchlist'] = localWatchlist
         .map(
@@ -97,7 +107,7 @@ class SyncService {
     final localFavorites = await db.query(
       'favorites',
       where: 'updated_at > ?',
-      whereArgs: [lastSync],
+      whereArgs: [lastPush],
     );
     payload['favorites'] = localFavorites
         .map(
@@ -122,7 +132,7 @@ class SyncService {
     final localWatchedSeasons = await db.query(
       'watched_seasons',
       where: 'updated_at > ?',
-      whereArgs: [lastSync],
+      whereArgs: [lastPush],
     );
     payload['watched_seasons'] = localWatchedSeasons
         .map(
@@ -139,7 +149,7 @@ class SyncService {
     final localSearchHistory = await db.query(
       'search_history',
       where: 'updated_at > ?',
-      whereArgs: [lastSync],
+      whereArgs: [lastPush],
     );
     payload['search_history'] = localSearchHistory
         .map(
@@ -157,14 +167,42 @@ class SyncService {
     debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
 
     // 2. PULL remote changes
-    final pullResult = await _apiService.pull(lastSync);
+    final pullResult = await _apiService.pull(lastPull);
     final serverTime = pullResult['server_time'] as int;
+
+    // Sunucudan gelen satır, yereldeki karşılığından ESKİYSE uygulanmaz.
+    // Aksi halde sync sürerken yapılan yerel bir değişiklik (ör. yeni puan)
+    // sunucunun eski kopyasıyla geri alınırdı (last-write-wins istemcide de
+    // uygulanmalı; sunucu tarafı zaten aynı kuralı işletiyor).
+    Future<bool> shouldApply(
+      DatabaseExecutor txn,
+      String table,
+      String where,
+      List<Object?> args,
+      Object? remoteUpdatedAt,
+    ) async {
+      final rows = await txn.query(
+        table,
+        columns: ['updated_at'],
+        where: where,
+        whereArgs: args,
+        limit: 1,
+      );
+      if (rows.isEmpty) return true;
+      final local = rows.first['updated_at'] as int? ?? 0;
+      final remote = (remoteUpdatedAt as num?)?.toInt() ?? 0;
+      return remote >= local;
+    }
 
     // Apply remote updates to local SQLite database
     await db.transaction((txn) async {
       // Ratings
       final remoteRatings = pullResult['ratings'] as List<dynamic>? ?? [];
       for (final r in remoteRatings) {
+        if (!await shouldApply(txn, 'ratings', 'movie_id = ? AND is_tv = ?',
+            [r['movie_id'], r['is_tv']], r['updated_at'])) {
+          continue;
+        }
         await txn.insert('ratings', {
           'movie_id': r['movie_id'],
           'is_tv': r['is_tv'],
@@ -188,6 +226,10 @@ class SyncService {
       // Watchlist
       final remoteWatchlist = pullResult['watchlist'] as List<dynamic>? ?? [];
       for (final w in remoteWatchlist) {
+        if (!await shouldApply(txn, 'watchlist', 'id = ? AND is_tv = ?',
+            [w['id'], w['is_tv']], w['updated_at'])) {
+          continue;
+        }
         await txn.insert('watchlist', {
           'id': w['id'],
           'is_tv': w['is_tv'],
@@ -207,6 +249,10 @@ class SyncService {
       // Favorites
       final remoteFavorites = pullResult['favorites'] as List<dynamic>? ?? [];
       for (final f in remoteFavorites) {
+        if (!await shouldApply(txn, 'favorites', 'id = ? AND is_tv = ?',
+            [f['id'], f['is_tv']], f['updated_at'])) {
+          continue;
+        }
         await txn.insert('favorites', {
           'id': f['id'],
           'is_tv': f['is_tv'],
@@ -227,6 +273,14 @@ class SyncService {
       final remoteWatchedSeasons =
           pullResult['watched_seasons'] as List<dynamic>? ?? [];
       for (final ws in remoteWatchedSeasons) {
+        if (!await shouldApply(
+            txn,
+            'watched_seasons',
+            'tv_id = ? AND season_number = ?',
+            [ws['tv_id'], ws['season_number']],
+            ws['updated_at'])) {
+          continue;
+        }
         await txn.insert('watched_seasons', {
           'tv_id': ws['tv_id'],
           'season_number': ws['season_number'],
@@ -239,6 +293,10 @@ class SyncService {
       final remoteSearchHistory =
           pullResult['search_history'] as List<dynamic>? ?? [];
       for (final sh in remoteSearchHistory) {
+        if (!await shouldApply(txn, 'search_history', 'query = ?',
+            [sh['query']], sh['updated_at'])) {
+          continue;
+        }
         await txn.insert('search_history', {
           'query': sh['query'],
           'created_at': sh['created_at'],
@@ -248,10 +306,13 @@ class SyncService {
       }
     });
 
-    // Save final server_time as our new last_sync_time
+    // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await PrefsService.setLastSyncTime(serverTime);
+    await PrefsService.setLastPushTime(pushWatermark);
     PrefsService.invalidateGenreWeights();
-    debugPrint("Sync complete. New lastSync timestamp: $serverTime");
+    debugPrint(
+      "Sync complete. pull cursor: $serverTime, push cursor: $pushWatermark",
+    );
   }
 }
 

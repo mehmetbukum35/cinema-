@@ -20,6 +20,12 @@ return [
     // Basit brute-force koruması (giriş/kayıt için): IP başına dakikada deneme
     'rate_limit_per_min' => 20,
 
+    // Opsiyonel — verilmezse parantez içindeki varsayılanlar kullanılır:
+    // POST /auth/refresh ve /auth/logout için IP başına dakikalık sınır (60).
+    // 'refresh_rate_limit_per_min' => 60,
+    // GET/POST /sync için kullanıcı başına dakikalık sınır (120).
+    // 'sync_rate_limit_per_min' => 120,
+
     'smtp' => [
         'host' => 'mail.example.com',
         'port' => 465,

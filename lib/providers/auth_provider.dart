@@ -37,16 +37,22 @@ class AuthState {
   bool get isAuthenticated => user != null && accessToken != null;
   bool get isLoggedIn => isAuthenticated;
 
+  // `error` için sentinel deseni: parametre hiç verilmezse mevcut hata korunur,
+  // açıkça `error: null` verilirse hata TEMİZLENİR. (Eski `error ?? this.error`
+  // deseni null'ı yutuyordu; başarısız denemeden kalan hata mesajı bir sonraki
+  // denemede ekranda kalıyordu.)
+  static const Object _unset = Object();
+
   AuthState copyWith({
     bool? loading,
     Map<String, dynamic>? user,
-    String? error,
+    Object? error = _unset,
     String? accessToken,
   }) {
     return AuthState(
       loading: loading ?? this.loading,
       user: user ?? this.user,
-      error: error ?? this.error,
+      error: identical(error, _unset) ? this.error : error as String?,
       accessToken: accessToken ?? this.accessToken,
     );
   }
@@ -261,8 +267,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (resolution == ConflictResolution.delete) {
       await DatabaseHelper().hardClearAllData();
     }
-    // Set sync timestamp to 0 so we fetch/push appropriately on new login session
+    // Set sync timestamps to 0 so we fetch/push appropriately on new login session
     await PrefsService.setLastSyncTime(0);
+    await PrefsService.setLastPushTime(0);
 
     await PrefsService.saveTokens(
       accessToken: tokens['access_token'] as String,
@@ -283,6 +290,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     // Giriş sonrası FCM token'ını sunucuya kaydet.
     NotificationService.instance.registerToken();
+  }
+
+  /// Çakışma diyaloğunda "Girişi İptal Et" seçildiğinde çağrılır: sunucunun
+  /// çoktan verdiği token çifti yerel oturuma hiç dönüşmeyeceği için refresh
+  /// token sunucuda iptal edilir (aksi halde 30 gün geçerli yetim token kalır).
+  /// Google ile girilmişse Google oturumu da kapatılır ki bir sonraki denemede
+  /// hesap seçici yeniden açılsın.
+  Future<void> cancelPendingLogin(Map<String, dynamic>? tokens) async {
+    final refreshToken = tokens?['refresh_token'] as String?;
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _apiService.revokeRefreshToken(refreshToken);
+    }
+    if (_googleInitialized) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint("Google sign-out after cancel failed (ignored): $e");
+      }
+    }
   }
 
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.

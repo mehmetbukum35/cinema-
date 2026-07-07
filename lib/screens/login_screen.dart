@@ -66,6 +66,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               resolution: resolution,
             );
         if (mounted) Navigator.of(context).pop();
+      } else {
+        // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
+        // sunucuda iptal et ki yetim refresh token kalmasın.
+        await ref
+            .read(authProvider.notifier)
+            .cancelPendingLogin(result.tokens);
       }
     }
     // error → auth.error zaten ekranda gösteriliyor; cancelled → sessiz.
