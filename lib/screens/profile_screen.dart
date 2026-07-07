@@ -24,6 +24,7 @@ import '../providers/social_provider.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
+import '../widgets/delete_account_dialog.dart';
 import '../widgets/auth_conflict_dialog.dart';
 import '../services/app_config.dart';
 
@@ -1511,6 +1512,52 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+          // Google Play politikası: hesap oluşturulabilen uygulamalarda
+          // uygulama içi kalıcı hesap silme yolu zorunlu.
+          if (isLoggedIn)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    showDeleteAccountDialog(context, ref);
+                  },
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: c.red.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                      boxShadow: c.cardShadow,
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.delete_forever_rounded,
+                          color: c.red,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          tr?.get('auth_delete_account') ?? 'Hesabı Sil',
+                          style: TextStyle(
+                            color: c.red,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1750,7 +1797,20 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              // TMDB kullanım şartı gereği zorunlu atıf metni.
+              Text(
+                tr?.get('tmdb_attribution') ??
+                    'Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından '
+                        'onaylanmış veya sertifikalandırılmış değildir.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: c.dim,
+                  fontSize: 11.5,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(

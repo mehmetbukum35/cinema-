@@ -44,7 +44,11 @@
       "Bash(curl -sS -m 20 \"https://foodlabeldetective.com.tr/cinema/profile/mehmetbukum\" -o /tmp/profile.html)",
       "Read(//tmp/**)",
       "Bash(curl -sS -m 20 \"https://foodlabeldetective.com.tr/cinema/profile/mehmetbukum\" -o profile.html)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"cinematic dark movie streaming entertainment landing page glassmorphism luxury\" --design-system -p \"Cinema+\")",
+      "Bash(git stash *)"
     ]
   }
 }

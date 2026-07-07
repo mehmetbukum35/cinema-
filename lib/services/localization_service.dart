@@ -34,6 +34,8 @@ class AppLocalizations {
       'profile_about_content': 'Cinema+ is your personal companion to discover movies and TV shows, match your taste with friends, and build your unique Cinema DNA.',
       'profile_about_author': 'Author',
       'profile_about_version': 'Version',
+      'tmdb_attribution':
+          'This product uses the TMDB API but is not endorsed or certified by TMDB.',
       'tab_browse': 'Browse',
       'tab_swipe': 'Rate',
       'tab_match': 'Match',
@@ -114,6 +116,9 @@ class AppLocalizations {
       'auth_delete_account': 'Delete Account',
       'auth_delete_confirm':
           'This will permanently delete your account and all associated cloud data. Are you sure?',
+      'auth_delete_ack': 'I understand this action cannot be undone.',
+      'auth_delete_done':
+          'Your account and cloud data have been permanently deleted.',
       'auth_forgot_password_link': 'Forgot Password?',
       'auth_forgot_title': 'Forgot Password',
       'auth_forgot_email_desc':
@@ -612,6 +617,8 @@ class AppLocalizations {
       'profile_about_content': 'Cinema+, Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetmenizi, arkadaşlarınızla ortak zevklerinizi eşleştirmenizi ve benzersiz Sinema DNA\'nızı oluşturmanızı sağlayan kişisel sinema asistanınızdır.',
       'profile_about_author': 'Yazar',
       'profile_about_version': 'Sürüm',
+      'tmdb_attribution':
+          'Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından onaylanmış veya sertifikalandırılmış değildir.',
       'tab_browse': 'Keşfet',
       'tab_swipe': 'Değerlendir',
       'tab_match': 'Eşleştir',
@@ -693,6 +700,9 @@ class AppLocalizations {
       'auth_delete_account': 'Hesabı Sil',
       'auth_delete_confirm':
           'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',
+      'auth_delete_ack': 'Bu işlemin geri alınamayacağını anlıyorum.',
+      'auth_delete_done':
+          'Hesabınız ve bulut verileriniz kalıcı olarak silindi.',
       'auth_forgot_password_link': 'Şifremi Unuttum',
       'auth_forgot_title': 'Şifremi Unuttum',
       'auth_forgot_email_desc':

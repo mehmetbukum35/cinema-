@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="tr" data-lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cinema+ | What to Watch?</title>
+<meta name="description" content="Tinder tarzı kaydırma ile film ve dizi keşfet, arkadaşlarınla birlikte karar ver, Sinema DNA'nı çıkar. Cinema+ | What to Watch?">
+<meta property="og:title" content="Cinema+ | What to Watch?">
+<meta property="og:description" content="Kaydır, keşfet, izle. Film ve dizi keşfinin en eğlenceli hali.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.cinema.mbkm.com.tr/">
+<meta name="theme-color" content="#0A0A0C">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A0A0C'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' text-anchor='middle' fill='%23F5F5F7'%3Ec%3Ctspan fill='%23E9B872'%3E%2B%3C/tspan%3E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0C; --bg-warm:#120E10; --surface:#15151A; --card:#1C1C22; --card-hi:#24242C;
+  --ink:#F5F5F7; --dim:#9A9AA4; --faint:#6E6E78;
+  --red:#E94560; --crimson:#C9304E; --ember:#FF6B81;
+  --gold:#E9B872; --gold-deep:#B8893E;
+  --border:#26262E; --border-soft:#1E1E25;
+  --glass:rgba(255,255,255,.06); --glass-stroke:rgba(255,255,255,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:300;line-height:1.7;overflow-x:hidden}
+[data-lang="tr"] .en{display:none!important}
+[data-lang="en"] .tr{display:none!important}
+a{color:inherit;text-decoration:none}
+img,svg{max-width:100%}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+::selection{background:var(--red);color:#fff}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(10,10,12,.72);border-bottom:1px solid var(--border-soft)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+.wordmark{font-size:1.35rem;font-weight:600;letter-spacing:-.02em}
+.wordmark b{color:var(--gold);font-weight:600}
+.nav-links{display:flex;gap:28px;align-items:center;font-size:.92rem;color:var(--dim)}
+.nav-links a{transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.lang-btn{cursor:pointer;border:1px solid var(--border);background:var(--glass);border-radius:99px;padding:5px 14px;color:var(--dim);font:inherit;font-size:.82rem;transition:color .2s,border-color .2s}
+.lang-btn:hover{color:var(--gold);border-color:var(--gold-deep)}
+.lang-btn span.on{color:var(--gold);font-weight:500}
+@media(max-width:720px){.nav-links a{display:none}}
+
+/* ── Hero ── */
+header{position:relative;padding:150px 0 90px;background:radial-gradient(900px 500px at 70% -10%,rgba(233,69,96,.13),transparent 60%),radial-gradient(700px 420px at 15% 20%,rgba(233,184,114,.07),transparent 60%),var(--bg)}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+.eyebrow{font-size:.8rem;letter-spacing:.35em;color:var(--gold);font-weight:500;margin-bottom:18px}
+h1{font-size:clamp(2.4rem,5.5vw,4.2rem);line-height:1.08;font-weight:700;letter-spacing:-.03em}
+h1 .accent{background:linear-gradient(120deg,var(--red),var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--dim);font-size:1.12rem;max-width:34rem;margin:22px 0 34px}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.btn-play{display:inline-flex;align-items:center;gap:12px;background:var(--ink);color:#0A0A0C;border-radius:14px;padding:12px 22px;font-weight:500;transition:transform .2s,box-shadow .2s;cursor:pointer}
+.btn-play:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(233,69,96,.25)}
+.btn-play small{display:block;font-size:.68rem;font-weight:400;opacity:.65;line-height:1.2}
+.btn-play .big{font-size:1.02rem;line-height:1.25}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:14px;padding:14px 22px;color:var(--dim);font-size:.95rem;transition:color .2s,border-color .2s;cursor:pointer}
+.btn-ghost:hover{color:var(--ink);border-color:var(--faint)}
+.soon{font-size:.8rem;color:var(--faint);margin-top:12px}
+
+/* phone mockup */
+.stage{display:flex;justify-content:center}
+.phone{width:280px;height:560px;background:linear-gradient(180deg,#17171d,#101014);border:1px solid var(--border);border-radius:42px;padding:16px 14px;position:relative;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.03) inset}
+.notch{width:110px;height:22px;background:#000;border-radius:12px;margin:0 auto 12px}
+.deck{position:relative;height:400px}
+.mcard{position:absolute;inset:0;border-radius:22px;overflow:hidden;border:1px solid var(--glass-stroke);display:flex;flex-direction:column;justify-content:flex-end;transition:transform .5s cubic-bezier(.2,.7,.3,1),opacity .5s}
+.mcard .art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.mcard .art svg{width:72px;height:72px;opacity:.5}
+.mcard .meta{position:relative;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%);padding:52px 16px 16px}
+.mcard .title{font-weight:600;font-size:1.05rem}
+.mcard .sub{font-size:.8rem;color:var(--gold)}
+.g-crimson{background:linear-gradient(160deg,#3d1220,#1a0b12 70%)}
+.g-gold{background:linear-gradient(160deg,#3a2c14,#161006 70%)}
+.g-blue{background:linear-gradient(160deg,#122036,#0a0f18 70%)}
+.stamp{position:absolute;top:20px;padding:5px 14px;border:2.5px solid;border-radius:8px;font-weight:700;font-size:.95rem;letter-spacing:.08em;opacity:0;transform:rotate(0deg)}
+.stamp.like{right:16px;color:#4CAF50;border-color:#4CAF50}
+.stamp.nope{left:16px;color:var(--red);border-color:var(--red)}
+.fly-right{transform:translateX(130%) rotate(14deg)!important;opacity:0}
+.fly-left{transform:translateX(-130%) rotate(-14deg)!important;opacity:0}
+.fly-right .stamp.like,.fly-left .stamp.nope{opacity:1;transition:opacity .15s}
+.deck .pos1{transform:scale(1) translateY(0);z-index:3}
+.deck .pos2{transform:scale(.94) translateY(-16px);z-index:2;filter:brightness(.7)}
+.deck .pos3{transform:scale(.88) translateY(-32px);z-index:1;filter:brightness(.45)}
+.pillrow{display:flex;justify-content:center;gap:22px;margin-top:22px}
+.pill{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;background:var(--glass)}
+.pill.no{border-color:var(--red);color:var(--red)}
+.pill.yes{border-color:#4CAF50;color:#4CAF50}
+.pill svg{width:24px;height:24px}
+@media(max-width:880px){.hero{grid-template-columns:1fr;text-align:center}.hero p{margin-inline:auto}.cta-row{justify-content:center}.stage{margin-top:10px}.phone{width:250px;height:500px}.deck{height:350px}}
+
+/* ── Sections ── */
+section{padding:90px 0}
+.sec-head{text-align:center;max-width:44rem;margin:0 auto 56px}
+h2{font-size:clamp(1.7rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.sec-head p{color:var(--dim);margin-top:14px;font-size:1.05rem}
+.gold-line{width:56px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:0 auto 22px}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.feat{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;padding:26px 24px;transition:transform .25s,border-color .25s,background .25s}
+.feat:hover{transform:translateY(-4px);border-color:var(--border);background:var(--card)}
+.feat .ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;background:var(--glass);border:1px solid var(--glass-stroke)}
+.feat .ic svg{width:22px;height:22px}
+.feat h3{font-size:1.08rem;font-weight:600;margin-bottom:8px}
+.feat p{color:var(--dim);font-size:.93rem}
+.c-red{color:var(--red)} .c-gold{color:var(--gold)} .c-blue{color:#4A90E2} .c-green{color:#4CAF50} .c-ember{color:var(--ember)} .c-dim{color:var(--dim)}
+
+/* how it works */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:step}
+@media(max-width:720px){.steps{grid-template-columns:1fr}}
+.step{position:relative;background:var(--bg-warm);border:1px solid var(--border-soft);border-radius:18px;padding:30px 26px}
+.step .num{font-size:2.6rem;font-weight:700;color:transparent;-webkit-text-stroke:1px var(--gold-deep);line-height:1;margin-bottom:14px}
+.step h3{font-size:1.05rem;font-weight:600;margin-bottom:8px}
+.step p{color:var(--dim);font-size:.93rem}
+
+/* FAQ */
+.faq{max-width:46rem;margin:0 auto}
+details{border-bottom:1px solid var(--border-soft)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 4px;font-weight:500;font-size:1.02rem;transition:color .2s}
+summary::-webkit-details-marker{display:none}
+summary:hover{color:var(--gold)}
+summary .chev{transition:transform .25s;color:var(--faint);flex:none}
+details[open] .chev{transform:rotate(45deg)}
+.faq-body{padding:0 4px 20px;color:var(--dim);font-size:.95rem}
+
+/* CTA band */
+.band{background:linear-gradient(140deg,rgba(233,69,96,.12),rgba(233,184,114,.06)),var(--surface);border:1px solid var(--border);border-radius:26px;padding:56px 40px;text-align:center}
+.band h2{margin-bottom:12px}
+.band p{color:var(--dim);margin-bottom:28px}
+
+/* footer */
+footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:var(--bg-warm)}
+.foot{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:32px;font-size:.9rem}
+@media(max-width:720px){.foot{grid-template-columns:1fr}}
+.foot h4{font-size:.8rem;letter-spacing:.18em;color:var(--faint);font-weight:500;margin-bottom:14px;text-transform:uppercase}
+.foot a{display:block;color:var(--dim);padding:4px 0;transition:color .2s}
+.foot a:hover{color:var(--gold)}
+.tmdb{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;padding:16px 18px;margin-top:10px}
+.tmdb .logo{display:inline-block;font-weight:700;font-size:.85rem;letter-spacing:.06em;background:linear-gradient(90deg,#90cea1,#01b4e4);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px}
+.tmdb p{color:var(--faint);font-size:.78rem;line-height:1.55}
+.copy{text-align:center;color:var(--faint);font-size:.8rem;margin-top:36px}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  .mcard{transition:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a href="#" class="wordmark" aria-label="Cinema+ ana sayfa">cinema<b>+</b></a>
+    <div class="nav-links">
+      <a href="#features"><span class="tr">Özellikler</span><span class="en">Features</span></a>
+      <a href="#how"><span class="tr">Nasıl çalışır</span><span class="en">How it works</span></a>
+      <a href="#faq"><span class="tr">SSS</span><span class="en">FAQ</span></a>
+      <button class="lang-btn" id="langBtn" aria-label="Dil değiştir / Change language"><span id="lt" class="on">TR</span> / <span id="le">EN</span></button>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap hero">
+    <div>
+      <div class="eyebrow">CINEMA+</div>
+      <h1>
+        <span class="tr">Bu gece <span class="accent">ne izlesem?</span><br>Kaydır, keşfet, izle.</span>
+        <span class="en">What to <span class="accent">watch tonight?</span><br>Swipe, discover, watch.</span>
+      </h1>
+      <p>
+        <span class="tr">Film ve dizileri Tinder tarzı kaydırarak keşfet, arkadaşlarınla ortak zevkini eşleştir, sana özel Sinema DNA'nı çıkar. Karar verme derdi bitti.</span>
+        <span class="en">Discover movies and shows with Tinder-style swiping, match tastes with your friends, and build your unique Cinema DNA. No more endless scrolling.</span>
+      </p>
+      <div class="cta-row">
+        <a class="btn-play" id="playBadge" href="#" rel="noopener">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M3.6 2.3 13.7 12 3.6 21.7c-.4-.3-.6-.8-.6-1.4V3.7c0-.6.2-1.1.6-1.4Zm1.5-.6c.3 0 .6.1.9.3l10.5 6-2.5 2.4L5.1 1.7ZM19.9 9.3l2.3 1.3c1.1.6 1.1 2.2 0 2.8l-2.3 1.3L17.2 12l2.7-2.7ZM16.5 14l2.5 2.4-10.5 6c-.3.2-.6.3-.9.3L16.5 14Z"/></svg>
+          <span>
+            <small><span class="tr">YAKINDA</span><span class="en">COMING SOON</span></small>
+            <span class="big">Google Play</span>
+          </span>
+        </a>
+        <a class="btn-ghost" href="#features">
+          <span class="tr">Özellikleri gör</span><span class="en">See features</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </a>
+      </div>
+      <div class="soon">
+        <span class="tr">Android için geliyor · iOS yolda</span>
+        <span class="en">Coming to Android · iOS on the way</span>
+      </div>
+    </div>
+
+    <div class="stage" aria-hidden="true">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="deck" id="deck">
+          <div class="mcard g-blue">
+            <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 2.4 3.9 5.5 3.9 9S14.5 18.6 12 21M12 3C9.5 5.4 8.1 8.5 8.1 12s1.4 6.6 3.9 9M3.5 9h17M3.5 15h17"/></svg></div>
+            <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
+            <div class="meta"><div class="title"><span class="tr">Bilim Kurgu</span><span class="en">Sci-Fi</span></div><div class="sub">★ 8.4 · 2026</div></div>
+          </div>
+          <div class="mcard g-gold">
+            <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#E9B872" stroke-width="1.2"><path d="M12 3l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6L4 8.9l5.6-.7L12 3z"/></svg></div>
+            <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
+            <div class="meta"><div class="title"><span class="tr">Romantik Komedi</span><span class="en">Rom-Com</span></div><div class="sub">★ 7.9 · 2025</div></div>
+          </div>
+          <div class="mcard g-crimson">
+            <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#E94560" stroke-width="1.2"><path d="M12 21s-7.5-4.7-9.3-9.6C1.5 8 3.6 4.9 6.8 4.9c2 0 3.7 1.1 4.6 2.8h1.2c.9-1.7 2.6-2.8 4.6-2.8 3.2 0 5.3 3.1 4.1 6.5C19.5 16.3 12 21 12 21z"/></svg></div>
+            <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
+            <div class="meta"><div class="title"><span class="tr">Gerilim</span><span class="en">Thriller</span></div><div class="sub">★ 8.1 · 2026</div></div>
+          </div>
+        </div>
+        <div class="pillrow">
+          <div class="pill no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+          <div class="pill yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-8.7-9C2.2 8 4.1 5.2 7 5.2c1.9 0 3.4 1 4.2 2.5h1.6c.8-1.5 2.3-2.5 4.2-2.5 2.9 0 4.8 2.8 3.7 5.8C19 15.6 12 20 12 20z"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="gold-line"></div>
+      <h2><span class="tr">Keşfetmenin en eğlenceli hali</span><span class="en">Discovery, but make it fun</span></h2>
+      <p><span class="tr">Cinema+, "ne izlesem?" sorusunu bir oyuna çevirir. Ne kadar kaydırırsan, öneriler o kadar sana benzer.</span><span class="en">Cinema+ turns "what to watch?" into a game. The more you swipe, the more the recommendations feel like you.</span></p>
+    </div>
+    <div class="grid">
+      <div class="feat rv">
+        <div class="ic c-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="12" height="17" rx="2.5" transform="rotate(-6 11 11)"/><path d="M9.5 21.5 19 19M20.5 8.5 22 12"/></svg></div>
+        <h3><span class="tr">Kaydırarak keşfet</span><span class="en">Swipe to discover</span></h3>
+        <p><span class="tr">Beğendiysen sağa, değilsen sola. Zevkine göre öğrenen öneri motoru her kaydırışta seni daha iyi tanır.</span><span class="en">Right if you like it, left if you don't. The recommendation engine learns your taste with every swipe.</span></p>
+      </div>
+      <div class="feat rv">
+        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 3c0 4 10 4 10 8s-10 4-10 8M17 3c0 4-10 4-10 8s10 4 10 8M7 5.5h10M7 18.5h10M8.5 12h7"/></svg></div>
+        <h3><span class="tr">Sinema DNA'n</span><span class="en">Your Cinema DNA</span></h3>
+        <p><span class="tr">Puanların ve tercihlerinden benzersiz bir zevk arketipi çıkarır: sen hangi izleyicisin?</span><span class="en">Your ratings and picks form a unique taste archetype: what kind of watcher are you?</span></p>
+      </div>
+      <div class="feat rv">
+        <div class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 15.2c2.6.2 4.4 1.9 4.9 4.8"/></svg></div>
+        <h3><span class="tr">Birlikte seçin</span><span class="en">Decide together</span></h3>
+        <p><span class="tr">Oda kodu paylaş, arkadaşlarınla aynı anda kaydırın. İkinizin de beğendiği yapım anında eşleşir.</span><span class="en">Share a room code and swipe together. When you both like the same title, it's a match.</span></p>
+      </div>
+      <div class="feat rv">
+        <div class="ic c-ember"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5A8 8 0 1 1 11.5 4a6.5 6.5 0 0 0 8.5 8.5z"/><path d="m16 5 .6 1.6L18.2 7l-1.6.6L16 9.2l-.6-1.6L13.8 7l1.6-.4L16 5z"/></svg></div>
+        <h3><span class="tr">Bu Gece Ne İzlesem?</span><span class="en">What to Watch Tonight?</span></h3>
+        <p><span class="tr">Kararsız kaldığın akşamlar için öneri motorunun en yüksek skorlu tek seçimi: aç ve izle.</span><span class="en">For indecisive nights: the engine's single highest-scoring pick. Open and press play.</span></p>
+      </div>
+      <div class="feat rv">
+        <div class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21V3z"/><path d="M9.5 9.5h5M12 7v5"/></svg></div>
+        <h3><span class="tr">İzleme listesi + topluluk skoru</span><span class="en">Watchlist + community score</span></h3>
+        <p><span class="tr">Listeni her cihazda senkron tut; bir yapımı Cinema+ üyelerinin yüzde kaçının beğendiğini gör.</span><span class="en">Keep your list in sync across devices and see what percentage of Cinema+ members liked a title.</span></p>
+      </div>
+      <div class="feat rv">
+        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M4 12h16M12 9v11M12 9S9.5 4.5 7 4.5 4.5 7.5 7 8.2c1.6.5 5 .8 5 .8zm0 0s2.5-4.5 5-4.5 2.5 3 0 3.7c-1.6.5-5 .8-5 .8z"/></svg></div>
+        <h3><span class="tr">Yıl sonu özeti</span><span class="en">Your year, wrapped</span></h3>
+        <p><span class="tr">Yılın biterken sinematik özetini çıkar ve tek dokunuşla arkadaşlarınla paylaş.</span><span class="en">Get a cinematic recap of your year and share it with friends in one tap.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="gold-line"></div>
+      <h2><span class="tr">Üç adımda başla</span><span class="en">Start in three steps</span></h2>
+    </div>
+    <div class="steps">
+      <div class="step rv">
+        <div class="num">01</div>
+        <h3><span class="tr">İndir ve giriş yap</span><span class="en">Download and sign in</span></h3>
+        <p><span class="tr">Google hesabınla saniyeler içinde başla — ya da önce misafir olarak keşfet.</span><span class="en">Start in seconds with your Google account — or explore as a guest first.</span></p>
+      </div>
+      <div class="step rv">
+        <div class="num">02</div>
+        <h3><span class="tr">Kaydır ve puanla</span><span class="en">Swipe and rate</span></h3>
+        <p><span class="tr">Birkaç kaydırma yeter: öneri motoru zevk profilini örmeye hemen başlar.</span><span class="en">A few swipes is all it takes: the engine starts weaving your taste profile right away.</span></p>
+      </div>
+      <div class="step rv">
+        <div class="num">03</div>
+        <h3><span class="tr">İzle ve paylaş</span><span class="en">Watch and share</span></h3>
+        <p><span class="tr">Nerede izleyebileceğini gör, arkadaşlarınla eşleş, Sinema DNA'nı paylaş.</span><span class="en">See where to stream it, match with friends, and share your Cinema DNA.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="gold-line"></div>
+      <h2><span class="tr">Sık sorulan sorular</span><span class="en">Frequently asked questions</span></h2>
+    </div>
+    <div class="faq rv">
+      <details>
+        <summary><span><span class="tr">Cinema+ ücretsiz mi?</span><span class="en">Is Cinema+ free?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr">Evet, Cinema+ ücretsizdir ve reklam içermez.</span><span class="en">Yes — Cinema+ is free and contains no ads.</span></div>
+      </details>
+      <details>
+        <summary><span><span class="tr">Film ve dizi bilgileri nereden geliyor?</span><span class="en">Where does the movie and show data come from?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr">İçerik verileri The Movie Database (TMDB) tarafından sağlanır. Cinema+, TMDB API'sini kullanır ancak TMDB tarafından onaylanmış veya sertifikalandırılmış değildir.</span><span class="en">Content data is provided by The Movie Database (TMDB). Cinema+ uses the TMDB API but is not endorsed or certified by TMDB.</span></div>
+      </details>
+      <details>
+        <summary><span><span class="tr">Verilerim güvende mi?</span><span class="en">Is my data safe?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr">Verilerini satmayız ve reklam için kullanmayız. Neyi neden topladığımızı <a href="gizlilik-politikasi.html" style="color:var(--gold)">gizlilik politikamızda</a> açıkça anlattık.</span><span class="en">We never sell your data or use it for ads. Our <a href="gizlilik-politikasi.html" style="color:var(--gold)">privacy policy</a> explains exactly what we collect and why.</span></div>
+      </details>
+      <details>
+        <summary><span><span class="tr">Hesabımı nasıl silebilirim?</span><span class="en">How do I delete my account?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr">Uygulama içinden birkaç dokunuşla ya da e-posta talebiyle. Ayrıntılar <a href="hesap-silme.html" style="color:var(--gold)">hesap silme sayfasında</a>.</span><span class="en">In a few taps inside the app, or by email request. Details on the <a href="hesap-silme.html" style="color:var(--gold)">account deletion page</a>.</span></div>
+      </details>
+      <details>
+        <summary><span><span class="tr">Hangi platformlarda kullanabilirim?</span><span class="en">Which platforms is it on?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr">Cinema+ önce Android'de, Google Play üzerinden yayınlanacak. iOS sürümü yol haritamızda.</span><span class="en">Cinema+ launches first on Android via Google Play. An iOS version is on our roadmap.</span></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="band rv">
+      <h2><span class="tr">Sinema DNA'nı keşfetmeye hazır mısın?</span><span class="en">Ready to discover your Cinema DNA?</span></h2>
+      <p><span class="tr">Google Play'de yayına girdiğimizde ilk denenler arasında ol.</span><span class="en">Be among the first to try it when we launch on Google Play.</span></p>
+      <a class="btn-play" href="#" style="display:inline-flex">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M3.6 2.3 13.7 12 3.6 21.7c-.4-.3-.6-.8-.6-1.4V3.7c0-.6.2-1.1.6-1.4Zm1.5-.6c.3 0 .6.1.9.3l10.5 6-2.5 2.4L5.1 1.7ZM19.9 9.3l2.3 1.3c1.1.6 1.1 2.2 0 2.8l-2.3 1.3L17.2 12l2.7-2.7ZM16.5 14l2.5 2.4-10.5 6c-.3.2-.6.3-.9.3L16.5 14Z"/></svg>
+        <span>
+          <small><span class="tr">YAKINDA</span><span class="en">COMING SOON</span></small>
+          <span class="big">Google Play</span>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a href="#" class="wordmark">cinema<b>+</b></a>
+        <p style="color:var(--dim);margin-top:10px;font-size:.88rem">
+          <span class="tr">What to Watch? — Film ve dizi keşfinin en eğlenceli hali.</span>
+          <span class="en">What to Watch? — The most fun way to discover movies and shows.</span>
+        </p>
+        <div class="tmdb">
+          <span class="logo">TMDB</span>
+          <p>
+            <span class="tr">Bu ürün TMDB API'sini kullanır ancak TMDB tarafından onaylanmış veya sertifikalandırılmış değildir. — This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
+            <span class="en">This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
+          </p>
+          <a href="https://www.themoviedb.org/" rel="noopener" style="color:#01b4e4;font-size:.78rem">themoviedb.org</a>
+        </div>
+      </div>
+      <div>
+        <h4><span class="tr">Yasal</span><span class="en">Legal</span></h4>
+        <a href="gizlilik-politikasi.html"><span class="tr">Gizlilik politikası</span><span class="en">Privacy policy</span></a>
+        <a href="hesap-silme.html"><span class="tr">Hesap silme</span><span class="en">Account deletion</span></a>
+      </div>
+      <div>
+        <h4><span class="tr">İletişim</span><span class="en">Contact</span></h4>
+        <a href="mailto:destek@mbkm.com.tr">destek@mbkm.com.tr</a>
+      </div>
+    </div>
+    <div class="copy">© 2026 Cinema+ | What to Watch?</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('langBtn'),
+      lt=document.getElementById('lt'), le=document.getElementById('le');
+  var titles={tr:'Cinema+ | What to Watch? — Kaydır, keşfet, izle',en:'Cinema+ | What to Watch? — Swipe, discover, watch'};
+  function setLang(l){
+    root.dataset.lang=l; root.lang=l; document.title=titles[l];
+    lt.classList.toggle('on',l==='tr'); le.classList.toggle('on',l==='en');
+    try{localStorage.setItem('cp-lang',l)}catch(e){}
+  }
+  var saved=null; try{saved=localStorage.getItem('cp-lang')}catch(e){}
+  setLang(saved==='en'?'en':'tr');
+  btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr')});
+
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
+    },{threshold:.15});
+    els.forEach(function(el){io.observe(el)});
+  }else{els.forEach(function(el){el.classList.add('in')})}
+
+  var deck=document.getElementById('deck');
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(deck && !reduced){
+    var dir=true;
+    function layout(){
+      var cards=deck.querySelectorAll('.mcard');
+      cards.forEach(function(c){c.classList.remove('pos1','pos2','pos3')});
+      if(cards[cards.length-1])cards[cards.length-1].classList.add('pos1');
+      if(cards[cards.length-2])cards[cards.length-2].classList.add('pos2');
+      if(cards[cards.length-3])cards[cards.length-3].classList.add('pos3');
+    }
+    layout();
+    setInterval(function(){
+      var cards=deck.querySelectorAll('.mcard');
+      var top=cards[cards.length-1]; if(!top)return;
+      top.classList.add(dir?'fly-right':'fly-left'); dir=!dir;
+      setTimeout(function(){
+        top.classList.remove('fly-right','fly-left');
+        deck.insertBefore(top,deck.firstChild); layout();
+      },550);
+    },2600);
+  }
+})();
+</script>
+</body>
+</html>
