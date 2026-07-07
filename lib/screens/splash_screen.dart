@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 /// Markalı, sinematik açılış ekranı.
@@ -52,7 +51,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     ),
   );
   late final Animation<double> _line = _curve(0.52, 0.86, Curves.easeOutCubic);
-  late final Animation<double> _tagline = _curve(0.66, 0.92, Curves.easeOut);
 
   Animation<double> _curve(double a, double b, Curve c) => CurvedAnimation(
     parent: _intro,
@@ -188,22 +186,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Opacity(
-                      opacity: _tagline.value,
-                      child: Text(
-                        AppLocalizations.of(context)?.get('tagline') ??
-                            (ui.PlatformDispatcher.instance.locale.languageCode == 'tr'
-                                ? 'NE İZLESEM?'
-                                : 'WHAT TO WATCH?'),
-                        style: TextStyle(
-                          color: c.dim,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 4,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -222,17 +204,19 @@ class _Wordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final isTr = ui.PlatformDispatcher.instance.locale.languageCode == 'tr';
     final style = TextStyle(
-      fontSize: 44,
+      fontSize: 24,
       fontWeight: FontWeight.w800,
-      letterSpacing: tracking,
+      letterSpacing: tracking * 0.4,
       height: 1.0,
     );
     return RichText(
+      textAlign: TextAlign.center,
       text: TextSpan(
         children: [
           TextSpan(
-            text: 'cinema',
+            text: 'Cinema',
             style: style.copyWith(color: c.ink),
           ),
           TextSpan(
@@ -240,6 +224,13 @@ class _Wordmark extends StatelessWidget {
             style: style.copyWith(
               color: AppColors.gold,
               shadows: CinemaShadows.glow(AppColors.gold, strength: 0.6),
+            ),
+          ),
+          TextSpan(
+            text: isTr ? ' | Ne İzlesem?' : ' | What to Watch?',
+            style: style.copyWith(
+              color: c.ink.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
