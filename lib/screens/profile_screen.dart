@@ -1597,17 +1597,19 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               Center(
                 child: Container(
-                  width: 72,
-                  height: 72,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: CinemaGradients.crimson,
                     boxShadow: CinemaShadows.redGlow,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '🎬',
-                    style: TextStyle(fontSize: 32),
+                    border: Border.all(
+                      color: c.goldSoft,
+                      width: 2,
+                    ),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/logo.jpg'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
