@@ -1923,6 +1923,20 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               .read(recommendationEngineProvider)
               .invalidateCache(isNegativeChange: rating <= 1)
               .catchError((_) => {});
+
+          // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
+          // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
+          // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
+          final recoSource = widget.movie.recoSource;
+          if (recoSource != null) {
+            PrefsService.recordRecoOutcome(
+              source: recoSource,
+              liked: rating >= 2,
+            ).catchError(
+              (e) => debugPrint("Reco telemetry write failed: $e"),
+            );
+          }
+
           setState(() {
             _currentRating = rating;
           });

@@ -118,6 +118,15 @@ class PrefsService {
     return list.contains(key);
   }
 
+  /// Engellenen yapımların anahtar seti — öneri motorunun kullandığı
+  /// "movie_123"/"tv_456" biçimiyle birebir aynıdır; doğrudan excludedKeys'e
+  /// karıştırılabilir. (Engellemeler daha önce yalnızca oturum içi listeden
+  /// düşülüyordu; yeniden yüklemede geri gelebiliyordu.)
+  static Future<Set<String>> getBlockedKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_keyBlockedMovies) ?? []).toSet();
+  }
+
   // ─── Theme mode ─────────────────────────────────────────────────────────────
   // Varsayılan 'light' — kayıt yoksa uygulama açık temayla açılır.
 
@@ -330,6 +339,104 @@ class PrefsService {
       ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(3).map((e) => e.key).toList();
   }
+
+  /// Tür ağırlık dağılımından, ağırlıkla orantılı olasılıkla [count] FARKLI
+  /// tür örnekler (yerine koymadan). Hep aynı "top-3 tür" sorgusu yerine
+  /// güne/tura bağlı bir [rng] ile çağrılırsa keşif havuzu çeşitlenir:
+  /// 4-5. sıradaki türler de ara sıra vitrine aday üretir. Pozitif ağırlıklı
+  /// tür sayısı yetersizse klasik getLikedGenreIds'e düşer.
+  static Future<List<int>> sampleLikedGenreIds(
+    Random rng, {
+    int count = 3,
+  }) async {
+    final weights = await getGenreWeights();
+    final positive = weights.entries.where((e) => e.value > 0).toList();
+    if (positive.length <= count) {
+      return getLikedGenreIds();
+    }
+    final pool = List.of(positive);
+    final picked = <int>[];
+    while (picked.length < count && pool.isNotEmpty) {
+      final total = pool.fold<double>(0.0, (s, e) => s + e.value);
+      var t = rng.nextDouble() * total;
+      var idx = pool.length - 1;
+      for (var i = 0; i < pool.length; i++) {
+        t -= pool[i].value;
+        if (t <= 0) {
+          idx = i;
+          break;
+        }
+      }
+      picked.add(pool[idx].key);
+      pool.removeAt(idx);
+    }
+    return picked;
+  }
+
+  // ─── Öneri gösterim hafızası (impression cooldown) ─────────────────────────
+  // "Dün gösterdik, etkileşmedi" sinyali: vitrine/raya çıkan yapımlar kısa bir
+  // süre skor cezası alır ki her açılışta aynı yüzler dizilmesin. Yalnızca
+  // cihazda tutulur; boyut sınırlı, eski kayıtlar kendiliğinden budanır.
+
+  static const _keyRecoImpressions = 'reco_impressions_v1';
+  static const _keyTonightHistory = 'tonight_history_v1';
+
+  static Future<Map<String, int>> _getTimestampMap(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key) ?? '{}';
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      return data.map((k, v) => MapEntry(k, (v as num).toInt()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> _recordTimestamps(
+    String prefKey,
+    List<String> keys, {
+    required int maxAgeMs,
+    required int maxEntries,
+  }) async {
+    if (keys.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    var data = await _getTimestampMap(prefKey);
+    for (final k in keys) {
+      data[k] = now;
+    }
+    data.removeWhere((_, v) => now - v > maxAgeMs);
+    if (data.length > maxEntries) {
+      final entries = data.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      data = Map.fromEntries(entries.take(maxEntries));
+    }
+    await prefs.setString(prefKey, jsonEncode(data));
+  }
+
+  /// key → son gösterim (ms). 14 gün pencere, en fazla 400 kayıt.
+  static Future<Map<String, int>> getRecoImpressions() =>
+      _getTimestampMap(_keyRecoImpressions);
+
+  static Future<void> recordRecoImpressions(List<String> keys) =>
+      _recordTimestamps(
+        _keyRecoImpressions,
+        keys,
+        maxAgeMs: 14 * 24 * 3600 * 1000,
+        maxEntries: 400,
+      );
+
+  /// Vitrin ("Bu Gece Ne İzlesem?") geçmişi: aynı yapım 7 gün içinde tekrar
+  /// vitrin olmasın diye ayrı ve daha uzun pencereli tutulur.
+  static Future<Map<String, int>> getTonightHistory() =>
+      _getTimestampMap(_keyTonightHistory);
+
+  static Future<void> recordTonightPick(String key) => _recordTimestamps(
+        _keyTonightHistory,
+        [key],
+        maxAgeMs: 30 * 24 * 3600 * 1000,
+        maxEntries: 60,
+      );
 
   static Map<int, double>? _cachedGenreWeights;
 

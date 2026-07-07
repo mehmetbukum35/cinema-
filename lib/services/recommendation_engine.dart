@@ -230,7 +230,11 @@ class RecommendationEngine {
   /// tohum yapıp TMDB recommendations + similar uçlarından aday toplar.
   /// Her adaya gerekçe olarak tohumun adı yazılır ("X'i beğendiğin için").
   /// Tohum adedi, telemetri verilerine göre dinamik olarak genişletilip daraltılır (Adaptive).
-  Future<List<Movie>> fetchSeedCandidates({int seedCount = 3}) async {
+  ///
+  /// [rng] verilirse tohumlar "hep en son beğenilenler" yerine son 12 beğeniden
+  /// yeniliğe eğilimli ağırlıklı örneklemeyle seçilir: güne bağlı bir rng ile
+  /// her gün farklı tohumlar → farklı benzer-film adayları (vitrin tazeliği).
+  Future<List<Movie>> fetchSeedCandidates({int seedCount = 3, Random? rng}) async {
     final candidates = <Movie>[];
     try {
       final db = DatabaseHelper();
@@ -266,10 +270,30 @@ class RecommendationEngine {
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
         );
 
-      final List<Map<String, dynamic>> ratingSeeds = [
-        ...harikaSeeds,
-        ...iyiSeeds,
-      ];
+      List<Map<String, dynamic>> ratingSeeds = [...harikaSeeds, ...iyiSeeds];
+
+      // Tohum rotasyonu: rng varsa son 12 beğeniden ağırlıklı örnekle
+      // (öndekiler daha olası ama eski favoriler de şans bulur).
+      if (rng != null && ratingSeeds.length > finalSeedCount) {
+        final window = ratingSeeds.take(12).toList();
+        final sampled = <Map<String, dynamic>>[];
+        while (sampled.length < finalSeedCount && window.isNotEmpty) {
+          final weights = List.generate(window.length, (i) => 1.0 / (i + 2));
+          final total = weights.fold<double>(0.0, (s, w) => s + w);
+          var t = rng.nextDouble() * total;
+          var idx = window.length - 1;
+          for (var i = 0; i < window.length; i++) {
+            t -= weights[i];
+            if (t <= 0) {
+              idx = i;
+              break;
+            }
+          }
+          sampled.add(window.removeAt(idx));
+        }
+        ratingSeeds = sampled;
+      }
+
       final seedItems = <({int id, bool isTV, String title})>[];
 
       for (final r in ratingSeeds) {
@@ -339,6 +363,60 @@ class RecommendationEngine {
     return candidates;
   }
 
+  // ── Keşif dilimi (epsilon-greedy) ─────────────────────────────────────────
+
+  /// "Sana Özel" rayının keşfe ayrılan oranı. Telemetrideki 'explore'
+  /// kaynağının beğeni dönüşümü 'discover'a göre iyiyse oran büyür, kötüyse
+  /// küçülür (Laplace düzeltmeli; adaptif tohum sayısıyla aynı desen).
+  /// Sınırlar [0.05, 0.20]: keşif hiç sıfırlanmaz ama rayı da ele geçirmez.
+  Future<double> adaptiveExploreRate({double base = 0.12}) async {
+    try {
+      final telemetry = await PrefsService.getRecoTelemetry();
+      final explore = telemetry['explore'] ?? {'shown': 0, 'liked': 0};
+      final discover = telemetry['discover'] ?? {'shown': 0, 'liked': 0};
+      final crExplore = (explore['liked']! + 1) / (explore['shown']! + 2);
+      final crDiscover = (discover['liked']! + 1) / (discover['shown']! + 2);
+      return (base * (crExplore / crDiscover)).clamp(0.05, 0.20);
+    } catch (e) {
+      debugPrint("adaptiveExploreRate failed, using base: $e");
+      return base;
+    }
+  }
+
+  /// Konfor alanı DIŞI keşif adayları: [pool] (trend/popüler listesi) içinden,
+  /// kişisel sıralamaya zaten girmiş ([rankedKeys]) ve dışlanmış
+  /// ([excludedKeys]) olanlar elendikten sonra kalite tabanını geçen
+  /// (vote >= [minVote]) adaylardan [rng] ile [count] tanesini seçer.
+  /// Seçilenler 'explore' kaynağıyla işaretlenir → telemetri döngüsü kapanır.
+  List<Movie> pickExplorationCandidates({
+    required List<Movie> pool,
+    required Set<String> rankedKeys,
+    required Set<String> excludedKeys,
+    required Random rng,
+    required int count,
+    double minVote = 6.5,
+  }) {
+    if (count <= 0) return const [];
+    final seen = <String>{};
+    final eligible = <Movie>[];
+    for (final m in pool) {
+      final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+      if (rankedKeys.contains(key) || excludedKeys.contains(key)) continue;
+      if (m.voteAverage < minVote) continue;
+      if (!seen.add(key)) continue;
+      eligible.add(m);
+    }
+    eligible.shuffle(rng);
+    final picked = eligible.take(count).toList();
+    for (final m in picked) {
+      m
+        ..recoSource = 'explore'
+        ..recoReason = null
+        ..recoReasonType = null;
+    }
+    return picked;
+  }
+
   /// Eh/Berbat oylanan yapımların benzerlerini bulup engelleme/ceza seti oluşturur.
   Future<(Set<String> berbatKeys, Set<String> ehKeys)>
   fetchNegativeSeedKeys() async {
@@ -397,10 +475,15 @@ class RecommendationEngine {
   /// [rerankK] aday keyword vektörüyle yeniden puanlanır, arkadaş sinyalleri
   /// eklenir ve çeşitlilik geçişi uygulanır. Dönen listedeki her filmde
   /// `personalizedMatchScore` (ve varsa `recoReason`) doldurulmuş olur.
+  /// [cooldownKeys]: yakın zamanda kullanıcıya GÖSTERİLMİŞ yapımların
+  /// anahtarları — küçük bir skor cezası ([cooldownPenalty]) alır ki vitrin ve
+  /// ray her açılışta aynı yüzlerle dizilmesin (impression cooldown).
   Future<List<Movie>> rankForYou(
     List<Movie> candidates, {
     Set<String> excludedKeys = const {},
     Map<String, List<String>> friendSignals = const {},
+    Set<String> cooldownKeys = const {},
+    double cooldownPenalty = 0.08,
     int rerankK = 20,
     bool diversify = true,
     double jitter = 0.0,
@@ -456,6 +539,10 @@ class RecommendationEngine {
       if (ehKeys.contains(key)) {
         penalty = -0.25;
       }
+      // Impression cooldown: yakın zamanda gösterilmişse hafif geri çekil.
+      if (cooldownKeys.contains(key)) {
+        penalty -= cooldownPenalty;
+      }
 
       final raw =
           blend(genreSim: genreSim, voteAverage: m.voteAverage) + penalty;
@@ -490,6 +577,9 @@ class RecommendationEngine {
         double penalty = 0.0;
         if (ehKeys.contains(key)) {
           penalty = -0.25;
+        }
+        if (cooldownKeys.contains(key)) {
+          penalty -= cooldownPenalty;
         }
 
         final raw =

@@ -22,11 +22,55 @@ String? recoReasonLabel(BuildContext context, Movie movie) {
 /// "Bu Gece Ne İzlesem?" vitrin kartı — öneri motorunun en yüksek skorlu
 /// seçimini backdrop, uyum yüzdesi ve "neden bu film" gerekçesiyle sunar.
 /// Uygulamanın adındaki soruya tek kartla cevap verir.
+///
+/// [onShuffle]: "Başka öner" — vitrin havuzundaki sıradaki adayı getirir.
+/// [onDismiss]: "İlgimi çekmedi" — yapımı kalıcı engeller ve sıradakine geçer.
+/// İkisi de null ise kart eski salt-okunur haliyle çizilir.
 class TonightPickCard extends StatelessWidget {
   final Movie movie;
   final VoidCallback onTap;
+  final VoidCallback? onShuffle;
+  final VoidCallback? onDismiss;
 
-  const TonightPickCard({super.key, required this.movie, required this.onTap});
+  const TonightPickCard({
+    super.key,
+    required this.movie,
+    required this.onTap,
+    this.onShuffle,
+    this.onDismiss,
+  });
+
+  Widget _actionChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: Colors.black.withValues(alpha: 0.45),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.18),
+                ),
+              ),
+              child: Icon(icon, size: 18, color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +135,32 @@ class TonightPickCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Sağ üst: "Başka öner" + "İlgimi çekmedi" hızlı aksiyonları.
+                  if (onShuffle != null || onDismiss != null)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Row(
+                        children: [
+                          if (onDismiss != null)
+                            _actionChip(
+                              icon: Icons.thumb_down_alt_outlined,
+                              label:
+                                  tr?.get('tonight_not_interested') ??
+                                  'İlgimi çekmedi',
+                              onPressed: onDismiss!,
+                            ),
+                          if (onShuffle != null) ...[
+                            const SizedBox(width: 8),
+                            _actionChip(
+                              icon: Icons.shuffle_rounded,
+                              label: tr?.get('tonight_shuffle') ?? 'Başka öner',
+                              onPressed: onShuffle!,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
