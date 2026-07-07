@@ -26,8 +26,14 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'app_title': 'What to Watch?',
-      'tagline': 'WHAT TO WATCH?',
+      'app_title': 'Cinema+',
+      'tagline': 'CINEMA+',
+      'profile_about': 'About App',
+      'profile_about_desc': 'Version, author and application info',
+      'profile_about_title': 'About Cinema+',
+      'profile_about_content': 'Cinema+ is your personal companion to discover movies and TV shows, match your taste with friends, and build your unique Cinema DNA.',
+      'profile_about_author': 'Author',
+      'profile_about_version': 'Version',
       'tab_browse': 'Browse',
       'tab_swipe': 'Rate',
       'tab_match': 'Match',
@@ -598,8 +604,14 @@ class AppLocalizations {
       'sync_retry': 'Retry',
     },
     'tr': {
-      'app_title': 'Ne İzlesem?',
-      'tagline': 'NE İZLESEM?',
+      'app_title': 'Cinema+',
+      'tagline': 'CINEMA+',
+      'profile_about': 'Uygulama Hakkında',
+      'profile_about_desc': 'Sürüm, yazar ve uygulama bilgileri',
+      'profile_about_title': 'Cinema+ Hakkında',
+      'profile_about_content': 'Cinema+, Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetmenizi, arkadaşlarınızla ortak zevklerinizi eşleştirmenizi ve benzersiz Sinema DNA\'nızı oluşturmanızı sağlayan kişisel sinema asistanınızdır.',
+      'profile_about_author': 'Yazar',
+      'profile_about_version': 'Sürüm',
       'tab_browse': 'Keşfet',
       'tab_swipe': 'Değerlendir',
       'tab_match': 'Eşleştir',
