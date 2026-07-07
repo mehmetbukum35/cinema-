@@ -152,14 +152,17 @@ footer a{color:var(--dim);margin:0 10px}
   var root=document.documentElement, btn=document.getElementById('langBtn'),
       lt=document.getElementById('lt'), le=document.getElementById('le');
   var titles={tr:'Hesap Silme — Cinema+ | What to Watch?',en:'Account Deletion — Cinema+ | What to Watch?'};
-  function setLang(l){
+  function setLang(l,persist){
     root.dataset.lang=l; root.lang=l; document.title=titles[l];
     lt.classList.toggle('on',l==='tr'); le.classList.toggle('on',l==='en');
-    try{localStorage.setItem('cp-lang',l)}catch(e){}
+    if(persist){try{localStorage.setItem('cp-lang',l)}catch(e){}}
   }
   var saved=null; try{saved=localStorage.getItem('cp-lang')}catch(e){}
-  setLang(saved==='en'?'en':'tr');
-  btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr')});
+  if(saved!=='tr'&&saved!=='en'){
+    saved=((navigator.language||'').toLowerCase().indexOf('tr')===0)?'tr':'en';
+  }
+  setLang(saved);
+  btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr',true)});
 })();
 </script>
 </body>

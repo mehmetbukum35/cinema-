@@ -57,7 +57,7 @@ footer a{color:var(--dim);margin:0 10px}
   <h1>Gizlilik Politikası</h1>
   <p class="date">Yürürlük tarihi: 8 Temmuz 2026</p>
 
-  <p>Bu gizlilik politikası, <strong>Cinema+ | What to Watch?</strong> mobil uygulaması ve <strong>cinema.mbkm.com.tr</strong> web sitesi ("Hizmet") için geçerlidir. Hizmet, Mehmet Büküm ("biz") tarafından işletilmektedir. Gizliliğinize saygı duyuyoruz: verilerinizi satmayız, reklam amacıyla kullanmayız ve yalnızca Hizmet'i sunmak için gerekli olanı toplarız.</p>
+  <p>Bu gizlilik politikası, <strong>Cinema+ | What to Watch?</strong> mobil uygulaması ve <strong>cinema.mbkm.com.tr</strong> web sitesi ("Hizmet") için geçerlidir. Hizmet, Muhammet Taha Büküm ("biz") tarafından işletilmektedir. Gizliliğinize saygı duyuyoruz: verilerinizi satmayız, reklam amacıyla kullanmayız ve yalnızca Hizmet'i sunmak için gerekli olanı toplarız.</p>
 
   <h2>1. Topladığımız veriler</h2>
   <p><strong>Hesap bilgileri.</strong> Kayıt olduğunuzda e-posta adresiniz, görünen adınız ve (e-posta ile kayıtta) şifrenizin güvenli özeti (hash) saklanır. Google ile giriş yaparsanız, Google hesabınızdan yalnızca e-posta adresiniz ve profil adınız alınır.</p>
@@ -105,7 +105,7 @@ footer a{color:var(--dim);margin:0 10px}
   <h1>Privacy Policy</h1>
   <p class="date">Effective date: July 8, 2026</p>
 
-  <p>This privacy policy applies to the <strong>Cinema+ | What to Watch?</strong> mobile application and the <strong>cinema.mbkm.com.tr</strong> website (the "Service"), operated by Mehmet Büküm ("we"). We respect your privacy: we do not sell your data, we do not use it for advertising, and we only collect what is necessary to provide the Service.</p>
+  <p>This privacy policy applies to the <strong>Cinema+ | What to Watch?</strong> mobile application and the <strong>cinema.mbkm.com.tr</strong> website (the "Service"), operated by Muhammet Taha Büküm ("we"). We respect your privacy: we do not sell your data, we do not use it for advertising, and we only collect what is necessary to provide the Service.</p>
 
   <h2>1. Data we collect</h2>
   <p><strong>Account information.</strong> When you register, we store your email address, display name and (for email sign-up) a secure hash of your password. If you sign in with Google, we only receive your email address and profile name from your Google account.</p>
@@ -163,14 +163,17 @@ footer a{color:var(--dim);margin:0 10px}
   var root=document.documentElement, btn=document.getElementById('langBtn'),
       lt=document.getElementById('lt'), le=document.getElementById('le');
   var titles={tr:'Gizlilik Politikası — Cinema+ | What to Watch?',en:'Privacy Policy — Cinema+ | What to Watch?'};
-  function setLang(l){
+  function setLang(l,persist){
     root.dataset.lang=l; root.lang=l; document.title=titles[l];
     lt.classList.toggle('on',l==='tr'); le.classList.toggle('on',l==='en');
-    try{localStorage.setItem('cp-lang',l)}catch(e){}
+    if(persist){try{localStorage.setItem('cp-lang',l)}catch(e){}}
   }
   var saved=null; try{saved=localStorage.getItem('cp-lang')}catch(e){}
-  setLang(saved==='en'?'en':'tr');
-  btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr')});
+  if(saved!=='tr'&&saved!=='en'){
+    saved=((navigator.language||'').toLowerCase().indexOf('tr')===0)?'tr':'en';
+  }
+  setLang(saved);
+  btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr',true)});
 })();
 </script>
 </body>
