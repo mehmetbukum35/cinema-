@@ -1,8 +1,8 @@
 class AppConfig {
   static const _defaultApiBaseUrl =
-      'https://foodlabeldetective.com.tr/cinema/api';
+      'https://cinema.mbkm.com.tr/api';
   static const _defaultWebProfileBaseUrl =
-      'https://foodlabeldetective.com.tr/cinema/profile';
+      'https://cinema.mbkm.com.tr/profile';
 
   static const _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 // src/ klasörünün TAM yolu (public_html DIŞINDA tutuluyor).
 // Hosting'deki gerçek yola göre AYARLA. cPanel kullanıcı adın foodlabe ise
-// ve src'yi /home/foodlabe/etc/ altına koyduysan, aşağıdaki doğrudur.
-$SRC = '/home/foodlabe/etc/src';
+// ve src'yi /home/mbkmcomt/etc/ altına koyduysan, aşağıdaki doğrudur.
+$SRC = '/home/mbkmcomt/etc/src';
 if (!is_dir($SRC)) {
     $SRC = dirname(__DIR__) . '/src';
 }
@@ -290,7 +290,7 @@ switch (true) {
     // ── Migration ucu KALDIRILDI ────────────────────────────────────────────
     // Güvenlik: Migration'ları web üzerinden çalıştırmak production veritabanını
     // tehlikeye atar. Bunun yerine: backend/migrate.php'yi sunucuda CLI ile çalıştırın.
-    //   $ php /home/foodlabe/etc/../migrate.php
+    //   $ php /home/mbkmcomt/etc/../migrate.php
     // case $route === 'GET /run-migrations': kaldırıldı.
 
     default:

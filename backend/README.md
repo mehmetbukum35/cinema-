@@ -77,7 +77,7 @@ The PHP/MySQL backend is deployed and verified. To perform a production smoke te
 1. **Verify Health Endpoint:**
    Ensure the server is running and database connection is healthy:
    ```bash
-   curl -s https://foodlabeldetective.com.tr/cinema/api/health
+   curl -s https://cinema.mbkm.com.tr/api/health
    # Expected response: {"status":"healthy"}
    ```
 
@@ -85,12 +85,12 @@ The PHP/MySQL backend is deployed and verified. To perform a production smoke te
    Ensure registration and authentication flows are functional:
    ```bash
    # Register a test account
-   curl -s -X POST https://foodlabeldetective.com.tr/cinema/api/auth/register \
+   curl -s -X POST https://cinema.mbkm.com.tr/api/auth/register \
      -H 'Content-Type: application/json' \
      -d '{"email":"test_smoke@example.com","password":"smoke_password123","displayName":"Smoke Test"}'
 
    # Login with the test account
-   curl -s -X POST https://foodlabeldetective.com.tr/cinema/api/auth/login \
+   curl -s -X POST https://cinema.mbkm.com.tr/api/auth/login \
      -H 'Content-Type: application/json' \
      -d '{"email":"test_smoke@example.com","password":"smoke_password123"}'
    ```
@@ -99,17 +99,17 @@ The PHP/MySQL backend is deployed and verified. To perform a production smoke te
    Push a movie rating and pull it back to confirm delta-sync database transactions:
    ```bash
    # Sync push (use access token returned from login)
-   curl -s -X POST https://foodlabeldetective.com.tr/cinema/api/sync \
+   curl -s -X POST https://cinema.mbkm.com.tr/api/sync \
      -H "Authorization: Bearer <ACCESS_TOKEN>" \
      -H 'Content-Type: application/json' \
      -d '{"ratings":[{"movie_id":603,"is_tv":0,"rating":3,"genre_ids":[28,878],"title":"The Matrix","updated_at":1719579999000,"deleted":false}]}'
 
    # Sync pull
-   curl -s "https://foodlabeldetective.com.tr/cinema/api/sync?since=0" \
+   curl -s "https://cinema.mbkm.com.tr/api/sync?since=0" \
      -H "Authorization: Bearer <ACCESS_TOKEN>"
    ```
 
 4. **Verify Hosting Configuration:**
-   - The fallback for `$SRC` directory structure inside `backend/api/index.php` dynamically checks `/home/foodlabe/etc/src` and falls back to `dirname(__DIR__) . '/src'`.
+   - The fallback for `$SRC` directory structure inside `backend/api/index.php` dynamically checks `/home/mbkmcomt/etc/src` and falls back to `dirname(__DIR__) . '/src'`.
    - Ensure the server runs with PHP 8.2+ and has proper `.htaccess` configuration to route requests to `index.php`.
 

@@ -404,7 +404,7 @@
             <h1><?php echo $displayName; ?></h1>
             <span class="handle">@<?php echo $userHandle; ?></span>
             <div>
-                <a href="https://foodlabeldetective.com.tr/cinema/download" class="cta-btn">
+                <a href="https://cinema.mbkm.com.tr/download" class="cta-btn">
                     <?php echo $displayName; ?> ile Eşleş ve İzle
                 </a>
             </div>
