@@ -205,7 +205,7 @@ class ApiService {
     } else {
       throw ApiException(
         statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Google ile giriş başarısız.',
+        message: data['error'] as String? ?? 'auth_err_google_failed',
       );
     }
   }

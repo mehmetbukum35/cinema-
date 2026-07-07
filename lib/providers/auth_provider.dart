@@ -128,7 +128,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false, error: e.message);
       return AuthResult(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
-      const errMsg = 'Giriş yapılamadı. Lütfen bağlantınızı kontrol edin.';
+      const errMsg = 'auth_err_login_failed';
       state = state.copyWith(loading: false, error: errMsg);
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
@@ -173,7 +173,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false, error: e.message);
       return AuthResult(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
-      const errMsg = 'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.';
+      const errMsg = 'auth_err_register_failed';
       state = state.copyWith(loading: false, error: errMsg);
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
@@ -186,7 +186,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Hesap çakışması olursa e-posta girişindeki AYNI conflict akışı çalışır.
   Future<AuthResult> signInWithGoogle() async {
     if (!AppConfig.googleSignInConfigured) {
-      const errMsg = 'Google girişi bu derlemede yapılandırılmamış.';
+      const errMsg = 'auth_err_google_not_configured';
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
     state = state.copyWith(loading: true, error: null);
@@ -211,7 +211,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final idToken = account.authentication.idToken;
       if (idToken == null) {
-        throw Exception('Google ID token alınamadı (serverClientId doğru mu?)');
+        throw Exception('auth_err_google_token_failed');
       }
 
       final data = await _apiService.loginWithGoogle(idToken);
@@ -242,7 +242,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return AuthResult(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
       debugPrint("Google sign-in failed: $e");
-      const errMsg = 'Google ile giriş yapılamadı. Lütfen tekrar deneyin.';
+      final errMsg = e.toString().contains('auth_err_google_token_failed')
+          ? 'auth_err_google_token_failed'
+          : 'auth_err_google_failed';
       state = state.copyWith(loading: false, error: errMsg);
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
@@ -379,7 +381,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Account deletion failed: $e\n$st");
       state = state.copyWith(
         loading: false,
-        error: 'Hesap silinemedi. Lütfen tekrar deneyin.',
+        error: 'auth_err_delete_failed',
       );
       return false;
     }
@@ -404,7 +406,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Change password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
-        error: 'Parola değiştirilemedi. Lütfen tekrar deneyin.',
+        error: 'auth_err_change_pass_failed',
       );
       return false;
     }
@@ -424,8 +426,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Forgot password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
-        error:
-            'Sıfırlama kodu gönderilemedi. Lütfen bağlantınızı kontrol edin.',
+        error: 'auth_err_forgot_send_failed',
       );
       return false;
     }
@@ -445,7 +446,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Verify reset code failed: $e\n$st");
       state = state.copyWith(
         loading: false,
-        error: 'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
+        error: 'auth_err_verify_code_failed',
       );
       return false;
     }
@@ -469,7 +470,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Reset password failed: $e\n$st");
       state = state.copyWith(
         loading: false,
-        error: 'Şifre sıfırlanamadı. Lütfen tekrar deneyin.',
+        error: 'auth_err_reset_pass_failed',
       );
       return false;
     }

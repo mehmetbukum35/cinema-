@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/app_config.dart';
 import '../services/localization_service.dart';
 import '../widgets/auth_conflict_dialog.dart';
+import '../widgets/forgot_password_sheet.dart';
 
 /// Giriş + Kayıt ekranı (tek ekranda mod değiştirir).
 /// Mevcut akışı bozmaz; istediğin yerden (ör. Profil) buraya yönlendir:
@@ -195,11 +196,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 'Password must be at least 8 characters.')
                           : null,
                     ),
+                    if (!_isRegister) ...[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => const ForgotPasswordSheet(),
+                            );
+                          },
+                          child: Text(
+                            AppLocalizations.of(context)
+                                    ?.get('auth_forgot_password_link') ??
+                                'Forgot Password?',
+                          ),
+                        ),
+                      ),
+                    ],
 
                     if (auth.error != null) ...[
                       const SizedBox(height: 16),
                       Text(
-                        auth.error!,
+                        AppLocalizations.of(context)?.get(auth.error!) ?? auth.error!,
                         style: TextStyle(color: cs.error),
                         textAlign: TextAlign.center,
                       ),

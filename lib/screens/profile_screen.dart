@@ -144,18 +144,23 @@ class ProfileScreen extends ConsumerWidget {
           ref.invalidate(statsProvider);
         }
       } else if (result.status == AuthStatus.error) {
+        final errKey = result.errorMessage ?? 'auth_err_login_failed';
+        final message = AppLocalizations.of(context)?.get(errKey) ?? errKey;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.errorMessage ?? 'Giriş başarısız.'),
+            content: Text(message),
             backgroundColor: c.red,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
+        final tr = AppLocalizations.of(context);
+        final formatString = tr?.get('error_occurred_msg') ?? 'Error: {}';
+        final message = formatString.replaceFirst('{}', e.toString());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hata oluştu: $e'),
+            content: Text(message),
             backgroundColor: c.red,
           ),
         );
