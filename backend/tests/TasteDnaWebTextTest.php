@@ -107,6 +107,30 @@ class TasteDnaWebTextTest extends TestCase
         ]);
         $this->assertStringContainsString('%78', $with['accuracy']);
         $this->assertStringContainsString('20', $with['accuracy']);
+
+        // Accuracy below 40% should be null on public profile
+        $low = TasteDnaWebText::build([
+            'archetype' => 'joy_chaser',
+            'total_rated' => 20,
+            'accuracy' => 0.39,
+            'accuracy_sample' => 20,
+        ]);
+        $this->assertNull($low['accuracy']);
+    }
+
+    public function testCleansRawKeywords(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'themes' => ['teheran (tehran), iran', 'tokyo, japan', 'family'],
+        ]);
+        
+        $this->assertNotNull($view);
+        // "teheran (tehran), iran" -> "Teheran"
+        // "tokyo, japan" -> "Tokyo"
+        // "family" -> "Aile" (translated)
+        $this->assertSame(['Teheran', 'Tokyo', 'Aile'], $view['themes']);
     }
 
     public function testHandlesSecondaryArchetype(): void

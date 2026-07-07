@@ -38,7 +38,12 @@
       "Bash(php -l api/index.php)",
       "Bash(flutter pub *)",
       "Bash(curl -sS -m 15 https://foodlabeldetective.com.tr/cinema/api/health)",
-      "Bash(curl -sS -m 15 -X POST https://foodlabeldetective.com.tr/cinema/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"claude.synctest.7f3a@example.com\",\"password\":\"TestSync123!\",\"display_name\":\"SyncTest\"}')"
+      "Bash(curl -sS -m 15 -X POST https://foodlabeldetective.com.tr/cinema/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"claude.synctest.7f3a@example.com\",\"password\":\"TestSync123!\",\"display_name\":\"SyncTest\"}')",
+      "WebFetch(domain:foodlabeldetective.com.tr)",
+      "Bash(curl -sS -m 20 https://foodlabeldetective.com.tr/cinema/profile/mehmetbukum -o __TRACKED_VAR__/profile.html)",
+      "Bash(curl -sS -m 20 \"https://foodlabeldetective.com.tr/cinema/profile/mehmetbukum\" -o /tmp/profile.html)",
+      "Read(//tmp/**)",
+      "Bash(curl -sS -m 20 \"https://foodlabeldetective.com.tr/cinema/profile/mehmetbukum\" -o profile.html)"
     ]
   }
 }

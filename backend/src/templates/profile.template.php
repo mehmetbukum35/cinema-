@@ -3,7 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $displayName; ?> Neler İzliyor? | Ne İzlesem</title>
+    <?php
+        $ogTitle = $displayName . " Neler İzliyor? | Ne İzlesem";
+        $ogDesc = "@" . $userHandle . " kullanıcısının Sinema DNA'sını ve izleme listesini keşfet.";
+        if (!empty($dna)) {
+            $ogTitle = $displayName . " Sinema DNA'sı: " . $dna['archetype'];
+            $ogDesc = "Arketip: " . $dna['archetype'] . " - " . $dna['essence'];
+        }
+        
+        $ogImage = '';
+        if (!empty($ratings) && !empty($ratings[0]['poster_path'])) {
+            $ogImage = "https://image.tmdb.org/t/p/w500" . $ratings[0]['poster_path'];
+        } elseif (!empty($goodRatings) && !empty($goodRatings[0]['poster_path'])) {
+            $ogImage = "https://image.tmdb.org/t/p/w500" . $goodRatings[0]['poster_path'];
+        } elseif (!empty($watchlist) && !empty($watchlist[0]['poster_path'])) {
+            $ogImage = "https://image.tmdb.org/t/p/w500" . $watchlist[0]['poster_path'];
+        }
+    ?>
+    <title><?php echo htmlspecialchars($ogTitle); ?></title>
+    <meta property="og:title" content="<?php echo htmlspecialchars($ogTitle); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($ogDesc); ?>">
+    <?php if (!empty($ogImage)): ?>
+        <meta property="og:image" content="<?php echo htmlspecialchars($ogImage); ?>">
+    <?php endif; ?>
+    <meta property="og:type" content="profile">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -169,6 +193,8 @@
             padding-bottom: 4px;
         }
         .dna-theme-poster-wrapper {
+            display: block;
+            text-decoration: none;
             position: relative;
             width: 50px;
             height: 75px;
@@ -264,6 +290,8 @@
         }
 
         .poster-wrap {
+            display: block;
+            text-decoration: none;
             aspect-ratio: 2/3;
             width: 100%;
             background-color: #0d121f;
@@ -342,6 +370,31 @@
                 font-size: 24px;
             }
         }
+
+        .dna-theme-row-collapsed {
+            display: none !important;
+        }
+
+        .toggle-themes-btn {
+            background: rgba(255, 179, 0, 0.1);
+            color: var(--gold);
+            border: 1px dashed rgba(255, 179, 0, 0.4);
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            margin-top: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .toggle-themes-btn:hover {
+            background: rgba(255, 179, 0, 0.2);
+            border-color: var(--gold);
+        }
     </style>
 </head>
 <body>
@@ -366,23 +419,29 @@
                 <div class="dna-essence"><?php echo htmlspecialchars($dna['essence']); ?></div>
 
                 <?php if (!empty($dna['themes_with_evidence'])): ?>
-                    <div class="dna-themes-evidence">
-                        <?php foreach ($dna['themes_with_evidence'] as $item): ?>
-                            <div class="dna-theme-row">
+                    <div class="dna-themes-evidence" id="dna-themes-container">
+                        <?php foreach ($dna['themes_with_evidence'] as $idx => $item): ?>
+                            <div class="dna-theme-row<?php echo $idx >= 3 ? ' dna-theme-row-collapsed' : ''; ?>">
                                 <span class="dna-chip theme-name"><?php echo htmlspecialchars($item['name']); ?></span>
                                 <div class="dna-theme-posters">
                                     <?php foreach ($item['movies'] as $m): ?>
-                                        <div class="dna-theme-poster-wrapper" title="<?php echo htmlspecialchars($m['title']); ?>">
+                                        <?php 
+                                            $tmdbUrl = 'https://www.themoviedb.org/' . ($m['is_tv'] ? 'tv' : 'movie') . '/' . (int)$m['id'];
+                                        ?>
+                                        <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="dna-theme-poster-wrapper" title="<?php echo htmlspecialchars($m['title']); ?>">
                                             <?php if (!empty($m['poster_path'])): ?>
                                                 <img class="dna-theme-poster" src="https://image.tmdb.org/t/p/w92<?php echo htmlspecialchars($m['poster_path']); ?>" alt="<?php echo htmlspecialchars($m['title']); ?>">
                                             <?php else: ?>
                                                 <div class="dna-theme-poster empty">🎬</div>
                                             <?php endif; ?>
-                                        </div>
+                                        </a>
                                     <?php endforeach; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                        <?php if (count($dna['themes_with_evidence']) > 3): ?>
+                            <button id="toggle-themes-btn" class="toggle-themes-btn">Tümünü Görmek İçin Dokunun</button>
+                        <?php endif; ?>
                     </div>
                 <?php elseif (!empty($dna['themes'])): ?>
                     <div class="dna-chips">
@@ -423,13 +482,50 @@
                 <div class="grid">
                     <?php foreach ($ratings as $r): ?>
                         <div class="card">
-                            <div class="poster-wrap">
+                            <?php 
+                                $tmdbUrl = 'https://www.themoviedb.org/' . ($r['is_tv'] ? 'tv' : 'movie') . '/' . (int)$r['movie_id'];
+                            ?>
+                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
                                 <?php if (!empty($r['poster_path'])): ?>
-                                    <img src="https://image.tmdb.org/t/p/w300<?php echo $r['poster_path']; ?>" alt="<?php echo htmlspecialchars($r['title']); ?>" class="poster" loading="lazy">
+                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($r['poster_path']); ?>" alt="<?php echo htmlspecialchars($r['title']); ?>" class="poster" loading="lazy">
                                 <?php else: ?>
                                     <div class="poster-placeholder"><?php echo htmlspecialchars($r['title']); ?></div>
                                 <?php endif; ?>
+                            </a>
+                            <div class="card-info">
+                                <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
+                                <div class="card-meta">
+                                    <span><?php echo $r['is_tv'] ? 'Dizi' : 'Film'; ?></span>
+                                    <?php if (!empty($r['vote_average'])): ?>
+                                        <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- İyi Buldukları (Liked / Good) -->
+        <section>
+            <h2>👍 İyi Buldukları</h2>
+            <?php if (empty($goodRatings)): ?>
+                <p class="empty-text">Henüz "İyi" olarak puanlanmış bir film veya dizi yok.</p>
+            <?php else: ?>
+                <div class="grid">
+                    <?php foreach ($goodRatings as $r): ?>
+                        <div class="card">
+                            <?php 
+                                $tmdbUrl = 'https://www.themoviedb.org/' . ($r['is_tv'] ? 'tv' : 'movie') . '/' . (int)$r['movie_id'];
+                            ?>
+                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
+                                <?php if (!empty($r['poster_path'])): ?>
+                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($r['poster_path']); ?>" alt="<?php echo htmlspecialchars($r['title']); ?>" class="poster" loading="lazy">
+                                <?php else: ?>
+                                    <div class="poster-placeholder"><?php echo htmlspecialchars($r['title']); ?></div>
+                                <?php endif; ?>
+                            </a>
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
                                 <div class="card-meta">
@@ -454,13 +550,16 @@
                 <div class="grid">
                     <?php foreach ($watchlist as $w): ?>
                         <div class="card">
-                            <div class="poster-wrap">
+                            <?php 
+                                $tmdbUrl = 'https://www.themoviedb.org/' . ($w['is_tv'] ? 'tv' : 'movie') . '/' . (int)$w['movie_id'];
+                            ?>
+                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
                                 <?php if (!empty($w['poster_path'])): ?>
-                                    <img src="https://image.tmdb.org/t/p/w300<?php echo $w['poster_path']; ?>" alt="<?php echo htmlspecialchars($w['title']); ?>" class="poster" loading="lazy">
+                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($w['poster_path']); ?>" alt="<?php echo htmlspecialchars($w['title']); ?>" class="poster" loading="lazy">
                                 <?php else: ?>
                                     <div class="poster-placeholder"><?php echo htmlspecialchars($w['title']); ?></div>
                                 <?php endif; ?>
-                            </div>
+                            </a>
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($w['title']); ?></div>
                                 <div class="card-meta">
@@ -476,5 +575,20 @@
             <?php endif; ?>
         </section>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var toggleBtn = document.getElementById('toggle-themes-btn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    var collapsedRows = document.querySelectorAll('.dna-theme-row-collapsed');
+                    collapsedRows.forEach(function(row) {
+                        row.classList.remove('dna-theme-row-collapsed');
+                    });
+                    toggleBtn.style.display = 'none';
+                });
+            }
+        });
+    </script>
 </body>
 </html>

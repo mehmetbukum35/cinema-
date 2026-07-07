@@ -37,6 +37,17 @@ class SocialWebRenderer
         $stRatings->execute([$userId]);
         $ratings = $stRatings->fetchAll();
 
+        // İyi Buldukları (Rating = 2 "İyi")
+        $stGoodRatings = $this->db->prepare(
+            'SELECT movie_id, is_tv, title, poster_path, vote_average, release_date
+             FROM ratings
+             WHERE user_id = ? AND rating = 2 AND deleted = 0
+             ORDER BY updated_at DESC
+             LIMIT 12'
+        );
+        $stGoodRatings->execute([$userId]);
+        $goodRatings = $stGoodRatings->fetchAll();
+
         // Watchlist
         $stWatch = $this->db->prepare(
             'SELECT id as movie_id, is_tv, title, poster_path, vote_average, release_date

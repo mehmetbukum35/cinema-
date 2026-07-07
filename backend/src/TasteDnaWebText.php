@@ -143,20 +143,36 @@ class TasteDnaWebText
             }
         }
 
-        // Temalar: sözlükten Türkçeye çevrilir; eşleşme yoksa İngilizce kalır.
-        $themes = [];
+        // Temalar: sözlükten Türkçeye çevrilir. Sözlükte olmayan ham TMDB
+        // keyword'leri TEMİZLENİR (parantezli takılar ve ", ülke" kuyrukları
+        // atılır; ör. "teheran (tehran), iran" → "Teheran") ve görünen ada
+        // göre tekilleştirilir ki "İran" ile "Teheran, iran" gibi yakın
+        // kopyalar çip listesini şişirmesin. Kanıt eşlemesi için her temanın
+        // orijinal İngilizce anahtarı yanında taşınır.
+        $themes = []; // her öğe: ['key' => ingilizce anahtar, 'name' => görünen ad]
+        $seenNames = [];
         foreach ((array) ($dna['themes'] ?? []) as $t) {
-            $t = strtolower(trim((string) $t));
-            if ($t === '') {
+            $key = strtolower(trim((string) $t));
+            if ($key === '') {
                 continue;
             }
-            $tr = self::THEMES_TR[$t] ?? $t;
+            $tr = self::THEMES_TR[$key] ?? self::cleanRawKeyword($key);
+            if ($tr === '') {
+                continue;
+            }
             // Türkçe baş harf: 'i' → 'İ' (mb_convert_case İngilizce 'I' üretir).
             $first = mb_substr($tr, 0, 1, 'UTF-8');
             $first = $first === 'i'
                 ? 'İ'
                 : mb_convert_case($first, MB_CASE_UPPER, 'UTF-8');
-            $themes[] = $first . mb_substr($tr, 1, null, 'UTF-8');
+            $display = $first . mb_substr($tr, 1, null, 'UTF-8');
+
+            $norm = mb_strtolower($display, 'UTF-8');
+            if (isset($seenNames[$norm])) {
+                continue;
+            }
+            $seenNames[$norm] = true;
+            $themes[] = ['key' => $key, 'name' => $display];
         }
 
         // Türler
@@ -208,9 +224,9 @@ class TasteDnaWebText
                 . ' → ' . self::genreName((int) $dna['shift_to']) . '.';
         }
 
-        // Kanıtlı isabet
+        // Kanıtlı isabet - Uyum oranı >= %40 ise gösterilir
         $accuracy = null;
-        if (isset($dna['accuracy']) && $dna['accuracy'] !== null) {
+        if (isset($dna['accuracy']) && $dna['accuracy'] !== null && (float)$dna['accuracy'] >= 0.40) {
             $sample = (int) ($dna['accuracy_sample'] ?? 0);
             $accuracy = 'Son önerilerdeki uyum oranı: ' . self::pct((float) $dna['accuracy'])
                 . ' — ' . $sample . ' öneri üzerinden.';
@@ -219,22 +235,24 @@ class TasteDnaWebText
         // Temalar ve kanıt filmleri
         $themesWithEvidence = [];
         if (isset($dna['theme_evidence']) && is_array($dna['theme_evidence'])) {
-            foreach ($themes as $i => $themeName) {
-                $engKey = $dna['themes'][$i] ?? null;
-                if ($engKey && isset($dna['theme_evidence'][$engKey])) {
+            foreach ($themes as $tItem) {
+                $engKey = $tItem['key'];
+                if (isset($dna['theme_evidence'][$engKey])) {
                     $themesWithEvidence[] = [
-                        'name' => $themeName,
+                        'name' => $tItem['name'],
                         'movies' => $dna['theme_evidence'][$engKey],
                     ];
                 }
             }
         }
 
+        $themeNamesOnly = array_map(fn($t) => $t['name'], $themes);
+
         return [
             'emoji' => $arch[0],
             'archetype' => $archetypeName,
             'essence' => $essence,
-            'themes' => array_slice($themes, 0, 5),
+            'themes' => array_slice($themeNamesOnly, 0, 5),
             'genres' => array_slice($genres, 0, 3),
             'signals' => $signals,
             'accuracy' => $accuracy,
@@ -254,5 +272,17 @@ class TasteDnaWebText
             'eternal_child' => 'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
             default => 'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
         };
+    }
+
+    private static function cleanRawKeyword(string $keyword): string
+    {
+        // Parantez içindeki metni ve parantezleri temizle
+        $clean = preg_replace('/\s*\([^)]*\)/u', '', $keyword);
+        // Virgülden sonrasını (örn. ", ülke") at
+        if (strpos($clean, ',') !== false) {
+            $parts = explode(',', $clean);
+            $clean = $parts[0];
+        }
+        return trim($clean);
     }
 }
