@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/api_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
@@ -844,6 +846,37 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Sürpriz/zar: zevke uygun rastgele film. "Bu Gece"
+                      // kartı motorun EN İYİ tahminini verirken bu "şaşırt
+                      // beni" niyetini karşılar; header'da küçük durur ki iki
+                      // ayrı "ne izlesem" kahramanı çakışmasın.
+                      Semantics(
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('browse_surprise') ??
+                            'Sürpriz film',
+                        button: true,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.casino_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          onPressed: _luckyPick,
+                          tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('browse_surprise') ??
+                              'Sürpriz film',
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       SizedBox(
                         width: 44,
                         height: 44,
@@ -915,37 +948,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Sürpriz/zar: zevke uygun rastgele film. "Bu Gece"
-                      // kartı motorun EN İYİ tahminini verirken bu "şaşırt
-                      // beni" niyetini karşılar; header'da küçük durur ki iki
-                      // ayrı "ne izlesem" kahramanı çakışmasın.
-                      Semantics(
-                        label:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('browse_surprise') ??
-                            'Sürpriz film',
-                        button: true,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.casino_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          onPressed: _luckyPick,
-                          tooltip:
-                              AppLocalizations.of(
-                                context,
-                              )?.get('browse_surprise') ??
-                              'Sürpriz film',
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Semantics(
                         label:
                             AppLocalizations.of(context)?.get('theme_switch') ??
@@ -1000,6 +1002,38 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         ),
                       ),
                       if (isAuthenticated) ...[
+                        const SizedBox(width: 8),
+                        Semantics(
+                          label: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                              ? 'Web Profili'
+                              : 'Web Profile',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.public_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            onPressed: () async {
+                              HapticFeedback.lightImpact();
+                              final username = authState.user?['username'] as String?;
+                              if (username != null && username.isNotEmpty) {
+                                final url = Uri.parse('${ApiService.webProfileBaseUrl}/$username');
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                }
+                              }
+                            },
+                            tooltip: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                                ? 'Web Profili'
+                                : 'Web Profile',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         // Hesap/profil kısayolu. Sosyal ağ artık "Birlikte"
                         // alt sekmesinde; başlık sadeleşti.

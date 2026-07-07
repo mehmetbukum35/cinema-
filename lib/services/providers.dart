@@ -19,8 +19,14 @@ import 'recommendation_engine.dart';
 import 'taste_dna_service.dart';
 
 class LocaleNotifier extends StateNotifier<Locale> {
-  LocaleNotifier() : super(const Locale('en', 'US')) {
+  LocaleNotifier() : super(_getInitialLocale()) {
     _init();
+  }
+
+  static Locale _getInitialLocale() {
+    final sysLang = ui.PlatformDispatcher.instance.locale.languageCode;
+    final supported = ['tr', 'en'].contains(sysLang) ? sysLang : 'en';
+    return Locale(supported);
   }
 
   void _init() async {

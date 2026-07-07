@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
@@ -138,6 +137,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final locale = ref.watch(localeProvider);
+    final isTr = locale.languageCode == 'tr';
     // Splash system bar'ı temaya göre ayarla
     final brightness = Theme.of(context).brightness;
     SystemChrome.setSystemUIOverlayStyle(
@@ -164,7 +165,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       scale: _markScale.value * (1 + 0.03 * _exit.value),
                       child: Opacity(
                         opacity: _markFade.value,
-                        child: _Wordmark(tracking: _tracking.value),
+                        child: _Wordmark(
+                          tracking: _tracking.value,
+                          isTr: isTr,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -199,12 +203,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
 class _Wordmark extends StatelessWidget {
   final double tracking;
-  const _Wordmark({required this.tracking});
+  final bool isTr;
+  const _Wordmark({required this.tracking, required this.isTr});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final isTr = ui.PlatformDispatcher.instance.locale.languageCode == 'tr';
     final style = TextStyle(
       fontSize: 24,
       fontWeight: FontWeight.w800,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
@@ -556,6 +557,8 @@ class ProfileScreen extends ConsumerWidget {
     final topGenres = stats['topGenres'] as List<dynamic>? ?? [];
     final tr = AppLocalizations.of(context);
     final syncState = ref.watch(syncProvider);
+    final auth = ref.watch(authProvider);
+    final isLoggedIn = auth.isLoggedIn;
 
     return RefreshIndicator(
       color: c.gold,
@@ -649,6 +652,25 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
+                  Semantics(
+                    label: tr?.get('browse_refresh') ?? 'Yenile',
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(Icons.refresh_rounded, color: c.dim, size: 22),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.invalidate(watchlistProvider);
+                        ref.invalidate(statsProvider);
+                      },
+                      tooltip: tr?.get('browse_refresh') ?? 'Yenile',
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   SizedBox(
                     width: 44,
                     height: 44,
@@ -759,25 +781,40 @@ class ProfileScreen extends ConsumerWidget {
                       padding: EdgeInsets.zero,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Semantics(
-                    label: tr?.get('browse_refresh') ?? 'Yenile',
-                    button: true,
-                    child: IconButton(
-                      icon: Icon(Icons.refresh_rounded, color: c.dim, size: 22),
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        ref.invalidate(watchlistProvider);
-                        ref.invalidate(statsProvider);
-                      },
-                      tooltip: tr?.get('browse_refresh') ?? 'Yenile',
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
+                  if (isLoggedIn) ...[
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: tr?.locale.languageCode == 'tr'
+                          ? 'Web Profili'
+                          : 'Web Profile',
+                      button: true,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.public_rounded,
+                          color: c.dim,
+                          size: 22,
+                        ),
+                        onPressed: () async {
+                          HapticFeedback.lightImpact();
+                          final username = auth.user?['username'] as String?;
+                          if (username != null && username.isNotEmpty) {
+                            final url = Uri.parse('${AppConfig.webProfileBaseUrl}/$username');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          }
+                        },
+                        tooltip: tr?.locale.languageCode == 'tr'
+                            ? 'Web Profili'
+                            : 'Web Profile',
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        padding: EdgeInsets.zero,
                       ),
-                      padding: EdgeInsets.zero,
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
