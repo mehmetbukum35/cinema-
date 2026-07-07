@@ -814,219 +814,33 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Semantics(
-                        label:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('semantics_refresh') ??
-                            'Refresh recommendations',
-                        button: true,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.refresh_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            _load();
-                          },
-                          tooltip:
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        Semantics(
+                          label:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('semantics_refresh') ??
+                              'Refresh recommendations',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.refresh_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _load();
+                            },
+                            tooltip:
                               AppLocalizations.of(
                                 context,
                               )?.get('browse_refresh') ??
                               'Yenile',
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Sürpriz/zar: zevke uygun rastgele film. "Bu Gece"
-                      // kartı motorun EN İYİ tahminini verirken bu "şaşırt
-                      // beni" niyetini karşılar; header'da küçük durur ki iki
-                      // ayrı "ne izlesem" kahramanı çakışmasın.
-                      Semantics(
-                        label:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('browse_surprise') ??
-                            'Sürpriz film',
-                        button: true,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.casino_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          onPressed: _luckyPick,
-                          tooltip:
-                              AppLocalizations.of(
-                                context,
-                              )?.get('browse_surprise') ??
-                              'Sürpriz film',
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: PopupMenuButton<String>(
-                          icon: Icon(
-                            Icons.language_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          padding: EdgeInsets.zero,
-                          tooltip:
-                              AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr'
-                              ? 'Dil Seçimi'
-                              : 'Change Language',
-                          onSelected: (String langCode) {
-                            HapticFeedback.mediumImpact();
-                            ref
-                                .read(localeProvider.notifier)
-                                .setLocale(langCode);
-                          },
-                          itemBuilder: (BuildContext context) => [
-                            PopupMenuItem(
-                              value: 'tr',
-                              child: Row(
-                                children: [
-                                  const Text(
-                                    '🇹🇷',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Türkçe',
-                                    style: TextStyle(
-                                      color: c.ink,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'en',
-                              child: Row(
-                                children: [
-                                  const Text(
-                                    '🇺🇸',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'English',
-                                    style: TextStyle(
-                                      color: c.ink,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          offset: const Offset(0, 40),
-                          color: c.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Semantics(
-                        label:
-                            AppLocalizations.of(context)?.get('theme_switch') ??
-                            'Tema',
-                        button: true,
-                        child: IconButton(
-                          icon: Icon(
-                            Theme.of(context).brightness == Brightness.light
-                                ? Icons.dark_mode_rounded
-                                : Icons.light_mode_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            ref.read(themeModeProvider.notifier).toggle();
-                          },
-                          tooltip:
-                              AppLocalizations.of(
-                                context,
-                              )?.get('theme_switch') ??
-                              'Tema',
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Semantics(
-                        label: AppLocalizations.of(context)?.get('profile_about') ??
-                            'Uygulama Hakkında',
-                        button: true,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.info_outline_rounded,
-                            color: c.dim,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            _showAboutSheet(context);
-                          },
-                          tooltip: AppLocalizations.of(context)?.get('profile_about') ??
-                              'Uygulama Hakkında',
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                      if (isAuthenticated) ...[
-                        const SizedBox(width: 8),
-                        Semantics(
-                          label: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                              ? 'Web Profili'
-                              : 'Web Profile',
-                          button: true,
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.public_rounded,
-                              color: c.dim,
-                              size: 20,
-                            ),
-                            onPressed: () async {
-                              HapticFeedback.lightImpact();
-                              final username = authState.user?['username'] as String?;
-                              if (username != null && username.isNotEmpty) {
-                                final url = Uri.parse('${ApiService.webProfileBaseUrl}/$username');
-                                if (await canLaunchUrl(url)) {
-                                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                                }
-                              }
-                            },
-                            tooltip: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                ? 'Web Profili'
-                                : 'Web Profile',
                             constraints: const BoxConstraints(
                               minWidth: 44,
                               minHeight: 44,
@@ -1035,48 +849,238 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // Hesap/profil kısayolu. Sosyal ağ artık "Birlikte"
-                        // alt sekmesinde; başlık sadeleşti.
+                        // Sürpriz/zar: zevke uygun rastgele film. "Bu Gece"
+                        // kartı motorun EN İYİ tahminini verirken bu "şaşırt
+                        // beni" niyetini karşılar; header'da küçük durur ki iki
+                        // ayrı "ne izlesem" kahramanı çakışmasın.
                         Semantics(
                           label:
                               AppLocalizations.of(
                                 context,
-                              )?.get('tab_profile') ??
-                              'Profil',
+                              )?.get('browse_surprise') ??
+                              'Sürpriz film',
                           button: true,
-                          child: GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              widget.onOpenProfile?.call();
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.casino_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            onPressed: _luckyPick,
+                            tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('browse_surprise') ??
+                              'Sürpriz film',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: PopupMenuButton<String>(
+                            icon: Icon(
+                              Icons.language_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                            tooltip:
+                              AppLocalizations.of(
+                                    context,
+                                  )?.locale.languageCode ==
+                                  'tr'
+                              ? 'Dil Seçimi'
+                              : 'Change Language',
+                            onSelected: (String langCode) {
+                              HapticFeedback.mediumImpact();
+                              ref
+                                  .read(localeProvider.notifier)
+                                  .setLocale(langCode);
                             },
-                            behavior: HitTestBehavior.opaque,
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Center(
-                                child: Container(
-                                  width: 30,
-                                  height: 30,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: CinemaGradients.crimson,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    _profileInitial(authState),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
+                            itemBuilder: (BuildContext context) => [
+                              PopupMenuItem(
+                                value: 'tr',
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      '🇹🇷',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Türkçe',
+                                      style: TextStyle(
+                                        color: c.ink,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'en',
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      '🇺🇸',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'English',
+                                      style: TextStyle(
+                                        color: c.ink,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            offset: const Offset(0, 40),
+                            color: c.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Semantics(
+                          label:
+                            AppLocalizations.of(context)?.get('theme_switch') ??
+                            'Tema',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Theme.of(context).brightness == Brightness.light
+                                  ? Icons.dark_mode_rounded
+                                  : Icons.light_mode_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              ref.read(themeModeProvider.notifier).toggle();
+                            },
+                            tooltip:
+                              AppLocalizations.of(
+                                context,
+                              )?.get('theme_switch') ??
+                              'Tema',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Semantics(
+                          label: AppLocalizations.of(context)?.get('profile_about') ??
+                              'Uygulama Hakkında',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.info_outline_rounded,
+                              color: c.dim,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _showAboutSheet(context);
+                            },
+                            tooltip: AppLocalizations.of(context)?.get('profile_about') ??
+                                'Uygulama Hakkında',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        if (isAuthenticated) ...[
+                          const SizedBox(width: 8),
+                          Semantics(
+                            label: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                                ? 'Web Profili'
+                                : 'Web Profile',
+                            button: true,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.public_rounded,
+                                color: c.dim,
+                                size: 20,
+                              ),
+                              onPressed: () async {
+                                HapticFeedback.lightImpact();
+                                final username = authState.user?['username'] as String?;
+                                if (username != null && username.isNotEmpty) {
+                                  final url = Uri.parse('${ApiService.webProfileBaseUrl}/$username');
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                  }
+                                }
+                              },
+                              tooltip: AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                                  ? 'Web Profili'
+                                  : 'Web Profile',
+                              constraints: const BoxConstraints(
+                                minWidth: 44,
+                                minHeight: 44,
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Hesap/profil kısayolu. Sosyal ağ artık "Birlikte"
+                          // alt sekmesinde; başlık sadeleşti.
+                          Semantics(
+                            label:
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('tab_profile') ??
+                                'Profil',
+                            button: true,
+                            child: GestureDetector(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                widget.onOpenProfile?.call();
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                  child: Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: CinemaGradients.crimson,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      _profileInitial(authState),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ],
               ),
