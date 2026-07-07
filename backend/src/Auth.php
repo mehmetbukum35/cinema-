@@ -101,51 +101,10 @@ class Auth
         $email = strtolower(trim((string) $claims['email']));
         $name = isset($claims['name']) ? trim((string) $claims['name']) : null;
 
-        // 1) Daha önce Google ile bağlanmış hesap
-        $st = $this->db->prepare(
-            'SELECT id, email, display_name, username FROM users WHERE google_sub = ?'
-        );
-        $st->execute([$sub]);
-        $u = $st->fetch();
-
-        $isNew = false;
-        if ($u) {
-            $uid = (int) $u['id'];
-            $email = (string) $u['email'];
-            $name = $u['display_name'];
-            $username = $u['username'];
-        } else {
-            // 2) Aynı e-postalı mevcut hesap → Google'ı bağla
-            $st = $this->db->prepare(
-                'SELECT id, display_name, username FROM users WHERE email = ?'
-            );
-            $st->execute([$email]);
-            $u = $st->fetch();
-
-            if ($u) {
-                $uid = (int) $u['id'];
-                $name = $u['display_name'];
-                $username = $u['username'];
-                $up = $this->db->prepare(
-                    'UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?'
-                );
-                $up->execute([$sub, now_ms(), $uid]);
-            } else {
-                // 3) Yeni hesap. Parola alanı boş bırakılmaz: rastgele bir
-                // secret hash'lenir — bilinmediği için parola girişi imkânsız,
-                // kullanıcı isterse "şifremi unuttum" ile parola belirleyebilir.
-                $t = now_ms();
-                $hash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
-                $ins = $this->db->prepare(
-                    'INSERT INTO users (email, password_hash, display_name, google_sub, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?)'
-                );
-                $ins->execute([$email, $hash, $name !== '' ? $name : null, $sub, $t, $t]);
-                $uid = (int) $this->db->lastInsertId();
-                $username = null;
-                $isNew = true;
-            }
-        }
+        // Hesabı bul/bağla/oluştur. Eşzamanlı ilk girişlerde UNIQUE ihlali
+        // (google_sub / email) doğabileceğinden transaction + tek retry ile sarılır.
+        [$uid, $email, $name, $username, $isNew] =
+            $this->resolveGoogleAccount($sub, $email, $name);
 
         json_out(200, [
             'user' => [
@@ -157,6 +116,82 @@ class Auth
             'tokens' => $this->issueTokens($uid),
             'is_new' => $isNew,
         ]);
+    }
+
+    /**
+     * Google hesabını bul/bağla/oluştur; [uid, email, name, username, isNew] döner.
+     * Transaction içinde çalışır; eşzamanlı iki istek aynı yeni kullanıcıyı
+     * yaratmaya çalışırsa oluşan UNIQUE ihlali yakalanıp bir kez yeniden denenir
+     * (ikinci turda kayıt artık mevcut olduğundan SELECT ile bulunur).
+     */
+    private function resolveGoogleAccount(string $sub, string $email, ?string $name): array
+    {
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                $this->db->beginTransaction();
+                $result = $this->findOrCreateGoogleUser($sub, $email, $name);
+                $this->db->commit();
+                return $result;
+            } catch (\PDOException $e) {
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
+                // İlk denemede yarış kaynaklı ihlal olabilir → tekrar dene.
+                if ($attempt === 0) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+        // Ulaşılmaz; döngü ya döner ya da fırlatır.
+        throw new \RuntimeException('resolveGoogleAccount: beklenmeyen durum');
+    }
+
+    /** google_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar. */
+    private function findOrCreateGoogleUser(string $sub, string $email, ?string $name): array
+    {
+        // 1) Daha önce Google ile bağlanmış hesap.
+        $st = $this->db->prepare(
+            'SELECT id, email, display_name, username FROM users WHERE google_sub = ?'
+        );
+        $st->execute([$sub]);
+        $u = $st->fetch();
+        if ($u) {
+            return [
+                (int) $u['id'],
+                (string) $u['email'],
+                $u['display_name'],
+                $u['username'],
+                false,
+            ];
+        }
+
+        // 2) Aynı e-postalı mevcut hesap → Google'ı bağla.
+        $st = $this->db->prepare(
+            'SELECT id, display_name, username FROM users WHERE email = ?'
+        );
+        $st->execute([$email]);
+        $u = $st->fetch();
+        if ($u) {
+            $uid = (int) $u['id'];
+            $up = $this->db->prepare(
+                'UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?'
+            );
+            $up->execute([$sub, now_ms(), $uid]);
+            return [$uid, $email, $u['display_name'], $u['username'], false];
+        }
+
+        // 3) Yeni hesap. Parola alanı boş bırakılmaz: rastgele bir secret
+        // hash'lenir — bilinmediği için parola girişi imkânsız; kullanıcı isterse
+        // "şifremi unuttum" ile parola belirleyebilir.
+        $t = now_ms();
+        $hash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+        $ins = $this->db->prepare(
+            'INSERT INTO users (email, password_hash, display_name, google_sub, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $ins->execute([$email, $hash, ($name !== null && $name !== '') ? $name : null, $sub, $t, $t]);
+        return [(int) $this->db->lastInsertId(), $email, $name, null, true];
     }
 
     // ─── POST /auth/refresh ─────────────────────────────────────────────────
