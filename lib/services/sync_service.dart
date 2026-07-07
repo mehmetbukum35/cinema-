@@ -7,6 +7,13 @@ import 'prefs_service.dart';
 import 'api_service.dart';
 import '../providers/auth_provider.dart';
 
+/// Sunucudan gelen sayısal alanları güvenle int'e çevirir. Paylaşımlı
+/// hosting'deki MySQL/PDO, BIGINT kolonları JSON'a STRING olarak yazar
+/// (ör. "updated_at":"1783407000000"); doğrudan `as num` cast'i TypeError
+/// fırlatır ve sync her seferinde aynı yerde patlar.
+int _asInt(Object? v) =>
+    v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
+
 class SyncService {
   final ApiService _apiService;
   Future<void>? _syncFuture;
@@ -168,7 +175,7 @@ class SyncService {
 
     // 2. PULL remote changes
     final pullResult = await _apiService.pull(lastPull);
-    final serverTime = pullResult['server_time'] as int;
+    final serverTime = _asInt(pullResult['server_time']);
 
     // Sunucudan gelen satır, yereldeki karşılığından ESKİYSE uygulanmaz.
     // Aksi halde sync sürerken yapılan yerel bir değişiklik (ör. yeni puan)
@@ -189,8 +196,8 @@ class SyncService {
         limit: 1,
       );
       if (rows.isEmpty) return true;
-      final local = rows.first['updated_at'] as int? ?? 0;
-      final remote = (remoteUpdatedAt as num?)?.toInt() ?? 0;
+      final local = _asInt(rows.first['updated_at']);
+      final remote = _asInt(remoteUpdatedAt);
       return remote >= local;
     }
 
