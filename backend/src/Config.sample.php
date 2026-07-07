@@ -14,7 +14,7 @@ return [
     // En az 32 karakter rastgele. Üret: bin2hex(random_bytes(32))
     'jwt_secret' => 'generate_a_random_32_bytes_hex_string_here',
 
-    'access_ttl'  => 15 * 60,             // access token: 15 dakika (saniye)
+    'access_ttl'  => 2 * 60 * 60,             // access token: 2 saat (saniye)
     'refresh_ttl' => 30 * 24 * 60 * 60,   // refresh token: 30 gün (saniye)
 
     // Basit brute-force koruması (giriş/kayıt için): IP başına dakikada deneme

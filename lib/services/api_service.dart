@@ -114,8 +114,16 @@ class ApiService {
 
     try {
       final refreshToken = await PrefsService.getRefreshToken();
+      final userData = await PrefsService.getUserData();
       if (refreshToken == null) {
-        completer.complete(RefreshOutcome.denied);
+        if (userData != null) {
+          debugPrint(
+            "Refresh token is null but user data exists. Treating as transient storage failure.",
+          );
+          completer.complete(RefreshOutcome.transient);
+        } else {
+          completer.complete(RefreshOutcome.denied);
+        }
       } else {
         final url = Uri.parse('$baseUrl/auth/refresh');
         final response = await _client.post(
