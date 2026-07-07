@@ -649,6 +649,71 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.language_rounded,
+                        color: c.dim,
+                        size: 22,
+                      ),
+                      padding: EdgeInsets.zero,
+                      tooltip: tr?.locale.languageCode == 'tr'
+                          ? 'Dil Seçimi'
+                          : 'Change Language',
+                      onSelected: (String langCode) {
+                        HapticFeedback.mediumImpact();
+                        ref.read(localeProvider.notifier).setLocale(langCode);
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'tr',
+                          child: Row(
+                            children: [
+                              const Text(
+                                '🇹🇷',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Türkçe',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'en',
+                          child: Row(
+                            children: [
+                              const Text(
+                                '🇺🇸',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'English',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      offset: const Offset(0, 40),
+                      color: c.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Semantics(
                     label: tr?.get('theme_switch') ?? 'Temayı değiştir',
                     button: true,
@@ -672,6 +737,29 @@ class ProfileScreen extends ConsumerWidget {
                       padding: EdgeInsets.zero,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Semantics(
+                    label: tr?.get('profile_about') ?? 'Uygulama Hakkında',
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.info_outline_rounded,
+                        color: c.dim,
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _showAboutSheet(context);
+                      },
+                      tooltip: tr?.get('profile_about') ?? 'Uygulama Hakkında',
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Semantics(
                     label: tr?.get('browse_refresh') ?? 'Yenile',
                     button: true,
@@ -1348,67 +1436,6 @@ class ProfileScreen extends ConsumerWidget {
                               tr?.locale.languageCode == 'tr'
                                   ? 'Film & dizi önerilerini zevkine göre ayarla'
                                   : 'Tune movie & show recommendations to your taste',
-                              style: TextStyle(color: c.dim, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.chevron_right_rounded, color: c.dim),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _showAboutSheet(context);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: c.isLight
-                        ? Border.all(color: c.border, width: 1)
-                        : null,
-                    boxShadow: c.cardShadow,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: c.gold.withValues(alpha: 0.15),
-                        ),
-                        child: Icon(
-                          Icons.info_outline_rounded,
-                          color: c.gold,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tr?.get('profile_about') ?? 'Uygulama Hakkında',
-                              style: TextStyle(
-                                color: c.ink,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              tr?.get('profile_about_desc') ?? 'Sürüm, yazar ve uygulama bilgileri',
                               style: TextStyle(color: c.dim, fontSize: 12),
                             ),
                           ],

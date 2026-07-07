@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/localization_service.dart';
@@ -192,7 +193,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       opacity: _tagline.value,
                       child: Text(
                         AppLocalizations.of(context)?.get('tagline') ??
-                            'NE İZLESEM?',
+                            (ui.PlatformDispatcher.instance.locale.languageCode == 'tr'
+                                ? 'NE İZLESEM?'
+                                : 'WHAT TO WATCH?'),
                         style: TextStyle(
                           color: c.dim,
                           fontSize: 11,
