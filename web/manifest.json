@@ -1,11 +1,11 @@
 {
-    "name": "ne_izlesem",
-    "short_name": "ne_izlesem",
+    "name": "Cinema+ | What to Watch?",
+    "short_name": "Cinema+",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetme uygulaması.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

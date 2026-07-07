@@ -117,7 +117,7 @@ class NeIzlesemApp extends ConsumerWidget {
     );
 
     return MaterialApp(
-      title: 'Ne İzlesem?',
+      title: 'Cinema+ | What to Watch?',
       navigatorKey: NotificationService.navigatorKey,
       locale: currentLocale,
       debugShowCheckedModeBanner: false,

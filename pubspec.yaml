@@ -1,5 +1,5 @@
 name: ne_izlesem
-description: "Ne İzlesem? - Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetme uygulaması."
+description: "Cinema+ | What to Watch? - Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetme uygulaması."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php
-        $ogTitle = $displayName . " Neler İzliyor? | Ne İzlesem";
+        $ogTitle = $displayName . " Neler İzliyor? | Cinema+";
         $ogDesc = "@" . $userHandle . " kullanıcısının Sinema DNA'sını ve izleme listesini keşfet.";
         if (!empty($dna)) {
             $ogTitle = $displayName . " Sinema DNA'sı: " . $dna['archetype'];
