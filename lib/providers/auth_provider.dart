@@ -95,6 +95,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return 'auth_err_login_failed';
       case 'Kayıt başarısız.':
         return 'auth_err_register_failed';
+      case 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.':
+      case 'Geçici hizmet kısıtı.':
+        return 'auth_err_rate_limited';
       default:
         return message;
     }
