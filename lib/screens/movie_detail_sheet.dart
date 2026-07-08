@@ -1663,232 +1663,228 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               ),
               const SizedBox(height: 8),
               Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        _isSpoiler = !_isSpoiler;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isSpoiler
+                            ? c.rBerbat.withValues(alpha: 0.15)
+                            : c.borderSoft.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isSpoiler ? c.rBerbat : c.borderSoft,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isSpoiler
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_outline_rounded,
+                            size: 14,
+                            color: _isSpoiler ? c.rBerbat : c.dim,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            tr?.get('review_spoiler') ?? 'Spoiler İçerir',
+                            style: TextStyle(
+                              color: _isSpoiler ? c.rBerbat : c.ink,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        _isPrivate = !_isPrivate;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isPrivate
+                            ? c.gold.withValues(alpha: 0.15)
+                            : c.borderSoft.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isPrivate ? c.gold : c.borderSoft,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isPrivate
+                                ? Icons.lock_rounded
+                                : Icons.lock_open_rounded,
+                            size: 14,
+                            color: _isPrivate ? c.gold : c.dim,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            tr?.get('review_private') ?? 'Gizli',
+                            style: TextStyle(
+                              color: _isPrivate ? c.gold : c.ink,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _isSpoiler = !_isSpoiler;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isSpoiler
-                                ? c.rBerbat.withValues(alpha: 0.15)
-                                : c.borderSoft.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _isSpoiler ? c.rBerbat : c.borderSoft,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _isSpoiler
-                                    ? Icons.warning_amber_rounded
-                                    : Icons.check_circle_outline_rounded,
-                                size: 14,
-                                color: _isSpoiler ? c.rBerbat : c.dim,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tr?.get('review_spoiler') ?? 'Spoiler İçerir',
-                                style: TextStyle(
-                                  color: _isSpoiler ? c.rBerbat : c.ink,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _isPrivate = !_isPrivate;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isPrivate
-                                ? c.gold.withValues(alpha: 0.15)
-                                : c.borderSoft.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _isPrivate ? c.gold : c.borderSoft,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _isPrivate
-                                    ? Icons.lock_rounded
-                                    : Icons.lock_open_rounded,
-                                size: 14,
-                                color: _isPrivate ? c.gold : c.dim,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tr?.get('review_private') ?? 'Gizli',
-                                style: TextStyle(
-                                  color: _isPrivate ? c.gold : c.ink,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    '${_commentController.text.length} / 280',
+                    style: TextStyle(color: c.dim, fontSize: 11),
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        '${_commentController.text.length} / 280',
-                        style: TextStyle(color: c.dim, fontSize: 11),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: _justSavedComment
-                            ? null
-                            : () async {
-                                HapticFeedback.mediumImpact();
-                                FocusScope.of(context).unfocus();
-                                if (_currentRating != null) {
-                                  try {
-                                    await PrefsService.saveRating(
-                                      movie: widget.movie,
-                                      rating: _currentRating!,
-                                      comment: _commentController.text,
-                                      isSpoiler: _isSpoiler ? 1 : 0,
-                                      isPrivate: _isPrivate ? 1 : 0,
-                                    );
-                                    ref
-                                        .read(recommendationEngineProvider)
-                                        .invalidateCache(
-                                          isNegativeChange:
-                                              _currentRating! <= 1,
-                                        )
-                                        .catchError((_) => {});
-                                    ref.invalidate(statsProvider);
-                                    ref
-                                        .read(syncServiceProvider)
-                                        .sync()
-                                        .catchError((_) => {});
-                                    ref
-                                        .read(socialProvider.notifier)
-                                        .loadActivityFeed()
-                                        .catchError((_) => {});
+                  ElevatedButton(
+                    onPressed: _justSavedComment
+                        ? null
+                        : () async {
+                            HapticFeedback.mediumImpact();
+                            FocusScope.of(context).unfocus();
+                            if (_currentRating != null) {
+                              try {
+                                await PrefsService.saveRating(
+                                  movie: widget.movie,
+                                  rating: _currentRating!,
+                                  comment: _commentController.text,
+                                  isSpoiler: _isSpoiler ? 1 : 0,
+                                  isPrivate: _isPrivate ? 1 : 0,
+                                );
+                                ref
+                                    .read(recommendationEngineProvider)
+                                    .invalidateCache(
+                                      isNegativeChange:
+                                          _currentRating! <= 1,
+                                    )
+                                    .catchError((_) => {});
+                                ref.invalidate(statsProvider);
+                                ref
+                                    .read(syncServiceProvider)
+                                    .sync()
+                                    .catchError((_) => {});
+                                ref
+                                    .read(socialProvider.notifier)
+                                    .loadActivityFeed()
+                                    .catchError((_) => {});
 
-                                    if (mounted) {
-                                      setState(() {
-                                        _justSavedComment = true;
-                                      });
-                                      final isGuest = !ref
-                                          .read(authProvider)
-                                          .isLoggedIn;
-                                      final baseMsg =
-                                          AppLocalizations.of(
-                                            context,
-                                          )?.get('review_saved_successfully') ??
-                                          'Review saved successfully';
-                                      final suffix = isGuest
-                                          ? (AppLocalizations.of(
-                                                      context,
-                                                    )?.locale.languageCode ==
-                                                    'tr'
-                                                ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
-                                                : ' (Saved locally, will sync when logged in.)')
-                                          : '';
+                                if (mounted) {
+                                  setState(() {
+                                    _justSavedComment = true;
+                                  });
+                                  final isGuest = !ref
+                                      .read(authProvider)
+                                      .isLoggedIn;
+                                  final baseMsg =
+                                      AppLocalizations.of(
+                                        context,
+                                      )?.get('review_saved_successfully') ??
+                                      'Review saved successfully';
+                                  final suffix = isGuest
+                                      ? (AppLocalizations.of(
+                                                  context,
+                                                )?.locale.languageCode ==
+                                                'tr'
+                                            ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
+                                            : ' (Saved locally, will sync when logged in.)')
+                                      : '';
 
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '$baseMsg$suffix',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          backgroundColor: c.red,
-                                          duration: const Duration(seconds: 3),
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '$baseMsg$suffix',
+                                        style: const TextStyle(
+                                          color: Colors.white,
                                         ),
-                                      );
-                                      Future.delayed(
-                                        const Duration(seconds: 2),
-                                        () {
-                                          if (mounted) {
-                                            setState(() {
-                                              _justSavedComment = false;
-                                            });
-                                          }
-                                        },
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            AppLocalizations.of(context)
-                                                    ?.get('error_occurred_msg')
-                                                    .replaceAll('{}', '$e') ??
-                                                'Error: $e',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          backgroundColor: c.red,
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    }
-                                  }
+                                      ),
+                                      backgroundColor: c.red,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                  Future.delayed(
+                                    const Duration(seconds: 2),
+                                    () {
+                                      if (mounted) {
+                                        setState(() {
+                                          _justSavedComment = false;
+                                        });
+                                      }
+                                    },
+                                  );
                                 }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _justSavedComment ? c.green : c.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          _justSavedComment
-                              ? (AppLocalizations.of(context)?.get('saved') ??
-                                    'Saved ✔')
-                              : (tr?.get('review_save') ?? 'Kaydet'),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        AppLocalizations.of(context)
+                                                ?.get('error_occurred_msg')
+                                                .replaceAll('{}', '$e') ??
+                                            'Error: $e',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      backgroundColor: c.red,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _justSavedComment ? c.green : c.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                    ],
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      _justSavedComment
+                          ? (AppLocalizations.of(context)?.get('saved') ??
+                                'Saved ✔')
+                          : (tr?.get('review_save') ?? 'Kaydet'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
