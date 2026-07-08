@@ -11,7 +11,11 @@ class TasteDnaPresenter {
 
   TasteDnaPresenter(this.l10n, this.dna);
 
-  String _t(String key, String fallback) => l10n?.get(key) ?? fallback;
+  String _t(String key, String fallback) {
+    final val = l10n?.get(key);
+    if (val == null || val == key) return fallback;
+    return val;
+  }
 
   bool get _isEn => l10n?.locale.languageCode == 'en';
 

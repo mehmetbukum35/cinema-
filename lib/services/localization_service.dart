@@ -1275,15 +1275,15 @@ class AppLocalizations {
     },
   };
 
-  String? get(String key) {
+  String get(String key) {
     final languageCode = locale.languageCode;
     if (_localizedValues[languageCode]?.containsKey(key) ?? false) {
-      return _localizedValues[languageCode]![key];
+      return _localizedValues[languageCode]![key]!;
     }
     if (_localizedValues['en']?.containsKey(key) ?? false) {
-      return _localizedValues['en']![key];
+      return _localizedValues['en']![key]!;
     }
-    return null;
+    return key;
   }
 }
 
