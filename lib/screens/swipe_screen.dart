@@ -700,7 +700,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                   },
                   onHorizontalDragEnd: (details) {
                     if (_dragX > 120) {
-                      _rate(3); // Rate Harika (Beğendim)
+                      _rate(2); // Rate İyi (Beğendim)
                     } else if (_dragX < -120) {
                       _rate(0); // Rate Berbat (Beğenmedim)
                     }
@@ -1324,7 +1324,7 @@ class _SwipeCard extends ConsumerWidget {
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: dragX > 0
-                              ? c.rHarika.withValues(
+                              ? c.rIyi.withValues(
                                   alpha: (dragX / 150).clamp(0.0, 0.5),
                                 )
                               : c.rBerbat.withValues(
@@ -1349,7 +1349,7 @@ class _SwipeCard extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: dragX > 0 ? c.rHarika : c.rBerbat,
+                            color: dragX > 0 ? c.rIyi : c.rBerbat,
                             width: 3,
                           ),
                           borderRadius: BorderRadius.circular(6),
@@ -1366,7 +1366,7 @@ class _SwipeCard extends ConsumerWidget {
                                     )?.get('swipe_disliked').toUpperCase() ??
                                     'DISLIKED'),
                           style: TextStyle(
-                            color: dragX > 0 ? c.rHarika : c.rBerbat,
+                            color: dragX > 0 ? c.rIyi : c.rBerbat,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
