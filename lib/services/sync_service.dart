@@ -346,6 +346,36 @@ class SyncService {
     debugPrint(
       "Sync complete. pull cursor: $serverTime, push cursor: $pushWatermark",
     );
+    _autoPublishDnaBackground();
+  }
+
+  void _autoPublishDnaBackground() {
+    final ref = _ref;
+    if (ref == null) return;
+
+    final auth = ref.read(authProvider);
+    if (!auth.isLoggedIn) return;
+
+    Future.microtask(() async {
+      try {
+        final userId = auth.user?['id']?.toString();
+        final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
+
+        final cachedData = await PrefsService.getCachedDna();
+        final currentHash = cachedData?['hash'];
+        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+
+        if (currentHash != null && currentHash != lastPublishedHash) {
+          await _apiService.publishTasteDna(dna.toJson());
+          await PrefsService.setLastPublishedDnaHash(currentHash);
+          debugPrint("Sync auto-publish DNA succeeded!");
+        } else {
+          debugPrint("Sync auto-publish DNA skipped (already up to date).");
+        }
+      } catch (e) {
+        debugPrint("Sync auto-publish DNA failed: $e");
+      }
+    });
   }
 }
 
