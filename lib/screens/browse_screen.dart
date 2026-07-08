@@ -1754,7 +1754,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               ),
             ),
             SizedBox(
-              height: 126,
+              height: 136,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -2138,7 +2138,6 @@ class _TopProfileCard extends ConsumerWidget {
 
     return Container(
       width: 260,
-      height: 122,
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
