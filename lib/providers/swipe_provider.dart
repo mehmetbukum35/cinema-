@@ -321,6 +321,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       isNegativeChange: prevRating == null || prevRating <= 1,
     );
 
+    // Revert recommendation telemetry outcome
+    if (prevRating != null) {
+      PrefsService.revertRecoOutcome(
+        source: movie.recoSource ?? 'discover',
+        liked: prevRating >= 2,
+      ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+    }
+
     // Remove from ratedIds
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
     final newRatedIds = Set<String>.from(state.ratedIds)..remove(key);

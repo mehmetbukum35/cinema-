@@ -227,7 +227,15 @@ class ProfileScreen extends ConsumerWidget {
     );
 
     if (ok == true) {
+      final ratingRecord = await PrefsService.getRating(movie.id, movie.isTV);
+      final prevRating = ratingRecord?['rating'] as int?;
       await PrefsService.deleteRating(movie.id, movie.isTV);
+      if (prevRating != null) {
+        PrefsService.revertRecoOutcome(
+          source: movie.recoSource ?? 'discover',
+          liked: prevRating >= 2,
+        ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+      }
       ref.invalidate(statsProvider);
     }
   }

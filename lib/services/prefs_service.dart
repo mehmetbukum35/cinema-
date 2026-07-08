@@ -262,6 +262,25 @@ class PrefsService {
     await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
   }
 
+  static Future<void> revertRecoOutcome({
+    required String source,
+    required bool liked,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
+    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+    final Map<String, dynamic> bucket =
+        (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
+    if ((bucket['shown'] as int) > 0) {
+      bucket['shown'] = (bucket['shown'] as int) - 1;
+    }
+    if (liked && (bucket['liked'] as int) > 0) {
+      bucket['liked'] = (bucket['liked'] as int) - 1;
+    }
+    data[source] = bucket;
+    await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+  }
+
   /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
     final prefs = await SharedPreferences.getInstance();

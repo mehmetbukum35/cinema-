@@ -170,5 +170,43 @@ void main() {
         expect(ratingData2['is_spoiler'], 0);
       },
     );
+
+    test(
+      'revertRecoOutcome should correctly decrement recommendation telemetry counters',
+      () async {
+        // Record outcomes
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: false);
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
+
+        var telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 3);
+        expect(telemetry['discover']?['liked'], 2);
+
+        // Revert one liked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 2);
+        expect(telemetry['discover']?['liked'], 1);
+
+        // Revert one disliked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: false);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 1);
+        expect(telemetry['discover']?['liked'], 1);
+
+        // Revert another liked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 0);
+        expect(telemetry['discover']?['liked'], 0);
+
+        // Revert when already 0 should not go negative
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 0);
+        expect(telemetry['discover']?['liked'], 0);
+      },
+    );
   });
 }

@@ -1949,7 +1949,17 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       onTap: () async {
         HapticFeedback.lightImpact();
         if (active) {
+          final oldRating = _currentRating;
           await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+          
+          final recoSource = widget.movie.recoSource;
+          if (recoSource != null && oldRating != null) {
+            PrefsService.revertRecoOutcome(
+              source: recoSource,
+              liked: oldRating >= 2,
+            ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+          }
+
           ref
               .read(recommendationEngineProvider)
               .invalidateCache(isNegativeChange: true)

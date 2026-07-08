@@ -1220,14 +1220,70 @@ class AppLocalizations {
       'sync_error_message':
           'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
       'sync_retry': 'Tekrar Dene',
+      'dna_title': 'Sinema DNA\'n',
+      'dna_banner_desc': 'Zevkinin kimliğini keşfet.',
+      'dna_analyzing': 'Zevk analizin yapılıyor...',
+      'dna_error': 'DNA\'n oluşturulamadı',
+      'dna_not_ready': 'DNA\'n henüz oluşuyor',
+      'dna_not_ready_desc': 'Birkaç yapımı daha oyladığında zevk kimliğin ortaya çıkacak.',
+      'dna_you_are': 'Sen bir',
+      'dna_themes': 'Sıkça izlediğin temalar',
+      'dna_top_genres': 'En sevdiğin türler',
+      'dna_signals': 'Zevkinin imzası',
+      'dna_share': 'Paylaş',
+      'dna_share_button': 'DNA\'nı Paylaş',
+      'dna_arch_dark_chronicler': 'Karanlık Anlatıcı',
+      'dna_arch_emotion_seeker': 'Duygu Avcısı',
+      'dna_arch_world_builder': 'Dünya Kâşifi',
+      'dna_arch_adrenaline_junkie': 'Adrenalin Tutkunu',
+      'dna_arch_joy_chaser': 'Neşe Avcısı',
+      'dna_arch_truth_seeker': 'Gerçeğin Peşinde',
+      'dna_arch_eternal_child': 'Sonsuz Çocuk',
+      'dna_arch_genre_nomad': 'Tür Göçebesi',
+      'dna_ess_dark_chronicler': 'Gölgelere, gerilime ve ahlaki griliğe çekiliyorsun.',
+      'dna_ess_emotion_seeker': 'Kalbe dokunan, insanı anlatan hikâyelerin peşindesin.',
+      'dna_ess_world_builder': 'Yeni evrenler, imkânsız dünyalar seni çağırıyor.',
+      'dna_ess_adrenaline_junkie': 'Tempo, aksiyon ve macera senin yakıtın.',
+      'dna_ess_joy_chaser': 'Kahkaha ve hafiflik senin sığınağın.',
+      'dna_ess_truth_seeker': 'Gerçek hikâyeler ve geçmişin dersleri ilgini çekiyor.',
+      'dna_ess_eternal_child': 'İçindeki çocuk hiç büyümedi — ve bu çok iyi.',
+      'dna_ess_genre_nomad': 'Tek bir türe sığmıyorsun; her renkten tadıyorsun.',
+      'dna_ess_sec_dark_chronicler': 'Gölgeler, gerilim ve ahlaki grilik de zevkini besliyor.',
+      'dna_ess_sec_emotion_seeker': 'Duygusal derinlik ve insani hikâyeler de seni cezbediyor.',
+      'dna_ess_sec_world_builder': 'Sıra dışı evrenler ve hayal gücü yüksek dünyalar da ilgini çekiyor.',
+      'dna_ess_sec_adrenaline_junkie': 'Tempo, aksiyon ve macera da senin heyecan kaynağın.',
+      'dna_ess_sec_joy_chaser': 'Hafiflik, neşe ve komedi de sığındığın limanlar arasında.',
+      'dna_ess_sec_truth_seeker': 'Gerçek hikâyeler ve yaşanmışlıklar da radarında.',
+      'dna_ess_sec_eternal_child': 'İçindeki büyümeyen çocuk da hikâyelerde yerini buluyor.',
+      'dna_ess_sec_genre_nomad': 'Farklı türlerin renkleri de zevkinde kendini gösteriyor.',
+      'dna_era_modern': 'Modern çağ çocuğu — beğenilerinin {p} 2015 sonrası.',
+      'dna_era_classic': 'Klasik ruh — eski sinemanın büyüsünü kovalıyorsun.',
+      'dna_era_traveler': 'Zaman gezgini — her dönemde kendini evinde hissediyorsun.',
+      'dna_depth_deep': 'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyorsun.',
+      'dna_depth_zeit': 'Zeitgeist takipçisi — anın nabzını tutuyorsun.',
+      'dna_depth_balanced': 'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyorsun.',
+      'dna_critic_tough': 'Sert eleştirmen — puanlarının yalnızca {p} "Harika".',
+      'dna_critic_generous': 'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyorsun.',
+      'dna_critic_balanced': 'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
+      'dna_blind': 'Kör noktan: {g} — sana pek hitap etmiyor.',
+      'dna_shift': 'Zevkinin rotası: {from} → {to}.',
+      'dna_accuracy': 'Son önerilerdeki uyum oranınız: {p} — {n} öneri üzerinden.',
+      'dna_share_header': 'Sinema DNA\'m: {a}',
+      'dna_share_themes': 'Temalarım',
+      'dna_share_cta': 'DNA\'na bak',
+      'dna_share_cta_none': 'Sen de Sinema DNA\'nı keşfet!',
     },
   };
 
-  String get(String key) {
-    final languageCode = _localizedValues.containsKey(locale.languageCode)
-        ? locale.languageCode
-        : 'en';
-    return _localizedValues[languageCode]?[key] ?? key;
+  String? get(String key) {
+    final languageCode = locale.languageCode;
+    if (_localizedValues[languageCode]?.containsKey(key) ?? false) {
+      return _localizedValues[languageCode]![key];
+    }
+    if (_localizedValues['en']?.containsKey(key) ?? false) {
+      return _localizedValues['en']![key];
+    }
+    return null;
   }
 }
 
