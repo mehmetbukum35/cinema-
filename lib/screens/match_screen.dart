@@ -470,8 +470,17 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 hintStyle: TextStyle(color: c.dim, fontSize: 15),
                 prefixIcon: Icon(Icons.search_rounded, color: c.dim, size: 20),
                 suffixIcon: _ctrl.text.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () {
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: c.dim,
+                          size: 18,
+                        ),
+                        tooltip: AppLocalizations.of(context)
+                                ?.get('semantics_close') ??
+                            'Close',
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
                           _ctrl.clear();
                           setState(() {
                             _searchResults = [];
@@ -479,11 +488,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                             _similar = [];
                           });
                         },
-                        child: Icon(
-                          Icons.close_rounded,
-                          color: c.dim,
-                          size: 18,
-                        ),
                       )
                     : null,
                 border: InputBorder.none,

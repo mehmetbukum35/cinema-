@@ -626,9 +626,18 @@ class AppLocalizations {
       'friend_taste_match_desc':
           'You have a {}% movie taste match with this friend.',
       'active_count_label': ' ({} Active)',
-      'sync_error_message':
-          'Sync failed. Your changes are safe on this device.',
       'sync_retry': 'Retry',
+      'splash_tagline': ' | What to Watch?',
+      'web_profile': 'Web Profile',
+      'social_customize_desc': 'Choose a username to add friends and see your cinema harmony.',
+      'social_set_username': 'Set Username',
+      'browse_surprise_title': 'Lucky Pick 🎲',
+      'browse_surprise_desc': 'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
+      'recap_share_template': '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
+      'recap_share_link_yes': 'Check out my profile: {url}',
+      'recap_share_link_no': 'Rate your titles and see your recap!',
+      'change_language': 'Change Language',
+      'got_it': 'Got it',
     },
     'tr': {
       'app_title': 'Cinema+',
@@ -1220,6 +1229,17 @@ class AppLocalizations {
       'sync_error_message':
           'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
       'sync_retry': 'Tekrar Dene',
+      'splash_tagline': ' | Ne İzlesem?',
+      'web_profile': 'Web Profili',
+      'social_customize_desc': 'Arkadaşlarınızı eklemek ve sinema uyumunuzu görmek için bir kullanıcı adı belirleyin.',
+      'social_set_username': 'Kullanıcı Adı Belirle',
+      'browse_surprise_title': 'Şanslı Seçim 🎲',
+      'browse_surprise_desc': 'Bu zar butonu, puanladığınız filmlerden yola çıkarak zevklerinize uygun rastgele bir film seçer. "Şaşırt beni" demek istediğinizde kullanabilirsiniz!',
+      'recap_share_template': '🎬 Ne İzlesem? {year} Sinematik Özetim!\n\nBu yıl tam {total} film/dizi oyladım! 🍿\nFavori Türlerim:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
+      'recap_share_link_yes': 'Profilime ve oylarıma göz at: {url}',
+      'recap_share_link_no': 'Sen de oylarını ver, özetini gör!',
+      'change_language': 'Dil Seçimi',
+      'got_it': 'Anladım',
     },
   };
 

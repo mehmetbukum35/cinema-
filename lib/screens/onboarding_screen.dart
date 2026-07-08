@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
@@ -843,19 +844,23 @@ class _FavoritePickStepState extends State<_FavoritePickStep> {
                       size: 20,
                     ),
                     suffixIcon: _ctrl.text.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: c.dim,
+                              size: 18,
+                            ),
+                            tooltip: AppLocalizations.of(context)
+                                    ?.get('semantics_close') ??
+                                'Close',
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
                               _ctrl.clear();
                               setState(() {
                                 _results = [];
                                 _searching = false;
                               });
                             },
-                            child: Icon(
-                              Icons.close_rounded,
-                              color: c.dim,
-                              size: 18,
-                            ),
                           )
                         : null,
                     border: InputBorder.none,

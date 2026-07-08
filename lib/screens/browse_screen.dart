@@ -570,9 +570,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         builder: (ctx) => AlertDialog(
           backgroundColor: c.surface,
           title: Text(
-            tr?.locale.languageCode == 'tr'
-                ? 'Şanslı Seçim 🎲'
-                : 'Lucky Pick 🎲',
+            tr?.get('browse_surprise_title') ?? 'Lucky Pick 🎲',
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -580,16 +578,15 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             ),
           ),
           content: Text(
-            tr?.locale.languageCode == 'tr'
-                ? 'Bu zar butonu, puanladığınız filmlerden yola çıkarak zevklerinize uygun rastgele bir film seçer. "Şaşırt beni" demek istediğinizde kullanabilirsiniz!'
-                : 'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
+            tr?.get('browse_surprise_desc') ??
+                'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
             style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text(
-                tr?.locale.languageCode == 'tr' ? 'Anladım' : 'Got it',
+                tr?.get('got_it') ?? 'Got it',
                 style: TextStyle(color: c.gold, fontWeight: FontWeight.w700),
               ),
             ),
@@ -893,13 +890,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                               size: 20,
                             ),
                             padding: EdgeInsets.zero,
-                            tooltip:
-                              AppLocalizations.of(
-                                    context,
-                                  )?.locale.languageCode ==
-                                  'tr'
-                              ? 'Dil Seçimi'
-                              : 'Change Language',
+                            tooltip: AppLocalizations.of(context)?.get('change_language') ??
+                                'Change Language',
                             onSelected: (String langCode) {
                               HapticFeedback.mediumImpact();
                               ref
@@ -1010,9 +1002,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                         if (isAuthenticated) ...[
                           const SizedBox(width: 8),
                           Semantics(
-                            label: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                ? 'Web Profili'
-                                : 'Web Profile',
+                            label: AppLocalizations.of(context)?.get('web_profile') ??
+                                'Web Profile',
                             button: true,
                             child: IconButton(
                               icon: Icon(
@@ -1030,9 +1021,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                                   }
                                 }
                               },
-                              tooltip: AppLocalizations.of(context)?.locale.languageCode == 'tr'
-                                  ? 'Web Profili'
-                                  : 'Web Profile',
+                              tooltip: AppLocalizations.of(context)?.get('web_profile') ??
+                                  'Web Profile',
                               constraints: const BoxConstraints(
                                 minWidth: 44,
                                 minHeight: 44,

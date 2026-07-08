@@ -30,7 +30,7 @@ class _WrappedModalState extends State<WrappedModal> {
   }
 
   void _shareRecap() {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
+    final l10n = AppLocalizations.of(context);
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
 
@@ -38,28 +38,27 @@ class _WrappedModalState extends State<WrappedModal> {
         .map((id) => PrefsService.genreName(id as int))
         .toList();
 
-    final String shareText;
     final profileUrl = widget.username != null && widget.username!.isNotEmpty
         ? '${ApiService.webProfileBaseUrl}/${widget.username}'
         : null;
 
-    if (isTr) {
-      shareText =
-          '🎬 Ne İzlesem? $_currentYear Sinematik Özetim!\n\n'
-          'Bu yıl tam $total film/dizi oyladım! 🍿\n'
-          'Favori Türlerim:\n'
-          '${genreNames.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}\n\n'
-          '${profileUrl != null ? 'Profilime ve oylarıma göz at: $profileUrl' : 'Sen de oylarını ver, özetini gör!'}\n'
-          '#NeIzlesem #Wrapped$_currentYear';
-    } else {
-      shareText =
-          '🎬 My $_currentYear Cinema Recap on Ne İzlesem!\n\n'
-          'I rated $total movies & shows this year! 🍿\n'
-          'My Top Genres:\n'
-          '${genreNames.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}\n\n'
-          '${profileUrl != null ? 'Check out my profile: $profileUrl' : 'Rate your titles and see your recap!'}\n'
-          '#NeIzlesem #Wrapped$_currentYear';
-    }
+    final genresText = genreNames
+        .asMap()
+        .entries
+        .map((e) => '${e.key + 1}. ${e.value}')
+        .join('\n');
+
+    final linkSection = profileUrl != null
+        ? (l10n?.get('recap_share_link_yes') ?? 'Check out my profile: {url}')
+            .replaceAll('{url}', profileUrl)
+        : (l10n?.get('recap_share_link_no') ?? 'Rate your titles and see your recap!');
+
+    final shareText = (l10n?.get('recap_share_template') ??
+            '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}')
+        .replaceAll('{year}', _currentYear.toString())
+        .replaceAll('{total}', total.toString())
+        .replaceAll('{genres}', genresText)
+        .replaceAll('{link_section}', linkSection);
 
     Share.share(shareText);
   }

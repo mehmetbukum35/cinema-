@@ -84,6 +84,7 @@ class Social
             $this->fcm->sendToUser($this->db, $toUserId, $title, $body, $data);
         } catch (Throwable $e) {
             // Push isteğe bağlıdır; hata olsa bile arkadaşlık işlemi başarılı sayılır.
+            cinema_error('[Non-blocking] Social push notification failed: ' . $e->getMessage(), $toUserId);
         }
     }
 

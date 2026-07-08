@@ -173,35 +173,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   size: 20,
                                 ),
                                 suffixIcon: _ctrl.text.isNotEmpty
-                                    ? Tooltip(
-                                        message:
-                                            AppLocalizations.of(
-                                              context,
-                                            )?.get('semantics_close') ??
-                                            'Close',
-                                        child: Semantics(
-                                          button: true,
-                                          label:
-                                              AppLocalizations.of(
-                                                context,
-                                              )?.get('semantics_close') ??
-                                              'Close',
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              _ctrl.clear();
-                                              setState(() {
-                                                _results = [];
-                                                _lastQuery = '';
-                                              });
-                                            },
-                                            child: Icon(
-                                              Icons.close_rounded,
-                                              color: c.dim,
-                                              size: 18,
-                                            ),
-                                          ),
+                                    ? IconButton(
+                                        icon: Icon(
+                                          Icons.close_rounded,
+                                          color: c.dim,
+                                          size: 18,
                                         ),
+                                        tooltip: AppLocalizations.of(context)
+                                                ?.get('semantics_close') ??
+                                            'Close',
+                                        onPressed: () {
+                                          HapticFeedback.lightImpact();
+                                          _ctrl.clear();
+                                          setState(() {
+                                            _results = [];
+                                            _lastQuery = '';
+                                          });
+                                        },
                                       )
                                     : null,
                                 border: InputBorder.none,

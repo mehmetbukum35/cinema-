@@ -462,9 +462,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              tr?.locale.languageCode == 'tr'
-                  ? 'Arkadaşlarınızı eklemek ve sinema uyumunuzu görmek için bir kullanıcı adı belirleyin.'
-                  : 'Choose a username to add friends and see your cinema harmony.',
+              tr?.get('social_customize_desc') ??
+                  'Choose a username to add friends and see your cinema harmony.',
               textAlign: TextAlign.center,
               style: TextStyle(color: c.dim, fontSize: 14, height: 1.4),
             ),
@@ -484,9 +483,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 ),
               ),
               child: Text(
-                tr?.locale.languageCode == 'tr'
-                    ? 'Kullanıcı Adı Belirle'
-                    : 'Set Username',
+                tr?.get('social_set_username') ?? 'Set Username',
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,

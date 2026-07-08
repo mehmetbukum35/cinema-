@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../services/localization_service.dart';
 
 /// Markalı, sinematik açılış ekranı.
 /// Karanlıktan bir ışık doğar, "cinema+" wordmark'ı zarifçe belirir,
@@ -137,8 +138,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final locale = ref.watch(localeProvider);
-    final isTr = locale.languageCode == 'tr';
     // Splash system bar'ı temaya göre ayarla
     final brightness = Theme.of(context).brightness;
     SystemChrome.setSystemUIOverlayStyle(
@@ -167,7 +166,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         opacity: _markFade.value,
                         child: _Wordmark(
                           tracking: _tracking.value,
-                          isTr: isTr,
                         ),
                       ),
                     ),
@@ -203,8 +201,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
 class _Wordmark extends StatelessWidget {
   final double tracking;
-  final bool isTr;
-  const _Wordmark({required this.tracking, required this.isTr});
+  const _Wordmark({required this.tracking});
 
   @override
   Widget build(BuildContext context) {
@@ -231,7 +228,8 @@ class _Wordmark extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: isTr ? ' | Ne İzlesem?' : ' | What to Watch?',
+            text: AppLocalizations.of(context)?.get('splash_tagline') ??
+                ' | What to Watch?',
             style: style.copyWith(
               color: c.ink.withValues(alpha: 0.8),
               fontWeight: FontWeight.w500,
