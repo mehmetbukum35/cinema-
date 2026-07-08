@@ -1149,9 +1149,11 @@ class ProfileScreen extends ConsumerWidget {
                               as Map<String, dynamic>;
                       final movie = item['movie'] as Movie;
                       final rating = item['rating'] as int;
+                      final isPrivate = (item['is_private'] as int? ?? 0) == 1;
                       return _RatedMovieCard(
                         movie: movie,
                         rating: rating,
+                        isPrivate: isPrivate,
                         onTap: () => _openDetail(context, ref, movie),
                         onDelete: () =>
                             _confirmDeleteRating(context, ref, movie),
@@ -2000,12 +2002,14 @@ class _WatchlistCard extends StatelessWidget {
 class _RatedMovieCard extends StatelessWidget {
   final Movie movie;
   final int rating;
+  final bool isPrivate;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
 
   const _RatedMovieCard({
     required this.movie,
     required this.rating,
+    this.isPrivate = false,
     required this.onTap,
     this.onDelete,
   });
@@ -2074,6 +2078,24 @@ class _RatedMovieCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (isPrivate)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.65),
+                          ),
+                          child: Icon(
+                            Icons.lock_rounded,
+                            color: c.gold,
+                            size: 14,
+                          ),
+                        ),
+                      ),
                     if (onDelete != null)
                       Positioned(
                         top: 6,

@@ -211,6 +211,7 @@ class AppLocalizations {
 
       // Review
       'review_spoiler': 'Contains Spoiler',
+      'review_private': 'Private Rating',
       'review_save': 'Save Review',
       'review_friends_title': 'Friends\' Reviews',
       'review_community_title': 'Community Reviews',
@@ -813,6 +814,7 @@ class AppLocalizations {
 
       // Review
       'review_spoiler': 'Spoiler İçerir',
+      'review_private': 'Gizli Puan/Yorum',
       'review_save': 'Yorumu Kaydet',
       'review_friends_title': 'Arkadaşlarından Yorumlar',
       'review_community_title': 'Topluluk Yorumları',

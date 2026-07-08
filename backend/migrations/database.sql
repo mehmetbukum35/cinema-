@@ -91,6 +91,7 @@ CREATE TABLE `ratings` (
   `popularity` double DEFAULT NULL,
   `comment` text DEFAULT NULL,
   `is_spoiler` tinyint(1) NOT NULL DEFAULT 0,
+  `is_private` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0

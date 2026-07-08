@@ -254,6 +254,7 @@ class SyncIntegrationTest extends TestCase
                 deleted INTEGER NOT NULL DEFAULT 0,
                 comment TEXT,
                 is_spoiler INTEGER NOT NULL DEFAULT 0,
+                is_private INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, movie_id, is_tv)
             )'
         );

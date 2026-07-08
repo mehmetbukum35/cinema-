@@ -184,7 +184,8 @@ CREATE TABLE `ratings` (
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0,
   `comment` text DEFAULT NULL,
-  `is_spoiler` tinyint(4) NOT NULL DEFAULT 0
+  `is_spoiler` tinyint(4) NOT NULL DEFAULT 0,
+  `is_private` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

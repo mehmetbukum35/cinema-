@@ -285,6 +285,7 @@ class PrefsService {
     List<int>? genreIds,
     String? comment,
     int? isSpoiler,
+    int? isPrivate,
   }) async {
     await DatabaseHelper().saveRating(
       movie: movie,
@@ -294,6 +295,7 @@ class PrefsService {
       genreIds: genreIds,
       comment: comment,
       isSpoiler: isSpoiler,
+      isPrivate: isPrivate,
     );
     invalidateGenreWeights();
   }
@@ -592,7 +594,11 @@ class PrefsService {
         }
         final movie = item['movie'] as Movie?;
         if (movie != null && movie.title.isNotEmpty) {
-          ratedMovies.add({'movie': movie, 'rating': rating});
+          ratedMovies.add({
+            'movie': movie,
+            'rating': rating,
+            'is_private': item['is_private'] as int? ?? 0,
+          });
         }
       }
     }

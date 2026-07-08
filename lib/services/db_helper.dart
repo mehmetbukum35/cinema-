@@ -64,7 +64,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 7,
+      version: 8,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
     );
@@ -109,6 +109,7 @@ class DatabaseHelper {
         popularity REAL,
         comment TEXT,
         is_spoiler INTEGER NOT NULL DEFAULT 0,
+        is_private INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (movie_id, is_tv)
       )
     ''');
@@ -355,6 +356,15 @@ class DatabaseHelper {
         debugPrint("Error migrating database to v7 (adding indices): $e");
       }
     }
+    if (oldVersion < 8) {
+      try {
+        await db.execute(
+          'ALTER TABLE ratings ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0',
+        );
+      } catch (e) {
+        debugPrint("Error migrating database to v8 (adding is_private): $e");
+      }
+    }
   }
 
   // ─── Ratings Operations ──────────────────────────────────────────────────────
@@ -369,6 +379,7 @@ class DatabaseHelper {
     int? deleted,
     String? comment,
     int? isSpoiler,
+    int? isPrivate,
   }) async {
     final db = await database;
     final finalMovieId = movieId ?? movie?.id ?? 0;
@@ -399,6 +410,7 @@ class DatabaseHelper {
         'popularity': movie?.popularity ?? 0.0,
         'comment': comment,
         'is_spoiler': isSpoiler ?? 0,
+        'is_private': isPrivate ?? 0,
       });
       return;
     }
@@ -419,6 +431,7 @@ class DatabaseHelper {
       'popularity': movie?.popularity ?? 0.0,
       'comment': comment,
       'is_spoiler': isSpoiler ?? 0,
+      'is_private': isPrivate ?? 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -461,6 +474,7 @@ class DatabaseHelper {
           'genreIds': genreIdsList,
           'created_at': m['created_at'] as int,
           'updated_at': m['updated_at'] as int? ?? m['created_at'] as int,
+          'is_private': m['is_private'] as int? ?? 0,
           'movie': Movie(
             id: m['movie_id'] as int,
             title: m['title'] as String? ?? '',
@@ -493,6 +507,7 @@ class DatabaseHelper {
         'genreIds': genreIdsList,
         'created_at': m['created_at'] as int,
         'updated_at': m['updated_at'] as int,
+        'is_private': m['is_private'] as int? ?? 0,
         'movie': Movie(
           id: m['movie_id'] as int,
           title: m['title'] as String? ?? '',

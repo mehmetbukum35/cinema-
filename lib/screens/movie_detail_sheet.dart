@@ -179,6 +179,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   int? _currentRating;
   final TextEditingController _commentController = TextEditingController();
   bool _isSpoiler = false;
+  bool _isPrivate = false;
   List<dynamic> _friendsReviews = [];
   List<dynamic> _communityReviews = [];
   bool _loadingFriendsReviews = false;
@@ -229,6 +230,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       _currentRating = ratingData?['rating'] as int?;
       _commentController.text = ratingData?['comment'] as String? ?? '';
       _isSpoiler = (ratingData?['is_spoiler'] ?? 0) == 1;
+      _isPrivate = (ratingData?['is_private'] ?? 0) == 1;
       _watchedSeasons = primaryResults[3] as Set<int>;
     });
 
@@ -1663,48 +1665,96 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() {
-                        _isSpoiler = !_isSpoiler;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isSpoiler
-                            ? c.rBerbat.withValues(alpha: 0.15)
-                            : c.borderSoft.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isSpoiler ? c.rBerbat : c.borderSoft,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isSpoiler
-                                ? Icons.warning_amber_rounded
-                                : Icons.check_circle_outline_rounded,
-                            size: 14,
-                            color: _isSpoiler ? c.rBerbat : c.dim,
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _isSpoiler = !_isSpoiler;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            tr?.get('review_spoiler') ?? 'Spoiler İçerir',
-                            style: TextStyle(
-                              color: _isSpoiler ? c.rBerbat : c.ink,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: _isSpoiler
+                                ? c.rBerbat.withValues(alpha: 0.15)
+                                : c.borderSoft.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isSpoiler ? c.rBerbat : c.borderSoft,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isSpoiler
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.check_circle_outline_rounded,
+                                size: 14,
+                                color: _isSpoiler ? c.rBerbat : c.dim,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr?.get('review_spoiler') ?? 'Spoiler İçerir',
+                                style: TextStyle(
+                                  color: _isSpoiler ? c.rBerbat : c.ink,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _isPrivate = !_isPrivate;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _isPrivate
+                                ? c.gold.withValues(alpha: 0.15)
+                                : c.borderSoft.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isPrivate ? c.gold : c.borderSoft,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isPrivate
+                                    ? Icons.lock_rounded
+                                    : Icons.lock_open_rounded,
+                                size: 14,
+                                color: _isPrivate ? c.gold : c.dim,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr?.get('review_private') ?? 'Gizli',
+                                style: TextStyle(
+                                  color: _isPrivate ? c.gold : c.ink,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
@@ -1726,6 +1776,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                       rating: _currentRating!,
                                       comment: _commentController.text,
                                       isSpoiler: _isSpoiler ? 1 : 0,
+                                      isPrivate: _isPrivate ? 1 : 0,
                                     );
                                     ref
                                         .read(recommendationEngineProvider)
@@ -1911,6 +1962,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             _currentRating = null;
             _commentController.clear();
             _isSpoiler = false;
+            _isPrivate = false;
           });
         } else {
           await PrefsService.saveRating(
@@ -1918,6 +1970,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             rating: rating,
             comment: _commentController.text,
             isSpoiler: _isSpoiler ? 1 : 0,
+            isPrivate: _isPrivate ? 1 : 0,
           );
           ref
               .read(recommendationEngineProvider)

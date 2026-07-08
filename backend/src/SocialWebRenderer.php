@@ -30,7 +30,7 @@ class SocialWebRenderer
         $stRatings = $this->db->prepare(
             'SELECT movie_id, is_tv, title, poster_path, vote_average, release_date
              FROM ratings
-             WHERE user_id = ? AND rating = 3 AND deleted = 0
+             WHERE user_id = ? AND rating = 3 AND deleted = 0 AND is_private = 0
              ORDER BY updated_at DESC
              LIMIT 12'
         );
@@ -41,7 +41,7 @@ class SocialWebRenderer
         $stGoodRatings = $this->db->prepare(
             'SELECT movie_id, is_tv, title, poster_path, vote_average, release_date
              FROM ratings
-             WHERE user_id = ? AND rating = 2 AND deleted = 0
+             WHERE user_id = ? AND rating = 2 AND deleted = 0 AND is_private = 0
              ORDER BY updated_at DESC
              LIMIT 12'
         );

@@ -311,7 +311,7 @@ class Social
                 FROM friends f
                 JOIN users u ON f.friend_id = u.id
                 JOIN ratings r ON f.friend_id = r.user_id
-                WHERE f.user_id = ? AND f.status = \'accepted\'';
+                WHERE f.user_id = ? AND f.status = \'accepted\' AND r.is_private = 0';
         
         $params = [$uid];
         if ($friendId !== null) {
@@ -571,11 +571,11 @@ class Social
              FROM friends f
              JOIN users u ON f.friend_id = u.id
              JOIN ratings r ON f.friend_id = r.user_id
-             WHERE f.user_id = ? AND f.status = \'accepted\' 
-               AND r.movie_id = ? AND r.is_tv = ?
-               AND r.comment IS NOT NULL AND r.comment <> \'\'
-               AND r.deleted = 0
-             ORDER BY r.updated_at DESC'
+              WHERE f.user_id = ? AND f.status = \'accepted\' 
+                AND r.movie_id = ? AND r.is_tv = ?
+                AND r.comment IS NOT NULL AND r.comment <> \'\'
+                AND r.deleted = 0 AND r.is_private = 0
+              ORDER BY r.updated_at DESC'
         );
         $stFriends->execute([$uid, $id, $isTV]);
         $friends = $stFriends->fetchAll();
@@ -586,16 +586,17 @@ class Social
                     u.display_name as friend_name, u.username as friend_username
              FROM ratings r
              JOIN users u ON r.user_id = u.id
-             WHERE r.movie_id = ? AND r.is_tv = ?
-               AND r.comment IS NOT NULL AND r.comment <> \'\'
-               AND r.deleted = 0
-               AND u.is_public = 1
-               AND r.user_id <> ?
-               AND r.user_id NOT IN (
-                   SELECT friend_id FROM friends WHERE user_id = ? AND status = \'accepted\'
-               )
-             ORDER BY r.updated_at DESC
-             LIMIT 20'
+              WHERE r.movie_id = ? AND r.is_tv = ?
+                AND r.comment IS NOT NULL AND r.comment <> \'\'
+                AND r.deleted = 0
+                AND r.is_private = 0
+                AND u.is_public = 1
+                AND r.user_id <> ?
+                AND r.user_id NOT IN (
+                    SELECT friend_id FROM friends WHERE user_id = ? AND status = \'accepted\'
+                )
+              ORDER BY r.updated_at DESC
+              LIMIT 20'
         );
         $stCommunity->execute([$id, $isTV, $uid, $uid]);
         $community = $stCommunity->fetchAll();
@@ -627,7 +628,7 @@ class Social
                 SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END)  AS eh,
                 SUM(CASE WHEN rating = 0 THEN 1 ELSE 0 END)  AS berbat
              FROM ratings
-             WHERE movie_id = ? AND is_tv = ? AND deleted = 0 AND rating BETWEEN 0 AND 3'
+             WHERE movie_id = ? AND is_tv = ? AND deleted = 0 AND is_private = 0 AND rating BETWEEN 0 AND 3'
         );
         $st->execute([$id, $isTV]);
         $row = $st->fetch() ?: [];
@@ -722,7 +723,7 @@ class Social
 
         $posterStmt = $this->db->prepare(
              'SELECT title, poster_path, movie_id, is_tv FROM ratings
-              WHERE user_id = ? AND rating >= 2 AND deleted = 0 AND poster_path IS NOT NULL
+              WHERE user_id = ? AND rating >= 2 AND deleted = 0 AND is_private = 0 AND poster_path IS NOT NULL
               ORDER BY rating DESC, updated_at DESC
               LIMIT 10'
         );
@@ -766,7 +767,7 @@ class Social
              FROM friends f
              JOIN users u ON f.friend_id = u.id
              JOIN ratings r ON f.friend_id = r.user_id
-             WHERE f.user_id = ? AND f.status = \'accepted\' AND r.rating >= 2 AND r.deleted = 0
+             WHERE f.user_id = ? AND f.status = \'accepted\' AND r.rating >= 2 AND r.deleted = 0 AND r.is_private = 0
              ORDER BY r.updated_at DESC
              LIMIT 1000'
         );

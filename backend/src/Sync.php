@@ -11,7 +11,7 @@ class Sync
             'keys' => ['movie_id', 'is_tv'],
             'cols' => ['rating', 'genre_ids', 'title', 'poster_path', 'backdrop_path',
                        'overview', 'vote_average', 'release_date', 'popularity', 'created_at',
-                       'comment', 'is_spoiler'],
+                       'comment', 'is_spoiler', 'is_private'],
             'json' => ['genre_ids'],
         ],
         'watchlist' => [
@@ -175,7 +175,7 @@ class Sync
                 continue;
             }
             $v = $item[$c] ?? null;
-            if ($c === 'is_spoiler' && $v === null) {
+            if (($c === 'is_spoiler' || $c === 'is_private') && $v === null) {
                 $v = 0;
             }
             if (in_array($c, $def['json'], true) && $v !== null) {

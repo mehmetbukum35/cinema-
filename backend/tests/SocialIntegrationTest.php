@@ -66,6 +66,47 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame([28, 35], TestHelperRegistry::$lastBody['watchlist'][0]['genre_ids']);
     }
 
+    public function testPrivateRatingsAreFilteredFromSocialViews(): void
+    {
+        $this->acceptFriendship(1, 2);
+        
+        // Insert public rating for friend (user 2)
+        $this->insertRatingPrivate(2, 301, 0, 3, 'Public Movie', 2000, 0);
+        // Insert private rating for friend (user 2)
+        $this->insertRatingPrivate(2, 302, 0, 3, 'Private Movie', 2010, 1);
+
+        // 1. Verify getActivityFeed
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertCount(1, TestHelperRegistry::$lastBody['activity']);
+        $this->assertSame(301, (int) TestHelperRegistry::$lastBody['activity'][0]['movie_id']);
+
+        // 2. Verify getFriendSignals
+        TestHelperRegistry::reset();
+        $this->social->getFriendSignals(1);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertArrayHasKey('movie_301', TestHelperRegistry::$lastBody['signals']);
+        $this->assertArrayNotHasKey('movie_302', TestHelperRegistry::$lastBody['signals']);
+
+        // 3. Verify getTopProfiles
+        TestHelperRegistry::reset();
+        $this->db->exec('UPDATE users SET is_public = 1 WHERE id = 2');
+        $this->social->getTopProfiles(1);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $profiles = TestHelperRegistry::$lastBody['profiles'];
+        // Sorted profiles. Find friend 2
+        $friend2Profile = null;
+        foreach ($profiles as $p) {
+            if ($p['id'] === 2) {
+                $friend2Profile = $p;
+            }
+        }
+        $this->assertNotNull($friend2Profile);
+        $this->assertCount(1, $friend2Profile['previews']);
+        $this->assertSame(301, (int) $friend2Profile['previews'][0]['movie_id']);
+    }
+
     public function testPublishTasteDnaStoresSnapshot(): void
     {
         $snapshot = ['archetype' => 'dark_chronicler', 'themes' => ['revenge']];
@@ -603,7 +644,8 @@ class SocialIntegrationTest extends TestCase
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 comment TEXT,
-                is_spoiler INTEGER NOT NULL DEFAULT 0
+                is_spoiler INTEGER NOT NULL DEFAULT 0,
+                is_private INTEGER NOT NULL DEFAULT 0
             )'
         );
         $this->db->exec(
@@ -695,6 +737,15 @@ class SocialIntegrationTest extends TestCase
              VALUES (?, ?, ?, ?, ?, "/poster.jpg", ?, ?, 0)'
         );
         $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $genreIds, $updatedAt]);
+    }
+
+    private function insertRatingPrivate(int $userId, int $movieId, int $isTv, int $rating, string $title, int $updatedAt, int $isPrivate): void
+    {
+        $stmt = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, poster_path, genre_ids, updated_at, deleted, is_private)
+             VALUES (?, ?, ?, ?, ?, "/poster.jpg", NULL, ?, 0, ?)'
+        );
+        $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $updatedAt, $isPrivate]);
     }
 
     private function insertWatchlist(int $userId, int $id, int $isTv, string $title, string $genreIds, int $createdAt): void
