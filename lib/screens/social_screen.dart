@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
@@ -37,9 +38,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 2),
+      initialIndex: widget.initialTab.clamp(0, 3),
     );
     // Akış sekmesi açıldığında gelen önerileri "görüldü" işaretle.
     _tabController.addListener(() {
@@ -53,6 +54,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       ref.read(socialProvider.notifier).loadFriends();
       ref.read(socialProvider.notifier).loadActivityFeed();
       ref.read(socialProvider.notifier).loadRecommendations();
+      ref.read(socialProvider.notifier).loadTopProfiles();
 
       final auth = ref.read(authProvider);
       if (auth.user != null) {
@@ -219,6 +221,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 ],
               ),
             ),
+            Tab(
+              text: AppLocalizations.of(context)?.get('top_lists') ?? 'Popular',
+            ),
           ],
         ),
       ),
@@ -256,6 +261,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                           _buildFriendsTab(c, socialState, isTr),
                           _buildRequestsTab(c, socialState, isTr),
                           _buildActivityTab(c, socialState, isTr),
+                          _buildTopListsTab(c, socialState, isTr),
                         ],
                       ),
                     ),
@@ -1059,6 +1065,203 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         final act = state.activityFeed[idx - recCount];
         return FriendActivityScreen._buildActivityCard(c, act, context, ref);
       },
+    );
+  }
+
+  // ─── Popüler Listeler sekmesi ─────────────────────────────────────────────
+  Widget _buildTopListsTab(ThemePalette c, SocialState state, bool isTr) {
+    if (state.topProfilesLoading && state.topProfiles.isEmpty) {
+      return Center(child: CircularProgressIndicator(color: c.gold));
+    }
+    if (state.topProfiles.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            AppLocalizations.of(context)?.get('top_lists_empty') ??
+                'No public profiles yet.',
+            style: TextStyle(color: c.dim),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: c.gold,
+      onRefresh: () => ref.read(socialProvider.notifier).loadTopProfiles(),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: state.topProfiles.length,
+        itemBuilder: (context, idx) =>
+            _buildTopProfileCard(c, state.topProfiles[idx], idx + 1),
+      ),
+    );
+  }
+
+  Widget _buildTopProfileCard(ThemePalette c, TopProfile p, int rank) {
+    // İlk üç sıraya madalya rengi; gerisi sade sıra numarası.
+    final rankColor = switch (rank) {
+      1 => const Color(0xFFFFD54F),
+      2 => const Color(0xFFB0BEC5),
+      3 => const Color(0xFFBC8A5F),
+      _ => c.dim,
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: rank <= 3
+            ? Border.all(color: rankColor.withValues(alpha: 0.4))
+            : null,
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          final url = Uri.parse(
+            '${ApiService.webProfileBaseUrl}/${p.username}',
+          );
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: 34,
+                    child: Text(
+                      '#$rank',
+                      style: TextStyle(
+                        color: rankColor,
+                        fontSize: rank <= 3 ? 18 : 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.shownName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: c.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        Text(
+                          '@${p.username}',
+                          style: TextStyle(color: c.dim, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (p.isMe)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context)?.get('top_lists_you') ??
+                            'You',
+                        style: TextStyle(
+                          color: c.gold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  // Kalp + sayı: kendi profilinde yalnızca sayı görünür.
+                  if (!p.isMe)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        p.meLiked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: p.meLiked ? c.red : c.dim,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref
+                            .read(socialProvider.notifier)
+                            .toggleProfileLike(p);
+                      },
+                    ),
+                  Text(
+                    p.likeCount.toString(),
+                    style: TextStyle(
+                      color: p.meLiked && !p.isMe ? c.red : c.dim,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (p.isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.favorite_rounded, color: c.dim, size: 16),
+                  ],
+                  const SizedBox(width: 4),
+                ],
+              ),
+              if (p.previews.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 92,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: p.previews.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final pv = p.previews[i];
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: pv.posterUrl.isEmpty
+                            ? Container(
+                                width: 62,
+                                color: c.bg,
+                                child: Icon(Icons.movie_rounded, color: c.dim),
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: pv.posterUrl,
+                                width: 62,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => const SizedBox(
+                                  width: 62,
+                                  height: 92,
+                                  child: PulsingPlaceholder(),
+                                ),
+                                errorWidget: (_, _, _) => Container(
+                                  width: 62,
+                                  color: c.bg,
+                                  child: Icon(
+                                    Icons.movie_rounded,
+                                    color: c.dim,
+                                  ),
+                                ),
+                              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

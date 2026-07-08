@@ -260,6 +260,17 @@ switch (true) {
         $social->getFriendSignals($auth->requireUser());
         break;
 
+    // ── Popüler Listeler (profil beğenileri) ───────────────────────────────
+    case $route === 'GET /social/profiles/top':
+        $social->getTopProfiles($auth->requireUser());
+        break;
+
+    case $route === 'POST /social/profile/like':
+        $uid = $auth->requireUser();
+        rate_limit('profile_like', (int) $cfg['rate_limit_per_min']);
+        $social->likeProfile($uid, read_json());
+        break;
+
     // ── Sinema DNA ──────────────────────────────────────────────────────────
     case $route === 'POST /social/dna':
         $uid = $auth->requireUser();

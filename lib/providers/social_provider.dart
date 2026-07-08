@@ -25,6 +25,10 @@ class SocialState {
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
   final Map<int, List<ActivityItem>> friendActivities;
 
+  /// "Popüler Listeler": en çok beğeni alan üyeler (sunucudan sıralı gelir).
+  final List<TopProfile> topProfiles;
+  final bool topProfilesLoading;
+
   final bool loading;
   final String? error;
 
@@ -39,6 +43,8 @@ class SocialState {
     this.recommendations = const [],
     this.unseenRecommendations = 0,
     this.friendActivities = const {},
+    this.topProfiles = const [],
+    this.topProfilesLoading = false,
     this.loading = false,
     this.error,
   });
@@ -54,6 +60,8 @@ class SocialState {
     List<RecommendationInboxItem>? recommendations,
     int? unseenRecommendations,
     Map<int, List<ActivityItem>>? friendActivities,
+    List<TopProfile>? topProfiles,
+    bool? topProfilesLoading,
     bool? loading,
     String? Function()? error,
   }) {
@@ -69,6 +77,8 @@ class SocialState {
       unseenRecommendations:
           unseenRecommendations ?? this.unseenRecommendations,
       friendActivities: friendActivities ?? this.friendActivities,
+      topProfiles: topProfiles ?? this.topProfiles,
+      topProfilesLoading: topProfilesLoading ?? this.topProfilesLoading,
       loading: loading ?? this.loading,
       error: error != null ? error() : this.error,
     );
@@ -300,6 +310,61 @@ class SocialNotifier extends StateNotifier<SocialState> {
     } catch (e) {
       state = state.copyWith(error: () => e.toString());
       return false;
+    }
+  }
+
+  /// "Popüler Listeler" sıralamasını yükler.
+  Future<void> loadTopProfiles() async {
+    state = state.copyWith(topProfilesLoading: true, error: () => null);
+    try {
+      final res = await _apiService.getTopProfiles();
+      final list = (res['profiles'] as List<dynamic>?)
+              ?.map((x) => TopProfile.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const <TopProfile>[];
+      state = state.copyWith(topProfiles: list, topProfilesLoading: false);
+    } on ApiException catch (e) {
+      state = state.copyWith(topProfilesLoading: false, error: () => e.message);
+    } catch (e) {
+      state = state.copyWith(topProfilesLoading: false, error: () => e.toString());
+    }
+  }
+
+  /// Profil beğenisini değiştirir. Önce iyimser (optimistic) güncelleme yapılır;
+  /// sunucu hata verirse eski duruma geri dönülür. Sıra numaraları sunucu
+  /// sıralaması bozulmasın diye yerinde bırakılır (bir sonraki yüklemede oturur).
+  Future<void> toggleProfileLike(TopProfile profile) async {
+    final newLiked = !profile.meLiked;
+    List<TopProfile> apply(List<TopProfile> list, int likeCount) => [
+          for (final p in list)
+            if (p.id == profile.id)
+              p.copyWith(meLiked: newLiked, likeCount: likeCount)
+            else
+              p,
+        ];
+
+    final optimisticCount = profile.likeCount + (newLiked ? 1 : -1);
+    state = state.copyWith(
+      topProfiles: apply(state.topProfiles, optimisticCount),
+    );
+
+    try {
+      final serverCount = await _apiService.likeProfile(profile.id, newLiked);
+      state = state.copyWith(
+        topProfiles: apply(state.topProfiles, serverCount),
+      );
+    } catch (e, st) {
+      debugPrint("Failed to toggle profile like: $e\n$st");
+      // Geri al.
+      state = state.copyWith(
+        topProfiles: apply(state.topProfiles, profile.likeCount),
+      );
+      state = state.copyWith(
+        topProfiles: [
+          for (final p in state.topProfiles)
+            if (p.id == profile.id) p.copyWith(meLiked: profile.meLiked) else p,
+        ],
+      );
     }
   }
 

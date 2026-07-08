@@ -472,6 +472,101 @@ class SocialIntegrationTest extends TestCase
         $this->assertFalse($body['enough']);
     }
 
+    // ─── Popüler Listeler (profil beğenileri) ───────────────────────────────
+
+    public function testLikeProfileTogglesAndCounts(): void
+    {
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame(1, TestHelperRegistry::$lastBody['like_count']);
+
+        // İkinci beğeni idempotent: sayı artmaz.
+        TestHelperRegistry::reset();
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        $this->assertSame(1, TestHelperRegistry::$lastBody['like_count']);
+
+        TestHelperRegistry::reset();
+        $this->social->likeProfile(3, ['owner_id' => 2, 'liked' => true]);
+        $this->assertSame(2, TestHelperRegistry::$lastBody['like_count']);
+
+        // Geri alma.
+        TestHelperRegistry::reset();
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => false]);
+        $this->assertSame(1, TestHelperRegistry::$lastBody['like_count']);
+        $this->assertFalse(TestHelperRegistry::$lastBody['liked']);
+    }
+
+    public function testLikeProfileRejectsSelfLike(): void
+    {
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(422);
+        try {
+            $this->social->likeProfile(1, ['owner_id' => 1, 'liked' => true]);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testLikeProfileRejectsPrivateProfile(): void
+    {
+        $this->db->exec('UPDATE users SET is_public = 0 WHERE id = 2');
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(403);
+        try {
+            $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        } finally {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testLikeProfileRejectsUnknownUser(): void
+    {
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(404);
+        try {
+            $this->social->likeProfile(1, ['owner_id' => 999, 'liked' => true]);
+        } finally {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testTopProfilesRanksByLikesThenLikedTitles(): void
+    {
+        // Bob 2 beğeni, Carol 1 beğeni alır; Alice 0 beğeni ama 1 sevilen yapım.
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        $this->social->likeProfile(3, ['owner_id' => 2, 'liked' => true]);
+        $this->social->likeProfile(2, ['owner_id' => 3, 'liked' => true]);
+        $this->insertRating(1, 101, 0, 3, 'The Matrix', 2000);
+
+        TestHelperRegistry::reset();
+        $this->social->getTopProfiles(1);
+        $profiles = TestHelperRegistry::$lastBody['profiles'];
+
+        $this->assertCount(3, $profiles);
+        $this->assertSame('bob', $profiles[0]['username']);
+        $this->assertSame(2, $profiles[0]['like_count']);
+        $this->assertTrue($profiles[0]['me_liked']); // 1 numaralı kullanıcı Bob'u beğendi
+        $this->assertSame('carol', $profiles[1]['username']);
+        $this->assertFalse($profiles[1]['me_liked']);
+        // Alice: beğenisi yok ama sevdiği yapım var; is_me işaretli.
+        $this->assertSame('alice', $profiles[2]['username']);
+        $this->assertTrue($profiles[2]['is_me']);
+        // Afiş önizlemesi sevilen yapımdan gelir.
+        $this->assertSame('The Matrix', $profiles[2]['previews'][0]['title']);
+    }
+
+    public function testTopProfilesExcludesPrivateAndUsernamelessUsers(): void
+    {
+        $this->db->exec('UPDATE users SET is_public = 0 WHERE id = 2');
+        $this->db->exec('UPDATE users SET username = NULL WHERE id = 3');
+
+        $this->social->getTopProfiles(1);
+        $profiles = TestHelperRegistry::$lastBody['profiles'];
+
+        $this->assertCount(1, $profiles);
+        $this->assertSame('alice', $profiles[0]['username']);
+    }
+
     private function createSchema(): void
     {
         $this->db->exec(
@@ -535,6 +630,14 @@ class SocialIntegrationTest extends TestCase
                 platform TEXT,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE profile_likes (
+                voter_id INTEGER NOT NULL,
+                owner_id INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (voter_id, owner_id)
             )'
         );
         $this->db->exec(

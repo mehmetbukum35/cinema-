@@ -144,3 +144,93 @@ class RecommendationInboxItem {
     'from_username': fromUsername,
   };
 }
+
+/// "Popüler Listeler" sıralamasında bir üyenin afiş önizlemesi.
+class TopProfilePreview {
+  final String? title;
+  final String? posterPath;
+  final int movieId;
+  final bool isTv;
+
+  TopProfilePreview({
+    this.title,
+    this.posterPath,
+    required this.movieId,
+    required this.isTv,
+  });
+
+  String get posterUrl =>
+      posterPath != null ? 'https://image.tmdb.org/t/p/w185$posterPath' : '';
+
+  factory TopProfilePreview.fromJson(Map<String, dynamic> json) {
+    return TopProfilePreview(
+      title: json['title'] as String?,
+      posterPath: json['poster_path'] as String?,
+      movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
+      isTv: json['is_tv'] == true ||
+          json['is_tv'] == 1 ||
+          json['is_tv']?.toString() == '1',
+    );
+  }
+}
+
+/// "Popüler Listeler" sıralamasındaki bir üye (GET /social/profiles/top).
+class TopProfile {
+  final int id;
+  final String username;
+  final String? displayName;
+  final int likeCount;
+  final bool meLiked;
+  final bool isMe;
+  final int likedTitles;
+  final List<TopProfilePreview> previews;
+
+  TopProfile({
+    required this.id,
+    required this.username,
+    this.displayName,
+    required this.likeCount,
+    required this.meLiked,
+    required this.isMe,
+    required this.likedTitles,
+    this.previews = const [],
+  });
+
+  String get shownName =>
+      (displayName != null && displayName!.trim().isNotEmpty)
+          ? displayName!
+          : username;
+
+  TopProfile copyWith({int? likeCount, bool? meLiked}) {
+    return TopProfile(
+      id: id,
+      username: username,
+      displayName: displayName,
+      likeCount: likeCount ?? this.likeCount,
+      meLiked: meLiked ?? this.meLiked,
+      isMe: isMe,
+      likedTitles: likedTitles,
+      previews: previews,
+    );
+  }
+
+  factory TopProfile.fromJson(Map<String, dynamic> json) {
+    return TopProfile(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String?,
+      likeCount: int.tryParse(json['like_count']?.toString() ?? '') ?? 0,
+      meLiked: json['me_liked'] == true ||
+          json['me_liked'] == 1 ||
+          json['me_liked']?.toString() == '1',
+      isMe: json['is_me'] == true ||
+          json['is_me'] == 1 ||
+          json['is_me']?.toString() == '1',
+      likedTitles: int.tryParse(json['liked_titles']?.toString() ?? '') ?? 0,
+      previews: (json['previews'] as List<dynamic>?)
+              ?.map((x) => TopProfilePreview.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}

@@ -721,6 +721,42 @@ class ApiService {
     }
   }
 
+  // GET /social/profiles/top — en çok beğeni alan 20 herkese açık üye.
+  Future<Map<String, dynamic>> getTopProfiles() async {
+    final response = await _request(
+      'GET',
+      '/social/profiles/top',
+      requireAuth: true,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return data;
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Popüler listeler alınamadı.',
+    );
+  }
+
+  // POST /social/profile/like — üye profilini beğen / beğeniyi geri al.
+  // Sunucunun döndürdüğü güncel like_count değerini verir.
+  Future<int> likeProfile(int ownerId, bool liked) async {
+    final response = await _request(
+      'POST',
+      '/social/profile/like',
+      body: {'owner_id': ownerId, 'liked': liked},
+      requireAuth: true,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return int.tryParse(data['like_count']?.toString() ?? '') ?? 0;
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Beğeni gönderilemedi.',
+    );
+  }
+
   // GET /social/title-reviews/{type}/{id}
   Future<Map<String, dynamic>> getTitleReviews(String type, int id) async {
     final response = await _request(

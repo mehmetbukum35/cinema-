@@ -62,7 +62,13 @@
       "Bash(curl -s -m 20 -w \" [HTTP %{http_code}]\" \"https://cinema.mbkm.com.tr/api/tmdb/3/movie/550?language=tr-TR\")",
       "Bash(curl -s -m 15 -o /dev/null -w \"tmdb-direct: %{http_code}\\\\n\" \"https://api.themoviedb.org/3/movie/550\")",
       "Bash(nslookup cinema.mbkm.com.tr)",
-      "Bash(php -l \"E:\\\\cinema+/backend/src/Tmdb.php\")"
+      "Bash(php -l \"E:\\\\cinema+/backend/src/Tmdb.php\")",
+      "Bash(curl -s -m 20 -w \"\\\\n[HTTP %{http_code}]\" \"https://cinema.mbkm.com.tr/api/tmdb/3/movie/550?language=tr-TR\")",
+      "Bash(echo \"grep-exit:$?\")",
+      "Bash(php vendor/bin/phpunit --no-coverage)",
+      "Bash(php -l \"E:\\\\cinema+/backend/src/Social.php\")",
+      "Bash(php -l \"E:\\\\cinema+/backend/api/index.php\")",
+      "Bash(php vendor/bin/phpunit --no-coverage --filter SocialIntegrationTest)"
     ]
   }
 }
