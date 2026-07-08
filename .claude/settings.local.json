@@ -48,7 +48,21 @@
       "mcp__visualize__read_me",
       "mcp__visualize__show_widget",
       "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"cinematic dark movie streaming entertainment landing page glassmorphism luxury\" --design-system -p \"Cinema+\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://api.github.com/repos/mehmetbukum35/cinema-/commits/f5ef34b0000000000000000000000000000000000)",
+      "Bash(curl -s https://api.github.com/repos/mehmetbukum35/cinema-/commits/1989636)",
+      "Bash(rm -rf /c/Users/mehme/AppData/Local/Temp/claude/E--cinema-/57ebae57-ff2f-4aa2-82ba-c283c1e2af7e/scratchpad/oldrepo.git && echo CLEANED)",
+      "Bash(curl -s -m 15 https://cinema.mbkm.com.tr/api/health)",
+      "Bash(curl -s -o /dev/null -w \"src-config: %{http_code}\\\\n\" -m 15 https://cinema.mbkm.com.tr/src/Config.php)",
+      "Bash(curl -s -o /dev/null -w \"etc-json: %{http_code}\\\\n\" -m 15 https://cinema.mbkm.com.tr/etc/src/fcm-service-account.json)",
+      "Bash(curl -s -m 15 \"https://cinema.mbkm.com.tr/api/tmdb/movie/550?language=tr-TR\")",
+      "Bash(curl -s -m 15 \"https://cinema.mbkm.com.tr/api/tmdb/3/movie/550?language=tr-TR\")",
+      "Bash(curl -s -m 20 -w \" [HTTP %{http_code}]\" \"https://cinema.mbkm.com.tr/api/tmdb/3/movie/550?language=tr-TR\")",
+      "Bash(curl -s -m 15 -o /dev/null -w \"tmdb-direct: %{http_code}\\\\n\" \"https://api.themoviedb.org/3/movie/550\")",
+      "Bash(nslookup cinema.mbkm.com.tr)",
+      "Bash(php -l \"E:\\\\cinema+/backend/src/Tmdb.php\")"
     ]
   }
 }

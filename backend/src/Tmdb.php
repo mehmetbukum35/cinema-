@@ -85,10 +85,15 @@ class Tmdb
             CURLOPT_TIMEOUT        => 12,
             CURLOPT_CONNECTTIMEOUT => 6,
             CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+            // Paylaşımlı hostinglerde IPv6 rotası çoğu zaman kırıktır ve curl
+            // önce IPv6 deneyip takılır; TMDB'ye IPv4 ile bağlanmayı zorla.
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
         ]);
         $body = curl_exec($ch);
         if ($body === false) {
+            $err = curl_error($ch);
             curl_close($ch);
+            cinema_error("TMDB proxy curl hatası: $err (url: $path)");
             fail(502, 'TMDB sunucusuna ulaşılamadı. Lütfen daha sonra tekrar deneyin.');
         }
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
