@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/movie.dart';
+import '../../models/social.dart';
 import '../../services/localization_service.dart';
 import '../../providers/social_provider.dart';
 import '../../theme/app_theme.dart';
 
 class RecommendSheet extends StatefulWidget {
   final Movie movie;
-  final List<dynamic> friends;
+  final List<Friend> friends;
   final WidgetRef ref;
   final BuildContext parentContext;
 
@@ -90,8 +91,8 @@ class RecommendSheetState extends State<RecommendSheet> {
               itemCount: widget.friends.length,
               itemBuilder: (listCtx, idx) {
                 final f = widget.friends[idx];
-                final name = f['display_name'] ?? f['username'] ?? 'User';
-                final friendId = int.tryParse(f['id'].toString()) ?? 0;
+                final name = f.displayName ?? f.username;
+                final friendId = f.id;
                 final isSending = _sendingToFriendId == friendId;
                 final isAnySending = _sendingToFriendId != null;
 

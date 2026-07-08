@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ne_izlesem/models/taste_dna.dart';
 import 'package:ne_izlesem/services/taste_dna_presenter.dart';
@@ -37,7 +39,12 @@ TasteDna _dna({
 }
 
 void main() {
-  // l10n null → Türkçe fallback'ler kullanılır; yüzde TR biçiminde ("%75").
+  setUpAll(() {
+    final file = File('assets/lexicon/theme_tr.json');
+    final jsonStr = file.readAsStringSync();
+    final Map<String, dynamic> decoded = json.decode(jsonStr);
+    TasteDnaPresenter.themeTr = decoded.map((k, v) => MapEntry(k, v.toString()));
+  });
 
   group('TasteDnaPresenter — arketip', () {
     test('arketip adı ve öz metni fallback', () {

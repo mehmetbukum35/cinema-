@@ -187,7 +187,7 @@ void main() {
       final state = container.read(socialProvider);
       expect(state.loading, isFalse);
       expect(state.friends, hasLength(1));
-      expect(state.friends[0]['username'], 'testfriend');
+      expect(state.friends[0].username, 'testfriend');
       expect(state.pendingReceived, hasLength(1));
       expect(state.pendingSent, hasLength(1));
     });
@@ -199,8 +199,8 @@ void main() {
 
       final state = container.read(socialProvider);
       expect(state.activityFeed, hasLength(1));
-      expect(state.activityFeed[0]['movie_id'], 101);
-      expect(state.activityFeed[0]['friend_username'], 'testfriend');
+      expect(state.activityFeed[0].movieId, 101);
+      expect(state.activityFeed[0].friendUsername, 'testfriend');
     });
 
     test('sendFriendRequest should invoke API and reload friends', () async {
@@ -273,7 +273,7 @@ void main() {
 
       final state = container.read(socialProvider);
       expect(state.recommendations, hasLength(1));
-      expect(state.recommendations[0]['title'], 'The Matrix');
+      expect(state.recommendations[0].title, 'The Matrix');
       expect(state.unseenRecommendations, 1);
     });
 
@@ -347,8 +347,8 @@ void main() {
         expect(mockApi.loadedActivityFriendId, 10);
         final state = container.read(socialProvider);
         expect(state.friendActivities[10], hasLength(1));
-        expect(state.friendActivities[10]![0]['movie_id'], 101);
-        expect(state.friendActivities[10]![0]['friend_username'], 'testfriend');
+        expect(state.friendActivities[10]![0].movieId, 101);
+        expect(state.friendActivities[10]![0].friendUsername, 'testfriend');
       },
     );
   });

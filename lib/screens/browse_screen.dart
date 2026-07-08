@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
+import '../models/social.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
@@ -1477,7 +1478,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     );
   }
 
-  Widget _friendsActivitySection(List<dynamic> feed) {
+  Widget _friendsActivitySection(List<ActivityItem> feed) {
     final c = context.c;
     return SliverToBoxAdapter(
       child: EntranceFade(
@@ -1521,15 +1522,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                 itemCount: feed.length,
                 itemBuilder: (ctx, i) {
                   final item = feed[i];
-                  final title = item['title'] as String? ?? '';
-                  final posterPath = item['poster_path'] as String? ?? '';
-                  final rating = item['rating'] is int
-                      ? item['rating'] as int
-                      : (int.tryParse(item['rating']?.toString() ?? '') ?? 0);
-                  final friendName =
-                      item['friend_name'] as String? ??
-                      item['friend_username'] as String? ??
-                      'Arkadaşın';
+                  final title = item.title;
+                  final posterPath = item.posterPath ?? '';
+                  final rating = item.rating;
+                  final friendName = item.friendName ?? item.friendUsername;
 
                   final ratingKey = rating >= 3
                       ? 'browse_rating_excellent'
@@ -1538,16 +1534,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                       AppLocalizations.of(context)?.get(ratingKey) ??
                       (rating >= 3 ? 'Harika dedi' : 'İyi dedi');
 
-                  final parsedId = item['movie_id'] is int
-                      ? item['movie_id'] as int
-                      : (int.tryParse(item['movie_id']?.toString() ?? '') ?? 0);
-                  final parsedIsTvVal = item['is_tv'] is int
-                      ? item['is_tv'] as int
-                      : (int.tryParse(item['is_tv']?.toString() ?? '') ?? 0);
+                  final parsedId = item.movieId;
+                  final isTv = item.isTv;
 
                   final movie = Movie(
                     id: parsedId,
-                    isTV: parsedIsTvVal == 1,
+                    isTV: isTv,
                     title: title,
                     posterPath: posterPath,
                     backdropPath: '',

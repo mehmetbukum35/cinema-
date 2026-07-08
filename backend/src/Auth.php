@@ -296,12 +296,15 @@ class Auth
         $u = $st->fetch();
 
         // Send 200 OK response instantly to close client connection and eliminate timing attacks
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
+        if (function_exists('json_out') && (defined('PHPUNIT_TESTING') || class_exists('PHPUnit\Framework\TestCase', false))) {
+            json_out(200, ['ok' => true]);
+        } else {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            }
         }
 
         // If the user doesn't exist, stop background execution

@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'screens/onboarding_screen.dart';
+import 'dart:convert';
 import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
 import 'services/prefs_service.dart';
@@ -14,10 +15,20 @@ import 'services/db_helper.dart';
 import 'services/localization_service.dart';
 import 'services/notification_service.dart';
 import 'services/providers.dart';
+import 'services/taste_dna_presenter.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load Taste DNA lexicon
+  try {
+    final jsonStr = await rootBundle.loadString('assets/lexicon/theme_tr.json');
+    final Map<String, dynamic> decoded = json.decode(jsonStr);
+    TasteDnaPresenter.themeTr = decoded.map((k, v) => MapEntry(k, v.toString()));
+  } catch (e) {
+    debugPrint("Failed to load theme_tr.json at startup: $e");
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

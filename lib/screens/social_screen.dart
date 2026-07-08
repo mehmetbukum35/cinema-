@@ -12,6 +12,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/pulsing_placeholder.dart';
 import 'movie_detail/spoiler_comment.dart';
 import '../models/movie.dart';
+import '../models/social.dart';
 import 'movie_detail_sheet.dart';
 import '../services/providers.dart';
 
@@ -553,9 +554,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, idx) {
                     final f = state.friends[idx];
-                    final name = f['display_name'] ?? f['username'] ?? 'User';
-                    final handle = f['username'] ?? '';
-                    final friendId = int.tryParse(f['id'].toString()) ?? 0;
+                    final name = f.displayName ?? f.username;
+                    final handle = f.username;
+                    final friendId = f.id;
                     final tasteScore = state.tasteScores[friendId];
 
                     return GestureDetector(
@@ -702,11 +703,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                                       TextButton(
                                         onPressed: () async {
                                           Navigator.pop(ctx);
-                                          final id =
-                                              int.tryParse(
-                                                f['id'].toString(),
-                                              ) ??
-                                              0;
+                                          final id = f.id;
                                           await ref
                                               .read(socialProvider.notifier)
                                               .rejectRequest(id);
@@ -762,7 +759,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           ),
           const SizedBox(height: 12),
           ...state.pendingReceived.map((f) {
-            final name = f['display_name'] ?? f['username'] ?? 'User';
+            final name = f.displayName ?? f.username;
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
@@ -794,14 +791,14 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       color: Colors.green,
                     ),
                     onPressed: () {
-                      final id = int.tryParse(f['id'].toString()) ?? 0;
+                      final id = f.id;
                       ref.read(socialProvider.notifier).acceptRequest(id);
                     },
                   ),
                   IconButton(
                     icon: Icon(Icons.cancel_rounded, color: c.red),
                     onPressed: () {
-                      final id = int.tryParse(f['id'].toString()) ?? 0;
+                      final id = f.id;
                       ref.read(socialProvider.notifier).rejectRequest(id);
                     },
                   ),
@@ -825,7 +822,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           ),
           const SizedBox(height: 12),
           ...state.pendingSent.map((f) {
-            final name = f['display_name'] ?? f['username'] ?? 'User';
+            final name = f.displayName ?? f.username;
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
@@ -866,7 +863,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       color: c.red.withValues(alpha: 0.6),
                     ),
                     onPressed: () {
-                      final id = int.tryParse(f['id'].toString()) ?? 0;
+                      final id = f.id;
                       ref.read(socialProvider.notifier).rejectRequest(id);
                     },
                   ),
@@ -882,21 +879,21 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   /// Gelen tek bir öneri kartı (gönderen + yapım + varsa not).
   Widget _buildRecommendationCard(
     ThemePalette c,
-    dynamic rec,
+    RecommendationInboxItem rec,
     bool isTr, {
     bool isLast = false,
   }) {
-    final fromName = rec['from_name'] ?? rec['from_username'] ?? 'Friend';
-    final title = rec['title'] ?? 'Movie';
-    final note = (rec['note'] ?? '').toString();
-    final posterPath = rec['poster_path'];
-    final isTv = _parseIsTv(rec);
-    final seen = rec['seen'] == true;
+    final fromName = rec.fromName ?? rec.fromUsername;
+    final title = rec.title;
+    final note = rec.note ?? '';
+    final posterPath = rec.posterPath;
+    final isTv = rec.isTv;
+    final seen = rec.seen;
 
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        final movieId = _parseMovieId(rec);
+        final movieId = rec.movieId;
         if (movieId > 0) {
           _openMovieDetail(context, ref, movieId, isTv);
         }
@@ -1086,19 +1083,17 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
 
   static Widget _buildActivityCard(
     ThemePalette c,
-    Map<String, dynamic> act,
+    ActivityItem act,
     BuildContext context,
     WidgetRef ref,
   ) {
-    final friendName = act['friend_name'] ?? act['friend_username'] ?? 'Friend';
-    final title = act['title'] ?? 'Movie';
-    final ratingVal = act['rating'] is int
-        ? act['rating'] as int
-        : (int.tryParse(act['rating']?.toString() ?? '') ?? 3);
-    final posterPath = act['poster_path'];
-    final isTv = _parseIsTv(act);
-    final comment = act['comment'] as String?;
-    final isSpoiler = (act['is_spoiler'] ?? 0) == 1;
+    final friendName = act.friendName ?? act.friendUsername;
+    final title = act.title;
+    final ratingVal = act.rating;
+    final posterPath = act.posterPath;
+    final isTv = act.isTv;
+    final comment = act.comment;
+    final isSpoiler = act.isSpoiler;
 
     Color badgeColor = c.rIyi;
     String badgeText = 'İyi';
@@ -1122,7 +1117,7 @@ class FriendActivityScreen extends ConsumerStatefulWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        final movieId = _parseMovieId(act);
+        final movieId = act.movieId;
         if (movieId > 0) {
           _openMovieDetail(context, ref, movieId, isTv);
         }
@@ -1445,20 +1440,6 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
   }
 }
 
-bool _parseIsTv(dynamic data) {
-  if (data == null) return false;
-  final val = data['is_tv'] ?? data['isTV'] ?? data['isTv'];
-  return val == true ||
-      val == 1 ||
-      val?.toString() == '1' ||
-      val?.toString() == 'true';
-}
-
-int _parseMovieId(dynamic data) {
-  if (data == null) return 0;
-  final val = data['movie_id'] ?? data['id'] ?? data['movieId'];
-  return int.tryParse(val?.toString() ?? '') ?? 0;
-}
 
 Future<void> _openMovieDetail(
   BuildContext context,

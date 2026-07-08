@@ -32,55 +32,23 @@ class TasteDnaWebText
     // TMDB keyword'leri İngilizce döner; sık temalar için TR sözlüğü.
     // Dart karşılığı: lib/services/taste_dna_presenter.dart (themeTr) —
     // ikisi senkron tutulmalı.
-    private const THEMES_TR = [
-        'revenge' => 'intikam', 'dystopia' => 'distopya',
-        'time travel' => 'zaman yolculuğu', 'heist' => 'soygun',
-        'serial killer' => 'seri katil', 'based on true story' => 'gerçek hikâye',
-        'love' => 'aşk', 'friendship' => 'dostluk', 'betrayal' => 'ihanet',
-        'survival' => 'hayatta kalma', 'space' => 'uzay', 'alien' => 'uzaylı',
-        'artificial intelligence' => 'yapay zekâ',
-        'artificial intelligence (a.i.)' => 'yapay zekâ',
-        'superhero' => 'süper kahraman', 'magic' => 'büyü', 'vampire' => 'vampir',
-        'zombie' => 'zombi', 'ghost' => 'hayalet', 'haunted house' => 'perili ev',
-        'murder' => 'cinayet', 'detective' => 'dedektif', 'police' => 'polis',
-        'mafia' => 'mafya', 'gangster' => 'gangster', 'prison' => 'hapishane',
-        'escape' => 'kaçış', 'war' => 'savaş', 'world war ii' => '2. Dünya Savaşı',
-        'soldier' => 'asker', 'spy' => 'casus', 'espionage' => 'casusluk',
-        'assassin' => 'suikastçı', 'martial arts' => 'dövüş sanatları',
-        'road trip' => 'yol hikâyesi', 'coming of age' => 'büyüme hikâyesi',
-        'high school' => 'lise', 'family' => 'aile',
-        'father son relationship' => 'baba-oğul ilişkisi',
-        'mother daughter relationship' => 'anne-kız ilişkisi',
-        'marriage' => 'evlilik', 'divorce' => 'boşanma', 'wedding' => 'düğün',
-        'childhood' => 'çocukluk', 'memory' => 'hafıza', 'dream' => 'rüya',
-        'nightmare' => 'kâbus', 'parallel world' => 'paralel evren',
-        'post-apocalyptic future' => 'kıyamet sonrası', 'apocalypse' => 'kıyamet',
-        'virus' => 'virüs', 'pandemic' => 'pandemi', 'monster' => 'canavar',
-        'dragon' => 'ejderha', 'kingdom' => 'krallık', 'medieval' => 'ortaçağ',
-        'pirate' => 'korsan', 'treasure' => 'hazine', 'island' => 'ada',
-        'ocean' => 'okyanus', 'desert' => 'çöl', 'jungle' => 'orman',
-        'small town' => 'kasaba', 'new york city' => 'New York',
-        'london, england' => 'Londra', 'paris, france' => 'Paris',
-        'robbery' => 'soygun', 'kidnapping' => 'kaçırılma',
-        'conspiracy' => 'komplo', 'corruption' => 'yolsuzluk',
-        'investigation' => 'soruşturma', 'courtroom' => 'mahkeme',
-        'lawyer' => 'avukat', 'journalist' => 'gazeteci', 'boxing' => 'boks',
-        'football (soccer)' => 'futbol', 'basketball' => 'basketbol',
-        'music' => 'müzik', 'musician' => 'müzisyen', 'dance' => 'dans',
-        'cooking' => 'yemek', 'chef' => 'şef', 'romance' => 'romantizm',
-        'forbidden love' => 'yasak aşk', 'love triangle' => 'aşk üçgeni',
-        'loss' => 'kayıp', 'grief' => 'yas', 'redemption' => 'kefaret',
-        'identity' => 'kimlik', 'loneliness' => 'yalnızlık',
-        'obsession' => 'takıntı', 'addiction' => 'bağımlılık',
-        'mental illness' => 'ruh sağlığı', 'psychopath' => 'psikopat',
-        'cult' => 'tarikat', 'religion' => 'din', 'mythology' => 'mitoloji',
-        'fairy tale' => 'masal', 'anime' => 'anime',
-        'video game' => 'video oyunu', 'hacker' => 'hacker',
-        'cyberpunk' => 'siberpunk', 'noir' => 'kara film', 'satire' => 'hiciv',
-        'dark comedy' => 'kara mizah', 'parody' => 'parodi',
-        'sibling relationship' => 'kardeş ilişkisi', 'class' => 'sınıf',
-        'money' => 'para',
-    ];
+    private static ?array $themesTr = null;
+
+    private static function getThemesTr(): array
+    {
+        if (self::$themesTr === null) {
+            $jsonPath = dirname(__DIR__, 2) . '/assets/lexicon/theme_tr.json';
+            if (!is_file($jsonPath)) {
+                $jsonPath = __DIR__ . '/theme_tr.json';
+            }
+            if (is_file($jsonPath)) {
+                self::$themesTr = json_decode(file_get_contents($jsonPath), true) ?? [];
+            } else {
+                self::$themesTr = [];
+            }
+        }
+        return self::$themesTr;
+    }
 
     private static function genreName(int $id): string
     {
@@ -156,7 +124,8 @@ class TasteDnaWebText
             if ($key === '') {
                 continue;
             }
-            $tr = self::THEMES_TR[$key] ?? self::cleanRawKeyword($key);
+            $themesTr = self::getThemesTr();
+            $tr = $themesTr[$key] ?? self::cleanRawKeyword($key);
             if ($tr === '') {
                 continue;
             }

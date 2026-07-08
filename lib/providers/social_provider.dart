@@ -3,14 +3,15 @@ import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
+import '../models/social.dart';
 import '../services/api_service.dart';
 import 'auth_provider.dart';
 
 class SocialState {
-  final List<dynamic> friends;
-  final List<dynamic> pendingReceived;
-  final List<dynamic> pendingSent;
-  final List<dynamic> activityFeed;
+  final List<Friend> friends;
+  final List<Friend> pendingReceived;
+  final List<Friend> pendingSent;
+  final List<ActivityItem> activityFeed;
   final List<Movie> intersection;
   final Map<String, dynamic> signals;
 
@@ -18,11 +19,11 @@ class SocialState {
   final Map<int, int> tasteScores;
 
   /// Gelen film/dizi önerileri (en yeni önce) ve görülmemiş sayısı.
-  final List<dynamic> recommendations;
+  final List<RecommendationInboxItem> recommendations;
   final int unseenRecommendations;
 
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
-  final Map<int, List<dynamic>> friendActivities;
+  final Map<int, List<ActivityItem>> friendActivities;
 
   final bool loading;
   final String? error;
@@ -43,16 +44,16 @@ class SocialState {
   });
 
   SocialState copyWith({
-    List<dynamic>? friends,
-    List<dynamic>? pendingReceived,
-    List<dynamic>? pendingSent,
-    List<dynamic>? activityFeed,
+    List<Friend>? friends,
+    List<Friend>? pendingReceived,
+    List<Friend>? pendingSent,
+    List<ActivityItem>? activityFeed,
     List<Movie>? intersection,
     Map<String, dynamic>? signals,
     Map<int, int>? tasteScores,
-    List<dynamic>? recommendations,
+    List<RecommendationInboxItem>? recommendations,
     int? unseenRecommendations,
-    Map<int, List<dynamic>>? friendActivities,
+    Map<int, List<ActivityItem>>? friendActivities,
     bool? loading,
     String? Function()? error,
   }) {
@@ -94,10 +95,24 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.getFriends();
+      
+      final friendsList = (res['friends'] as List<dynamic>?)
+              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
+      final pendingReceivedList = (res['pending_received'] as List<dynamic>?)
+              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
+      final pendingSentList = (res['pending_sent'] as List<dynamic>?)
+              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
+
       state = state.copyWith(
-        friends: res['friends'] as List<dynamic>,
-        pendingReceived: res['pending_received'] as List<dynamic>,
-        pendingSent: res['pending_sent'] as List<dynamic>,
+        friends: friendsList,
+        pendingReceived: pendingReceivedList,
+        pendingSent: pendingSentList,
         loading: false,
       );
       // Rozetler için uyum skorlarını arka planda yükle (await edilmez).
@@ -113,7 +128,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final feed = await _apiService.getActivityFeed();
-      state = state.copyWith(activityFeed: feed, loading: false);
+      final feedList = (feed as List<dynamic>?)
+              ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
+      state = state.copyWith(activityFeed: feedList, loading: false);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
@@ -125,8 +144,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final feed = await _apiService.getActivityFeed(friendId: friendId);
-      final map = Map<int, List<dynamic>>.from(state.friendActivities);
-      map[friendId] = feed;
+      final feedList = (feed as List<dynamic>?)
+              ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
+      final map = Map<int, List<ActivityItem>>.from(state.friendActivities);
+      map[friendId] = feedList;
       state = state.copyWith(friendActivities: map, loading: false);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: () => e.message);
@@ -209,7 +232,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadTasteScores() async {
     final scores = Map<int, int>.from(state.tasteScores);
     for (final f in state.friends) {
-      final id = int.tryParse((f as Map)['id'].toString()) ?? 0;
+      final id = f.id;
       if (id == 0) continue;
       try {
         final res = await _apiService.getTasteMatch(id);
@@ -228,8 +251,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadRecommendations() async {
     try {
       final res = await _apiService.getRecommendations();
+      final recList = (res['recommendations'] as List<dynamic>?)
+              ?.map((x) => RecommendationInboxItem.fromJson(x as Map<String, dynamic>))
+              .toList() ??
+          const [];
       state = state.copyWith(
-        recommendations: res['recommendations'] as List<dynamic>,
+        recommendations: recList,
         unseenRecommendations: (res['unseen'] as num?)?.toInt() ?? 0,
       );
     } catch (e, st) {

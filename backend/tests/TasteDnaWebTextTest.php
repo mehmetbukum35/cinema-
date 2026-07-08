@@ -179,34 +179,31 @@ class TasteDnaWebTextTest extends TestCase
 
     public function testLexiconParityWithDart(): void
     {
-        $dartPath = __DIR__ . '/../../lib/services/taste_dna_presenter.dart';
-        if (!is_file($dartPath)) {
-            $this->markTestSkipped('Dart presenter file not found.');
-        }
+        $jsonPath = __DIR__ . '/../../assets/lexicon/theme_tr.json';
+        $fallbackPath = __DIR__ . '/../src/theme_tr.json';
 
-        $dartContent = file_get_contents($dartPath);
-        // Find: static const Map<String, String> themeTr = { ... };
-        if (!preg_match('/themeTr\s*=\s*\{([^}]+)\}/s', $dartContent, $matches)) {
-            $this->fail('Could not extract themeTr map from Dart presenter.');
-        }
+        $this->assertFileExists($jsonPath, 'theme_tr.json must exist in assets/lexicon/');
+        $this->assertFileExists($fallbackPath, 'theme_tr.json fallback must exist in backend/src/');
 
-        $lines = explode("\n", $matches[1]);
-        $dartMap = [];
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '//')) {
-                continue;
-            }
-            // Match: 'key': 'value',
-            if (preg_match('/\'([^\']+)\'\s*:\s*\'([^\']+)\'/', $line, $m)) {
-                $dartMap[$m[1]] = $m[2];
-            }
-        }
+        $jsonContent = file_get_contents($jsonPath);
+        $fallbackContent = file_get_contents($fallbackPath);
 
-        // Extract PHP map via reflection
+        $this->assertJson($jsonContent, 'theme_tr.json in assets must be valid JSON');
+        $this->assertJson($fallbackContent, 'theme_tr.json fallback in backend must be valid JSON');
+
+        $jsonMap = json_decode($jsonContent, true);
+        $fallbackMap = json_decode($fallbackContent, true);
+
+        $this->assertEquals($jsonMap, $fallbackMap, 'Assets theme_tr.json and backend/src/theme_tr.json must be identical.');
+        $this->assertArrayHasKey('revenge', $jsonMap);
+        $this->assertEquals('intikam', $jsonMap['revenge']);
+
+        // Test TasteDnaWebText class can load it successfully
         $ref = new ReflectionClass(TasteDnaWebText::class);
-        $phpMap = $ref->getConstant('THEMES_TR');
+        $method = $ref->getMethod('getThemesTr');
+        $method->setAccessible(true);
+        $loadedMap = $method->invoke(null);
 
-        $this->assertEquals($dartMap, $phpMap, 'Lexicon drift detected! Dart themeTr and PHP THEMES_TR maps must be identical.');
+        $this->assertEquals($jsonMap, $loadedMap, 'TasteDnaWebText::getThemesTr() must load the JSON correctly.');
     }
 }

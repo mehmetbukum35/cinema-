@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
+import '../models/social.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
@@ -82,7 +83,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   // ── Birlikte modu ─────────────────────────────────────────────────────────
   int _matchMode = 0; // 0: Movie Match, 1: Together, 2: Friend
-  Map<String, dynamic>? _selectedFriend;
+  Friend? _selectedFriend;
   final Set<int> _p1 = {};
   final Set<int> _p2 = {};
   int _activePerson = 1; // 1 veya 2
@@ -1444,8 +1445,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemBuilder: (context, idx) {
                 final f = friends[idx];
-                final name = f['display_name'] ?? f['username'] ?? 'User';
-                final handle = f['username'] ?? '';
+                final name = f.displayName ?? f.username;
+                final handle = f.username;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -1494,7 +1495,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                           debugPrint("Sync failed on friend select: $e\n$st");
                         }
                       }
-                      final id = int.tryParse(f['id'].toString()) ?? 0;
+                      final id = f.id;
                       ref
                           .read(socialProvider.notifier)
                           .loadWatchlistIntersection(id);
@@ -1510,9 +1511,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
     // A friend is selected! Display watchlist intersection
     final friendName =
-        _selectedFriend!['display_name'] ??
-        _selectedFriend!['username'] ??
-        'Friend';
+        _selectedFriend!.displayName ??
+        _selectedFriend!.username;
     final intersection = socialState.intersection;
 
     return Column(

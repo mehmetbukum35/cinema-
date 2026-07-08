@@ -27,6 +27,7 @@ import '../widgets/logout_confirm_dialog.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/auth_conflict_dialog.dart';
 import '../services/app_config.dart';
+import 'profile/widgets/change_password_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -1421,6 +1422,79 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
+          if (isLoggedIn && auth.user?['google_sub'] == null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: c.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (_) => ChangePasswordSheet(ref: ref, parentContext: context),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: c.isLight
+                          ? Border.all(color: c.border, width: 1)
+                          : null,
+                      boxShadow: c.cardShadow,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.gold.withValues(alpha: 0.15),
+                          ),
+                          child: Icon(
+                            Icons.lock_reset_rounded,
+                            color: c.gold,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tr?.get('change_password_title') ?? 'Şifre Değiştir',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                tr?.locale.languageCode == 'tr'
+                                    ? 'Hesap şifrenizi güncelleyin'
+                                    : 'Update your account password',
+                                style: TextStyle(color: c.dim, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: c.dim),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -2186,9 +2260,6 @@ class _SyncHeaderActionState extends ConsumerState<_SyncHeaderAction> {
     HapticFeedback.lightImpact();
     try {
       await ref.read(syncServiceProvider).sync();
-      ref.invalidate(watchlistProvider);
-      ref.invalidate(statsProvider);
-      ref.invalidate(swipeProvider);
       await _loadSyncTime();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
