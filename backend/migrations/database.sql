@@ -89,9 +89,30 @@ CREATE TABLE `ratings` (
   `vote_average` double DEFAULT NULL,
   `release_date` varchar(20) DEFAULT NULL,
   `popularity` double DEFAULT NULL,
+  `comment` text DEFAULT NULL,
+  `is_spoiler` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tablo için tablo yapısı `recommendations`
+--
+
+CREATE TABLE `recommendations` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `from_user_id` bigint(20) UNSIGNED NOT NULL,
+  `to_user_id` bigint(20) UNSIGNED NOT NULL,
+  `movie_id` int(11) NOT NULL,
+  `is_tv` tinyint(1) NOT NULL,
+  `title` varchar(512) NOT NULL,
+  `poster_path` varchar(255) DEFAULT NULL,
+  `note` varchar(280) DEFAULT NULL,
+  `seen` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -139,7 +160,7 @@ CREATE TABLE `users` (
   `is_public` tinyint(1) NOT NULL DEFAULT 1,
   `taste_dna` text DEFAULT NULL,
   `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
-  `google_sub` varchar(64) DEFAULT NULL
+  `google_sub` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -210,6 +231,14 @@ ALTER TABLE `ratings`
   ADD KEY `idx_ratings_sync` (`user_id`,`updated_at`);
 
 --
+-- Tablo için indeksler `recommendations`
+--
+ALTER TABLE `recommendations`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_rec_once` (`from_user_id`,`to_user_id`,`movie_id`,`is_tv`),
+  ADD KEY `idx_rec_inbox` (`to_user_id`,`created_at`);
+
+--
 -- Tablo için indeksler `refresh_tokens`
 --
 ALTER TABLE `refresh_tokens`
@@ -230,7 +259,8 @@ ALTER TABLE `search_history`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_users_email` (`email`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `idx_users_google_sub` (`google_sub`);
 
 --
 -- Tablo için indeksler `watched_seasons`
@@ -249,6 +279,12 @@ ALTER TABLE `watchlist`
 --
 -- Dökümü yapılmış tablolar için AUTO_INCREMENT değeri
 --
+
+--
+-- Tablo için AUTO_INCREMENT değeri `recommendations`
+--
+ALTER TABLE `recommendations`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `refresh_tokens`
@@ -284,6 +320,13 @@ ALTER TABLE `friends`
 --
 ALTER TABLE `ratings`
   ADD CONSTRAINT `fk_ratings_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Tablo kısıtlamaları `recommendations`
+--
+ALTER TABLE `recommendations`
+  ADD CONSTRAINT `fk_rec_from` FOREIGN KEY (`from_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_rec_to` FOREIGN KEY (`to_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Tablo kısıtlamaları `refresh_tokens`

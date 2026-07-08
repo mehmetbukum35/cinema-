@@ -159,4 +159,149 @@ class AuthTest extends TestCase
         $this->assertEquals('new@example.com', $body['user']['email']);
         $this->assertArrayHasKey('tokens', $body);
     }
+
+    public function testLogout(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $this->db->method('prepare')->willReturn($stmt);
+
+        $auth = new Auth($this->db, $this->cfg);
+        $auth->logout(['refresh_token' => 'some_token']);
+
+        $this->assertEquals(200, TestHelperRegistry::$lastStatus);
+        $this->assertEquals(['ok' => true], TestHelperRegistry::$lastBody);
+    }
+
+    public function testDeleteAccount(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $this->db->method('prepare')->willReturn($stmt);
+
+        $auth = new Auth($this->db, $this->cfg);
+        $auth->deleteAccount(42);
+
+        $this->assertEquals(200, TestHelperRegistry::$lastStatus);
+        $this->assertEquals(['ok' => true], TestHelperRegistry::$lastBody);
+    }
+
+    public function testChangePasswordSuccess(): void
+    {
+        $uid = 42;
+        $hashed = password_hash('old_pass_123', PASSWORD_BCRYPT);
+
+        // Select stmt returns current password hash
+        $stmtSelect = $this->createMock(PDOStatement::class);
+        $stmtSelect->method('fetch')->willReturn(['password_hash' => $hashed]);
+
+        // Update stmt and Delete stmt
+        $stmtUpdate = $this->createMock(PDOStatement::class);
+        $stmtDelete = $this->createMock(PDOStatement::class);
+
+        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtSelect, $stmtUpdate, $stmtDelete) {
+            if (str_contains($sql, 'SELECT password_hash')) {
+                return $stmtSelect;
+            }
+            if (str_contains($sql, 'UPDATE users SET password_hash')) {
+                return $stmtUpdate;
+            }
+            if (str_contains($sql, 'DELETE FROM refresh_tokens')) {
+                return $stmtDelete;
+            }
+            return $this->createMock(PDOStatement::class);
+        });
+
+        $auth = new Auth($this->db, $this->cfg);
+        $auth->changePassword($uid, ['old_password' => 'old_pass_123', 'new_password' => 'new_pass_123']);
+
+        $this->assertEquals(200, TestHelperRegistry::$lastStatus);
+        $this->assertEquals(['ok' => true], TestHelperRegistry::$lastBody);
+    }
+
+    public function testChangePasswordWrongOldPasswordThrows(): void
+    {
+        $uid = 42;
+        $hashed = password_hash('correct_password', PASSWORD_BCRYPT);
+
+        $stmtSelect = $this->createMock(PDOStatement::class);
+        $stmtSelect->method('fetch')->willReturn(['password_hash' => $hashed]);
+
+        $this->db->method('prepare')->willReturn($stmtSelect);
+
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(401);
+
+        try {
+            $auth->changePassword($uid, ['old_password' => 'wrong_password', 'new_password' => 'new_pass_123']);
+        } finally {
+            $this->assertEquals(401, TestHelperRegistry::$lastStatus);
+            $this->assertEquals('Mevcut parola hatalı.', TestHelperRegistry::$lastBody['error']);
+        }
+    }
+
+    public function testRefreshSuccess(): void
+    {
+        $rt = 'some_refresh_token';
+        $hash = hash('sha256', $rt);
+
+        // Select stmt returns user_id and valid expires_at
+        $stmtSelect = $this->createMock(PDOStatement::class);
+        $stmtSelect->method('fetch')->willReturn([
+            'user_id' => '42',
+            'expires_at' => time() + 3600,
+        ]);
+
+        // Update stmt for grace period
+        $stmtUpdate = $this->createMock(PDOStatement::class);
+
+        // Insert new token stmt (called inside issueTokens)
+        $stmtInsert = $this->createMock(PDOStatement::class);
+
+        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtSelect, $stmtUpdate, $stmtInsert) {
+            if (str_contains($sql, 'SELECT user_id, expires_at')) {
+                return $stmtSelect;
+            }
+            if (str_contains($sql, 'UPDATE refresh_tokens SET expires_at')) {
+                return $stmtUpdate;
+            }
+            if (str_contains($sql, 'INSERT INTO refresh_tokens')) {
+                return $stmtInsert;
+            }
+            return $this->createMock(PDOStatement::class);
+        });
+
+        $auth = new Auth($this->db, $this->cfg);
+        $auth->refresh(['refresh_token' => $rt]);
+
+        $this->assertEquals(200, TestHelperRegistry::$lastStatus);
+        $body = TestHelperRegistry::$lastBody;
+        $this->assertArrayHasKey('tokens', $body);
+        $this->assertNotEmpty($body['tokens']['access_token']);
+    }
+
+    public function testRefreshExpiredThrows(): void
+    {
+        $rt = 'some_refresh_token';
+
+        $stmtSelect = $this->createMock(PDOStatement::class);
+        $stmtSelect->method('fetch')->willReturn([
+            'user_id' => '42',
+            'expires_at' => time() - 10, // expired
+        ]);
+
+        $this->db->method('prepare')->willReturn($stmtSelect);
+
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(401);
+
+        try {
+            $auth->refresh(['refresh_token' => $rt]);
+        } finally {
+            $this->assertEquals(401, TestHelperRegistry::$lastStatus);
+            $this->assertEquals('Geçersiz veya süresi dolmuş yenileme anahtarı.', TestHelperRegistry::$lastBody['error']);
+        }
+    }
 }

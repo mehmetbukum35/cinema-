@@ -24,7 +24,7 @@ void main() {
       // 1. Arrange: Setup Mock Client
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/cinema/api/auth/login');
+        expect(request.url.path, '/api/auth/login');
 
         final body = jsonDecode(request.body);
         expect(body['email'], 'test@example.com');
@@ -64,7 +64,7 @@ void main() {
     test('loginWithGoogle should post id_token and return session', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/cinema/api/auth/google');
+        expect(request.url.path, '/api/auth/google');
         final body = jsonDecode(request.body);
         expect(body['id_token'], 'google-id-token-x');
 
@@ -117,7 +117,7 @@ void main() {
       // 1. Arrange: Setup Mock Client
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/cinema/api/social/friends');
+        expect(request.url.path, '/api/social/friends');
         expect(request.headers['Authorization'], 'Bearer initial_access');
 
         return http.Response(
@@ -176,11 +176,11 @@ void main() {
       final mockClient = MockClient((request) async {
         requestCount++;
         if (requestCount == 1) {
-          expect(request.url.path, '/cinema/api/social/friends');
+          expect(request.url.path, '/api/social/friends');
           expect(request.headers['Authorization'], 'Bearer initial_access');
           return http.Response('Unauthorized', 401);
         } else if (requestCount == 2) {
-          expect(request.url.path, '/cinema/api/auth/refresh');
+          expect(request.url.path, '/api/auth/refresh');
           final body = jsonDecode(request.body);
           expect(body['refresh_token'], 'initial_refresh');
           return http.Response(
@@ -193,7 +193,7 @@ void main() {
             200,
           );
         } else {
-          expect(request.url.path, '/cinema/api/social/friends');
+          expect(request.url.path, '/api/social/friends');
           expect(request.headers['Authorization'], 'Bearer refreshed_access');
           return http.Response(
             jsonEncode({
@@ -221,7 +221,7 @@ void main() {
     test('getTasteMatch should call taste endpoint and parse score', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/cinema/api/social/match/taste/42');
+        expect(request.url.path, '/api/social/match/taste/42');
         expect(request.headers['Authorization'], 'Bearer initial_access');
         return http.Response(
           jsonEncode({
@@ -246,7 +246,7 @@ void main() {
     test('recommendToFriend should POST correct payload', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/cinema/api/social/recommend');
+        expect(request.url.path, '/api/social/recommend');
 
         final body = jsonDecode(request.body);
         expect(body['friend_id'], 42);
@@ -271,7 +271,7 @@ void main() {
     test('getRecommendations should parse inbox payload', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/cinema/api/social/recommendations');
+        expect(request.url.path, '/api/social/recommendations');
         return http.Response(
           jsonEncode({
             'recommendations': [
@@ -302,7 +302,7 @@ void main() {
       () async {
         final mockClient = MockClient((request) async {
           expect(request.method, 'GET');
-          expect(request.url.path, '/cinema/api/titles/movie/603/score');
+          expect(request.url.path, '/api/titles/movie/603/score');
           expect(request.headers['Authorization'], 'Bearer initial_access');
           return http.Response(
             jsonEncode({

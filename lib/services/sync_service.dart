@@ -5,7 +5,11 @@ import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
 import 'api_service.dart';
+import 'providers.dart';
 import '../providers/auth_provider.dart';
+import '../providers/watchlist_provider.dart';
+import '../providers/swipe_provider.dart';
+import '../providers/social_provider.dart';
 
 /// Sunucudan gelen sayısal alanları güvenle int'e çevirir. Paylaşımlı
 /// hosting'deki MySQL/PDO, BIGINT kolonları JSON'a STRING olarak yazar
@@ -16,9 +20,10 @@ int _asInt(Object? v) =>
 
 class SyncService {
   final ApiService _apiService;
+  final Ref? _ref;
   Future<void>? _syncFuture;
 
-  SyncService(this._apiService);
+  SyncService(this._apiService, [this._ref]);
 
   // Core 2-way delta-sync method
   Future<void> sync() async {
@@ -201,6 +206,8 @@ class SyncService {
       return remote >= local;
     }
 
+    int appliedCount = 0;
+
     // Apply remote updates to local SQLite database
     await db.transaction((txn) async {
       // Ratings
@@ -228,6 +235,7 @@ class SyncService {
           'updated_at': r['updated_at'],
           'deleted': r['deleted'] ? 1 : 0,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
+        appliedCount++;
       }
 
       // Watchlist
@@ -251,6 +259,7 @@ class SyncService {
           'updated_at': w['updated_at'],
           'deleted': w['deleted'] ? 1 : 0,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
+        appliedCount++;
       }
 
       // Favorites
@@ -274,6 +283,7 @@ class SyncService {
           'updated_at': f['updated_at'],
           'deleted': f['deleted'] ? 1 : 0,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
+        appliedCount++;
       }
 
       // Watched Seasons
@@ -294,6 +304,7 @@ class SyncService {
           'updated_at': ws['updated_at'],
           'deleted': ws['deleted'] ? 1 : 0,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
+        appliedCount++;
       }
 
       // Search History
@@ -310,6 +321,7 @@ class SyncService {
           'updated_at': sh['updated_at'],
           'deleted': sh['deleted'] ? 1 : 0,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
+        appliedCount++;
       }
     });
 
@@ -317,6 +329,18 @@ class SyncService {
     await PrefsService.setLastSyncTime(serverTime);
     await PrefsService.setLastPushTime(pushWatermark);
     PrefsService.invalidateGenreWeights();
+
+    // Invalidate recommendation engine cache and DNA cache
+    await _ref?.read(recommendationEngineProvider).invalidateCache();
+
+    if (appliedCount > 0) {
+      debugPrint("Sync pulled $appliedCount database changes. Invalidating UI providers.");
+      _ref?.invalidate(watchlistProvider);
+      _ref?.invalidate(statsProvider);
+      _ref?.invalidate(swipeProvider);
+      _ref?.invalidate(socialProvider);
+    }
+
     debugPrint(
       "Sync complete. pull cursor: $serverTime, push cursor: $pushWatermark",
     );
@@ -325,7 +349,7 @@ class SyncService {
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
-  return SyncService(apiService);
+  return SyncService(apiService, ref);
 });
 
 enum SyncStatus { idle, syncing, success, error }

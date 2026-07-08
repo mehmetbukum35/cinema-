@@ -137,7 +137,7 @@ CREATE TABLE search_history (
 
 ## 2. Kimlik Doğrulama (Auth)
 
-JWT tabanlı. **Access token** kısa ömürlü (15 dk), **refresh token** uzun ömürlü (30 gün) ve DB'de hash'li tutulur.
+JWT tabanlı. **Access token** kısa ömürlü (2 saat), **refresh token** uzun ömürlü (30 gün) ve DB'de hash'li tutulur.
 
 ### POST `/auth/register`
 ```json

@@ -69,6 +69,37 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _initSession();
   }
 
+  String _mapBackendError(String message) {
+    final clean = message.trim();
+    switch (clean) {
+      case 'Bu e-posta zaten kayıtlı.':
+        return 'auth_err_email_exists';
+      case 'E-posta veya parola hatalı.':
+        return 'auth_err_invalid_credentials';
+      case 'Geçersiz e-posta.':
+      case 'Geçersiz e-posta formatı.':
+      case 'E-posta adresi gerekli.':
+        return 'auth_forgot_err_email_invalid';
+      case 'Parola en az 8 karakter olmalı.':
+      case 'Yeni parola en az 8 karakter olmalı.':
+        return 'auth_forgot_err_pass_length';
+      case 'Mevcut parola hatalı.':
+        return 'auth_err_wrong_password';
+      case 'Kullanıcı bulunamadı.':
+        return 'auth_err_user_not_found';
+      case 'Google kimliği doğrulanamadı.':
+        return 'auth_err_google_failed';
+      case 'Geçersiz veya süresi dolmuş doğrulama kodu.':
+        return 'auth_err_verify_code_failed';
+      case 'Giriş başarısız.':
+        return 'auth_err_login_failed';
+      case 'Kayıt başarısız.':
+        return 'auth_err_register_failed';
+      default:
+        return message;
+    }
+  }
+
   // Restore session from local storage on launch
   Future<void> _initSession() async {
     state = state.copyWith(loading: true);
@@ -131,8 +162,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return AuthResult(status: AuthStatus.success);
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
-      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
       const errMsg = 'auth_err_login_failed';
       state = state.copyWith(loading: false, error: errMsg);
@@ -176,8 +208,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return AuthResult(status: AuthStatus.success);
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
-      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
       const errMsg = 'auth_err_register_failed';
       state = state.copyWith(loading: false, error: errMsg);
@@ -244,8 +277,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return AuthResult(status: AuthStatus.success);
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
-      return AuthResult(status: AuthStatus.error, errorMessage: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
       debugPrint("Google sign-in failed: $e");
       final errMsg = e.toString().contains('auth_err_google_token_failed')
@@ -401,7 +435,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _endLocalSession(wipeLocalData: true);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
       debugPrint("Account deletion failed: $e\n$st");
@@ -426,7 +461,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _endLocalSession(wipeLocalData: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
       debugPrint("Change password failed: $e\n$st");
@@ -446,7 +482,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
       debugPrint("Forgot password failed: $e\n$st");
@@ -466,7 +503,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
       debugPrint("Verify reset code failed: $e\n$st");
@@ -490,7 +528,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(); // reset to default logged-out state
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: e.message);
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
       debugPrint("Reset password failed: $e\n$st");
