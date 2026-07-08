@@ -48,6 +48,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         ref.read(socialProvider.notifier).markRecommendationsSeen();
       }
     });
+    // Menüden/bildirimden doğrudan Akış ile açıldıysa listener tetiklenmez;
+    // görüldü işaretini burada ver.
+    if (widget.initialTab == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(socialProvider.notifier).markRecommendationsSeen();
+        }
+      });
+    }
 
     // Initial data load
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -119,14 +128,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
               icon: Icon(Icons.share_rounded, color: c.gold),
               onPressed: () {
                 final username = authUser['username'];
+                final profileUrl = ApiService.webProfileUrl(
+                  username,
+                  lang: isTr ? 'tr' : 'en',
+                );
                 Share.share(
                   AppLocalizations.of(context)
                           ?.get('share_profile_text')
-                          .replaceAll(
-                            '{}',
-                            '${ApiService.webProfileBaseUrl}/$username',
-                          ) ??
-                      'Follow me on What to Watch! Check out my watchlist and favorites here: ${ApiService.webProfileBaseUrl}/$username',
+                          .replaceAll('{}', profileUrl) ??
+                      'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
                 );
               },
             ),
@@ -230,43 +240,43 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       body: authUser == null || authUser['username'] == null
           ? _buildProfileSetupPlaceholder(c)
           : (socialState.loading &&
-                  socialState.friends.isEmpty &&
-                  socialState.activityFeed.isEmpty
-              ? Center(child: CircularProgressIndicator(color: c.gold))
-              : Column(
-                  children: [
-                    if (socialState.error != null)
-                      Container(
-                        width: double.infinity,
-                        color: c.red.withValues(alpha: 0.15),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 16,
-                        ),
-                        child: Text(
-                          socialState.error!,
-                          style: TextStyle(
-                            color: c.red,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                    socialState.friends.isEmpty &&
+                    socialState.activityFeed.isEmpty
+                ? Center(child: CircularProgressIndicator(color: c.gold))
+                : Column(
+                    children: [
+                      if (socialState.error != null)
+                        Container(
+                          width: double.infinity,
+                          color: c.red.withValues(alpha: 0.15),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 16,
                           ),
-                          textAlign: TextAlign.center,
+                          child: Text(
+                            socialState.error!,
+                            style: TextStyle(
+                              color: c.red,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildFriendsTab(c, socialState, isTr),
+                            _buildRequestsTab(c, socialState, isTr),
+                            _buildActivityTab(c, socialState, isTr),
+                            _buildTopListsTab(c, socialState, isTr),
+                          ],
                         ),
                       ),
-
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildFriendsTab(c, socialState, isTr),
-                          _buildRequestsTab(c, socialState, isTr),
-                          _buildActivityTab(c, socialState, isTr),
-                          _buildTopListsTab(c, socialState, isTr),
-                        ],
-                      ),
-                    ),
-                  ],
-                )),
+                    ],
+                  )),
     );
   }
 
@@ -312,7 +322,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          AppLocalizations.of(context)?.get('customize_profile') ??
+                          AppLocalizations.of(
+                                context,
+                              )?.get('customize_profile') ??
                               'Customize Profile',
                           style: TextStyle(
                             color: c.ink,
@@ -326,7 +338,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                           style: TextStyle(color: c.ink, fontSize: 14),
                           decoration: InputDecoration(
                             labelText:
-                                AppLocalizations.of(context)?.get('username_username') ??
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('username_username') ??
                                 'Username (@username)',
                             labelStyle: TextStyle(color: c.dim, fontSize: 13),
                             prefixText: '@',
@@ -347,7 +361,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                           color: Colors.transparent,
                           child: SwitchListTile(
                             title: Text(
-                              AppLocalizations.of(context)?.get('public_profile') ??
+                              AppLocalizations.of(
+                                    context,
+                                  )?.get('public_profile') ??
                                   'Public Profile',
                               style: TextStyle(color: c.ink, fontSize: 14),
                             ),
@@ -370,12 +386,16 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () async {
-                            final username = _usernameCtrl.text.trim().toLowerCase();
+                            final username = _usernameCtrl.text
+                                .trim()
+                                .toLowerCase();
                             if (username.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    AppLocalizations.of(context)?.get('please_enter_a_username') ??
+                                    AppLocalizations.of(
+                                          context,
+                                        )?.get('please_enter_a_username') ??
                                         'Please enter a username.',
                                   ),
                                 ),
@@ -391,14 +411,18 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    AppLocalizations.of(context)?.get('profile_updated_successfully') ??
+                                    AppLocalizations.of(context)?.get(
+                                          'profile_updated_successfully',
+                                        ) ??
                                         'Profile updated successfully.',
                                   ),
                                   backgroundColor: c.gold,
                                 ),
                               );
                             } else if (context.mounted) {
-                              final err = ref.read(socialProvider).error ?? 'Bir hata oluştu';
+                              final err =
+                                  ref.read(socialProvider).error ??
+                                  'Bir hata oluştu';
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(err),
@@ -417,7 +441,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: Text(
-                            AppLocalizations.of(context)?.get('save_settings') ??
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('save_settings') ??
                                 'Save Settings',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
@@ -1119,7 +1145,10 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
           final url = Uri.parse(
-            '${ApiService.webProfileBaseUrl}/${p.username}',
+            ApiService.webProfileUrl(
+              p.username,
+              lang: ref.read(localeProvider).languageCode,
+            ),
           );
           await launchUrl(url, mode: LaunchMode.externalApplication);
         },
@@ -1194,9 +1223,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        ref
-                            .read(socialProvider.notifier)
-                            .toggleProfileLike(p);
+                        ref.read(socialProvider.notifier).toggleProfileLike(p);
                       },
                     ),
                   Text(
@@ -1639,7 +1666,6 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
     );
   }
 }
-
 
 Future<void> _openMovieDetail(
   BuildContext context,

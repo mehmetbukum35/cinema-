@@ -31,7 +31,8 @@ class AppLocalizations {
       'profile_about': 'About App',
       'profile_about_desc': 'Version, author and application info',
       'profile_about_title': 'About Cinema+ | What to Watch',
-      'profile_about_content': 'Cinema+ is your personal companion to discover movies and TV shows, match your taste with friends, and build your unique Cinema DNA.',
+      'profile_about_content':
+          'Cinema+ is your personal companion to discover movies and TV shows, match your taste with friends, and build your unique Cinema DNA.',
       'profile_about_author': 'Author',
       'profile_about_version': 'Version',
       'tmdb_attribution':
@@ -53,6 +54,30 @@ class AppLocalizations {
       'together_similar_desc': 'Discover titles similar to one you love',
       'tab_search': 'Search',
       'tab_profile': 'Profile',
+
+      // Global top bar & menu
+      'menu_social': 'Social',
+      'menu_preferences': 'Preferences',
+      'menu_account': 'Account',
+      'menu_my_friends': 'My Friends',
+      'menu_requests': 'Friend Requests',
+      'menu_activity': 'Activity Feed',
+      'menu_top_lists': 'Top Lists',
+      'menu_my_profile': 'My Profile',
+      'theme_dark': 'Dark',
+      'theme_light': 'Light',
+
+      // Library (showroom)
+      'library_title': 'Your Library',
+      'profile_cinema_identity': 'Your Cinema Identity',
+      'danger_zone': 'Danger Zone',
+      'sort_added': 'Added',
+      'sort_rating': 'Rating',
+      'sort_year': 'Year',
+      'sort_my_rating': 'My Rating',
+      'library_rated_empty_title': 'No ratings yet',
+      'library_rated_empty_desc':
+          'Rate movies and shows to build your history.',
 
       // Onboarding
       'onboarding_loading': 'Preparing...',
@@ -122,7 +147,8 @@ class AppLocalizations {
       'auth_forgot_password_link': 'Forgot Password?',
       'auth_forgot_title': 'Forgot Password',
       'change_password_title': 'Change Password',
-      'change_password_desc': 'You will be logged out of all devices on success.',
+      'change_password_desc':
+          'You will be logged out of all devices on success.',
       'change_password_old_password': 'Current Password',
       'change_password_new_password': 'New Password',
       'change_password_confirm_password': 'Confirm New Password',
@@ -155,23 +181,30 @@ class AppLocalizations {
       'auth_forgot_err_pass_length': 'Password must be at least 8 characters.',
       'auth_forgot_success_reset':
           'Your password has been successfully reset. You can now sign in with your new password.',
-      'auth_err_google_not_configured': 'Google sign-in is not configured for this build.',
+      'auth_err_google_not_configured':
+          'Google sign-in is not configured for this build.',
       'auth_err_google_token_failed': 'Failed to retrieve Google ID token.',
       'auth_err_google_failed': 'Google sign-in failed. Please try again.',
-      'auth_err_register_failed': 'Registration failed. Please check your connection.',
+      'auth_err_register_failed':
+          'Registration failed. Please check your connection.',
       'auth_err_login_failed': 'Login failed. Please check your connection.',
       'auth_err_delete_failed': 'Failed to delete account. Please try again.',
-      'auth_err_change_pass_failed': 'Failed to change password. Please try again.',
+      'auth_err_change_pass_failed':
+          'Failed to change password. Please try again.',
       'auth_err_email_exists': 'This email is already registered.',
       'auth_err_invalid_credentials': 'Invalid email or password.',
       'auth_err_wrong_password': 'Current password is incorrect.',
       'auth_err_user_not_found': 'User not found.',
-      'auth_err_forgot_send_failed': 'Failed to send reset code. Please check your connection.',
-      'auth_err_verify_code_failed': 'Verification code is invalid. Please try again.',
-      'auth_err_reset_pass_failed': 'Failed to reset password. Please try again.',
+      'auth_err_forgot_send_failed':
+          'Failed to send reset code. Please check your connection.',
+      'auth_err_verify_code_failed':
+          'Verification code is invalid. Please try again.',
+      'auth_err_reset_pass_failed':
+          'Failed to reset password. Please try again.',
       'auth_err_generic': 'An error occurred.',
       'auth_err_rate_limited': 'Too many requests. Please try again later.',
-      'sync_login_hint': 'Please sign in at the top of the profile to enable Cloud Backup.',
+      'sync_login_hint':
+          'Please sign in at the top of the profile to enable Cloud Backup.',
       'profile_guest': 'Guest User',
       'profile_not_logged_in': 'Cloud sync is not active',
       'profile_watchlist': 'Watchlist',
@@ -634,11 +667,14 @@ class AppLocalizations {
       'sync_retry': 'Retry',
       'splash_tagline': ' | What to Watch?',
       'web_profile': 'Web Profile',
-      'social_customize_desc': 'Choose a username to add friends and see your cinema harmony.',
+      'social_customize_desc':
+          'Choose a username to add friends and see your cinema harmony.',
       'social_set_username': 'Set Username',
       'browse_surprise_title': 'Lucky Pick 🎲',
-      'browse_surprise_desc': 'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
-      'recap_share_template': '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
+      'browse_surprise_desc':
+          'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
+      'recap_share_template':
+          '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
       'recap_share_link_yes': 'Check out my profile: {url}',
       'recap_share_link_no': 'Rate your titles and see your recap!',
       'change_language': 'Change Language',
@@ -650,7 +686,8 @@ class AppLocalizations {
       'profile_about': 'Uygulama Hakkında',
       'profile_about_desc': 'Sürüm, yazar ve uygulama bilgileri',
       'profile_about_title': 'Cinema+ | Ne İzlesem? Hakkında',
-      'profile_about_content': 'Cinema+, Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetmenizi, arkadaşlarınızla ortak zevklerinizi eşleştirmenizi ve benzersiz Sinema DNA\'nızı oluşturmanızı sağlayan kişisel sinema asistanınızdır.',
+      'profile_about_content':
+          'Cinema+, Tinder tarzı kaydırma arayüzü ile film ve dizi keşfetmenizi, arkadaşlarınızla ortak zevklerinizi eşleştirmenizi ve benzersiz Sinema DNA\'nızı oluşturmanızı sağlayan kişisel sinema asistanınızdır.',
       'profile_about_author': 'Yazar',
       'profile_about_version': 'Sürüm',
       'tmdb_attribution':
@@ -672,6 +709,30 @@ class AppLocalizations {
       'together_similar_desc': 'Sevdiğin bir filme benzer yapımları keşfet',
       'tab_search': 'Ara',
       'tab_profile': 'Profil',
+
+      // Global üst bar & menü
+      'menu_social': 'Sosyal',
+      'menu_preferences': 'Tercihler',
+      'menu_account': 'Hesap',
+      'menu_my_friends': 'Arkadaşlarım',
+      'menu_requests': 'Arkadaşlık İstekleri',
+      'menu_activity': 'Aktivite Akışı',
+      'menu_top_lists': 'Top Listeler',
+      'menu_my_profile': 'Profilim',
+      'theme_dark': 'Koyu',
+      'theme_light': 'Açık',
+
+      // Kütüphane (showroom)
+      'library_title': 'Kütüphanen',
+      'profile_cinema_identity': 'Sinema Kimliğin',
+      'danger_zone': 'Tehlike Bölgesi',
+      'sort_added': 'Eklenme',
+      'sort_rating': 'Puan',
+      'sort_year': 'Yıl',
+      'sort_my_rating': 'Puanım',
+      'library_rated_empty_title': 'Henüz değerlendirme yok',
+      'library_rated_empty_desc':
+          'Film ve dizileri puanladıkça geçmişin burada birikir.',
 
       // Onboarding
       'onboarding_loading': 'Hazırlanıyor...',
@@ -742,7 +803,8 @@ class AppLocalizations {
       'auth_forgot_password_link': 'Şifremi Unuttum',
       'auth_forgot_title': 'Şifremi Unuttum',
       'change_password_title': 'Şifre Değiştir',
-      'change_password_desc': 'Şifreniz değiştirildiğinde tüm cihazlarınızdan çıkış yapılacaktır.',
+      'change_password_desc':
+          'Şifreniz değiştirildiğinde tüm cihazlarınızdan çıkış yapılacaktır.',
       'change_password_old_password': 'Mevcut Şifre',
       'change_password_new_password': 'Yeni Şifre',
       'change_password_confirm_password': 'Yeni Şifreyi Onayla',
@@ -775,23 +837,33 @@ class AppLocalizations {
       'auth_forgot_err_pass_length': 'Parola en az 8 karakter olmalıdır.',
       'auth_forgot_success_reset':
           'Şifreniz başarıyla sıfırlandı. Yeni şifrenizle giriş yapabilirsiniz.',
-      'auth_err_google_not_configured': 'Google girişi bu derlemede yapılandırılmamış.',
+      'auth_err_google_not_configured':
+          'Google girişi bu derlemede yapılandırılmamış.',
       'auth_err_google_token_failed': 'Google ID token alınamadı.',
-      'auth_err_google_failed': 'Google ile giriş yapılamadı. Lütfen tekrar deneyin.',
-      'auth_err_register_failed': 'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.',
-      'auth_err_login_failed': 'Giriş yapılamadı. Lütfen bağlantınızı kontrol edin.',
+      'auth_err_google_failed':
+          'Google ile giriş yapılamadı. Lütfen tekrar deneyin.',
+      'auth_err_register_failed':
+          'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.',
+      'auth_err_login_failed':
+          'Giriş yapılamadı. Lütfen bağlantınızı kontrol edin.',
       'auth_err_delete_failed': 'Hesap silinemedi. Lütfen tekrar deneyin.',
-      'auth_err_change_pass_failed': 'Parola değiştirilemedi. Lütfen tekrar deneyin.',
+      'auth_err_change_pass_failed':
+          'Parola değiştirilemedi. Lütfen tekrar deneyin.',
       'auth_err_email_exists': 'Bu e-posta zaten kayıtlı.',
       'auth_err_invalid_credentials': 'E-posta veya parola hatalı.',
       'auth_err_wrong_password': 'Mevcut parola hatalı.',
       'auth_err_user_not_found': 'Kullanıcı bulunamadı.',
-      'auth_err_forgot_send_failed': 'Sıfırlama kodu gönderilemedi. Lütfen bağlantınızı kontrol edin.',
-      'auth_err_verify_code_failed': 'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
-      'auth_err_reset_pass_failed': 'Şifre sıfırlanamadı. Lütfen tekrar deneyin.',
+      'auth_err_forgot_send_failed':
+          'Sıfırlama kodu gönderilemedi. Lütfen bağlantınızı kontrol edin.',
+      'auth_err_verify_code_failed':
+          'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
+      'auth_err_reset_pass_failed':
+          'Şifre sıfırlanamadı. Lütfen tekrar deneyin.',
       'auth_err_generic': 'Bir hata oluştu.',
-      'auth_err_rate_limited': 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.',
-      'sync_login_hint': 'Bulut yedeklemeyi etkinleştirmek için lütfen profil sayfasının üst kısmından giriş yapın.',
+      'auth_err_rate_limited':
+          'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.',
+      'sync_login_hint':
+          'Bulut yedeklemeyi etkinleştirmek için lütfen profil sayfasının üst kısmından giriş yapın.',
       'profile_guest': 'Misafir Kullanıcı',
       'profile_not_logged_in': 'Bulut eşitleme aktif değil',
       'profile_watchlist': 'İzleme Listesi',
@@ -939,7 +1011,8 @@ class AppLocalizations {
           'Ölçülü eleştirmen — övgün de eleştirin de yerini biliyor.',
       'dna_blind': 'Kör noktan: {g} — sana pek hitap etmiyor.',
       'dna_shift': 'Zevkinin rotası: {from} → {to}.',
-      'dna_accuracy': 'Son önerilerdeki uyum oranınız: {p} — {n} öneri üzerinden.',
+      'dna_accuracy':
+          'Son önerilerdeki uyum oranınız: {p} — {n} öneri üzerinden.',
       'dna_share_header': 'Sinema DNA\'m: {a}',
       'dna_share_themes': 'Temalarım',
       'dna_share_cta': 'DNA\'na bak',
@@ -1241,11 +1314,14 @@ class AppLocalizations {
       'sync_retry': 'Tekrar Dene',
       'splash_tagline': ' | Ne İzlesem?',
       'web_profile': 'Web Profili',
-      'social_customize_desc': 'Arkadaşlarınızı eklemek ve sinema uyumunuzu görmek için bir kullanıcı adı belirleyin.',
+      'social_customize_desc':
+          'Arkadaşlarınızı eklemek ve sinema uyumunuzu görmek için bir kullanıcı adı belirleyin.',
       'social_set_username': 'Kullanıcı Adı Belirle',
       'browse_surprise_title': 'Şanslı Seçim 🎲',
-      'browse_surprise_desc': 'Bu zar butonu, puanladığınız filmlerden yola çıkarak zevklerinize uygun rastgele bir film seçer. "Şaşırt beni" demek istediğinizde kullanabilirsiniz!',
-      'recap_share_template': '🎬 Ne İzlesem? {year} Sinematik Özetim!\n\nBu yıl tam {total} film/dizi oyladım! 🍿\nFavori Türlerim:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
+      'browse_surprise_desc':
+          'Bu zar butonu, puanladığınız filmlerden yola çıkarak zevklerinize uygun rastgele bir film seçer. "Şaşırt beni" demek istediğinizde kullanabilirsiniz!',
+      'recap_share_template':
+          '🎬 Ne İzlesem? {year} Sinematik Özetim!\n\nBu yıl tam {total} film/dizi oyladım! 🍿\nFavori Türlerim:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}',
       'recap_share_link_yes': 'Profilime ve oylarıma göz at: {url}',
       'recap_share_link_no': 'Sen de oylarını ver, özetini gör!',
       'change_language': 'Dil Seçimi',

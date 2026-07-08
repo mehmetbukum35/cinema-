@@ -80,8 +80,9 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
   void _share(TasteDnaPresenter p) {
     HapticFeedback.mediumImpact();
     final username = ref.read(authProvider).user?['username'] as String?;
+    final lang = ref.read(localeProvider).languageCode;
     final profileUrl = (username != null && username.isNotEmpty)
-        ? '${ApiService.webProfileBaseUrl}/$username'
+        ? ApiService.webProfileUrl(username, lang: lang)
         : null;
     Share.share(p.shareText(profileUrl));
   }

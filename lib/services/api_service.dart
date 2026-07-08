@@ -17,6 +17,14 @@ enum RefreshOutcome { success, denied, transient }
 class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
+
+  /// Web profil URL'i. Sayfa varsayılan Türkçe render edilir; uygulama
+  /// İngilizce kullanılıyorsa ?lang=en eklenir ki ziyaretçi aynı dille
+  /// karşılansın.
+  static String webProfileUrl(String username, {String lang = 'tr'}) =>
+      lang == 'tr'
+      ? '$webProfileBaseUrl/$username'
+      : '$webProfileBaseUrl/$username?lang=$lang';
   final http.Client _client;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
@@ -110,7 +118,8 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (data is Map<String, dynamic>) {
         final serverMsg = data['error'] as String?;
-        if (serverMsg == 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' ||
+        if (serverMsg ==
+                'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' ||
             serverMsg == 'Geçici hizmet kısıtı.') {
           message = 'auth_err_rate_limited';
         } else if (serverMsg != null && serverMsg.isNotEmpty) {

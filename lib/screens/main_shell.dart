@@ -5,6 +5,7 @@ import '../services/localization_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../providers/social_provider.dart';
+import '../widgets/app_top_bar.dart';
 import 'browse_screen.dart';
 import 'swipe_screen.dart';
 import 'together_screen.dart';
@@ -50,55 +51,61 @@ class _MainShellState extends ConsumerState<MainShell> {
         social.pendingReceived.length + social.unseenRecommendations;
     return Scaffold(
       backgroundColor: pal.bg,
-      body: Column(
-        children: [
-          if (isOffline)
-            Container(
-              width: double.infinity,
-              color: Colors.orange.shade800,
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.cloud_off_rounded,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(
-                          context,
-                        )?.get('you_are_offline_your_changes_w') ??
-                        'You are offline — Your changes will be synced',
-                    style: const TextStyle(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            if (isOffline)
+              Container(
+                width: double.infinity,
+                color: Colors.orange.shade800,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                  horizontal: 16,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.cloud_off_rounded,
                       color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      size: 14,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocalizations.of(
+                            context,
+                          )?.get('you_are_offline_your_changes_w') ??
+                          'You are offline — Your changes will be synced',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // Global üst bar: her sekmede aynı yerde durur (zar + rozetli
+            // avatar menüsü). Keşfet başlığındaki dağınık ikon sırasının yerine.
+            AppTopBar(onOpenProfile: () => _onTabChange(4)),
+            Expanded(
+              child: IndexedStack(
+                index: _tab,
+                children: [
+                  // TickerMode: görünmeyen sekmelerin TÜM animasyonlarını (aurora,
+                  // shimmer vb.) dondurur — kapsamlı pil koruması.
+                  TickerMode(enabled: _tab == 0, child: const BrowseScreen()),
+                  TickerMode(enabled: _tab == 1, child: const SwipeScreen()),
+                  TickerMode(enabled: _tab == 2, child: const TogetherScreen()),
+                  TickerMode(enabled: _tab == 3, child: const SearchScreen()),
+                  TickerMode(enabled: _tab == 4, child: const ProfileScreen()),
                 ],
               ),
             ),
-          Expanded(
-            child: IndexedStack(
-              index: _tab,
-              children: [
-                // TickerMode: görünmeyen sekmelerin TÜM animasyonlarını (aurora,
-                // shimmer vb.) dondurur — kapsamlı pil koruması.
-                TickerMode(
-                  enabled: _tab == 0,
-                  child: BrowseScreen(onOpenProfile: () => _onTabChange(4)),
-                ),
-                TickerMode(enabled: _tab == 1, child: const SwipeScreen()),
-                TickerMode(enabled: _tab == 2, child: const TogetherScreen()),
-                TickerMode(enabled: _tab == 3, child: const SearchScreen()),
-                TickerMode(enabled: _tab == 4, child: const ProfileScreen()),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

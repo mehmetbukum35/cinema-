@@ -9,8 +9,9 @@ import 'match_screen.dart';
 import 'social_screen.dart';
 
 /// "Birlikte" hub'ı — Bento grid dashboard.
-/// İç içe sekme yerine 4 net hedefi kart olarak sunar: en üstte geniş "Sosyal"
-/// hero kartı (en sık dönülen yer), altında kompakt eşleştirme modları.
+/// Tamamı sosyal 3 hedefi kart olarak sunar: en üstte geniş "Sosyal" hero
+/// kartı (en sık dönülen yer), altında kompakt eşleştirme modları.
+/// ("Benzer Film Bul" sosyal olmadığı için Ara ekranına taşındı.)
 /// Her kart ilgili ekranı geri-butonlu tam ekran olarak açar (task akışı).
 class TogetherScreen extends ConsumerStatefulWidget {
   const TogetherScreen({super.key});
@@ -102,20 +103,6 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-
-            // ── Footer: Film benzerliği ───────────────────────────────────
-            _wideCard(
-              c: c,
-              title: tr?.get('together_similar_title') ?? 'Find Similar',
-              subtitle:
-                  tr?.get('together_similar_desc') ??
-                  'Discover titles similar to one you love',
-              icon: Icons.compare_arrows_rounded,
-              onTap: () => _push(
-                const MatchScreen(initialMode: 0, hideModeSelector: true),
-              ),
             ),
           ],
         ),
@@ -237,65 +224,6 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Geniş (tam genişlik) düz kart.
-  Widget _wideCard({
-    required ThemePalette c,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return SpringButton(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: c.borderSoft),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.red.withValues(alpha: 0.14),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: c.red, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: c.dim, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: c.dim, size: 22),
           ],
         ),
       ),

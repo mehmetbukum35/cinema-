@@ -12,6 +12,7 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/pulsing_placeholder.dart';
+import 'match_screen.dart';
 import 'movie_detail_sheet.dart';
 import 'results_screen.dart';
 
@@ -179,8 +180,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                           color: c.dim,
                                           size: 18,
                                         ),
-                                        tooltip: AppLocalizations.of(context)
-                                                ?.get('semantics_close') ??
+                                        tooltip:
+                                            AppLocalizations.of(
+                                              context,
+                                            )?.get('semantics_close') ??
                                             'Close',
                                         onPressed: () {
                                           HapticFeedback.lightImpact();
@@ -388,12 +391,89 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _quickAccess() {
     final c = context.c;
+    final tr = AppLocalizations.of(context);
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // "Benzer Film Bul" — Birlikte'den taşındı: "aradığımı biliyorum"
+          // ile "buna benzer bir şey istiyorum" niyetleri aynı rafta dursun.
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const MatchScreen(initialMode: 0, hideModeSelector: true),
+                ),
+              );
+            },
+            // Birlikte'deki "Sosyal" hero kartıyla aynı görsel dil: kart
+            // zemini + altın çerçeve + altın ikon — tek aksan, tutarlı okuma.
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: c.gold.withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
+                boxShadow: CinemaShadows.card,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.gold.withValues(alpha: 0.14),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.compare_arrows_rounded,
+                      color: c.gold,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tr?.get('together_similar_title') ?? 'Find Similar',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          tr?.get('together_similar_desc') ??
+                              'Discover titles similar to one you love',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: c.dim,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: c.dim, size: 24),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           if (_history.isNotEmpty) ...[
             Row(
               children: [

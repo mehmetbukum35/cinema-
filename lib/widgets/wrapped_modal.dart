@@ -43,7 +43,10 @@ class _WrappedModalState extends State<WrappedModal> {
         .toList();
 
     final profileUrl = widget.username != null && widget.username!.isNotEmpty
-        ? '${ApiService.webProfileBaseUrl}/${widget.username}'
+        ? ApiService.webProfileUrl(
+            widget.username!,
+            lang: l10n?.locale.languageCode ?? 'tr',
+          )
         : null;
 
     final genresText = genreNames
@@ -54,23 +57,25 @@ class _WrappedModalState extends State<WrappedModal> {
 
     final linkSection = profileUrl != null
         ? (l10n?.get('recap_share_link_yes') ?? 'Check out my profile: {url}')
-            .replaceAll('{url}', profileUrl)
-        : (l10n?.get('recap_share_link_no') ?? 'Rate your titles and see your recap!');
+              .replaceAll('{url}', profileUrl)
+        : (l10n?.get('recap_share_link_no') ??
+              'Rate your titles and see your recap!');
 
-    final shareText = (l10n?.get('recap_share_template') ??
-            '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}')
-        .replaceAll('{year}', _currentYear.toString())
-        .replaceAll('{total}', total.toString())
-        .replaceAll('{genres}', genresText)
-        .replaceAll('{link_section}', linkSection);
+    final shareText =
+        (l10n?.get('recap_share_template') ??
+                '🎬 My {year} Cinema Recap on Ne İzlesem!\n\nI rated {total} movies & shows this year! 🍿\nMy Top Genres:\n{genres}\n\n{link_section}\n#NeIzlesem #Wrapped{year}')
+            .replaceAll('{year}', _currentYear.toString())
+            .replaceAll('{total}', total.toString())
+            .replaceAll('{genres}', genresText)
+            .replaceAll('{link_section}', linkSection);
 
     try {
-      final boundary = _shareCardKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _shareCardKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary != null) {
         final image = await boundary.toImage(pixelRatio: 3.0);
-        final byteData =
-            await image.toByteData(format: ui.ImageByteFormat.png);
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
         if (byteData != null) {
           final png = XFile.fromData(
             byteData.buffer.asUint8List(),
@@ -590,125 +595,127 @@ class _WrappedModalState extends State<WrappedModal> {
           RepaintBoundary(
             key: _shareCardKey,
             child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFFF2E93).withValues(alpha: 0.4),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF2E93).withValues(alpha: 0.2),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFFFF2E93).withValues(alpha: 0.4),
+                  width: 1.5,
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.movie_filter_rounded,
-                      color: Color(0xFFFF2E93),
-                      size: 24,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'cinema+',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  (AppLocalizations.of(context)?.get('recap_share_title') ??
-                          'MY {} CINEMA JOURNEY')
-                      .replaceAll('{}', _currentYear.toString()),
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.movie_outlined,
-                      color: Colors.white70,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      (AppLocalizations.of(context)?.get('recap_share_sub') ??
-                              'rated {} titles')
-                          .replaceAll('{}', total.toString()),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                if (genreNames.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Divider(color: Colors.white10, height: 20),
-                  Text(
-                    AppLocalizations.of(context)?.get('recap_share_genres') ??
-                        'My Favorite Genres:',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    alignment: WrapAlignment.center,
-                    children: genreNames.map((name) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF2E93).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFFF2E93,
-                            ).withValues(alpha: 0.4),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2E93).withValues(alpha: 0.2),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
                   ),
                 ],
-              ],
+              ),
+              child: Column(
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.movie_filter_rounded,
+                        color: Color(0xFFFF2E93),
+                        size: 24,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'cinema+',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    (AppLocalizations.of(context)?.get('recap_share_title') ??
+                            'MY {} CINEMA JOURNEY')
+                        .replaceAll('{}', _currentYear.toString()),
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.movie_outlined,
+                        color: Colors.white70,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        (AppLocalizations.of(context)?.get('recap_share_sub') ??
+                                'rated {} titles')
+                            .replaceAll('{}', total.toString()),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (genreNames.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(color: Colors.white10, height: 20),
+                    Text(
+                      AppLocalizations.of(context)?.get('recap_share_genres') ??
+                          'My Favorite Genres:',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      children: genreNames.map((name) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFFF2E93,
+                            ).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFFF2E93,
+                              ).withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
           ),
           const SizedBox(height: 40),
           // Share Button
