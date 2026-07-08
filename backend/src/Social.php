@@ -721,10 +721,10 @@ class Social
         $st->execute([$uid]);
 
         $posterStmt = $this->db->prepare(
-            'SELECT title, poster_path, movie_id, is_tv FROM ratings
-             WHERE user_id = ? AND rating >= 2 AND deleted = 0 AND poster_path IS NOT NULL
-             ORDER BY rating DESC, updated_at DESC
-             LIMIT 4'
+             'SELECT title, poster_path, movie_id, is_tv FROM ratings
+              WHERE user_id = ? AND rating >= 2 AND deleted = 0 AND poster_path IS NOT NULL
+              ORDER BY rating DESC, updated_at DESC
+              LIMIT 10'
         );
 
         $profiles = [];

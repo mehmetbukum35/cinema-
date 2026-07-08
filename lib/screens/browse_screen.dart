@@ -246,6 +246,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         if (!mounted) return;
         ref.read(socialProvider.notifier).loadFriends();
         ref.read(socialProvider.notifier).loadActivityFeed();
+        ref.read(socialProvider.notifier).loadTopProfiles();
       });
     }
 
@@ -664,6 +665,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           next.isAuthenticated) {
         ref.read(socialProvider.notifier).loadFriends();
         ref.read(socialProvider.notifier).loadActivityFeed();
+        ref.read(socialProvider.notifier).loadTopProfiles();
       }
     });
 
@@ -1182,6 +1184,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           // ── Arkadaşlarından Son Sinyaller ──────────────────────────────────────────
           if (isAuthenticated && socialState.activityFeed.isNotEmpty)
             _friendsActivitySection(socialState.activityFeed),
+
+          // ── Popüler Üyeler ─────────────────────────────────────────────────────────
+          if (isAuthenticated && socialState.topProfiles.isNotEmpty)
+            _topProfilesSection(socialState.topProfiles),
 
           // ── Bu Hafta Trend ────────────────────────────────────────────────────
           if (_trending.isNotEmpty)
@@ -1712,6 +1718,61 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     );
   }
 
+  Widget _topProfilesSection(List<TopProfile> profiles) {
+    final c = context.c;
+    return SliverToBoxAdapter(
+      child: EntranceFade(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: 18,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      gradient: CinemaGradients.crimson,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    AppLocalizations.of(
+                          context,
+                        )?.get('top_lists_title') ??
+                        'Popüler Listeler',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 126,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: profiles.length,
+                itemBuilder: (ctx, i) {
+                  final p = profiles[i];
+                  return _TopProfileCard(profile: p, rank: i + 1);
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openDetail(Movie movie) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -2046,6 +2107,214 @@ class _BrowseCard extends ConsumerWidget {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopProfileCard extends ConsumerWidget {
+  final TopProfile profile;
+  final int rank;
+
+  const _TopProfileCard({
+    required this.profile,
+    required this.rank,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final tr = AppLocalizations.of(context);
+
+    // Ranks 1, 2, 3 have specific colors
+    final rankColor = switch (rank) {
+      1 => const Color(0xFFFFD54F),
+      2 => const Color(0xFFB0BEC5),
+      3 => const Color(0xFFBC8A5F),
+      _ => c.dim,
+    };
+
+    return Container(
+      width: 260,
+      height: 122,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: rank <= 3
+            ? Border.all(color: rankColor.withValues(alpha: 0.4), width: 1.5)
+            : Border.all(color: c.borderSoft, width: 1),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          final url = Uri.parse(
+            '${ApiService.webProfileBaseUrl}/${profile.username}',
+          );
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    '#$rank',
+                    style: TextStyle(
+                      color: rankColor,
+                      fontSize: rank <= 3 ? 17 : 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: CinemaGradients.crimson,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    profile.shownName.isEmpty ? '?' : profile.shownName[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.shownName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: c.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                      Text(
+                        '@${profile.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: c.dim, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                if (profile.isMe)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.gold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      tr?.get('top_lists_you') ?? 'Sen',
+                      style: TextStyle(
+                        color: c.gold,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      ref
+                          .read(socialProvider.notifier)
+                          .toggleProfileLike(profile);
+                    },
+                    child: Icon(
+                      profile.meLiked
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: profile.meLiked ? c.red : c.dim,
+                      size: 18,
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Text(
+                  profile.likeCount.toString(),
+                  style: TextStyle(
+                    color: profile.meLiked && !profile.isMe ? c.red : c.dim,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+                if (profile.isMe) ...[
+                  const SizedBox(width: 2),
+                  Icon(Icons.favorite_rounded, color: c.dim, size: 12),
+                ],
+              ],
+            ),
+            if (profile.previews.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 58,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      for (final pv in profile.previews.take(10)) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: pv.posterUrl.isEmpty
+                              ? Container(
+                                  width: 38,
+                                  height: 58,
+                                  color: c.bg,
+                                  child: Icon(Icons.movie_rounded, color: c.dim, size: 14),
+                                )
+                              : CachedNetworkImage(
+                                  imageUrl: pv.posterUrl,
+                                  width: 38,
+                                  height: 58,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, _) => const SizedBox(
+                                    width: 38,
+                                    height: 58,
+                                    child: PulsingPlaceholder(),
+                                  ),
+                                  errorWidget: (_, _, _) => Container(
+                                    width: 38,
+                                    height: 58,
+                                    color: c.bg,
+                                    child: Icon(
+                                      Icons.movie_rounded,
+                                      color: c.dim,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 6),
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
