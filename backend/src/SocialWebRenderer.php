@@ -9,18 +9,23 @@ class SocialWebRenderer
 
     public function renderPublicWebProfile(string $username): void
     {
+        // Sayfa dili: uygulama, kendi diline göre ?lang=en|tr ekler.
+        // Varsayılan Türkçe (eski linkler kırılmasın).
+        $lang = (isset($_GET['lang']) && $_GET['lang'] === 'en') ? 'en' : 'tr';
+        $t = self::webStrings($lang);
+
         // Kullanıcıyı bul
         $st = $this->db->prepare('SELECT id, display_name, username, is_public, taste_dna FROM users WHERE username = ?');
         $st->execute([$username]);
         $user = $st->fetch();
 
         if (!$user) {
-            $this->renderWebError('Kullanıcı bulunamadı', 'Aradığınız profil sistemimizde kayıtlı görünmüyor.');
+            $this->renderWebError($t['not_found_title'], $t['not_found_desc']);
             return;
         }
 
         if ((int) $user['is_public'] !== 1) {
-            $this->renderWebError('Gizli Profil', 'Bu kullanıcı profilini dış dünyaya kapatmayı tercih etmiş.');
+            $this->renderWebError($t['private_title'], $t['private_desc']);
             return;
         }
 
@@ -73,9 +78,62 @@ class SocialWebRenderer
         if (is_file($templatePath)) {
             require $templatePath;
         } else {
-            $this->renderWebError('Sistem Hatası', 'Profil şablonu bulunamadı.');
+            $this->renderWebError($t['tmpl_error_title'], $t['tmpl_error_desc']);
         }
         exit;
+    }
+
+    /// Web profil sayfasının arayüz metinleri. DNA içeriği (arketip, özet vb.)
+    /// uygulamadan yayınlandığı dilde saklanır; burada yalnızca sayfa
+    /// iskeletinin metinleri çevrilir.
+    private static function webStrings(string $lang): array
+    {
+        if ($lang === 'en') {
+            return [
+                'not_found_title' => 'User not found',
+                'not_found_desc'  => 'The profile you are looking for does not seem to exist.',
+                'private_title'   => 'Private Profile',
+                'private_desc'    => 'This user prefers to keep their profile private.',
+                'tmpl_error_title' => 'System Error',
+                'tmpl_error_desc'  => 'Profile template not found.',
+                'og_title'        => '%s — What Are They Watching? | Cinema+',
+                'og_desc'         => "Explore @%s's Cinema DNA and watchlist.",
+                'og_dna_title'    => "%s's Cinema DNA: %s",
+                'og_dna_desc'     => 'Archetype: %s - %s',
+                'cta'             => 'Match & Watch with %s',
+                'show_all_themes' => 'Tap to See All',
+                'sec_great'       => '🍿 Rated Great',
+                'sec_good'        => '👍 Rated Good',
+                'sec_watchlist'   => '📝 Watchlist',
+                'empty_great'     => 'No titles rated "Great" yet.',
+                'empty_good'      => 'No titles rated "Good" yet.',
+                'empty_watchlist' => 'Nothing in the watchlist yet.',
+                'tv'              => 'TV Show',
+                'movie'           => 'Movie',
+            ];
+        }
+        return [
+            'not_found_title' => 'Kullanıcı bulunamadı',
+            'not_found_desc'  => 'Aradığınız profil sistemimizde kayıtlı görünmüyor.',
+            'private_title'   => 'Gizli Profil',
+            'private_desc'    => 'Bu kullanıcı profilini dış dünyaya kapatmayı tercih etmiş.',
+            'tmpl_error_title' => 'Sistem Hatası',
+            'tmpl_error_desc'  => 'Profil şablonu bulunamadı.',
+            'og_title'        => '%s Neler İzliyor? | Cinema+',
+            'og_desc'         => "@%s kullanıcısının Sinema DNA'sını ve izleme listesini keşfet.",
+            'og_dna_title'    => "%s Sinema DNA'sı: %s",
+            'og_dna_desc'     => 'Arketip: %s - %s',
+            'cta'             => '%s ile Eşleş ve İzle',
+            'show_all_themes' => 'Tümünü Görmek İçin Dokunun',
+            'sec_great'       => '🍿 Harika Buldukları',
+            'sec_good'        => '👍 İyi Buldukları',
+            'sec_watchlist'   => '📝 İzleme Listesi',
+            'empty_great'     => 'Henüz "Harika" olarak puanlanmış bir film veya dizi yok.',
+            'empty_good'      => 'Henüz "İyi" olarak puanlanmış bir film veya dizi yok.',
+            'empty_watchlist' => 'İzleme listesinde henüz bir şey yok.',
+            'tv'              => 'Dizi',
+            'movie'           => 'Film',
+        ];
     }
 
     // Yardımcı: Şık Hata Sayfası oluşturucu (Web için)

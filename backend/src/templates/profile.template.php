@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="<?php echo htmlspecialchars($lang ?? 'tr'); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php
-        $ogTitle = $displayName . " Neler İzliyor? | Cinema+";
-        $ogDesc = "@" . $userHandle . " kullanıcısının Sinema DNA'sını ve izleme listesini keşfet.";
+        $ogTitle = sprintf($t['og_title'], $displayName);
+        $ogDesc = sprintf($t['og_desc'], $userHandle);
         if (!empty($dna)) {
-            $ogTitle = $displayName . " Sinema DNA'sı: " . $dna['archetype'];
-            $ogDesc = "Arketip: " . $dna['archetype'] . " - " . $dna['essence'];
+            $ogTitle = sprintf($t['og_dna_title'], $displayName, $dna['archetype']);
+            $ogDesc = sprintf($t['og_dna_desc'], $dna['archetype'], $dna['essence']);
         }
         
         $ogImage = '';
@@ -405,7 +405,7 @@
             <span class="handle">@<?php echo $userHandle; ?></span>
             <div>
                 <a href="https://cinema.mbkm.com.tr/download" class="cta-btn">
-                    <?php echo $displayName; ?> ile Eşleş ve İzle
+                    <?php echo sprintf($t['cta'], $displayName); ?>
                 </a>
             </div>
         </header>
@@ -440,7 +440,7 @@
                             </div>
                         <?php endforeach; ?>
                         <?php if (count($dna['themes_with_evidence']) > 3): ?>
-                            <button id="toggle-themes-btn" class="toggle-themes-btn">Tümünü Görmek İçin Dokunun</button>
+                            <button id="toggle-themes-btn" class="toggle-themes-btn"><?php echo htmlspecialchars($t['show_all_themes']); ?></button>
                         <?php endif; ?>
                     </div>
                 <?php elseif (!empty($dna['themes'])): ?>
@@ -475,9 +475,9 @@
 
         <!-- Harika Buldukları (Favorites / Top Rated) -->
         <section>
-            <h2>🍿 Harika Buldukları</h2>
+            <h2><?php echo htmlspecialchars($t['sec_great']); ?></h2>
             <?php if (empty($ratings)): ?>
-                <p class="empty-text">Henüz "Harika" olarak puanlanmış bir film veya dizi yok.</p>
+                <p class="empty-text"><?php echo htmlspecialchars($t['empty_great']); ?></p>
             <?php else: ?>
                 <div class="grid">
                     <?php foreach ($ratings as $r): ?>
@@ -495,7 +495,7 @@
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
                                 <div class="card-meta">
-                                    <span><?php echo $r['is_tv'] ? 'Dizi' : 'Film'; ?></span>
+                                    <span><?php echo $r['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
                                     <?php if (!empty($r['vote_average'])): ?>
                                         <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
                                     <?php endif; ?>
@@ -509,9 +509,9 @@
 
         <!-- İyi Buldukları (Liked / Good) -->
         <section>
-            <h2>👍 İyi Buldukları</h2>
+            <h2><?php echo htmlspecialchars($t['sec_good']); ?></h2>
             <?php if (empty($goodRatings)): ?>
-                <p class="empty-text">Henüz "İyi" olarak puanlanmış bir film veya dizi yok.</p>
+                <p class="empty-text"><?php echo htmlspecialchars($t['empty_good']); ?></p>
             <?php else: ?>
                 <div class="grid">
                     <?php foreach ($goodRatings as $r): ?>
@@ -529,7 +529,7 @@
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
                                 <div class="card-meta">
-                                    <span><?php echo $r['is_tv'] ? 'Dizi' : 'Film'; ?></span>
+                                    <span><?php echo $r['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
                                     <?php if (!empty($r['vote_average'])): ?>
                                         <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
                                     <?php endif; ?>
@@ -543,9 +543,9 @@
 
         <!-- İzleme Listesi (Watchlist) -->
         <section>
-            <h2>📝 İzleme Listesi</h2>
+            <h2><?php echo htmlspecialchars($t['sec_watchlist']); ?></h2>
             <?php if (empty($watchlist)): ?>
-                <p class="empty-text">İzleme listesinde henüz bir şey yok.</p>
+                <p class="empty-text"><?php echo htmlspecialchars($t['empty_watchlist']); ?></p>
             <?php else: ?>
                 <div class="grid">
                     <?php foreach ($watchlist as $w): ?>
@@ -563,7 +563,7 @@
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($w['title']); ?></div>
                                 <div class="card-meta">
-                                    <span><?php echo $w['is_tv'] ? 'Dizi' : 'Film'; ?></span>
+                                    <span><?php echo $w['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
                                     <?php if (!empty($w['vote_average'])): ?>
                                         <span class="rating-badge">★ <?php echo round((float) $w['vote_average'], 1); ?></span>
                                     <?php endif; ?>
