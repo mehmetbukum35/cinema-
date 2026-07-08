@@ -4,3 +4,6 @@ src/fcm-service-account.json
 *-service-account.json
 /vendor/
 /.phpunit.cache/
+
+# Veritabanı dökümleri
+migrations/foodlabe_cinema.sql

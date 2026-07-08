@@ -144,6 +144,13 @@ class Sync
         foreach ($def['keys'] as $k) {
             if (!array_key_exists($k, $item)) return false;
         }
+
+        // Puanlama doğrulaması: 0-3 arası olmalı
+        if ($table === 'ratings' && empty($item['deleted'])) {
+            if (!isset($item['rating']) || (int)$item['rating'] < 0 || (int)$item['rating'] > 3) {
+                return false;
+            }
+        }
         $updatedAt = (int) ($item['updated_at'] ?? now_ms());
         $deleted   = !empty($item['deleted']) ? 1 : 0;
 

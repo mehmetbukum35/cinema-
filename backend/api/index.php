@@ -69,12 +69,14 @@ if ($method === 'GET' && (str_starts_with($path, '/profile/') || str_contains($p
     $profilePath = substr($path, $pos);
     $parts = explode('/', trim($profilePath, '/'));
     if (count($parts) === 2 && $parts[0] === 'profile') {
+        rate_limit('profile_view', (int) ($cfg['public_profile_rate_limit_per_min'] ?? 60), false);
         $social->renderPublicWebProfile($parts[1]);
         exit;
     }
 }
 
 if ($method === 'GET' && (str_starts_with($path, '/download') || str_contains($path, '/download'))) {
+    rate_limit('download', (int) ($cfg['download_rate_limit_per_min'] ?? 60), false);
     $social->renderDownloadPage();
     exit;
 }
@@ -135,32 +137,32 @@ switch (true) {
 
     // ── Auth (açık uçlar) ──────────────────────────────────────────────────
     case $route === 'POST /auth/register':
-        rate_limit('register', (int) $cfg['rate_limit_per_min']);
+        rate_limit('register', (int) $cfg['rate_limit_per_min'], true);
         $auth->register(read_json());
         break;
 
     case $route === 'POST /auth/login':
-        rate_limit('login', (int) $cfg['rate_limit_per_min']);
+        rate_limit('login', (int) $cfg['rate_limit_per_min'], true);
         $auth->login(read_json());
         break;
 
     case $route === 'POST /auth/google':
-        rate_limit('google_login', (int) $cfg['rate_limit_per_min']);
+        rate_limit('google_login', (int) $cfg['rate_limit_per_min'], true);
         $auth->googleLogin(read_json());
         break;
 
     case $route === 'POST /auth/forgot-password':
-        rate_limit('forgot_password', (int) $cfg['rate_limit_per_min']);
+        rate_limit('forgot_password', (int) $cfg['rate_limit_per_min'], true);
         $auth->forgotPassword(read_json());
         break;
 
     case $route === 'POST /auth/verify-reset-code':
-        rate_limit('verify_reset_code', (int) $cfg['rate_limit_per_min']);
+        rate_limit('verify_reset_code', (int) $cfg['rate_limit_per_min'], true);
         $auth->verifyResetCode(read_json());
         break;
 
     case $route === 'POST /auth/reset-password':
-        rate_limit('reset_password', (int) $cfg['rate_limit_per_min']);
+        rate_limit('reset_password', (int) $cfg['rate_limit_per_min'], true);
         $auth->resetPassword(read_json());
         break;
 
@@ -188,11 +190,14 @@ switch (true) {
         break;
 
     case $route === 'DELETE /me':
-        $auth->deleteAccount($auth->requireUser());
+        $uid = $auth->requireUser();
+        rate_limit('delete_account_u' . $uid, 5, true);
+        $auth->deleteAccount($uid);
         break;
 
     case $route === 'POST /auth/change-password':
         $uid = $auth->requireUser();
+        rate_limit('change_password_u' . $uid, (int) ($cfg['rate_limit_per_min'] ?? 20), true);
         $auth->changePassword($uid, read_json());
         break;
 
@@ -295,7 +300,19 @@ switch (true) {
 
     // ── Sağlık kontrolü ────────────────────────────────────────────────────
     case $route === 'GET /health':
-        json_out(200, ['ok' => true, 'time' => now_ms()]);
+        rate_limit('health_check', (int) ($cfg['health_rate_limit_per_min'] ?? 120), false);
+        $dbOk = false;
+        try {
+            $stmt = $db->query("SELECT 1 FROM rate_limits LIMIT 1");
+            $dbOk = ($stmt !== false);
+        } catch (Throwable $e) {
+            $dbOk = false;
+        }
+        if (!$dbOk) {
+            json_out(500, ['ok' => false, 'error' => 'Database or rate_limits table unhealthy']);
+        } else {
+            json_out(200, ['ok' => true, 'time' => now_ms()]);
+        }
         break;
 
     // ── Migration ucu KALDIRILDI ────────────────────────────────────────────

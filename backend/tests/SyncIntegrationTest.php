@@ -85,6 +85,32 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(2000, (int) $row['updated_at']);
     }
 
+    // ─── rating range validation: GEÇERSİZ puan yoksayılır ────────────────────
+    public function testInvalidRatingIsIgnored(): void
+    {
+        $applied = $this->push(1, 'ratings', [
+            ['movie_id' => 888, 'is_tv' => 0, 'rating' => 4, 'title' => 'Too High', 'updated_at' => 1000],
+            ['movie_id' => 889, 'is_tv' => 0, 'rating' => -1, 'title' => 'Too Low', 'updated_at' => 1000],
+            ['movie_id' => 890, 'is_tv' => 0, 'rating' => 2, 'title' => 'Valid', 'updated_at' => 1000],
+        ]);
+
+        // Sadece geçerli olan (890) uygulanmalı
+        $this->assertSame(1, $applied);
+        
+        $stmt = $this->db->prepare("SELECT * FROM ratings WHERE user_id = 1 AND movie_id = ?");
+        
+        $stmt->execute([888]);
+        $this->assertFalse($stmt->fetch());
+        
+        $stmt->execute([889]);
+        $this->assertFalse($stmt->fetch());
+        
+        $stmt->execute([890]);
+        $validRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertIsArray($validRow);
+        $this->assertSame(2, (int)$validRow['rating']);
+    }
+
     // ─── Eşit timestamp da kazanır (>= kuralı) ───────────────────────────────
     public function testEqualTimestampOverwrites(): void
     {

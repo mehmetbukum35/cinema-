@@ -222,7 +222,7 @@ JWT tabanlı. **Access token** ömrü **2 saat**, **refresh token** ömrü **30 
 ```
 
 ### POST `/auth/google` (Google Sign-In)
-Google üzerinden oturum açar veya hesap bağlar. Nonce doğrulamasını yerel JWKS/RS256 ile gerçekleştirir.
+Google üzerinden oturum açar veya hesap bağlar. İmza doğrulamasını yerel JWKS/RS256 ile gerçekleştirir.
 ```json
 // İstek
 { "id_token": "eyJ..." }

@@ -95,7 +95,7 @@ Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>
 
 - Parolalar `password_hash()` (bcrypt) ile. Refresh token'lar DB'de **SHA-256 hash'li** tutulur, ham hali saklanmaz.
 - Tüm sorgular PDO **prepared statement** — SQL injection yok.
-- `/auth/login` ve `/auth/register` dosya tabanlı basit **rate-limit** ile korunur (ölçeklenince Redis/DB'ye taşı).
+- Hassas ve açık uçlar veritabanı tabanlı **rate-limit** ile korunur.
 - `Config.php` repoya girmez (`.gitignore`), web kökü dışında durmalı.
 - TMDB görsellerini bu API üzerinden **proxy'leme** — 10 GB trafik kotanı korumak için posterler doğrudan TMDB CDN'inden gelsin.
 

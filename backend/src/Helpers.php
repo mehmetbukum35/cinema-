@@ -41,10 +41,10 @@ function bearer_token(): ?string
 }
 
 /**
- * Dosya tabanlı, IP başına dakikalık basit rate-limit.
- * Paylaşımlı hosting için yeterli; ölçeklenince Redis/DB'ye taşı.
+ * Veritabanı tabanlı, IP/Kullanıcı başına dakikalık basit rate-limit.
+ * DB hatasında failClosed=true ise 503 fırlatır, yoksa loglayıp geçişe izin verir (fail-open).
  */
-function rate_limit(string $bucket, int $perMin): void
+function rate_limit(string $bucket, int $perMin, bool $failClosed = false): void
 {
     $ip  = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $key = preg_replace('/[^a-z0-9_]/i', '_', "$bucket-$ip");
@@ -88,8 +88,14 @@ function rate_limit(string $bucket, int $perMin): void
             fail(429, 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.');
         }
     } catch (Throwable $e) {
-        // Veritabanı hatası durumunda sistemi kilitlememek için hata loglanır ve geçilir (fail-safe).
+        // Testlerde fail() çağrısının fırlattığı istisna yakalanmamalı (yoksa 429 testi geçemez).
+        if (get_class($e) === 'TestExitException') {
+            throw $e;
+        }
         cinema_error("Rate limit DB error: " . $e->getMessage());
+        if ($failClosed) {
+            fail(503, 'Geçici hizmet kısıtı.');
+        }
     }
 }
 
