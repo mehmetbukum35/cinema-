@@ -2,19 +2,25 @@
 declare(strict_types=1);
 // Ortak yardımcılar: JSON yanıt, gövde okuma, basit rate-limit.
 
-function now_ms(): int { return (int) round(microtime(true) * 1000); }
-
-function json_out(int $status, array $body): void
-{
-    http_response_code($status);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($body, JSON_UNESCAPED_UNICODE);
-    exit;
+if (!function_exists('now_ms')) {
+    function now_ms(): int { return (int) round(microtime(true) * 1000); }
 }
 
-function fail(int $status, string $msg): void
-{
-    json_out($status, ['error' => $msg]);
+if (!function_exists('json_out')) {
+    function json_out(int $status, array $body): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($body, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+if (!function_exists('fail')) {
+    function fail(int $status, string $msg): void
+    {
+        json_out($status, ['error' => $msg]);
+    }
 }
 
 /** İstek gövdesini JSON olarak okur. Aşırı büyük gövdeler 413 ile reddedilir. */
@@ -29,15 +35,17 @@ function read_json(int $maxBytes = 4 * 1024 * 1024): array
 }
 
 /** Authorization: Bearer <token> başlığından token'ı çeker. */
-function bearer_token(): ?string
-{
-    $hdr = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-    if ($hdr === '' && function_exists('apache_request_headers')) {
-        $h = apache_request_headers();
-        $hdr = $h['Authorization'] ?? $h['authorization'] ?? '';
+if (!function_exists('bearer_token')) {
+    function bearer_token(): ?string
+    {
+        $hdr = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if ($hdr === '' && function_exists('apache_request_headers')) {
+            $h = apache_request_headers();
+            $hdr = $h['Authorization'] ?? $h['authorization'] ?? '';
+        }
+        if (preg_match('/Bearer\s+(.+)/i', $hdr, $m)) return trim($m[1]);
+        return null;
     }
-    if (preg_match('/Bearer\s+(.+)/i', $hdr, $m)) return trim($m[1]);
-    return null;
 }
 
 /**

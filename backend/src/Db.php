@@ -21,4 +21,16 @@ class Db
         }
         return self::$pdo;
     }
+
+    /** @internal PHPUnit only */
+    public static function inject(PDO $pdo): void
+    {
+        self::$pdo = $pdo;
+    }
+
+    /** @internal PHPUnit only */
+    public static function reset(): void
+    {
+        self::$pdo = null;
+    }
 }

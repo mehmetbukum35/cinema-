@@ -89,6 +89,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return 'auth_err_user_not_found';
       case 'Google kimliği doğrulanamadı.':
         return 'auth_err_google_failed';
+      case 'Bağlı Google hesabı yok.':
+      case 'Bağlantıyı kaldırmak için parola gerekli.':
+        return 'auth_err_google_unlink_failed';
       case 'Geçersiz veya süresi dolmuş doğrulama kodu.':
         return 'auth_err_verify_code_failed';
       case 'Giriş başarısız.':
@@ -472,6 +475,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         loading: false,
         error: 'auth_err_change_pass_failed',
+      );
+      return false;
+    }
+  }
+
+  // DELETE /auth/google/link
+  Future<bool> unlinkGoogle(String password) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      await _apiService.unlinkGoogle(password: password);
+      final user = Map<String, dynamic>.from(state.user ?? {});
+      user.remove('google_sub');
+      await PrefsService.saveUserData(user);
+      state = state.copyWith(loading: false, user: user);
+      return true;
+    } on ApiException catch (e) {
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return false;
+    } catch (e, st) {
+      debugPrint("Google unlink failed: $e\n$st");
+      state = state.copyWith(
+        loading: false,
+        error: 'auth_err_google_unlink_failed',
       );
       return false;
     }

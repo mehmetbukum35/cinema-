@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -96,9 +97,10 @@ class NotificationService {
       // Token yenilenince sunucuya tekrar kaydet
       FirebaseMessaging.instance.onTokenRefresh.listen(_sendToken);
 
-      // GEÇİCİ (test için): token'ı konsola yazdır. Yayın öncesi bu satırı sil.
-      final debugToken = await FirebaseMessaging.instance.getToken();
-      debugPrint('🔑 FCM TOKEN: $debugToken');
+      if (kDebugMode) {
+        final debugToken = await FirebaseMessaging.instance.getToken();
+        debugPrint('🔑 FCM TOKEN: $debugToken');
+      }
     } catch (e, st) {
       // Firebase yapılandırılmamış olabilir; sessizce geç.
       debugPrint('Firebase messaging init failed: $e\n$st');

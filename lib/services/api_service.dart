@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'app_config.dart';
 import 'prefs_service.dart';
+import '../models/social.dart';
 
 /// Refresh denemesinin sonucu:
 /// - [success]: yeni token çifti alındı, istek yeniden denenebilir.
@@ -63,7 +64,6 @@ class ApiService {
       rethrow;
     }
 
-    // If unauthorized, attempt to silent refresh and retry once
     if (response.statusCode == 401 && requireAuth) {
       debugPrint("Access token expired (401). Attempting silent refresh...");
       final outcome = await _attemptTokenRefresh();
@@ -97,7 +97,30 @@ class ApiService {
       }
     }
 
+    if (response.statusCode == 429) {
+      _throwRateLimited(response);
+    }
+
     return response;
+  }
+
+  Never _throwRateLimited(http.Response response) {
+    String message = 'auth_err_rate_limited';
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        final serverMsg = data['error'] as String?;
+        if (serverMsg == 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' ||
+            serverMsg == 'Geçici hizmet kısıtı.') {
+          message = 'auth_err_rate_limited';
+        } else if (serverMsg != null && serverMsg.isNotEmpty) {
+          message = serverMsg;
+        }
+      }
+    } catch (_) {
+      // Varsayılan anahtar kullanılır.
+    }
+    throw ApiException(statusCode: 429, message: message);
   }
 
   // Attempts to refresh access token using the stored refresh token
@@ -604,7 +627,7 @@ class ApiService {
   }
 
   // GET /social/friends/signals
-  Future<Map<String, dynamic>> getFriendSignals() async {
+  Future<FriendSignals> getFriendSignals() async {
     final response = await _request(
       'GET',
       '/social/friends/signals',
@@ -612,11 +635,30 @@ class ApiService {
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
-      return data['signals'] as Map<String, dynamic>;
+      return FriendSignals.fromJson(
+        data['signals'] as Map<String, dynamic>? ?? const {},
+      );
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Arkadaş sinyalleri alınamadı.',
+      );
+    }
+  }
+
+  // DELETE /auth/google/link — Google hesabı bağlantısını kaldırır.
+  Future<void> unlinkGoogle({required String password}) async {
+    final response = await _request(
+      'DELETE',
+      '/auth/google/link',
+      body: {'password': password},
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'auth_err_google_unlink_failed',
       );
     }
   }

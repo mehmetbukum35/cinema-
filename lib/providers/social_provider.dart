@@ -13,7 +13,7 @@ class SocialState {
   final List<Friend> pendingSent;
   final List<ActivityItem> activityFeed;
   final List<Movie> intersection;
-  final Map<String, dynamic> signals;
+  final FriendSignals signals;
 
   /// Arkadaş id → zevk uyumu skoru (0-100). Veri yetersizse anahtar yoktur.
   final Map<int, int> tasteScores;
@@ -38,7 +38,7 @@ class SocialState {
     this.pendingSent = const [],
     this.activityFeed = const [],
     this.intersection = const [],
-    this.signals = const {},
+    this.signals = const FriendSignals(),
     this.tasteScores = const {},
     this.recommendations = const [],
     this.unseenRecommendations = 0,
@@ -55,7 +55,7 @@ class SocialState {
     List<Friend>? pendingSent,
     List<ActivityItem>? activityFeed,
     List<Movie>? intersection,
-    Map<String, dynamic>? signals,
+    FriendSignals? signals,
     Map<int, int>? tasteScores,
     List<RecommendationInboxItem>? recommendations,
     int? unseenRecommendations,

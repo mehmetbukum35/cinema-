@@ -17,7 +17,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Veritabanı: `foodlabe_cinema`
+-- Veritabanı: cinema+ (production adı hosting ortamına göre değişir)
 --
 
 -- --------------------------------------------------------

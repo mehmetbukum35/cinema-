@@ -84,7 +84,7 @@ if ($method === 'GET' && (str_starts_with($path, '/download') || str_contains($p
 if ($method === 'GET' && str_starts_with($path, '/tmdb/')) {
     // TMDB anahtarı yalnızca sunucuda kalır (bkz. Tmdb.php). Herkese açık ama
     // dakikada IP başına sınırlı — anahtarın kötüye kullanılmasını önler.
-    rate_limit('tmdb', (int) ($cfg['tmdb_rate_limit_per_min'] ?? 120));
+    rate_limit('tmdb', (int) ($cfg['tmdb_rate_limit_per_min'] ?? 120), true);
     $tmdb->proxy(substr($path, strlen('/tmdb')), $_GET);
     exit;
 }
@@ -170,12 +170,12 @@ switch (true) {
     // sınırlanır. CGNAT arkasındaki meşru kullanıcıları boğmamak için limit
     // login'den daha cömerttir (token yenileme zaten seyrek bir işlemdir).
     case $route === 'POST /auth/refresh':
-        rate_limit('refresh', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60));
+        rate_limit('refresh', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60), true);
         $auth->refresh(read_json());
         break;
 
     case $route === 'POST /auth/logout':
-        rate_limit('logout', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60));
+        rate_limit('logout', (int) ($cfg['refresh_rate_limit_per_min'] ?? 60), true);
         $auth->logout(read_json());
         break;
 
@@ -201,18 +201,24 @@ switch (true) {
         $auth->changePassword($uid, read_json());
         break;
 
+    case $route === 'DELETE /auth/google/link':
+        $uid = $auth->requireUser();
+        rate_limit('unlink_google_u' . $uid, (int) ($cfg['rate_limit_per_min'] ?? 20), true);
+        $auth->unlinkGoogle($uid, read_json());
+        break;
+
     // ── Senkronizasyon (ana akış) ──────────────────────────────────────────
     // Kullanıcı bazlı sınır (IP değil): CGNAT arkasındaki farklı kullanıcılar
     // birbirini etkilemez; tek bir hesabın sync'i floodlaması engellenir.
     case $route === 'GET /sync':
         $uid = $auth->requireUser();
-        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120));
+        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120), true);
         $sync->pull($uid, (int) ($_GET['since'] ?? 0));
         break;
 
     case $route === 'POST /sync':
         $uid = $auth->requireUser();
-        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120));
+        rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120), true);
         $sync->push($uid, read_json());
         break;
 
@@ -272,21 +278,21 @@ switch (true) {
 
     case $route === 'POST /social/profile/like':
         $uid = $auth->requireUser();
-        rate_limit('profile_like', (int) $cfg['rate_limit_per_min']);
+        rate_limit('profile_like', (int) $cfg['rate_limit_per_min'], true);
         $social->likeProfile($uid, read_json());
         break;
 
     // ── Sinema DNA ──────────────────────────────────────────────────────────
     case $route === 'POST /social/dna':
         $uid = $auth->requireUser();
-        rate_limit('social_dna', (int) $cfg['rate_limit_per_min']);
+        rate_limit('social_dna', (int) $cfg['rate_limit_per_min'], true);
         $social->publishTasteDna($uid, read_json());
         break;
 
     // ── Arkadaşa Öneri ──────────────────────────────────────────────────────
     case $route === 'POST /social/recommend':
         $uid = $auth->requireUser();
-        rate_limit('recommend', (int) $cfg['rate_limit_per_min']);
+        rate_limit('recommend', (int) $cfg['rate_limit_per_min'], true);
         $social->recommend($uid, read_json());
         break;
 

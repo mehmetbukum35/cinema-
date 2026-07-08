@@ -130,6 +130,11 @@ class AppLocalizations {
       'change_password_error_mismatch': 'New passwords do not match.',
       'change_password_error_short': 'Password must be at least 6 characters.',
       'change_password_success': 'Password changed successfully.',
+      'google_unlink_title': 'Unlink Google Account',
+      'google_unlink_desc': 'Enter your account password to continue.',
+      'google_unlink_button': 'Unlink Google',
+      'google_unlink_success': 'Google account unlinked.',
+      'auth_err_google_unlink_failed': 'Could not unlink Google account.',
       'auth_forgot_email_desc':
           'Enter your registered email address to receive a password reset code.',
       'auth_forgot_code_title': 'Verify Code',
@@ -745,6 +750,11 @@ class AppLocalizations {
       'change_password_error_mismatch': 'Yeni şifreler eşleşmiyor.',
       'change_password_error_short': 'Yeni şifre en az 6 karakter olmalıdır.',
       'change_password_success': 'Şifreniz başarıyla değiştirildi.',
+      'google_unlink_title': 'Google Bağlantısını Kaldır',
+      'google_unlink_desc': 'Devam etmek için hesap parolanızı girin.',
+      'google_unlink_button': 'Bağlantıyı Kaldır',
+      'google_unlink_success': 'Google hesabı bağlantısı kaldırıldı.',
+      'auth_err_google_unlink_failed': 'Google bağlantısı kaldırılamadı.',
       'auth_forgot_email_desc':
           'Şifre sıfırlama kodunu almak için kayıtlı e-posta adresinizi girin.',
       'auth_forgot_code_title': 'Kodu Doğrula',

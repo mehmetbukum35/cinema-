@@ -1,4 +1,26 @@
 
+/// Arkadaşların yüksek puan verdiği yapımlar: `movie_123` / `tv_456` → isim listesi.
+class FriendSignals {
+  final Map<String, List<String>> byTitleKey;
+
+  const FriendSignals([this.byTitleKey = const {}]);
+
+  factory FriendSignals.fromJson(Map<String, dynamic> json) {
+    return FriendSignals({
+      for (final entry in json.entries)
+        entry.key: (entry.value as List<dynamic>)
+            .map((name) => name.toString())
+            .toList(),
+    });
+  }
+
+  List<String>? friendsFor({required int movieId, required bool isTv}) {
+    return byTitleKey['${isTv ? 'tv' : 'movie'}_$movieId'];
+  }
+
+  Map<String, List<String>> toRecommendationMap() => byTitleKey;
+}
+
 class Friend {
   final int id;
   final String username;

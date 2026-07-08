@@ -219,18 +219,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
       final allCandidates = [...merged, ...similarCandidates];
 
-      // Load friend signals from socialProvider state
       Map<String, List<String>> friendSignals = const {};
       final refInstance = ref;
       if (refInstance != null) {
         try {
-          final rawSignals = refInstance.read(socialProvider).signals;
-          friendSignals = rawSignals.map(
-            (k, v) => MapEntry(
-              k,
-              (v as List<dynamic>).map((e) => e.toString()).toList(),
-            ),
-          );
+          friendSignals = refInstance
+              .read(socialProvider)
+              .signals
+              .toRecommendationMap();
         } catch (e) {
           debugPrint("Failed to read friend signals from provider: $e");
         }

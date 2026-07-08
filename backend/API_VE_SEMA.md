@@ -65,7 +65,7 @@ CREATE TABLE ratings (
   user_id      BIGINT UNSIGNED NOT NULL,
   movie_id     INT             NOT NULL,
   is_tv        TINYINT(1)      NOT NULL,
-  rating       INT             NOT NULL,    -- Puan (-2: Negatif / Sevmedim, 1: Normal, 2: İyi, 3: Harika)
+  rating       INT             NOT NULL,    -- Puan (0: Berbat, 1: Eh, 2: İyi, 3: Harika) — Sync.php 0..3 doğrular
   genre_ids    JSON            NULL,
   title        VARCHAR(512)    NULL,
   poster_path  VARCHAR(255)    NULL,
@@ -228,6 +228,20 @@ Google üzerinden oturum açar veya hesap bağlar. İmza doğrulamasını yerel 
 { "id_token": "eyJ..." }
 // 200 Yanıt
 { "user": {...}, "access_token": "eyJ...", "refresh_token": "f3a9..." }
+```
+
+> **Gelecek (nonce akışı):** Replay saldırılarını daha sıkı önlemek için planlanan
+> `GET /auth/google/nonce` ucu sunucu tarafında tek kullanımlık nonce üretecek;
+> istemci Google Sign-In başlatmadan önce bu nonce'u alıp ID token isteğine ekleyecek.
+> Şu an nonce doğrulaması uygulanmıyor; tam akış bir sonraki sürümde eklenecek.
+
+### DELETE `/auth/google/link` *(Bearer)*
+Bağlı Google hesabını kaldırır. Parola ile giriş mümkün olan hesaplarda mevcut parola zorunludur.
+```json
+// İstek
+{ "password": "mevcut_parola" }
+// 200 Yanıt
+{ "ok": true }
 ```
 
 ### POST `/auth/forgot-password` (Şifremi Unuttum)

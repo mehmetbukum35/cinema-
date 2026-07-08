@@ -221,4 +221,38 @@ class GoogleAuthTest extends TestCase
         $this->expectExceptionCode(500);
         $auth->googleLogin(['id_token' => 'x']);
     }
+
+    public function testUnlinkGoogleRemovesSubWhenPasswordValid(): void
+    {
+        $pass = 'Password123!';
+        $hash = password_hash($pass, PASSWORD_BCRYPT);
+        $this->db->exec(
+            "INSERT INTO users (email, password_hash, google_sub, created_at, updated_at)
+             VALUES ('linked@example.com', " . $this->db->quote($hash) . ", 'google-sub-linked', 1, 1)"
+        );
+        $uid = (int) $this->db->lastInsertId();
+
+        $this->auth->unlinkGoogle($uid, ['password' => $pass]);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertTrue(TestHelperRegistry::$lastBody['ok']);
+        $row = $this->db->query("SELECT google_sub FROM users WHERE id = $uid")->fetch();
+        $this->assertNull($row['google_sub']);
+    }
+
+    public function testUnlinkGoogleRequiresPassword(): void
+    {
+        $this->db->exec(
+            "INSERT INTO users (email, password_hash, google_sub, created_at, updated_at)
+             VALUES ('linked@example.com', 'hash', 'google-sub-linked', 1, 1)"
+        );
+        $uid = (int) $this->db->lastInsertId();
+
+        $this->expectException(TestExitException::class);
+        try {
+            $this->auth->unlinkGoogle($uid, ['password' => '']);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
 }

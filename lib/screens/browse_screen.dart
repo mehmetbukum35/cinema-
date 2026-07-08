@@ -299,13 +299,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       Map<String, List<String>> friendSignals = const {};
       if (isAuthenticated) {
         try {
-          final raw = await ref.read(apiServiceProvider).getFriendSignals();
-          friendSignals = raw.map(
-            (k, v) => MapEntry(
-              k,
-              (v as List<dynamic>).map((e) => e.toString()).toList(),
-            ),
-          );
+          friendSignals = (await ref
+                  .read(apiServiceProvider)
+                  .getFriendSignals())
+              .toRecommendationMap();
         } catch (e) {
           debugPrint("Friend signals unavailable for browse: $e");
         }

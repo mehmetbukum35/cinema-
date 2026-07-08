@@ -324,5 +324,26 @@ void main() {
         expect(res['enough'], isTrue);
       },
     );
+
+    test('should throw auth_err_rate_limited on HTTP 429', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'error': 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.',
+          }),
+          429,
+        );
+      });
+
+      final apiService = ApiService(client: mockClient);
+      expect(
+        () => apiService.getFriends(),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 429)
+              .having((e) => e.message, 'message', 'auth_err_rate_limited'),
+        ),
+      );
+    });
   });
 }

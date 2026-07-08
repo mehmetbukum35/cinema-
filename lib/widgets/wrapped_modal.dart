@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/movie.dart';
@@ -20,6 +23,7 @@ class WrappedModal extends StatefulWidget {
 
 class _WrappedModalState extends State<WrappedModal> {
   final PageController _pageController = PageController();
+  final GlobalKey _shareCardKey = GlobalKey();
   int _currentPage = 0;
   final int _currentYear = DateTime.now().year;
 
@@ -29,7 +33,7 @@ class _WrappedModalState extends State<WrappedModal> {
     super.dispose();
   }
 
-  void _shareRecap() {
+  Future<void> _shareRecap() async {
     final l10n = AppLocalizations.of(context);
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
@@ -59,6 +63,27 @@ class _WrappedModalState extends State<WrappedModal> {
         .replaceAll('{total}', total.toString())
         .replaceAll('{genres}', genresText)
         .replaceAll('{link_section}', linkSection);
+
+    try {
+      final boundary = _shareCardKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary != null) {
+        final image = await boundary.toImage(pixelRatio: 3.0);
+        final byteData =
+            await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData != null) {
+          final png = XFile.fromData(
+            byteData.buffer.asUint8List(),
+            mimeType: 'image/png',
+            name: 'cinema_recap_$_currentYear.png',
+          );
+          await Share.shareXFiles([png], text: shareText);
+          return;
+        }
+      }
+    } catch (e, st) {
+      debugPrint('PNG recap share failed, falling back to text: $e\n$st');
+    }
 
     Share.share(shareText);
   }
@@ -562,7 +587,9 @@ class _WrappedModalState extends State<WrappedModal> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Graphic wrapped visual card
-          Container(
+          RepaintBoundary(
+            key: _shareCardKey,
+            child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.8),
@@ -681,6 +708,7 @@ class _WrappedModalState extends State<WrappedModal> {
                 ],
               ],
             ),
+          ),
           ),
           const SizedBox(height: 40),
           // Share Button

@@ -54,7 +54,7 @@ class Auth
         $email = strtolower(trim($in['email'] ?? ''));
         $pass  = (string) ($in['password'] ?? '');
 
-        $st = $this->db->prepare('SELECT id, password_hash, display_name, username FROM users WHERE email = ?');
+        $st = $this->db->prepare('SELECT id, password_hash, display_name, username, google_sub FROM users WHERE email = ?');
         $st->execute([$email]);
         $u = $st->fetch();
 
@@ -73,7 +73,8 @@ class Auth
                 'id' => $uid,
                 'email' => $email,
                 'display_name' => $u['display_name'],
-                'username' => $u['username']
+                'username' => $u['username'],
+                'google_sub' => $u['google_sub'],
             ],
             'tokens' => $this->issueTokens($uid),
         ]);
@@ -118,6 +119,7 @@ class Auth
                 'email' => $email,
                 'display_name' => $name,
                 'username' => $username,
+                'google_sub' => $sub,
             ],
             'tokens' => $this->issueTokens($uid),
             'is_new' => $isNew,
@@ -242,13 +244,40 @@ class Auth
     // ─── GET /me ────────────────────────────────────────────────────────────
     public function me(int $uid): void
     {
-        $st = $this->db->prepare('SELECT id, email, display_name, username, is_public FROM users WHERE id = ?');
+        $st = $this->db->prepare(
+            'SELECT id, email, display_name, username, is_public, google_sub FROM users WHERE id = ?'
+        );
         $st->execute([$uid]);
         $u = $st->fetch();
         if (!$u) fail(404, 'Kullanıcı bulunamadı.');
         $u['id'] = (int) $u['id'];
         $u['is_public'] = (int) $u['is_public'];
         json_out(200, $u);
+    }
+
+    // ─── DELETE /auth/google/link *(Bearer)* ─────────────────────────────────
+    // Google hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
+    // mevcut parola zorunludur.
+    public function unlinkGoogle(int $uid, array $in): void
+    {
+        $st = $this->db->prepare('SELECT google_sub, password_hash FROM users WHERE id = ?');
+        $st->execute([$uid]);
+        $u = $st->fetch();
+        if (!$u || empty($u['google_sub'])) {
+            fail(422, 'Bağlı Google hesabı yok.');
+        }
+
+        $pass = (string) ($in['password'] ?? '');
+        if ($pass === '') {
+            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.');
+        }
+        if (!password_verify($pass, $u['password_hash'])) {
+            fail(401, 'Mevcut parola hatalı.');
+        }
+
+        $up = $this->db->prepare('UPDATE users SET google_sub = NULL, updated_at = ? WHERE id = ?');
+        $up->execute([now_ms(), $uid]);
+        json_out(200, ['ok' => true]);
     }
 
     // ─── POST /auth/change-password (nadir/tekil işlem) ─────────────────────
