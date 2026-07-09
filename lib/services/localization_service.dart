@@ -266,6 +266,7 @@ class AppLocalizations {
       'review_report_harassment': 'Harassment',
       'review_report_other': 'Other',
       'review_reported': 'Report received. Thank you.',
+      'review_longpress_hint': 'Press and hold a review to report or block',
       'review_block_user': 'Block user',
       'review_block_confirm_title': 'Block this user?',
       'review_block_confirm_msg':
@@ -961,6 +962,8 @@ class AppLocalizations {
       'review_report_harassment': 'Taciz',
       'review_report_other': 'Diğer',
       'review_reported': 'Şikayetin alındı. Teşekkürler.',
+      'review_longpress_hint':
+          'Şikayet etmek veya engellemek için yoruma basılı tut',
       'review_block_user': 'Kullanıcıyı engelle',
       'review_block_confirm_title': 'Bu kullanıcı engellensin mi?',
       'review_block_confirm_msg':

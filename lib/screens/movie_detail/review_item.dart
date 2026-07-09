@@ -52,112 +52,111 @@ class ReviewItem extends StatelessWidget {
         badgeText = tr?.get('profile_berbat') ?? 'Berbat';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.borderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
+    // Moderasyon menüsü karta uzun basmayla açılır: ufak bir ikonu nişanlamak
+    // yerine hedef kartın tamamıdır. Kısa dokunuş spoiler açmada kalır,
+    // gesture arena ikisini çakışmadan ayırır.
+    return GestureDetector(
+      onLongPress: hasMenu
+          ? () {
+              HapticFeedback.mediumImpact();
+              _showModerationMenu(context);
+            }
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.borderSoft),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: c.border,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          reviewerName.isNotEmpty
+                              ? reviewerName[0].toUpperCase()
+                              : 'U',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          reviewerName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: c.ink,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.border,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        reviewerName.isNotEmpty
-                            ? reviewerName[0].toUpperCase()
-                            : 'U',
-                        style: TextStyle(
-                          color: c.ink,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
+                    if (badgeColor != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: badgeColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              color: badgeColor,
+                              size: 10,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              badgeText,
+                              style: TextStyle(
+                                color: badgeColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        reviewerName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (badgeColor != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badgeColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: badgeColor.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star_rounded, color: badgeColor, size: 10),
-                          const SizedBox(width: 2),
-                          Text(
-                            badgeText,
-                            style: TextStyle(
-                              color: badgeColor,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (hasMenu)
-                    // 40x40 opak vuruş alanı: ikon küçük görünse de parmak
-                    // hedefi erişilebilirlik sınırında (min ~40dp) kalır.
-                    GestureDetector(
-                      onTap: () => _showModerationMenu(context),
-                      behavior: HitTestBehavior.opaque,
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Icon(
-                          Icons.more_vert_rounded,
-                          size: 20,
-                          color: c.dim,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SpoilerComment(comment: comment, isSpoiler: isSpoiler),
-        ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            SpoilerComment(comment: comment, isSpoiler: isSpoiler),
+          ],
+        ),
       ),
     );
   }
@@ -165,7 +164,7 @@ class ReviewItem extends StatelessWidget {
   void _showModerationMenu(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    HapticFeedback.lightImpact();
+    final reviewerName = rev['friend_name'] ?? rev['friend_username'] ?? 'User';
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: c.card,
@@ -175,7 +174,20 @@ class ReviewItem extends StatelessWidget {
       builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              child: Text(
+                '$reviewerName',
+                style: TextStyle(
+                  color: c.dim,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
             if (onReport != null)
               ListTile(
                 leading: Icon(Icons.flag_outlined, color: c.rBerbat, size: 20),

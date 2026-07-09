@@ -325,7 +325,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             isTV: widget.movie.isTV,
             reason: reason,
           );
-      _showToast(tr?.get('review_reported') ?? 'Şikayetin alındı. Teşekkürler.');
+      _showToast(
+        tr?.get('review_reported') ?? 'Şikayetin alındı. Teşekkürler.',
+      );
     } catch (e) {
       _showToast(
         tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
@@ -344,7 +346,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       // Engellenen kullanıcının yorumları listeden düşsün; arkadaşlık da
       // sunucuda koparıldığı için aktivite akışı yenilenir.
       _loadFriendsReviews();
-      ref.read(socialProvider.notifier).loadActivityFeed().catchError((_) => {});
+      ref
+          .read(socialProvider.notifier)
+          .loadActivityFeed()
+          .catchError((_) => {});
     } catch (e) {
       _showToast(
         tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
@@ -1844,8 +1849,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                 ref
                                     .read(recommendationEngineProvider)
                                     .invalidateCache(
-                                      isNegativeChange:
-                                          _currentRating! <= 1,
+                                      isNegativeChange: _currentRating! <= 1,
                                     )
                                     .catchError((_) => {});
                                 ref.invalidate(statsProvider);
@@ -1879,9 +1883,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                             : ' (Saved locally, will sync when logged in.)')
                                       : '';
 
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).showSnackBar(
+                                  ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         '$baseMsg$suffix',
@@ -1906,9 +1908,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                 }
                               } catch (e) {
                                 if (mounted) {
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).showSnackBar(
+                                  ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         AppLocalizations.of(context)
@@ -1989,6 +1989,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       );
     }
 
+    final canModerate = ref.read(authProvider).isLoggedIn;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2003,6 +2004,23 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           _sectionLabel('review_community_title'),
           const SizedBox(height: 10),
           ..._communityReviews.map(_buildReviewItem),
+        ],
+        // Uzun basma görünmez bir jest; tek satırlık ipucu keşfettirir.
+        if (canModerate) ...[
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(Icons.touch_app_outlined, color: c.dim, size: 12),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  tr?.get('review_longpress_hint') ??
+                      'Şikayet etmek veya engellemek için yoruma basılı tut',
+                  style: TextStyle(color: c.dim, fontSize: 10.5),
+                ),
+              ),
+            ],
+          ),
         ],
       ],
     );
@@ -2022,7 +2040,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           }
           final oldRating = _currentRating;
           await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
-          
+
           final recoSource = widget.movie.recoSource;
           if (recoSource != null && oldRating != null) {
             PrefsService.revertRecoOutcome(
@@ -2063,9 +2081,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             PrefsService.recordRecoOutcome(
               source: recoSource,
               liked: rating >= 2,
-            ).catchError(
-              (e) => debugPrint("Reco telemetry write failed: $e"),
-            );
+            ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
           }
 
           setState(() {
