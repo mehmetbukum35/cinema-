@@ -2005,21 +2005,35 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           const SizedBox(height: 10),
           ..._communityReviews.map(_buildReviewItem),
         ],
-        // Uzun basma görünmez bir jest; tek satırlık ipucu keşfettirir.
+        // Uzun basma görünmez bir jest; altın vurgulu bilgi şeridi keşfettirir.
         if (canModerate) ...[
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(Icons.touch_app_outlined, color: c.dim, size: 12),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  tr?.get('review_longpress_hint') ??
-                      'Şikayet etmek veya engellemek için yoruma basılı tut',
-                  style: TextStyle(color: c.dim, fontSize: 10.5),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: c.gold.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: c.gold.withValues(alpha: 0.28)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.touch_app_rounded, color: c.gold, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    tr?.get('review_longpress_hint') ??
+                        'Şikayet etmek veya engellemek için yoruma basılı tut',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ],
