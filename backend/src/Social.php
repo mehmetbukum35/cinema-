@@ -158,6 +158,19 @@ class Social
 
         $friendId = (int) $target['id'];
 
+        // Engel kontrolü (iki yönlü): engellenen kişi engelleyene istek atamaz,
+        // engelleyen de engellediğine atamaz. Engellendiğini belli etmemek için
+        // "bulunamadı" ile aynı yanıt döner (taciz edenin doğrulama yapmasını önler).
+        $blk = $this->db->prepare(
+            'SELECT 1 FROM user_blocks
+              WHERE (user_id = ? AND blocked_user_id = ?)
+                 OR (user_id = ? AND blocked_user_id = ?)'
+        );
+        $blk->execute([$uid, $friendId, $friendId, $uid]);
+        if ($blk->fetch()) {
+            fail(404, 'Kullanıcı bulunamadı.');
+        }
+
         // Zaten arkadaş veya istek var mı kontrol et
         $check = $this->db->prepare('SELECT status FROM friends WHERE user_id = ? AND friend_id = ?');
         $check->execute([$uid, $friendId]);

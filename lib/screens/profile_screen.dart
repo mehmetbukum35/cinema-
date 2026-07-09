@@ -18,6 +18,7 @@ import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'taste_dna_screen.dart';
 import 'my_reviews_screen.dart';
+import 'blocked_users_screen.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
@@ -1433,6 +1434,78 @@ class ProfileScreen extends ConsumerWidget {
                                 tr?.locale.languageCode == 'tr'
                                     ? 'Hesap şifrenizi güncelleyin'
                                     : 'Update your account password',
+                                style: TextStyle(color: c.dim, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: c.dim),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Engellenen kullanıcılar: yalnızca girişli kullanıcıda anlamlı
+          // (engelleme sunucu tarafında yaşar).
+          if (isLoggedIn)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BlockedUsersScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: c.isLight
+                          ? Border.all(color: c.border, width: 1)
+                          : null,
+                      boxShadow: c.cardShadow,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.gold.withValues(alpha: 0.15),
+                          ),
+                          child: Icon(
+                            Icons.block_rounded,
+                            color: c.gold,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tr?.get('blocked_users_title') ??
+                                    'Engellenen Kullanıcılar',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                tr?.get('blocked_users_subtitle') ??
+                                    'Engellediğin kullanıcıları yönet',
                                 style: TextStyle(color: c.dim, fontSize: 12),
                               ),
                             ],

@@ -470,7 +470,9 @@ Yorum şikayeti. Yorumlar `ratings` satırı olduğundan hedef `(user_id, movie_
 
 ### POST `/social/users/block` / `/social/users/unblock` *(Bearer)*
 Kullanıcı engelleme: engellenenin yorumları/aktivitesi görünmez, mevcut arkadaşlık iki
-yönde silinir. Gövde: `{ "user_id": 2 }`.
+yönde silinir. Gövde: `{ "user_id": 2 }`. Engel aktifken taraflar birbirine arkadaşlık
+isteği de gönderemez — istek, engel bilgisini sızdırmamak için "Kullanıcı bulunamadı"
+(404) ile reddedilir.
 
 ### GET `/social/users/blocked` *(Bearer)*
 Engellenen kullanıcıların listesi.

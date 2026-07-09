@@ -742,6 +742,39 @@ class SocialIntegrationTest extends TestCase
         }
     }
 
+    public function testBlockedUserCannotSendFriendRequest(): void
+    {
+        // Alice (1), Bob'u (2) engeller → Bob, Alice'e istek atamaz;
+        // yanıt "bulunamadı" ile aynıdır (engel bilgisi sızmaz).
+        $this->social->blockUser(1, ['user_id' => 2]);
+
+        TestHelperRegistry::reset();
+        try {
+            $this->social->sendFriendRequest(2, ['search_query' => 'alice']);
+            $this->fail('Engellenen kullanıcının isteği reddedilmeliydi.');
+        } catch (TestExitException $e) {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+            $this->assertSame('Kullanıcı bulunamadı.', TestHelperRegistry::$lastBody['error']);
+        }
+        $this->assertNull($this->friendStatus(2, 1));
+
+        // Ters yön: engelleyen de engellediğine istek atamaz.
+        TestHelperRegistry::reset();
+        try {
+            $this->social->sendFriendRequest(1, ['search_query' => 'bob']);
+            $this->fail('Engelleyenin isteği de reddedilmeliydi.');
+        } catch (TestExitException $e) {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+        }
+
+        // Engel kalkınca istek normal akışına döner.
+        $this->social->unblockUser(1, ['user_id' => 2]);
+        TestHelperRegistry::reset();
+        $this->social->sendFriendRequest(2, ['search_query' => 'alice']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame('pending', $this->friendStatus(2, 1));
+    }
+
     private function createSchema(): void
     {
         $this->db->exec(
