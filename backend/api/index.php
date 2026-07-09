@@ -20,6 +20,7 @@ require_once "$SRC/Smtp.php";
 require_once "$SRC/Fcm.php";
 require_once "$SRC/SocialWebRenderer.php";
 require_once "$SRC/Social.php";
+require_once "$SRC/Moderation.php";
 require_once "$SRC/Tmdb.php";
 
 // Config web kök DIŞINDA. Yoksa örnek dosyadan kopyalanmamış demektir.
@@ -48,6 +49,7 @@ if (!empty($cfg['fcm']['service_account'])) {
     }
 }
 $social = new Social($db, null, $fcm);
+$moderation = new Moderation($db, (string) ($cfg['admin_key'] ?? ''));
 $tmdb = new Tmdb((string) ($cfg['tmdb_api_key'] ?? ''));
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -302,6 +304,38 @@ switch (true) {
 
     case $route === 'POST /social/recommendations/seen':
         $social->markRecommendationsSeen($auth->requireUser());
+        break;
+
+    // ── Yorum Moderasyonu ───────────────────────────────────────────────────
+    case $route === 'POST /social/reviews/report':
+        $uid = $auth->requireUser();
+        rate_limit('report_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->reportReview($uid, read_json());
+        break;
+
+    case $route === 'POST /social/users/block':
+        $uid = $auth->requireUser();
+        rate_limit('block_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->blockUser($uid, read_json());
+        break;
+
+    case $route === 'POST /social/users/unblock':
+        $social->unblockUser($auth->requireUser(), read_json());
+        break;
+
+    case $route === 'GET /social/users/blocked':
+        $social->getBlockedUsers($auth->requireUser());
+        break;
+
+    // Admin paneli: Config'de admin_key boşsa 404 döner (varlığı sızdırılmaz).
+    case $route === 'GET /admin/moderation':
+        rate_limit('admin_moderation', 30, true);
+        $moderation->renderPanel();
+        break;
+
+    case $route === 'POST /admin/moderation/action':
+        rate_limit('admin_moderation', 30, true);
+        $moderation->handleAction();
         break;
 
     // ── Sağlık kontrolü ────────────────────────────────────────────────────

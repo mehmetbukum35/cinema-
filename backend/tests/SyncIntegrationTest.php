@@ -228,6 +228,69 @@ class SyncIntegrationTest extends TestCase
     // ───────────────────────── yardımcılar ──────────────────────────────────
 
     /** Tek tabloyu push edip applied sayısını döndürür. */
+    // ─── Yorum doğrulaması: 280 kırpma + URL sökme ───────────────────────────
+    public function testCommentIsSanitizedOnPush(): void
+    {
+        $longComment = str_repeat('a', 400);
+        $applied = $this->push(1, 'ratings', [
+            ['movie_id' => 1, 'is_tv' => 0, 'rating' => 2, 'title' => 'Long',
+             'comment' => $longComment, 'updated_at' => 1000],
+            ['movie_id' => 2, 'is_tv' => 0, 'rating' => 2, 'title' => 'Spammy',
+             'comment' => 'Harika film! https://spam.example.com/kumar hemen tikla', 'updated_at' => 1000],
+            ['movie_id' => 3, 'is_tv' => 0, 'rating' => 2, 'title' => 'OnlyUrl',
+             'comment' => 'www.spam-site.io/x', 'updated_at' => 1000],
+        ]);
+        $this->assertSame(3, $applied);
+
+        $this->assertSame(280, mb_strlen($this->row('ratings', 'movie_id', 1)['comment']));
+
+        $spammy = $this->row('ratings', 'movie_id', 2);
+        $this->assertStringNotContainsString('http', $spammy['comment']);
+        $this->assertStringContainsString('Harika film!', $spammy['comment']);
+
+        // Yalnızca URL'den oluşan yorum boşa iner → NULL saklanır.
+        $this->assertNull($this->row('ratings', 'movie_id', 3)['comment']);
+    }
+
+    // ─── Küfür tespiti: is_hidden sunucu tarafında set edilir ────────────────
+    public function testFlaggedCommentIsAutoHiddenAndUnhiddenWhenEdited(): void
+    {
+        $this->push(1, 'ratings', [
+            ['movie_id' => 10, 'is_tv' => 0, 'rating' => 0, 'title' => 'Bad',
+             'comment' => 'bu film amk berbat', 'updated_at' => 1000],
+        ]);
+        $this->assertSame(1, (int) $this->row('ratings', 'movie_id', 10)['is_hidden']);
+
+        // Kullanıcı küfrü temizleyip yorumu güncellerse görünürlük geri gelir.
+        $this->push(1, 'ratings', [
+            ['movie_id' => 10, 'is_tv' => 0, 'rating' => 0, 'title' => 'Bad',
+             'comment' => 'bu film berbat', 'updated_at' => 2000],
+        ]);
+        $row = $this->row('ratings', 'movie_id', 10);
+        $this->assertSame(0, (int) $row['is_hidden']);
+        $this->assertSame('bu film berbat', $row['comment']);
+    }
+
+    // ─── Moderatör gizlemesi, yorum değişmedikçe korunur ─────────────────────
+    public function testModeratorHideSurvivesUnrelatedUpdate(): void
+    {
+        $this->push(1, 'ratings', [
+            ['movie_id' => 11, 'is_tv' => 0, 'rating' => 2, 'title' => 'Reported',
+             'comment' => 'sinsi spam yorumu', 'updated_at' => 1000],
+        ]);
+        // Moderatör/otomatik eşik gizledi:
+        $this->db->exec('UPDATE ratings SET is_hidden = 1 WHERE movie_id = 11');
+
+        // Yorum AYNI kalarak puan güncellenirse gizleme kalkmaz.
+        $this->push(1, 'ratings', [
+            ['movie_id' => 11, 'is_tv' => 0, 'rating' => 3, 'title' => 'Reported',
+             'comment' => 'sinsi spam yorumu', 'updated_at' => 2000],
+        ]);
+        $row = $this->row('ratings', 'movie_id', 11);
+        $this->assertSame(1, (int) $row['is_hidden']);
+        $this->assertSame(3, (int) $row['rating']);
+    }
+
     private function push(int $uid, string $table, array $items): int
     {
         TestHelperRegistry::reset();
@@ -281,6 +344,7 @@ class SyncIntegrationTest extends TestCase
                 comment TEXT,
                 is_spoiler INTEGER NOT NULL DEFAULT 0,
                 is_private INTEGER NOT NULL DEFAULT 0,
+                is_hidden INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, movie_id, is_tv)
             )'
         );

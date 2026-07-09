@@ -17,6 +17,7 @@ import '../services/sync_service.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'taste_dna_screen.dart';
+import 'my_reviews_screen.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
@@ -861,6 +862,69 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ),
                     ],
+                  ),
+                ),
+              ),
+              // Yorumlarım: yazılan tüm yorumların toplu görünümü/yönetimi.
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: SpringButton(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyReviewsScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: c.borderSoft),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.rate_review_outlined,
+                            color: c.gold,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tr?.get('my_reviews_title') ?? 'Yorumlarım',
+                                  style: TextStyle(
+                                    color: c.ink,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  tr?.get('my_reviews_subtitle') ??
+                                      'Yazdığın tüm yorumlar tek yerde',
+                                  style: TextStyle(color: c.dim, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: c.dim,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

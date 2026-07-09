@@ -47,3 +47,8 @@ if (!function_exists('bearer_token')) {
         return TestHelperRegistry::$mockBearerToken;
     }
 }
+
+// Test-üstü tanımlar yüklendikten sonra gerçek yardımcıları getir:
+// guard'lı olanlar (json_out/fail/...) atlanır, sanitize_comment gibi
+// yalnızca Helpers.php'de yaşayanlar kullanılabilir olur.
+require_once __DIR__ . '/../src/Helpers.php';

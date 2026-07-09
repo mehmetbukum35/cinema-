@@ -300,6 +300,107 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     }
   }
 
+  void _showToast(String msg, {bool success = true}) {
+    if (!mounted) return;
+    final c = context.c;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
+        backgroundColor: success ? c.green : c.red,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _reportReview(dynamic rev, String reason) async {
+    final reviewerId = int.tryParse(rev['user_id']?.toString() ?? '');
+    if (reviewerId == null) return;
+    final tr = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(apiServiceProvider)
+          .reportReview(
+            userId: reviewerId,
+            movieId: widget.movie.id,
+            isTV: widget.movie.isTV,
+            reason: reason,
+          );
+      _showToast(tr?.get('review_reported') ?? 'Şikayetin alındı. Teşekkürler.');
+    } catch (e) {
+      _showToast(
+        tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
+        success: false,
+      );
+    }
+  }
+
+  Future<void> _blockReviewer(dynamic rev) async {
+    final reviewerId = int.tryParse(rev['user_id']?.toString() ?? '');
+    if (reviewerId == null) return;
+    final tr = AppLocalizations.of(context);
+    try {
+      await ref.read(apiServiceProvider).blockUser(reviewerId);
+      _showToast(tr?.get('review_blocked') ?? 'Kullanıcı engellendi');
+      // Engellenen kullanıcının yorumları listeden düşsün; arkadaşlık da
+      // sunucuda koparıldığı için aktivite akışı yenilenir.
+      _loadFriendsReviews();
+      ref.read(socialProvider.notifier).loadActivityFeed().catchError((_) => {});
+    } catch (e) {
+      _showToast(
+        tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
+        success: false,
+      );
+    }
+  }
+
+  Future<bool> _confirmRatingDelete() async {
+    final c = context.c;
+    final tr = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text(
+          tr?.get('rating_delete_with_comment_title') ?? 'Puan kaldırılsın mı?',
+          style: TextStyle(color: c.ink, fontSize: 16),
+        ),
+        content: Text(
+          tr?.get('rating_delete_with_comment_msg') ??
+              'Puanı kaldırırsan yazdığın yorum da silinir.',
+          style: TextStyle(color: c.dim, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text(
+              tr?.get('profile_cancel') ?? 'İptal',
+              style: TextStyle(color: c.dim),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: Text(
+              tr?.get('remove') ?? 'Kaldır',
+              style: TextStyle(color: c.rBerbat, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  /// Yorum kartı: giriş yapmış kullanıcıya şikayet/engelleme menüsü açılır.
+  Widget _buildReviewItem(dynamic rev) {
+    final canModerate =
+        ref.read(authProvider).isLoggedIn && rev['user_id'] != null;
+    return ReviewItem(
+      rev: rev,
+      onReport: canModerate ? (reason) => _reportReview(rev, reason) : null,
+      onBlock: canModerate ? () => _blockReviewer(rev) : null,
+    );
+  }
+
   /// cinema+ üyelerinin topluluk skorunu çeker (sessiz: hata rozeti gizler).
   Future<void> _loadCommunityScore() async {
     final id = widget.movie.id;
@@ -1615,7 +1716,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                   border: InputBorder.none,
                   counterText: '',
                 ),
-                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 8),
               Row(
@@ -1713,9 +1813,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${_commentController.text.length} / 280',
-                    style: TextStyle(color: c.dim, fontSize: 11),
+                  // Sayaç yalnızca kendini yeniler; her tuş vuruşunda koca
+                  // sheet'i setState ile yeniden çizmek gereksizdi.
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _commentController,
+                    builder: (_, value, _) => Text(
+                      '${value.text.length} / 280',
+                      style: TextStyle(color: c.dim, fontSize: 11),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: _justSavedComment
@@ -1725,10 +1830,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                             FocusScope.of(context).unfocus();
                             if (_currentRating != null) {
                               try {
+                                final commentText = _commentController.text
+                                    .trim();
                                 await PrefsService.saveRating(
                                   movie: widget.movie,
                                   rating: _currentRating!,
-                                  comment: _commentController.text,
+                                  comment: commentText.isEmpty
+                                      ? null
+                                      : commentText,
                                   isSpoiler: _isSpoiler ? 1 : 0,
                                   isPrivate: _isPrivate ? 1 : 0,
                                 );
@@ -1780,7 +1889,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                           color: Colors.white,
                                         ),
                                       ),
-                                      backgroundColor: c.red,
+                                      backgroundColor: c.green,
                                       duration: const Duration(seconds: 3),
                                     ),
                                   );
@@ -1887,13 +1996,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           const SizedBox(height: 20),
           _sectionLabel('review_friends_title'),
           const SizedBox(height: 10),
-          ..._friendsReviews.map((rev) => ReviewItem(rev: rev)),
+          ..._friendsReviews.map(_buildReviewItem),
         ],
         if (_communityReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
           _sectionLabel('review_community_title'),
           const SizedBox(height: 10),
-          ..._communityReviews.map((rev) => ReviewItem(rev: rev)),
+          ..._communityReviews.map(_buildReviewItem),
         ],
       ],
     );
@@ -1905,6 +2014,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       onTap: () async {
         HapticFeedback.lightImpact();
         if (active) {
+          // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
+          // götürür — kullanıcıdan onay al.
+          if (_commentController.text.trim().isNotEmpty) {
+            final confirmed = await _confirmRatingDelete();
+            if (!confirmed) return;
+          }
           final oldRating = _currentRating;
           await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
           
@@ -1927,10 +2042,11 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             _isPrivate = false;
           });
         } else {
+          final commentText = _commentController.text.trim();
           await PrefsService.saveRating(
             movie: widget.movie,
             rating: rating,
-            comment: _commentController.text,
+            comment: commentText.isEmpty ? null : commentText,
             isSpoiler: _isSpoiler ? 1 : 0,
             isPrivate: _isPrivate ? 1 : 0,
           );

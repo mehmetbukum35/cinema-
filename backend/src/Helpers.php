@@ -108,6 +108,51 @@ function rate_limit(string $bucket, int $perMin, bool $failClosed = false): void
 }
 
 /**
+ * Kullanıcı yorumunu sunucu tarafında normalize eder. İstemci 280 karakterle
+ * sınırlar ama API'ye güvenilmez: kontrol karakterleri temizlenir, URL'ler
+ * sökülür (reklam/spam vektörü), 280 karaktere kırpılır. Boş kalan yorum NULL
+ * olur ki sorgulardaki `comment IS NOT NULL AND comment <> ''` filtresi işlesin.
+ */
+function sanitize_comment(?string $c): ?string
+{
+    if ($c === null) return null;
+    $c = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $c) ?? '';
+    $c = preg_replace('~(?:https?://|www\.)[^\s]+~iu', '', $c) ?? '';
+    $c = preg_replace('/[ \t]{2,}/u', ' ', $c) ?? '';
+    $c = trim($c);
+    if ($c === '') return null;
+    return function_exists('mb_substr') ? mb_substr($c, 0, 280, 'UTF-8') : substr($c, 0, 280);
+}
+
+/**
+ * Basit TR+EN küfür/spam tespiti (kelime sınırı ile; "klasik" gibi masum
+ * kelimeler yanlış pozitif üretmez). Kusursuz değildir — amaç bariz vakaları
+ * otomatik gizleyip (is_hidden=1) gerisini şikayet mekanizmasına bırakmaktır.
+ * Yorum kullanıcının kendi cihazında görünmeye devam eder; yalnızca
+ * başkalarına gösterilmez.
+ */
+function comment_flagged(string $c): bool
+{
+    static $words = [
+        // TR
+        'amk', 'aq', 'orospu', 'oç', 'piç', 'sik', 'sikeyim', 'sikerim',
+        'yarrak', 'amcık', 'amına', 'ibne', 'pezevenk', 'kahpe', 'gavat',
+        'yavşak', 'şerefsiz',
+        // EN
+        'fuck', 'shit', 'bitch', 'asshole', 'cunt', 'faggot', 'nigger',
+        // spam/reklam
+        'bahis', 'casino', 'bet365', 'kumarhane', 'porno', 'escort', 'viagra',
+    ];
+    $lc = function_exists('mb_strtolower') ? mb_strtolower($c, 'UTF-8') : strtolower($c);
+    foreach ($words as $w) {
+        if (preg_match('/(?<![\p{L}\p{N}])' . preg_quote($w, '/') . '(?![\p{L}\p{N}])/u', $lc)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * cinema+ merkezi hata loglama yardımcı fonksiyonu.
  * Bağlamsal verileri (IP, Rota, Kullanıcı ID) otomatik ekler.
  */

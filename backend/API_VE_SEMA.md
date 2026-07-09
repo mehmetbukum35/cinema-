@@ -74,14 +74,46 @@ CREATE TABLE ratings (
   vote_average DOUBLE          NULL,
   release_date VARCHAR(20)     NULL,
   popularity   DOUBLE          NULL,
-  comment      TEXT            NULL,        -- Kullanıcının yorumu
+  comment      TEXT            NULL,        -- Kullanıcının yorumu (sunucuda 280'e kırpılır, URL'ler sökülür)
   is_spoiler   TINYINT(1)      NOT NULL DEFAULT 0, -- Yorum sürprizbozan içeriyor mu?
+  is_private   TINYINT(1)      NOT NULL DEFAULT 0, -- Gizli puan/yorum: sosyal görünümlere çıkmaz
+  is_hidden    TINYINT(1)      NOT NULL DEFAULT 0, -- Moderasyon gizlemesi (SYNC EDİLMEZ; sunucu tarafı)
   created_at   BIGINT          NOT NULL,
   updated_at   BIGINT          NOT NULL,   -- delta-sync için
   deleted      TINYINT(1)      NOT NULL DEFAULT 0,  -- soft delete
   PRIMARY KEY (user_id, movie_id, is_tv),
   KEY idx_ratings_sync (user_id, updated_at),
+  KEY idx_ratings_title (movie_id, is_tv),  -- başlık bazlı yorum/skor sorguları
   CONSTRAINT fk_ratings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ─── Yorum şikayetleri (review_reports) ──────────────────────────
+-- Yorumlar ratings satırıdır; şikayet hedefi (reported_user_id, movie_id, is_tv).
+-- status: open → moderatör aksiyonuyla resolved/dismissed.
+CREATE TABLE review_reports (
+  reporter_id      BIGINT UNSIGNED NOT NULL,
+  reported_user_id BIGINT UNSIGNED NOT NULL,
+  movie_id         INT             NOT NULL,
+  is_tv            TINYINT(1)      NOT NULL,
+  reason           VARCHAR(40)     NOT NULL DEFAULT 'other',
+  status           VARCHAR(20)     NOT NULL DEFAULT 'open',
+  created_at       BIGINT          NOT NULL,
+  PRIMARY KEY (reporter_id, reported_user_id, movie_id, is_tv),
+  KEY idx_reports_review (reported_user_id, movie_id, is_tv),
+  KEY idx_reports_status (status, created_at),
+  CONSTRAINT fk_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_reports_reported FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ─── Kullanıcı engelleme (user_blocks) ───────────────────────────
+CREATE TABLE user_blocks (
+  user_id         BIGINT UNSIGNED NOT NULL,
+  blocked_user_id BIGINT UNSIGNED NOT NULL,
+  created_at      BIGINT          NOT NULL,
+  PRIMARY KEY (user_id, blocked_user_id),
+  KEY idx_blocks_blocked (blocked_user_id),
+  CONSTRAINT fk_blocks_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_blocks_blocked FOREIGN KEY (blocked_user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ─── İzleme listesi (watchlist) ──────────────────────────────────
@@ -315,6 +347,10 @@ Kullanıcıyı ve `ON DELETE CASCADE` sayesinde tüm verilerini (ratings, watchl
 
 ### POST `/sync` *(Bearer)*
 Yerel değişiklikleri sunucuya iter. Çakışma kuralı: **En yüksek `updated_at` (LWW) kazanır**.
+
+Yorum doğrulaması (sunucu tarafı, istemciye güvenilmez):
+- `comment` 280 karaktere kırpılır; URL'ler sökülür; kontrol karakterleri temizlenir; boş kalan yorum `NULL` olur.
+- Basit TR+EN küfür/spam listesine takılan yorum `ratings.is_hidden = 1` ile otomatik gizlenir: kullanıcının kendi cihazında görünmeye devam eder ama başkalarına gösterilmez. Yorum metni değişince yeniden değerlendirilir (küfür temizlenirse görünürlük döner); metin değişmeden yapılan güncellemeler moderatör gizlemesini KALDIRMAZ. `is_hidden` sync kolonu değildir, istemciden gelen değeri yok sayılır.
 ```json
 {
   "ratings":   [ { "movie_id":603, "is_tv":0, "rating":3, "genre_ids":[28,878], "comment":"Yorum", "is_spoiler":0, "updated_at":1719579999000, "deleted":false } ],
@@ -414,6 +450,35 @@ Kullanıcıya gelen önerileri listeler.
 
 ### POST `/social/recommendations/seen` *(Bearer)*
 Gelen önerileri "görüldü" olarak işaretler.
+
+### GET `/social/title-reviews/{type}/{id}` *(Bearer)*
+Bir yapımın arkadaş ve topluluk yorumlarını döner. `is_hidden = 1` (moderasyon)
+ve engellenen kullanıcıların (iki yönlü) yorumları filtrelenir. Her yorumda
+şikayet/engelleme hedefi için `user_id` bulunur.
+```json
+{ "friends": [ { "user_id": 2, "rating": 3, "comment": "...", "is_spoiler": 0, ... } ], "community": [ ... ] }
+```
+
+### POST `/social/reviews/report` *(Bearer)*
+Yorum şikayeti. Yorumlar `ratings` satırı olduğundan hedef `(user_id, movie_id, is_tv)` üçlüsüdür.
+`reason`: `profanity | spam | spoiler | harassment | other`. Aynı kullanıcı aynı yorumu bir kez
+şikayet edebilir; **3 farklı kullanıcıdan** açık şikayet birikince yorum otomatik gizlenir
+(`ratings.is_hidden = 1`) ve yanıtta `auto_hidden: true` döner.
+```json
+{ "user_id": 2, "movie_id": 603, "is_tv": 0, "reason": "spam" }
+```
+
+### POST `/social/users/block` / `/social/users/unblock` *(Bearer)*
+Kullanıcı engelleme: engellenenin yorumları/aktivitesi görünmez, mevcut arkadaşlık iki
+yönde silinir. Gövde: `{ "user_id": 2 }`.
+
+### GET `/social/users/blocked` *(Bearer)*
+Engellenen kullanıcıların listesi.
+
+### GET `/admin/moderation?key=<admin_key>`
+Moderasyon paneli (HTML): açık şikayetler ve gizlenen yorumlar; gizle / geri aç /
+şikayeti kapat aksiyonları (`POST /admin/moderation/action`). Config'de `admin_key`
+boşsa uç 404 döner.
 
 ---
 

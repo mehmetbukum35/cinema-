@@ -608,6 +608,117 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('alice', $profiles[0]['username']);
     }
 
+    public function testReportReviewAutoHidesAfterThreshold(): void
+    {
+        // Bob (2) yorum yazar; 3 farklı kullanıcı şikayet edince otomatik gizlenir.
+        $now = now_ms();
+        $this->db->exec('INSERT INTO users (id, email, display_name, username) VALUES (4, \'dave@example.com\', \'Dave\', \'dave\')');
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment)
+             VALUES (2, 500, 0, 0, \'Spam Movie\', \'[]\', ?, 0, \'reklam icerigi\')'
+        );
+        $st->execute([$now]);
+
+        $this->social->reportReview(1, ['user_id' => 2, 'movie_id' => 500, 'is_tv' => 0, 'reason' => 'spam']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertFalse(TestHelperRegistry::$lastBody['auto_hidden']);
+
+        // Aynı kullanıcının tekrar şikayeti sayacı artırmaz (idempotent).
+        TestHelperRegistry::reset();
+        $this->social->reportReview(1, ['user_id' => 2, 'movie_id' => 500, 'is_tv' => 0, 'reason' => 'spam']);
+        $this->assertFalse(TestHelperRegistry::$lastBody['auto_hidden']);
+
+        TestHelperRegistry::reset();
+        $this->social->reportReview(3, ['user_id' => 2, 'movie_id' => 500, 'is_tv' => 0, 'reason' => 'spam']);
+        $this->assertFalse(TestHelperRegistry::$lastBody['auto_hidden']);
+
+        TestHelperRegistry::reset();
+        $this->social->reportReview(4, ['user_id' => 2, 'movie_id' => 500, 'is_tv' => 0, 'reason' => 'other']);
+        $this->assertTrue(TestHelperRegistry::$lastBody['auto_hidden']);
+
+        $hidden = $this->db->query('SELECT is_hidden FROM ratings WHERE user_id = 2 AND movie_id = 500')->fetchColumn();
+        $this->assertSame(1, (int) $hidden);
+    }
+
+    public function testHiddenReviewExcludedFromReviewsAndActivityComment(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $now = now_ms();
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment, is_hidden)
+             VALUES (2, 600, 0, 3, \'Hidden Review Movie\', \'[]\', ?, 0, \'kufurlu yorum\', 1)'
+        );
+        $st->execute([$now]);
+
+        $this->social->getTitleReviews(1, 'movie', 600);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['friends']);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['community']);
+
+        // Aktivitede puan görünür ama yorum metni sızmaz.
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1);
+        $feed = TestHelperRegistry::$lastBody['activity'];
+        $this->assertCount(1, $feed);
+        $this->assertNull($feed[0]['comment']);
+    }
+
+    public function testBlockUserRemovesFriendshipAndFiltersReviews(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $now = now_ms();
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment)
+             VALUES (2, 700, 0, 3, \'Block Test Movie\', \'[]\', ?, 0, \'taciz eden yorum\')'
+        );
+        $st->execute([$now]);
+
+        $this->social->blockUser(1, ['user_id' => 2]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertNull($this->friendStatus(1, 2));
+        $this->assertNull($this->friendStatus(2, 1));
+
+        // Topluluk sorgusunda da görünmemeli (arkadaşlık zaten koptu).
+        TestHelperRegistry::reset();
+        $this->social->getTitleReviews(1, 'movie', 700);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['friends']);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['community']);
+
+        // Ters yön: Bob da Alice'in yorumunu görmez.
+        $st2 = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment)
+             VALUES (1, 700, 0, 2, \'Block Test Movie\', \'[]\', ?, 0, \'alice yorumu\')'
+        );
+        $st2->execute([$now]);
+        TestHelperRegistry::reset();
+        $this->social->getTitleReviews(2, 'movie', 700);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['community']);
+
+        // Engeli kaldırınca topluluk yorumu tekrar görünür.
+        TestHelperRegistry::reset();
+        $this->social->unblockUser(1, ['user_id' => 2]);
+        $this->assertTrue(TestHelperRegistry::$lastBody['removed']);
+        TestHelperRegistry::reset();
+        $this->social->getTitleReviews(1, 'movie', 700);
+        $this->assertCount(1, TestHelperRegistry::$lastBody['community']);
+    }
+
+    public function testReportOwnReviewRejected(): void
+    {
+        $now = now_ms();
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment)
+             VALUES (1, 800, 0, 2, \'Own Movie\', \'[]\', ?, 0, \'kendi yorumum\')'
+        );
+        $st->execute([$now]);
+
+        $this->expectException(TestExitException::class);
+        try {
+            $this->social->reportReview(1, ['user_id' => 1, 'movie_id' => 800, 'is_tv' => 0]);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
     private function createSchema(): void
     {
         $this->db->exec(
@@ -645,7 +756,28 @@ class SocialIntegrationTest extends TestCase
                 deleted INTEGER NOT NULL DEFAULT 0,
                 comment TEXT,
                 is_spoiler INTEGER NOT NULL DEFAULT 0,
-                is_private INTEGER NOT NULL DEFAULT 0
+                is_private INTEGER NOT NULL DEFAULT 0,
+                is_hidden INTEGER NOT NULL DEFAULT 0
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE review_reports (
+                reporter_id INTEGER NOT NULL,
+                reported_user_id INTEGER NOT NULL,
+                movie_id INTEGER NOT NULL,
+                is_tv INTEGER NOT NULL,
+                reason TEXT NOT NULL DEFAULT \'other\',
+                status TEXT NOT NULL DEFAULT \'open\',
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (reporter_id, reported_user_id, movie_id, is_tv)
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE user_blocks (
+                user_id INTEGER NOT NULL,
+                blocked_user_id INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (user_id, blocked_user_id)
             )'
         );
         $this->db->exec(

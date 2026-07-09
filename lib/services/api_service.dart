@@ -821,6 +821,86 @@ class ApiService {
     );
   }
 
+  // POST /social/reviews/report — yorum şikayeti. Yorumlar ratings satırı
+  // olduğundan hedef (user_id, movie_id, is_tv) üçlüsüyle belirtilir.
+  Future<bool> reportReview({
+    required int userId,
+    required int movieId,
+    required bool isTV,
+    required String reason,
+  }) async {
+    final response = await _request(
+      'POST',
+      '/social/reviews/report',
+      body: {
+        'user_id': userId,
+        'movie_id': movieId,
+        'is_tv': isTV ? 1 : 0,
+        'reason': reason,
+      },
+      requireAuth: true,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return data['auto_hidden'] == true;
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Şikayet gönderilemedi.',
+    );
+  }
+
+  // POST /social/users/block — kullanıcıyı engelle (arkadaşlık da kopar).
+  Future<void> blockUser(int userId) async {
+    final response = await _request(
+      'POST',
+      '/social/users/block',
+      body: {'user_id': userId},
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Kullanıcı engellenemedi.',
+      );
+    }
+  }
+
+  // POST /social/users/unblock
+  Future<void> unblockUser(int userId) async {
+    final response = await _request(
+      'POST',
+      '/social/users/unblock',
+      body: {'user_id': userId},
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Engel kaldırılamadı.',
+      );
+    }
+  }
+
+  // GET /social/users/blocked
+  Future<List<dynamic>> getBlockedUsers() async {
+    final response = await _request(
+      'GET',
+      '/social/users/blocked',
+      requireAuth: true,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return data['blocked'] as List<dynamic>? ?? [];
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Engellenenler yüklenemedi.',
+    );
+  }
+
   // GET /titles/{type}/{id}/score — cinema+ üyelerinin topluluk skoru
   Future<Map<String, dynamic>> getTitleScore(String type, int id) async {
     final response = await _request(

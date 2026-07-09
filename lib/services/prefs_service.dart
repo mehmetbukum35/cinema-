@@ -323,6 +323,16 @@ class PrefsService {
     return DatabaseHelper().getRating(movieId, isTV);
   }
 
+  /// Yorumu puandan bağımsız siler (puan korunur, sync'e yansır).
+  static Future<void> deleteComment(int movieId, bool isTV) async {
+    await DatabaseHelper().deleteComment(movieId, isTV);
+  }
+
+  /// Yorum yazılmış tüm puanlar, en yeni önce ("Yorumlarım" ekranı).
+  static Future<List<Map<String, dynamic>>> getCommentedRatings() async {
+    return DatabaseHelper().getCommentedRatings();
+  }
+
   static Future<List<int>> getLikedGenreIds() async {
     final prefs = await SharedPreferences.getInstance();
     final Map<int, int> counts = {};

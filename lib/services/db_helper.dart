@@ -608,6 +608,54 @@ class DatabaseHelper {
     );
   }
 
+  /// Yorumu puandan bağımsız siler: comment NULL'a çekilir, puan korunur.
+  /// updated_at güncellenir ki değişiklik sync ile sunucuya da yansısın.
+  Future<void> deleteComment(int movieId, bool isTV) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (db == null) {
+      final idx = _mockRatings.indexWhere(
+        (e) => e['movie_id'] == movieId && e['is_tv'] == (isTV ? 1 : 0),
+      );
+      if (idx >= 0) {
+        _mockRatings[idx]['comment'] = null;
+        _mockRatings[idx]['is_spoiler'] = 0;
+        _mockRatings[idx]['updated_at'] = now;
+      }
+      return;
+    }
+    await db.update(
+      'ratings',
+      {'comment': null, 'is_spoiler': 0, 'updated_at': now},
+      where: 'movie_id = ? AND is_tv = ?',
+      whereArgs: [movieId, isTV ? 1 : 0],
+    );
+  }
+
+  /// Yorum yazılmış tüm puanlar ("Yorumlarım" ekranı), en yeni önce.
+  Future<List<Map<String, dynamic>>> getCommentedRatings() async {
+    final db = await database;
+    if (db == null) {
+      final list = _mockRatings
+          .where(
+            (m) =>
+                m['deleted'] != 1 &&
+                ((m['comment'] as String?)?.trim().isNotEmpty ?? false),
+          )
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+      list.sort(
+        (a, b) => (b['updated_at'] as int).compareTo(a['updated_at'] as int),
+      );
+      return list;
+    }
+    return db.query(
+      'ratings',
+      where: "deleted = 0 AND comment IS NOT NULL AND TRIM(comment) <> ''",
+      orderBy: 'updated_at DESC',
+    );
+  }
+
   Future<int> getRatingCount() async {
     final db = await database;
     if (db == null) {

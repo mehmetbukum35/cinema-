@@ -151,6 +151,14 @@ class Sync
                 return false;
             }
         }
+
+        // Yorum doğrulaması: istemcinin 280 sınırına güvenilmez — kırp, URL'leri
+        // sök, kontrol karakterlerini temizle (bkz. sanitize_comment).
+        if ($table === 'ratings' && array_key_exists('comment', $item)) {
+            $item['comment'] = sanitize_comment(
+                is_string($item['comment']) ? $item['comment'] : null
+            );
+        }
         $updatedAt = (int) ($item['updated_at'] ?? now_ms());
         $deleted   = !empty($item['deleted']) ? 1 : 0;
 
@@ -195,6 +203,22 @@ class Sync
             $values['created_at'] = $updatedAt;
         }
 
+        // Küfür/spam tespiti: işaretli yorum sunucuda gizlenir. is_hidden sync
+        // kolonu DEĞİLDİR — kullanıcının kendi verisi bozulmaz, yorum yalnızca
+        // başkalarına gösterilmez. Yorum metni değiştiğinde yeniden değerlendirilir:
+        // küfrü temizleyen kullanıcı otomatik görünür olur; buna karşılık şikayet
+        // yoluyla gizlenmiş bir yorum ancak metin değişirse görünürlüğe döner.
+        $extraCols = [];
+        if ($table === 'ratings') {
+            $newComment = $values['comment'] ?? null;
+            $oldComment = $existing !== false ? ($existing['comment'] ?? null) : null;
+            if ($existing === false || $newComment !== $oldComment) {
+                $extraCols['is_hidden'] =
+                    ($newComment !== null && comment_flagged((string) $newComment)) ? 1 : 0;
+            }
+        }
+        $values = array_merge($values, $extraCols);
+
         if ($existing === false) {
             // Yeni kayıt → INSERT
             $colNames = array_keys($values);
@@ -206,7 +230,7 @@ class Sync
         }
 
         // Eşit/yeni → anahtar dışındaki tüm kolonları güncelle.
-        $updateCols = array_merge($def['cols'], ['updated_at', 'deleted']);
+        $updateCols = array_merge($def['cols'], ['updated_at', 'deleted'], array_keys($extraCols));
         $setParts = [];
         $setVals  = [];
         foreach ($updateCols as $c) {

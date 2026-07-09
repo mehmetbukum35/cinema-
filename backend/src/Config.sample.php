@@ -48,6 +48,11 @@ return [
     // GET /tmdb/* proxy'si için IP başına dakikalık istek sınırı.
     'tmdb_rate_limit_per_min' => 120,
 
+    // Yorum moderasyon paneli (GET /admin/moderation?key=...) için anahtar.
+    // En az 32 karakter rastgele üret: bin2hex(random_bytes(32)).
+    // Boş bırakılırsa panel tamamen devre dışı kalır (404 döner).
+    'admin_key' => '',
+
     // Firebase Cloud Messaging (push bildirimleri).
     // service_account: Firebase Console > Project settings > Service accounts >
     //   "Generate new private key" ile inen JSON dosyasının tam yolu. Web kök DIŞINDA tut, repoya ekleme.
