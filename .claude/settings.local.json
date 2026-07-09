@@ -68,7 +68,21 @@
       "Bash(php vendor/bin/phpunit --no-coverage)",
       "Bash(php -l \"E:\\\\cinema+/backend/src/Social.php\")",
       "Bash(php -l \"E:\\\\cinema+/backend/api/index.php\")",
-      "Bash(php vendor/bin/phpunit --no-coverage --filter SocialIntegrationTest)"
+      "Bash(php vendor/bin/phpunit --no-coverage --filter SocialIntegrationTest)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(php -l backend/src/SocialWebRenderer.php)",
+      "Bash(php -l backend/src/templates/profile.template.php)",
+      "Bash(php -l \"E:\\\\cinema+\\\\backend\\\\src\\\\Social.php\")",
+      "Bash(php -l \"E:\\\\cinema+\\\\backend\\\\src\\\\Sync.php\")",
+      "Bash(php -l \"E:\\\\cinema+\\\\backend\\\\src\\\\Helpers.php\")",
+      "Bash(php -l \"E:\\\\cinema+\\\\backend\\\\src\\\\Moderation.php\")",
+      "Bash(php -l \"E:\\\\cinema+\\\\backend\\\\api\\\\index.php\")",
+      "Bash(./vendor/bin/phpunit --no-coverage)",
+      "Bash(./vendor/bin/phpunit --no-coverage --display-warnings)",
+      "Bash(git checkout *)",
+      "Bash(curl -4 -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://cinema.mbkm.com.tr/api/admin/moderation?key=2d1e657171bf59e88a5251221146c6627253ae5e8b1fa6d900a94d228e4a5b12\")",
+      "Bash(curl -4 -s \"https://cinema.mbkm.com.tr/api/admin/moderation?key=2d1e657171bf59e88a5251221146c6627253ae5e8b1fa6d900a94d228e4a5b12\")"
     ]
   }
 }

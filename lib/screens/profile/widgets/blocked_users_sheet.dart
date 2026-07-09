@@ -236,7 +236,7 @@ class _BlockedUsersSheetState extends ConsumerState<BlockedUsersSheet> {
                   shrinkWrap: true,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   itemCount: _blocked.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final user = _blocked[index];
                     final userId = user['id'] as int;
