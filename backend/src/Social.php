@@ -315,9 +315,11 @@ class Social
                 FROM friends f
                 JOIN users u ON f.friend_id = u.id
                 JOIN ratings r ON f.friend_id = r.user_id
-                WHERE f.user_id = ? AND f.status = \'accepted\' AND r.is_private = 0';
+                WHERE f.user_id = ? AND f.status = \'accepted\' AND r.is_private = 0
+                  AND f.friend_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
+                  AND f.friend_id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)';
         
-        $params = [$uid];
+        $params = [$uid, $uid, $uid];
         if ($friendId !== null) {
             $sql .= ' AND f.friend_id = ?';
             $params[] = $friendId;

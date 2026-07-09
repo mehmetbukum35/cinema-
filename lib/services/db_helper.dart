@@ -6,6 +6,9 @@ import 'package:path/path.dart';
 import '../models/movie.dart';
 
 class DatabaseHelper {
+  /// saveRating'te alan verilmediğinde mevcut DB değerini korumak için işaretçi.
+  static const unset = Object();
+
   static DatabaseHelper? _instance;
   static Database? _database;
   static bool _useInMemoryMock = false;
@@ -377,9 +380,9 @@ class DatabaseHelper {
     List<int>? genreIds,
     int? updatedAt,
     int? deleted,
-    String? comment,
-    int? isSpoiler,
-    int? isPrivate,
+    Object? comment = unset,
+    Object? isSpoiler = unset,
+    Object? isPrivate = unset,
   }) async {
     final db = await database;
     final finalMovieId = movieId ?? movie?.id ?? 0;
@@ -387,6 +390,20 @@ class DatabaseHelper {
     final finalGenreIds = genreIds ?? movie?.genreIds ?? const <int>[];
     final now = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
     final delVal = deleted ?? 0;
+
+    final existing = await getRating(finalMovieId, finalIsTV);
+    final createdAt = existing != null
+        ? (existing['created_at'] as int)
+        : now;
+    final String? finalComment = identical(comment, unset)
+        ? (existing?['comment'] as String?)
+        : comment as String?;
+    final int finalIsSpoiler = identical(isSpoiler, unset)
+        ? (existing?['is_spoiler'] as int? ?? 0)
+        : isSpoiler as int;
+    final int finalIsPrivate = identical(isPrivate, unset)
+        ? (existing?['is_private'] as int? ?? 0)
+        : isPrivate as int;
 
     if (db == null) {
       _mockRatings.removeWhere(
@@ -398,19 +415,21 @@ class DatabaseHelper {
         'is_tv': finalIsTV ? 1 : 0,
         'rating': rating,
         'genre_ids': jsonEncode(finalGenreIds),
-        'created_at': now,
+        'created_at': createdAt,
         'updated_at': now,
         'deleted': delVal,
-        'title': movie?.title ?? '',
-        'poster_path': movie?.posterPath,
-        'backdrop_path': movie?.backdropPath,
-        'overview': movie?.overview ?? '',
-        'vote_average': movie?.voteAverage ?? 0.0,
-        'release_date': movie?.releaseDate,
-        'popularity': movie?.popularity ?? 0.0,
-        'comment': comment,
-        'is_spoiler': isSpoiler ?? 0,
-        'is_private': isPrivate ?? 0,
+        'title': movie?.title ?? (existing?['title'] as String? ?? ''),
+        'poster_path': movie?.posterPath ?? existing?['poster_path'],
+        'backdrop_path': movie?.backdropPath ?? existing?['backdrop_path'],
+        'overview': movie?.overview ?? (existing?['overview'] as String? ?? ''),
+        'vote_average':
+            movie?.voteAverage ?? (existing?['vote_average'] as num? ?? 0.0),
+        'release_date': movie?.releaseDate ?? existing?['release_date'],
+        'popularity':
+            movie?.popularity ?? (existing?['popularity'] as num? ?? 0.0),
+        'comment': finalComment,
+        'is_spoiler': finalIsSpoiler,
+        'is_private': finalIsPrivate,
       });
       return;
     }
@@ -419,19 +438,21 @@ class DatabaseHelper {
       'is_tv': finalIsTV ? 1 : 0,
       'rating': rating,
       'genre_ids': jsonEncode(finalGenreIds),
-      'created_at': now,
+      'created_at': createdAt,
       'updated_at': now,
       'deleted': delVal,
-      'title': movie?.title ?? '',
-      'poster_path': movie?.posterPath,
-      'backdrop_path': movie?.backdropPath,
-      'overview': movie?.overview ?? '',
-      'vote_average': movie?.voteAverage ?? 0.0,
-      'release_date': movie?.releaseDate,
-      'popularity': movie?.popularity ?? 0.0,
-      'comment': comment,
-      'is_spoiler': isSpoiler ?? 0,
-      'is_private': isPrivate ?? 0,
+      'title': movie?.title ?? (existing?['title'] as String? ?? ''),
+      'poster_path': movie?.posterPath ?? existing?['poster_path'],
+      'backdrop_path': movie?.backdropPath ?? existing?['backdrop_path'],
+      'overview': movie?.overview ?? (existing?['overview'] as String? ?? ''),
+      'vote_average':
+          movie?.voteAverage ?? (existing?['vote_average'] as num? ?? 0.0),
+      'release_date': movie?.releaseDate ?? existing?['release_date'],
+      'popularity':
+          movie?.popularity ?? (existing?['popularity'] as num? ?? 0.0),
+      'comment': finalComment,
+      'is_spoiler': finalIsSpoiler,
+      'is_private': finalIsPrivate,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

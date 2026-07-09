@@ -26,6 +26,7 @@ import '../widgets/auth_conflict_dialog.dart';
 import '../services/app_config.dart';
 import 'profile/widgets/change_password_sheet.dart';
 import 'profile/widgets/unlink_google_sheet.dart';
+import 'profile/widgets/blocked_users_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -1291,6 +1292,82 @@ class ProfileScreen extends ConsumerWidget {
               child: const _FamilyModeCard(),
             ),
           ),
+
+          if (isLoggedIn)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: context.c.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (_) =>
+                          BlockedUsersSheet(parentContext: context),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: c.isLight
+                          ? Border.all(color: c.border, width: 1)
+                          : null,
+                      boxShadow: c.cardShadow,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.red.withValues(alpha: 0.12),
+                          ),
+                          child: Icon(
+                            Icons.block_rounded,
+                            color: c.red,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tr?.get('blocked_users_title') ??
+                                    'Engellenen Kullanıcılar',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                tr?.get('blocked_users_subtitle') ??
+                                    'Yorumlarını ve aktivitelerini gizlediğin kişiler',
+                                style: TextStyle(color: c.dim, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: c.dim),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           if (isLoggedIn && auth.user?['google_sub'] == null)
             SliverToBoxAdapter(

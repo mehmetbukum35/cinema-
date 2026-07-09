@@ -271,6 +271,16 @@ class AppLocalizations {
       'review_block_confirm_msg':
           'You will no longer see their reviews or activity, and any friendship will be removed.',
       'review_blocked': 'User blocked',
+      'blocked_users_title': 'Blocked Users',
+      'blocked_users_subtitle':
+          'People whose reviews and activity you have hidden',
+      'blocked_users_empty': 'You have not blocked anyone.',
+      'blocked_users_unblock': 'Unblock',
+      'blocked_users_unblock_confirm_title': 'Remove block?',
+      'blocked_users_unblock_confirm_msg':
+          '{} will be unblocked and their reviews may appear again.',
+      'blocked_users_unblocked': 'User unblocked',
+      'blocked_users_load_error': 'Could not load blocked users.',
       'review_delete': 'Delete review',
       'review_delete_confirm': 'Delete this review? Your rating will be kept.',
       'review_deleted': 'Review deleted',
@@ -692,6 +702,7 @@ class AppLocalizations {
           'You have a {}% movie taste match with this friend.',
       'active_count_label': ' ({} Active)',
       'sync_retry': 'Retry',
+      'retry': 'Try again',
       'splash_tagline': ' | What to Watch?',
       'web_profile': 'Web Profile',
       'social_customize_desc':
@@ -955,6 +966,16 @@ class AppLocalizations {
       'review_block_confirm_msg':
           'Yorumlarını ve aktivitesini artık görmezsin; varsa arkadaşlık da kaldırılır.',
       'review_blocked': 'Kullanıcı engellendi',
+      'blocked_users_title': 'Engellenen Kullanıcılar',
+      'blocked_users_subtitle':
+          'Yorumlarını ve aktivitelerini gizlediğin kişiler',
+      'blocked_users_empty': 'Engellediğin kullanıcı yok.',
+      'blocked_users_unblock': 'Engeli Kaldır',
+      'blocked_users_unblock_confirm_title': 'Engel kaldırılsın mı?',
+      'blocked_users_unblock_confirm_msg':
+          '{} kullanıcısının engeli kaldırılacak ve yorumları tekrar görünebilir.',
+      'blocked_users_unblocked': 'Engel kaldırıldı',
+      'blocked_users_load_error': 'Engellenenler yüklenemedi.',
       'review_delete': 'Yorumu sil',
       'review_delete_confirm': 'Bu yorum silinsin mi? Puanın korunacak.',
       'review_deleted': 'Yorum silindi',
@@ -1366,6 +1387,7 @@ class AppLocalizations {
       'sync_error_message':
           'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
       'sync_retry': 'Tekrar Dene',
+      'retry': 'Tekrar dene',
       'splash_tagline': ' | Ne İzlesem?',
       'web_profile': 'Web Profili',
       'social_customize_desc':

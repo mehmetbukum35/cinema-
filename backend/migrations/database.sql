@@ -92,6 +92,7 @@ CREATE TABLE `ratings` (
   `comment` text DEFAULT NULL,
   `is_spoiler` tinyint(1) NOT NULL DEFAULT 0,
   `is_private` tinyint(1) NOT NULL DEFAULT 0,
+  `is_hidden` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0
@@ -142,6 +143,34 @@ CREATE TABLE `search_history` (
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tablo için tablo yapısı `review_reports`
+--
+
+CREATE TABLE `review_reports` (
+  `reporter_id` bigint(20) UNSIGNED NOT NULL,
+  `reported_user_id` bigint(20) UNSIGNED NOT NULL,
+  `movie_id` int(11) NOT NULL,
+  `is_tv` tinyint(1) NOT NULL,
+  `reason` varchar(40) NOT NULL DEFAULT 'other',
+  `status` varchar(20) NOT NULL DEFAULT 'open',
+  `created_at` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tablo için tablo yapısı `user_blocks`
+--
+
+CREATE TABLE `user_blocks` (
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `blocked_user_id` bigint(20) UNSIGNED NOT NULL,
+  `created_at` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -229,7 +258,8 @@ ALTER TABLE `password_resets`
 --
 ALTER TABLE `ratings`
   ADD PRIMARY KEY (`user_id`,`movie_id`,`is_tv`),
-  ADD KEY `idx_ratings_sync` (`user_id`,`updated_at`);
+  ADD KEY `idx_ratings_sync` (`user_id`,`updated_at`),
+  ADD KEY `idx_ratings_title` (`movie_id`,`is_tv`);
 
 --
 -- Tablo için indeksler `recommendations`
@@ -253,6 +283,21 @@ ALTER TABLE `refresh_tokens`
 ALTER TABLE `search_history`
   ADD PRIMARY KEY (`user_id`,`query`),
   ADD KEY `idx_sh_sync` (`user_id`,`updated_at`);
+
+--
+-- Tablo için indeksler `review_reports`
+--
+ALTER TABLE `review_reports`
+  ADD PRIMARY KEY (`reporter_id`,`reported_user_id`,`movie_id`,`is_tv`),
+  ADD KEY `idx_reports_review` (`reported_user_id`,`movie_id`,`is_tv`),
+  ADD KEY `idx_reports_status` (`status`,`created_at`);
+
+--
+-- Tablo için indeksler `user_blocks`
+--
+ALTER TABLE `user_blocks`
+  ADD PRIMARY KEY (`user_id`,`blocked_user_id`),
+  ADD KEY `idx_blocks_blocked` (`blocked_user_id`);
 
 --
 -- Tablo için indeksler `users`
@@ -334,6 +379,20 @@ ALTER TABLE `recommendations`
 --
 ALTER TABLE `refresh_tokens`
   ADD CONSTRAINT `fk_rt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Tablo kısıtlamaları `review_reports`
+--
+ALTER TABLE `review_reports`
+  ADD CONSTRAINT `fk_reports_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_reports_reported` FOREIGN KEY (`reported_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Tablo kısıtlamaları `user_blocks`
+--
+ALTER TABLE `user_blocks`
+  ADD CONSTRAINT `fk_blocks_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_blocks_blocked` FOREIGN KEY (`blocked_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Tablo kısıtlamaları `search_history`

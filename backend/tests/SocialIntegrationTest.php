@@ -702,6 +702,29 @@ class SocialIntegrationTest extends TestCase
         $this->assertCount(1, TestHelperRegistry::$lastBody['community']);
     }
 
+    public function testActivityFeedFiltersBlockedUsers(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $now = now_ms();
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment)
+             VALUES (2, 900, 0, 3, \'Feed Movie\', \'[]\', ?, 0, \'arkadas yorumu\')'
+        );
+        $st->execute([$now]);
+
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1);
+        $this->assertCount(1, TestHelperRegistry::$lastBody['activity']);
+
+        $this->db->prepare(
+            'INSERT INTO user_blocks (user_id, blocked_user_id, created_at) VALUES (1, 2, ?)'
+        )->execute([$now]);
+
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['activity']);
+    }
+
     public function testReportOwnReviewRejected(): void
     {
         $now = now_ms();

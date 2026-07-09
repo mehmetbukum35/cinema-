@@ -302,9 +302,9 @@ class PrefsService {
     bool? isTV,
     required int rating,
     List<int>? genreIds,
-    String? comment,
-    int? isSpoiler,
-    int? isPrivate,
+    Object? comment = DatabaseHelper.unset,
+    Object? isSpoiler = DatabaseHelper.unset,
+    Object? isPrivate = DatabaseHelper.unset,
   }) async {
     await DatabaseHelper().saveRating(
       movie: movie,

@@ -136,5 +136,25 @@ void main() {
       final rows = await helper.getCommentedRatings();
       expect(rows, isEmpty);
     });
+
+    test('saveRating without comment preserves existing comment on rating change', () async {
+      await helper.saveRating(
+        movie: movie(30, 'Swipe Test'),
+        rating: 3,
+        comment: 'Önce yorum yazdım',
+        isSpoiler: 1,
+        isPrivate: 1,
+      );
+
+      // Swipe akışı yalnızca puan gönderir — yorum alanları unset kalır.
+      await helper.saveRating(movie: movie(30, 'Swipe Test'), rating: 2);
+
+      final row = await helper.getRating(30, false);
+      expect(row, isNotNull);
+      expect(row!['rating'], 2);
+      expect(row['comment'], 'Önce yorum yazdım');
+      expect(row['is_spoiler'], 1);
+      expect(row['is_private'], 1);
+    });
   });
 }
