@@ -271,6 +271,29 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame('bu film berbat', $row['comment']);
     }
 
+    // ─── Yorum yasağı: susturulan kullanıcının yeni yorumu otomatik gizlenir ─
+    public function testReviewBannedUserCommentsAreAutoHidden(): void
+    {
+        $this->db->exec('UPDATE users SET review_banned = 1 WHERE id = 1');
+
+        $this->push(1, 'ratings', [
+            ['movie_id' => 12, 'is_tv' => 0, 'rating' => 2, 'title' => 'Banned',
+             'comment' => 'gayet masum bir yorum', 'updated_at' => 1000],
+        ]);
+        $row = $this->row('ratings', 'movie_id', 12);
+        $this->assertSame(1, (int) $row['is_hidden']);
+        // Yorum verisi korunur; yalnızca başkalarına gösterilmez.
+        $this->assertSame('gayet masum bir yorum', $row['comment']);
+
+        // Yasaksız kullanıcı etkilenmez.
+        $this->push(2, 'ratings', [
+            ['movie_id' => 12, 'is_tv' => 0, 'rating' => 2, 'title' => 'Free',
+             'comment' => 'gayet masum bir yorum', 'updated_at' => 1000],
+        ]);
+        $rowFree = $this->rowForUser('ratings', 2, 'movie_id', 12);
+        $this->assertSame(0, (int) $rowFree['is_hidden']);
+    }
+
     // ─── Moderatör gizlemesi, yorum değişmedikçe korunur ─────────────────────
     public function testModeratorHideSurvivesUnrelatedUpdate(): void
     {
@@ -324,6 +347,14 @@ class SyncIntegrationTest extends TestCase
 
     private function createSchema(): void
     {
+        // Sync::isReviewBanned kullanıcı tablosuna bakar (yorum yasağı).
+        $this->db->exec(
+            'CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                review_banned INTEGER NOT NULL DEFAULT 0
+            )'
+        );
+        $this->db->exec('INSERT INTO users (id, review_banned) VALUES (1, 0), (2, 0)');
         $this->db->exec(
             'CREATE TABLE ratings (
                 user_id INTEGER NOT NULL,

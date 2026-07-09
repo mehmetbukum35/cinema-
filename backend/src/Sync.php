@@ -40,6 +40,19 @@ class Sync
 
     public function __construct(private PDO $db) {}
 
+    /** Push başına kullanıcı yasağı bir kez okunur (upsert kayıt başına çağrılır). */
+    private array $reviewBanCache = [];
+
+    private function isReviewBanned(int $uid): bool
+    {
+        if (!array_key_exists($uid, $this->reviewBanCache)) {
+            $st = $this->db->prepare('SELECT review_banned FROM users WHERE id = ?');
+            $st->execute([$uid]);
+            $this->reviewBanCache[$uid] = ((int) $st->fetchColumn()) === 1;
+        }
+        return $this->reviewBanCache[$uid];
+    }
+
     // ─── GET /sync?since=<unix_ms> ──────────────────────────────────────────
     // since'ten sonra değişen tüm kayıtları (silmeler dahil) döner.
     public function pull(int $uid, int $since): void
@@ -213,8 +226,12 @@ class Sync
             $newComment = $values['comment'] ?? null;
             $oldComment = $existing !== false ? ($existing['comment'] ?? null) : null;
             if ($existing === false || $newComment !== $oldComment) {
+                // Küfür filtresi VEYA yorum yasağı (susturulmuş kullanıcı):
+                // ikisi de yeni/değişen yorumu başkalarından gizler.
                 $extraCols['is_hidden'] =
-                    ($newComment !== null && comment_flagged((string) $newComment)) ? 1 : 0;
+                    ($newComment !== null &&
+                        (comment_flagged((string) $newComment) || $this->isReviewBanned($uid)))
+                    ? 1 : 0;
             }
         }
         $values = array_merge($values, $extraCols);

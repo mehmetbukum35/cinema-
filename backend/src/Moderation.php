@@ -61,15 +61,27 @@ class Moderation
         $stHidden->execute();
         $hidden = $stHidden->fetchAll();
 
+        // Susturulan kullanıcılar: yasağı kaldırma buradan yapılır.
+        $stBanned = $this->db->prepare(
+            "SELECT id, username, display_name FROM users
+              WHERE review_banned = 1 ORDER BY id ASC LIMIT 200"
+        );
+        $stBanned->execute();
+        $banned = $stBanned->fetchAll();
+
         header('Content-Type: text/html; charset=utf-8');
         header('X-Robots-Tag: noindex, nofollow');
-        echo $this->html($key, $open, $hidden);
+        echo $this->html($key, $open, $hidden, $banned);
         exit;
     }
 
     // ─── POST /admin/moderation/action ───────────────────────────────────────
-    // action: hide (gizle + şikayetleri kapat) | restore (geri aç + şikayetleri
-    // reddet) | dismiss (yorumu görünür bırak, şikayetleri kapat).
+    // Yorum bazlı: hide (gizle + şikayetleri kapat) | restore (geri aç +
+    // şikayetleri reddet) | dismiss (görünür bırak, şikayetleri kapat).
+    // Kullanıcı bazlı: ban_user (sustur: tüm yorumları gizle + gelecektekiler
+    // sync'te otomatik gizlenir + açık şikayetleri kapat) | unban_user
+    // (susturmayı kaldır; eski yorumlar gizli kalır, tek tek geri açılır —
+    // yasak süresince yazılmış içerik gözden geçirilmeden görünür olmasın).
     public function handleAction(): void
     {
         $key      = $this->requireKey();
@@ -78,7 +90,36 @@ class Moderation
         $movieId  = (int) ($_POST['movie_id'] ?? 0);
         $isTV     = ((int) ($_POST['is_tv'] ?? 0)) === 1 ? 1 : 0;
 
-        if ($userId <= 0 || $movieId <= 0 || !in_array($action, ['hide', 'restore', 'dismiss'], true)) {
+        $reviewActions = ['hide', 'restore', 'dismiss'];
+        $userActions   = ['ban_user', 'unban_user'];
+
+        if ($userId <= 0 || !in_array($action, array_merge($reviewActions, $userActions), true)) {
+            fail(422, 'Geçersiz istek.');
+        }
+
+        if (in_array($action, $userActions, true)) {
+            $up = $this->db->prepare('UPDATE users SET review_banned = ? WHERE id = ?');
+            $up->execute([$action === 'ban_user' ? 1 : 0, $userId]);
+
+            if ($action === 'ban_user') {
+                $hideAll = $this->db->prepare(
+                    "UPDATE ratings SET is_hidden = 1
+                      WHERE user_id = ? AND comment IS NOT NULL AND comment <> ''"
+                );
+                $hideAll->execute([$userId]);
+
+                $closeReports = $this->db->prepare(
+                    "UPDATE review_reports SET status = 'resolved'
+                      WHERE reported_user_id = ? AND status = 'open'"
+                );
+                $closeReports->execute([$userId]);
+            }
+
+            header('Location: moderation?key=' . rawurlencode($key), true, 302);
+            exit;
+        }
+
+        if ($movieId <= 0) {
             fail(422, 'Geçersiz istek.');
         }
 
@@ -100,7 +141,7 @@ class Moderation
         exit;
     }
 
-    private function html(string $key, array $open, array $hidden): string
+    private function html(string $key, array $open, array $hidden, array $banned): string
     {
         $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
         $keyH = $e($key);
@@ -135,13 +176,32 @@ class Moderation
             : implode('', array_map(fn($r) => $card($r, [
                 ['hide', 'Gizle', 'danger'],
                 ['dismiss', 'Şikayeti Kapat (görünür kalsın)', 'plain'],
+                ['ban_user', 'Kullanıcıyı Sustur', 'danger'],
             ]), $open));
 
         $hiddenHtml = $hidden === []
             ? '<p class="empty">Gizlenmiş yorum yok.</p>'
             : implode('', array_map(fn($r) => $card($r, [
                 ['restore', 'Geri Aç', 'ok'],
+                ['ban_user', 'Kullanıcıyı Sustur', 'danger'],
             ]), $hidden));
+
+        // Susturulanlar: yalın satır — kullanıcı adı + yasağı kaldır.
+        $bannedHtml = $banned === []
+            ? '<p class="empty">Susturulmuş kullanıcı yok.</p>'
+            : implode('', array_map(function (array $u) use ($e, $keyH): string {
+                $name = trim((string) ($u['display_name'] ?? '')) !== ''
+                    ? $u['display_name'] : '@' . ($u['username'] ?? '?');
+                return '<div class="card"><div class="head"><b>' . $e($name) . '</b>'
+                    . ' <span class="meta">#' . (int) $u['id'] . '</span></div>'
+                    . '<div class="meta">Yeni yorumları otomatik gizleniyor. Yasağı kaldırmak eski'
+                    . ' yorumları geri açmaz; onları "Gizlenen Yorumlar"dan tek tek geri açın.</div>'
+                    . '<div class="actions"><form method="post" action="moderation/action">'
+                    . '<input type="hidden" name="key" value="' . $keyH . '">'
+                    . '<input type="hidden" name="user_id" value="' . (int) $u['id'] . '">'
+                    . '<input type="hidden" name="action" value="unban_user">'
+                    . '<button class="ok">Susturmayı Kaldır</button></form></div></div>';
+            }, $banned));
 
         return '<!doctype html><html lang="tr"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -159,6 +219,7 @@ class Moderation
             . '<h1>Cinema+ Yorum Moderasyonu</h1>'
             . '<h2>Açık Şikayetler (' . count($open) . ')</h2>' . $openHtml
             . '<h2>Gizlenen Yorumlar (' . count($hidden) . ')</h2>' . $hiddenHtml
+            . '<h2>Susturulan Kullanıcılar (' . count($banned) . ')</h2>' . $bannedHtml
             . '</body></html>';
     }
 }

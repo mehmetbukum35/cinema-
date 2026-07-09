@@ -478,9 +478,13 @@ isteği de gönderemez — istek, engel bilgisini sızdırmamak için "Kullanıc
 Engellenen kullanıcıların listesi.
 
 ### GET `/admin/moderation?key=<admin_key>`
-Moderasyon paneli (HTML): açık şikayetler ve gizlenen yorumlar; gizle / geri aç /
-şikayeti kapat aksiyonları (`POST /admin/moderation/action`). Config'de `admin_key`
-boşsa uç 404 döner.
+Moderasyon paneli (HTML): açık şikayetler, gizlenen yorumlar ve susturulan
+kullanıcılar. Aksiyonlar (`POST /admin/moderation/action`): yorum bazlı gizle /
+geri aç / şikayeti kapat; kullanıcı bazlı **sustur** (`ban_user`:
+`users.review_banned = 1` — mevcut tüm yorumları gizler, sync'e gelen yeni
+yorumlar da otomatik gizlenir, açık şikayetleri kapatır) ve **susturmayı kaldır**
+(`unban_user`; eski yorumlar gizli kalır, tek tek geri açılır). Config'de
+`admin_key` boşsa uç 404 döner.
 
 ---
 

@@ -136,13 +136,17 @@ class ReviewItem extends StatelessWidget {
                       ),
                     ),
                   if (hasMenu)
+                    // 40x40 opak vuruş alanı: ikon küçük görünse de parmak
+                    // hedefi erişilebilirlik sınırında (min ~40dp) kalır.
                     GestureDetector(
                       onTap: () => _showModerationMenu(context),
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 6),
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
                         child: Icon(
                           Icons.more_vert_rounded,
-                          size: 16,
+                          size: 20,
                           color: c.dim,
                         ),
                       ),

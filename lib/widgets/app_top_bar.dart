@@ -12,6 +12,7 @@ import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../screens/movie_detail_sheet.dart';
+import '../screens/my_reviews_screen.dart';
 import '../screens/social_screen.dart';
 import 'about_sheet.dart';
 
@@ -469,6 +470,19 @@ class _AppMenu extends ConsumerWidget {
                       onTap: () {
                         _close(context);
                         onOpenProfile?.call();
+                      },
+                    ),
+                    _row(
+                      c,
+                      icon: Icons.rate_review_rounded,
+                      label: tr?.get('my_reviews_title') ?? 'Yorumlarım',
+                      onTap: () {
+                        _close(context);
+                        Navigator.of(parentContext).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MyReviewsScreen(),
+                          ),
+                        );
                       },
                     ),
                     if (auth.isAuthenticated &&
