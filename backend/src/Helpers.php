@@ -124,31 +124,173 @@ function sanitize_comment(?string $c): ?string
     return function_exists('mb_substr') ? mb_substr($c, 0, 280, 'UTF-8') : substr($c, 0, 280);
 }
 
+/** Leetspeak / rakam taklidi → harf (küfür normalizasyonu). */
+function profanity_decode_leet(string $s): string
+{
+    static $map = [
+        '@' => 'a', '4' => 'a', '8' => 'b', '3' => 'e', '6' => 'g',
+        '1' => 'i', '!' => 'i', '|' => 'i', '0' => 'o', '5' => 's',
+        '$' => 's', '7' => 't', '2' => 'z',
+    ];
+    return strtr($s, $map);
+}
+
+/** Tekrarlı karakterleri söker: amkkk → amk. */
+function profanity_collapse_repeats(string $s): string
+{
+    return preg_replace('/(.)\1{2,}/u', '$1', $s) ?? $s;
+}
+
+/** Türkçe aksanları ASCII'ye indirger (kasıtlı yazım hataları için). */
+function profanity_fold_tr(string $s): string
+{
+    static $map = [
+        'ş' => 's', 'ç' => 'c', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ü' => 'u',
+        'â' => 'a', 'î' => 'i', 'û' => 'u',
+    ];
+    return strtr($s, $map);
+}
+
+/** Ayraç/boşluk temizlenmiş kompakt akış (a.m.k → amk). */
+function profanity_compact(string $s): string
+{
+    $s = preg_replace('/[\s\.\-_\*\+,;:!?#@\/\\\|~`\'"(){}\[\]<>]+/u', '', $s) ?? $s;
+    return preg_replace('/[^\p{L}\p{N}]/u', '', $s) ?? $s;
+}
+
 /**
- * Basit TR+EN küfür/spam tespiti (kelime sınırı ile; "klasik" gibi masum
- * kelimeler yanlış pozitif üretmez). Kusursuz değildir — amaç bariz vakaları
- * otomatik gizleyip (is_hidden=1) gerisini şikayet mekanizmasına bırakmaktır.
- * Yorum kullanıcının kendi cihazında görünmeye devam eder; yalnızca
- * başkalarına gösterilmez.
+ * Küfür kontrolü için metin varyantları: küçük harf, leet, tekrar sökme,
+ * aksan indirgeme ve ayraçsız kompakt form.
+ *
+ * @return list<string>
+ */
+function profanity_variants(string $text): array
+{
+    $base = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+    $seen = [];
+    $out  = [];
+
+    $add = static function (string $v) use (&$seen, &$out): void {
+        if ($v !== '' && !isset($seen[$v])) {
+            $seen[$v] = true;
+            $out[]    = $v;
+        }
+    };
+
+    $leet     = profanity_decode_leet($base);
+    $folded   = profanity_fold_tr($base);
+    $leetFold = profanity_fold_tr($leet);
+
+    foreach ([$base, $leet, $folded, $leetFold] as $v) {
+        $add($v);
+        $add(profanity_collapse_repeats($v));
+    }
+
+    foreach ($out as $v) {
+        $add(profanity_compact($v));
+    }
+
+    return $out;
+}
+
+/** Kelime sınırı ile tam eşleşme (tamam içindeki am gibi yanlış pozitifleri önler). */
+function profanity_has_word(string $haystack, string $word): bool
+{
+    return (bool) preg_match(
+        '/(?<![\p{L}\p{N}])' . preg_quote($word, '/') . '(?![\p{L}\p{N}])/u',
+        $haystack
+    );
+}
+
+/**
+ * TR+EN küfür/spam tespiti: genişletilmiş kelime listesi, leetspeak, boşluk/ayraç
+ * ve tekrarlı karakter obfuscation'ına karşı normalizasyon. Kusursuz değildir —
+ * amaç bariz vakaları otomatik gizleyip (is_hidden=1) gerisini şikayet mekanizmasına
+ * bırakmaktır. Yorum kullanıcının kendi cihazında görünmeye devam eder.
  */
 function comment_flagged(string $c): bool
 {
-    static $words = [
-        // TR
-        'amk', 'aq', 'orospu', 'oç', 'piç', 'sik', 'sikeyim', 'sikerim',
-        'yarrak', 'amcık', 'amına', 'ibne', 'pezevenk', 'kahpe', 'gavat',
-        'yavşak', 'şerefsiz',
-        // EN
-        'fuck', 'shit', 'bitch', 'asshole', 'cunt', 'faggot', 'nigger',
-        // spam/reklam
-        'bahis', 'casino', 'bet365', 'kumarhane', 'porno', 'escort', 'viagra',
-    ];
-    $lc = function_exists('mb_strtolower') ? mb_strtolower($c, 'UTF-8') : strtolower($c);
-    foreach ($words as $w) {
-        if (preg_match('/(?<![\p{L}\p{N}])' . preg_quote($w, '/') . '(?![\p{L}\p{N}])/u', $lc)) {
-            return true;
+    static $boundaryWords = null;
+    static $compactWords = null;
+    static $patterns = null;
+
+    if ($boundaryWords === null) {
+        $boundaryWords = [
+            // TR — bariz küfür
+            'amk', 'amq', 'amına', 'amcik', 'amcık', 'amini', 'aminakoyim', 'aminakoyayim',
+            'aq', 'orospu', 'orosbu', 'orospucocugu', 'orospucocuğu', 'oç', 'oc',
+            'piç', 'pic', 'pıç', 'sik', 'sikerim', 'sikeyim', 'sikiyim', 'siktim',
+            'sikik', 'siktiğim', 'siktigim', 'sikmiş', 'sikmis', 'sokayım', 'sokayim',
+            'yarrak', 'yarak', 'göt', 'gotun', 'götün', 'gotune', 'götüne', 'götveren',
+            'ibne', 'ibine', 'pezevenk', 'kahpe', 'gavat', 'yavşak', 'yavsak',
+            'şerefsiz', 'serefsiz', 'puşt', 'pust', 'dingil', 'dalyarak', 'malafat',
+            'ananı', 'anani', 'anasını', 'anasini', 'sürtük', 'surtuk', 'kerhane',
+            'bok', 'boktan', 'sikimsonik', 'godoş', 'godos',
+            // EN
+            'fuck', 'fucking', 'fucker', 'fucked', 'fuk', 'fck', 'shit', 'sh1t',
+            'bitch', 'b1tch', 'asshole', 'cunt', 'faggot', 'fag', 'nigger', 'nigga',
+            'dick', 'd1ck', 'pussy', 'whore', 'bastard', 'motherfucker', 'wtf',
+            // spam/reklam
+            'bahis', 'casino', 'bet365', 'kumarhane', 'porno', 'escort', 'viagra',
+        ];
+
+        // Kompakt akışta yalnızca ayırt edici uzun formlar (topic→pic, boks→bok yanlış pozitifi yok).
+        $compactWords = [
+            'amk', 'amq', 'orospu', 'orosbu', 'yarrak', 'pezevenk', 'kahpe', 'gavat',
+            'dalyarak', 'malafat', 'sikimsonik', 'godos', 'aminakoyim', 'aminakoyayim',
+            'orospucocugu', 'motherfucker', 'asshole', 'kumarhane', 'bet365', 'viagra',
+        ];
+
+        $patterns = [
+            // TR — ayraç/boşluk obfuscation
+            '/(?<![\p{L}\p{N}])a[\W_]*m[\W_]*k(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])a[\W_]*q(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])o[\W_]*[çc](?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])p[\W_]*[iı][\W_]*[çc](?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])s[\W_]*i[\W_]*k(?:erim|iyim|tim|tir|ik|mis|miş|iyor)?(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])y[\W_]*a[\W_]*r[\W_]*a[\W_]*k(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])g[oö0][\W_]*t(?:[uü]n|[uü]ne|veren)(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])or[\W_]*o[\W_]*s[\W_]*p[\W_]*u(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])a[\W_]*m[\W_]*[cç][\W_]*[iı][\W_]*k(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])a[\W_]*m[\W_]*[iı][\W_]*n[\W_]*a(?![\p{L}\p{N}])/iu',
+            // EN — ayraç obfuscation
+            '/(?<![\p{L}\p{N}])f[\W_]*u[\W_]*c[\W_]*k(?:ing|er|ed)?(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])s[\W_]*h[\W_]*i[\W_]*t(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])b[\W_]*i[\W_]*t[\W_]*c[\W_]*h(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])a[\W_]*s[\W_]*s[\W_]*h[\W_]*o[\W_]*l[\W_]*e(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])c[\W_]*u[\W_]*n[\W_]*t(?![\p{L}\p{N}])/iu',
+            '/(?<![\p{L}\p{N}])n[\W_]*i[\W_]*g[\W_]*g[\W_]*[ae]r?(?![\p{L}\p{N}])/iu',
+        ];
+    }
+
+    $variants = profanity_variants($c);
+
+    foreach ($variants as $text) {
+        foreach ($boundaryWords as $w) {
+            if (profanity_has_word($text, $w)) {
+                return true;
+            }
+        }
+        foreach ($patterns as $p) {
+            if (preg_match($p, $text)) {
+                return true;
+            }
         }
     }
+
+    // Kompakt varyantlarda yalnızca ayırt edici uzun/kök kelimeler.
+    foreach ($variants as $text) {
+        $compact = profanity_compact($text);
+        if ($compact === '') {
+            continue;
+        }
+        foreach ($compactWords as $w) {
+            if (str_contains($compact, $w)) {
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 
