@@ -656,6 +656,11 @@ class AppLocalizations {
       'error_occurred_msg': 'Error: {}',
       'share_profile_text':
           'Follow me on What to Watch! Check out my watchlist and favorites here: {}',
+      'profile_share': 'Share',
+      'profile_share_message':
+          'Follow me on What to Watch! Check out my watchlist and favorites here: {}',
+      'profile_share_no_username':
+          'Set a username in your profile to share your web profile.',
       'taste_score_match': '{}% match',
       'remove_friend_confirm_msg':
           'Are you sure you want to remove {} from friends?',
@@ -1301,6 +1306,11 @@ class AppLocalizations {
       'error_occurred_msg': 'Hata oluştu: {}',
       'share_profile_text':
           'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',
+      'profile_share': 'Paylaş',
+      'profile_share_message':
+          'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',
+      'profile_share_no_username':
+          'Profilinizi paylaşmak için profil ayarlarından kullanıcı adı belirleyin.',
       'taste_score_match': '%{} uyum',
       'remove_friend_confirm_msg':
           '{} arkadaş listenizden çıkarılacak. Emin misiniz?',

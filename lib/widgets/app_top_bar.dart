@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
@@ -119,6 +120,39 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
     return source.isEmpty ? '?' : source[0].toUpperCase();
   }
 
+  Future<void> _shareProfile() async {
+    HapticFeedback.lightImpact();
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+
+    final tr = AppLocalizations.of(context);
+    final username = (auth.user?['username'] as String?)?.trim();
+    if (username == null || username.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr?.get('profile_share_no_username') ??
+                'Profilinizi paylaşmak için kullanıcı adı belirleyin.',
+          ),
+        ),
+      );
+      widget.onOpenProfile?.call();
+      return;
+    }
+
+    final locale = ref.read(localeProvider);
+    final isTr = locale.languageCode == 'tr';
+    final profileUrl = ApiService.webProfileUrl(
+      username,
+      lang: isTr ? 'tr' : 'en',
+    );
+    final message =
+        tr?.get('profile_share_message').replaceAll('{}', profileUrl) ??
+        'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl';
+    await Share.share(message);
+  }
+
   void _openMenu() {
     HapticFeedback.lightImpact();
     showGeneralDialog(
@@ -197,6 +231,18 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
               padding: EdgeInsets.zero,
             ),
           ),
+          if (auth.isAuthenticated)
+            Semantics(
+              label: tr?.get('profile_share') ?? 'Paylaş',
+              button: true,
+              child: IconButton(
+                icon: Icon(Icons.share_rounded, color: c.dim, size: 22),
+                onPressed: _shareProfile,
+                tooltip: tr?.get('profile_share') ?? 'Paylaş',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                padding: EdgeInsets.zero,
+              ),
+            ),
           Semantics(
             label: tr?.get('menu_account') ?? 'Menü',
             button: true,
