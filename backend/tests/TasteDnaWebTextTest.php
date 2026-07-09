@@ -25,7 +25,7 @@ class TasteDnaWebTextTest extends TestCase
             'depth' => 'deep_digger',
             'critic' => 'tough',
             'harika_share' => 0.1,
-        ]);
+        ], 'tr');
 
         $this->assertNotNull($view);
         $this->assertSame('Karanlık Anlatıcı', $view['archetype']);
@@ -205,5 +205,67 @@ class TasteDnaWebTextTest extends TestCase
         $loadedMap = $method->invoke(null);
 
         $this->assertEquals($jsonMap, $loadedMap, 'TasteDnaWebText::getThemesTr() must load the JSON correctly.');
+    }
+
+    public function testBuildsEnglishArchetypeThemesAndGenres(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'dark_chronicler',
+            'total_rated' => 20,
+            'themes' => ['revenge', 'dystopia'],
+            'top_genres' => [27, 53],
+            'era' => 'modern',
+            'modern_share' => 0.75,
+            'depth' => 'deep_digger',
+            'critic' => 'tough',
+            'harika_share' => 0.1,
+        ], 'en');
+
+        $this->assertNotNull($view);
+        $this->assertSame('The Dark Chronicler', $view['archetype']);
+        $this->assertSame(['Revenge', 'Dystopia'], $view['themes']);
+        $this->assertSame(['Horror', 'Thriller'], $view['genres']);
+    }
+
+    public function testEnglishSignalsUsePercentSuffix(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'era' => 'modern',
+            'modern_share' => 0.75,
+            'critic' => 'tough',
+            'harika_share' => 0.1,
+        ], 'en');
+
+        $joined = implode(' | ', $view['signals']);
+        $this->assertStringContainsString('75% of your loves', $joined);
+        $this->assertStringContainsString('10% of your ratings', $joined);
+        $this->assertStringNotContainsString("%75", $joined);
+    }
+
+    public function testEnglishAccuracyText(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'joy_chaser',
+            'total_rated' => 20,
+            'accuracy' => 0.78,
+            'accuracy_sample' => 20,
+        ], 'en');
+
+        $this->assertStringContainsString('Taste match rate in recent recommendations: 78%', $view['accuracy']);
+        $this->assertStringContainsString('across 20 picks', $view['accuracy']);
+    }
+
+    public function testEnglishSecondaryArchetype(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'dark_chronicler',
+            'secondary_archetype' => 'world_builder',
+            'total_rated' => 20,
+        ], 'en');
+
+        $this->assertSame('The Dark Chronicler + The World Explorer', $view['archetype']);
+        $this->assertStringContainsString('Extraordinary universes', $view['essence']);
     }
 }

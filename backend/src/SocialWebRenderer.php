@@ -9,9 +9,9 @@ class SocialWebRenderer
 
     public function renderPublicWebProfile(string $username): void
     {
-        // Sayfa dili: uygulama, kendi diline göre ?lang=en|tr ekler.
-        // Varsayılan Türkçe (eski linkler kırılmasın).
-        $lang = (isset($_GET['lang']) && $_GET['lang'] === 'en') ? 'en' : 'tr';
+        // Sayfa dili: uygulama ?lang=en|tr ile açık seçer; doğrudan tarayıcı
+        // ziyaretinde Accept-Language (tr → TR, aksi halde EN).
+        $lang = self::resolveWebProfileLang();
         $t = self::webStrings($lang);
 
         // Kullanıcıyı bul
@@ -71,7 +71,7 @@ class SocialWebRenderer
         $dna = null;
         if (!empty($user['taste_dna'])) {
             $decoded = json_decode((string) $user['taste_dna'], true);
-            $dna = TasteDnaWebText::build(is_array($decoded) ? $decoded : null);
+            $dna = TasteDnaWebText::build(is_array($decoded) ? $decoded : null, $lang);
         }
 
         $templatePath = __DIR__ . '/templates/profile.template.php';
@@ -83,9 +83,34 @@ class SocialWebRenderer
         exit;
     }
 
-    /// Web profil sayfasının arayüz metinleri. DNA içeriği (arketip, özet vb.)
-    /// uygulamadan yayınlandığı dilde saklanır; burada yalnızca sayfa
-    /// iskeletinin metinleri çevrilir.
+    /** ?lang= veya Accept-Language ile web profil dili (en|tr). */
+    public static function resolveWebProfileLang(): string
+    {
+        if (isset($_GET['lang'])) {
+            $q = (string) $_GET['lang'];
+            if ($q === 'en' || $q === 'tr') {
+                return $q;
+            }
+        }
+        return self::langFromAcceptLanguage($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '');
+    }
+
+    /** Accept-Language: yalnızca tr → Türkçe; diğer tüm durumlar İngilizce. */
+    public static function langFromAcceptLanguage(string $header): string
+    {
+        if ($header === '') {
+            return 'en';
+        }
+        foreach (explode(',', $header) as $part) {
+            $tag = strtolower(trim(explode(';', $part)[0]));
+            if ($tag === 'tr' || str_starts_with($tag, 'tr-')) {
+                return 'tr';
+            }
+        }
+        return 'en';
+    }
+
+    /// Web profil sayfasının arayüz metinleri.
     private static function webStrings(string $lang): array
     {
         if ($lang === 'en') {

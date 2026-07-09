@@ -18,13 +18,9 @@ class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
 
-  /// Web profil URL'i. Sayfa varsayılan Türkçe render edilir; uygulama
-  /// İngilizce kullanılıyorsa ?lang=en eklenir ki ziyaretçi aynı dille
-  /// karşılansın.
+  /// Web profil URL'i. Uygulama diline göre ?lang=en|tr eklenir.
   static String webProfileUrl(String username, {String lang = 'tr'}) =>
-      lang == 'tr'
-      ? '$webProfileBaseUrl/$username'
-      : '$webProfileBaseUrl/$username?lang=$lang';
+      '$webProfileBaseUrl/$username?lang=$lang';
   final http.Client _client;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
