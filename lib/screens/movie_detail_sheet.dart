@@ -14,7 +14,6 @@ import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
-import 'results_screen.dart';
 import 'person_screen.dart';
 import '../models/review.dart';
 import '../providers/watchlist_provider.dart';
@@ -513,8 +512,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                             const SizedBox(height: 10),
                             _similarRow(context),
                           ],
-                          const SizedBox(height: 16),
-                          _discoverButton(context, movie),
                           const SizedBox(height: 8),
                           SizedBox(
                             height: MediaQuery.of(context).viewInsets.bottom,
@@ -1053,47 +1050,6 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _discoverButton(BuildContext context, Movie movie) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultsScreen(
-              genreStr: movie.genreIds.isNotEmpty
-                  ? movie.genreIds.first.toString()
-                  : null,
-              includeMovies: !movie.isTV,
-              includeTv: movie.isTV,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.red, Color(0xFFB83050)],
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          AppLocalizations.of(context)?.get('recommend_similar') ??
-              'Recommend Similar',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ),
     );
   }

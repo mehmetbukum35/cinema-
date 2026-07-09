@@ -523,6 +523,11 @@ class _AppMenu extends ConsumerWidget {
     required VoidCallback onLeft,
     required VoidCallback onRight,
   }) {
+    final selectedBg = c.isLight
+        ? c.gold.withValues(alpha: 0.24)
+        : c.gold.withValues(alpha: 0.18);
+    final selectedBorder = c.gold.withValues(alpha: c.isLight ? 0.72 : 0.58);
+
     Widget seg(String label, bool on, VoidCallback onTap) => GestureDetector(
       onTap: () {
         if (!on) {
@@ -530,20 +535,25 @@ class _AppMenu extends ConsumerWidget {
           onTap();
         }
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: on
-              ? (c.isLight ? c.gold.withValues(alpha: 0.15) : c.cardHi)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: on ? selectedBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: on ? selectedBorder : Colors.transparent,
+            width: 1,
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: on ? c.gold : c.textFaint,
             fontSize: 10.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: on ? FontWeight.w800 : FontWeight.w500,
+            letterSpacing: on ? 0.25 : 0,
           ),
         ),
       ),
@@ -551,7 +561,7 @@ class _AppMenu extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: c.isLight ? c.bg : c.bg,
+        color: c.isLight ? c.bgWarm : c.card,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: c.border, width: 1),
       ),
