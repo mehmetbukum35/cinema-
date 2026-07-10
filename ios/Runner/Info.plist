@@ -65,6 +65,8 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 	</array>
+	<!-- Google Sign-In (iOS): şema, iOS client ID'nin TERSİDİR
+	     (GoogleService-Info.plist > REVERSED_CLIENT_ID) — web client ID değil. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -72,9 +74,13 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.925394401867-pkgskofm1romudrtlhap7hauerbkvesm</string>
+				<string>com.googleusercontent.apps.925394401867-fjftcvlo842dgvqgqemau5bgdmla4qv9</string>
 			</array>
 		</dict>
 	</array>
+	<!-- google_sign_in v7 iOS client ID'yi buradan okur (GoogleService-Info.plist
+	     Xcode hedefine ekli olmadığı için zorunlu). -->
+	<key>GIDClientID</key>
+	<string>925394401867-fjftcvlo842dgvqgqemau5bgdmla4qv9.apps.googleusercontent.com</string>
 </dict>
 </plist>
