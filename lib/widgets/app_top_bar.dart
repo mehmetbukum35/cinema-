@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../utils/share_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
@@ -121,7 +121,7 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
     return source.isEmpty ? '?' : source[0].toUpperCase();
   }
 
-  Future<void> _shareProfile() async {
+  Future<void> _shareProfile(BuildContext anchorContext) async {
     HapticFeedback.lightImpact();
     final auth = ref.read(authProvider);
     if (!auth.isAuthenticated) return;
@@ -151,7 +151,14 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
     final message =
         tr?.get('profile_share_message').replaceAll('{}', profileUrl) ??
         'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl';
-    await Share.share(message);
+
+    await shareMessage(
+      context: context,
+      anchorContext: anchorContext,
+      message: message,
+      failureMessage: tr?.get('profile_share_failed') ??
+          'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+    );
   }
 
   void _openMenu() {
@@ -233,15 +240,20 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
             ),
           ),
           if (auth.isAuthenticated)
-            Semantics(
-              label: tr?.get('profile_share') ?? 'Paylaş',
-              button: true,
-              child: IconButton(
-                icon: Icon(Icons.share_rounded, color: c.dim, size: 22),
-                onPressed: _shareProfile,
-                tooltip: tr?.get('profile_share') ?? 'Paylaş',
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                padding: EdgeInsets.zero,
+            Builder(
+              builder: (shareBtnContext) => Semantics(
+                label: tr?.get('profile_share') ?? 'Paylaş',
+                button: true,
+                child: IconButton(
+                  icon: Icon(Icons.share_rounded, color: c.dim, size: 22),
+                  onPressed: () => _shareProfile(shareBtnContext),
+                  tooltip: tr?.get('profile_share') ?? 'Paylaş',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  padding: EdgeInsets.zero,
+                ),
               ),
             ),
           Semantics(

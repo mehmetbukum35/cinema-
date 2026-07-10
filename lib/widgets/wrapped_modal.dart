@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import '../utils/share_helper.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
@@ -33,8 +34,10 @@ class _WrappedModalState extends State<WrappedModal> {
     super.dispose();
   }
 
-  Future<void> _shareRecap() async {
+  Future<void> _shareRecap(BuildContext anchorContext) async {
     final l10n = AppLocalizations.of(context);
+    final failureMessage = l10n?.get('profile_share_failed') ??
+        'Paylaşım açılamadı. Lütfen tekrar deneyin.';
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
 
@@ -69,6 +72,8 @@ class _WrappedModalState extends State<WrappedModal> {
             .replaceAll('{genres}', genresText)
             .replaceAll('{link_section}', linkSection);
 
+    final shareOrigin = sharePositionOriginFrom(anchorContext);
+
     try {
       final boundary =
           _shareCardKey.currentContext?.findRenderObject()
@@ -82,7 +87,14 @@ class _WrappedModalState extends State<WrappedModal> {
             mimeType: 'image/png',
             name: 'cinema_recap_$_currentYear.png',
           );
-          await Share.shareXFiles([png], text: shareText);
+          if (!mounted) return;
+          await shareFiles(
+            context: context,
+            sharePositionOrigin: shareOrigin,
+            files: [png],
+            text: shareText,
+            failureMessage: failureMessage,
+          );
           return;
         }
       }
@@ -90,7 +102,13 @@ class _WrappedModalState extends State<WrappedModal> {
       debugPrint('PNG recap share failed, falling back to text: $e\n$st');
     }
 
-    Share.share(shareText);
+    if (!mounted) return;
+    await shareMessage(
+      context: context,
+      sharePositionOrigin: shareOrigin,
+      message: shareText,
+      failureMessage: failureMessage,
+    );
   }
 
   @override
@@ -719,9 +737,10 @@ class _WrappedModalState extends State<WrappedModal> {
           ),
           const SizedBox(height: 40),
           // Share Button
-          SpringButton(
-            onTap: _shareRecap,
-            child: Container(
+          Builder(
+            builder: (shareBtnContext) => SpringButton(
+              onTap: () => _shareRecap(shareBtnContext),
+              child: Container(
               height: 52,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -758,6 +777,7 @@ class _WrappedModalState extends State<WrappedModal> {
                 ],
               ),
             ),
+          ),
           ),
         ],
       ),

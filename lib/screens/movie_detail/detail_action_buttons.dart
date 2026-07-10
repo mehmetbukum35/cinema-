@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../utils/share_helper.dart';
 import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
@@ -93,23 +93,29 @@ class DetailActionButtons extends StatelessWidget {
           child: Semantics(
             button: true,
             label: AppLocalizations.of(context)?.get('share') ?? 'Share',
-            child: SpringButton(
-              onTap: () {
-                final typeLabel = movie.isTV
-                    ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
-                          'Dizi')
-                    : (AppLocalizations.of(context)?.get('onboarding_movie') ??
-                          'Film');
-                final shareTemplate =
-                    AppLocalizations.of(context)?.get('detail_share_text') ??
-                    'What to Watch recommendation: {}';
-                final shareText = shareTemplate.replaceAll(
-                  '{}',
-                  '${movie.title} (${movie.year})\n⭐ ${movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
-                );
-                Share.share(shareText);
-              },
-              child: Container(
+            child: Builder(
+              builder: (shareBtnContext) => SpringButton(
+                onTap: () {
+                  final tr = AppLocalizations.of(context);
+                  final typeLabel = movie.isTV
+                      ? (tr?.get('onboarding_tv') ?? 'Dizi')
+                      : (tr?.get('onboarding_movie') ?? 'Film');
+                  final shareTemplate =
+                      tr?.get('detail_share_text') ??
+                      'What to Watch recommendation: {}';
+                  final shareText = shareTemplate.replaceAll(
+                    '{}',
+                    '${movie.title} (${movie.year})\n⭐ ${movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
+                  );
+                  shareMessage(
+                    context: context,
+                    anchorContext: shareBtnContext,
+                    message: shareText,
+                    failureMessage: tr?.get('profile_share_failed') ??
+                        'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+                  );
+                },
+                child: Container(
                 height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
@@ -119,6 +125,7 @@ class DetailActionButtons extends StatelessWidget {
                 ),
                 child: Icon(Icons.share_rounded, color: c.dim, size: 18),
               ),
+            ),
             ),
           ),
         ),

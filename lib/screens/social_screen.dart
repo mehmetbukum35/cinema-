@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../utils/share_helper.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
@@ -161,21 +161,27 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         ),
         actions: [
           if (authUser != null && authUser['username'] != null)
-            IconButton(
-              icon: Icon(Icons.share_rounded, color: c.gold),
-              onPressed: () {
-                final username = authUser['username'];
-                final profileUrl = ApiService.webProfileUrl(
-                  username,
-                  lang: isTr ? 'tr' : 'en',
-                );
-                Share.share(
-                  AppLocalizations.of(context)
-                          ?.get('share_profile_text')
-                          .replaceAll('{}', profileUrl) ??
-                      'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
-                );
-              },
+            Builder(
+              builder: (shareBtnContext) => IconButton(
+                icon: Icon(Icons.share_rounded, color: c.gold),
+                onPressed: () {
+                  final username = authUser['username'];
+                  final profileUrl = ApiService.webProfileUrl(
+                    username,
+                    lang: isTr ? 'tr' : 'en',
+                  );
+                  final tr = AppLocalizations.of(context);
+                  shareMessage(
+                    context: context,
+                    anchorContext: shareBtnContext,
+                    message: tr?.get('share_profile_text')
+                            .replaceAll('{}', profileUrl) ??
+                        'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
+                    failureMessage: tr?.get('profile_share_failed') ??
+                        'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+                  );
+                },
+              ),
             ),
           IconButton(
             icon: Icon(Icons.settings_rounded, color: c.dim),

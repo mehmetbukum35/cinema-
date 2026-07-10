@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../utils/share_helper.dart';
 
 import '../models/movie.dart';
 import '../models/taste_dna.dart';
@@ -77,14 +77,21 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
     }
   }
 
-  void _share(TasteDnaPresenter p) {
+  Future<void> _share(TasteDnaPresenter p, BuildContext anchorContext) async {
     HapticFeedback.mediumImpact();
+    final tr = AppLocalizations.of(context);
     final username = ref.read(authProvider).user?['username'] as String?;
     final lang = ref.read(localeProvider).languageCode;
     final profileUrl = (username != null && username.isNotEmpty)
         ? ApiService.webProfileUrl(username, lang: lang)
         : null;
-    Share.share(p.shareText(profileUrl));
+    await shareMessage(
+      context: context,
+      anchorContext: anchorContext,
+      message: p.shareText(profileUrl),
+      failureMessage: tr?.get('profile_share_failed') ??
+          'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+    );
   }
 
   @override
@@ -129,11 +136,15 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           ),
           const Spacer(),
           if (_dna != null && _dna!.isReady)
-            IconButton(
-              icon: Icon(Icons.ios_share_rounded, color: c.gold, size: 20),
-              onPressed: () => _share(TasteDnaPresenter(tr, _dna!)),
-              tooltip: tr?.get('dna_share') ?? 'Paylaş',
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            Builder(
+              builder: (shareBtnContext) => IconButton(
+                icon: Icon(Icons.ios_share_rounded, color: c.gold, size: 20),
+                onPressed: () =>
+                    _share(TasteDnaPresenter(tr, _dna!), shareBtnContext),
+                tooltip: tr?.get('dna_share') ?? 'Paylaş',
+                constraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
             ),
         ],
       ),
@@ -412,9 +423,10 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
     AppLocalizations? tr,
     TasteDnaPresenter p,
   ) {
-    return GestureDetector(
-      onTap: () => _share(p),
-      child: Container(
+    return Builder(
+      builder: (shareBtnContext) => GestureDetector(
+        onTap: () => _share(p, shareBtnContext),
+        child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
@@ -447,6 +459,7 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
