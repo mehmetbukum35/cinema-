@@ -21,6 +21,29 @@ class Moderation
         return $key;
     }
 
+    /**
+     * Panelin MUTLAK yolu (alt klasör ön eki dahil), o anki istek yolundan
+     * türetilir. Göreli adresler tarayıcıda yanlış çözülüyordu: /action'dan
+     * dönen "Location: moderation" yönlendirmesi /admin/moderation/moderation
+     * gibi var olmayan bir uca gidiyordu.
+     */
+    private function panelPath(): string
+    {
+        $path = (string) (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '');
+        $path = rtrim($path, '/');
+        if (str_ends_with($path, '/action')) {
+            $path = substr($path, 0, -strlen('/action'));
+        }
+        return $path !== '' ? $path : '/admin/moderation';
+    }
+
+    /** İşlem sonrası paneli mutlak yolla yeniden yükler. */
+    private function redirectToPanel(string $key): never
+    {
+        header('Location: ' . $this->panelPath() . '?key=' . rawurlencode($key), true, 302);
+        exit;
+    }
+
     // ─── GET /admin/moderation ───────────────────────────────────────────────
     public function renderPanel(): void
     {
@@ -115,8 +138,7 @@ class Moderation
                 $closeReports->execute([$userId]);
             }
 
-            header('Location: moderation?key=' . rawurlencode($key), true, 302);
-            exit;
+            $this->redirectToPanel($key);
         }
 
         if ($movieId <= 0) {
@@ -137,16 +159,16 @@ class Moderation
         );
         $upR->execute([$newStatus, $userId, $movieId, $isTV]);
 
-        header('Location: moderation?key=' . rawurlencode($key), true, 302);
-        exit;
+        $this->redirectToPanel($key);
     }
 
     private function html(string $key, array $open, array $hidden, array $banned): string
     {
         $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
         $keyH = $e($key);
+        $actionUrl = $e($this->panelPath() . '/action');
 
-        $card = function (array $r, array $buttons) use ($e, $keyH): string {
+        $card = function (array $r, array $buttons) use ($e, $keyH, $actionUrl): string {
             $name = trim((string) ($r['display_name'] ?? '')) !== ''
                 ? $r['display_name'] : '@' . ($r['username'] ?? '?');
             $meta = [];
@@ -156,7 +178,7 @@ class Moderation
             $meta[] = ((int) $r['is_tv'] === 1 ? 'Dizi' : 'Film') . ' #' . (int) $r['movie_id'];
             $btnHtml = '';
             foreach ($buttons as [$action, $label, $cls]) {
-                $btnHtml .= '<form method="post" action="moderation/action">'
+                $btnHtml .= '<form method="post" action="' . $actionUrl . '">'
                     . '<input type="hidden" name="key" value="' . $keyH . '">'
                     . '<input type="hidden" name="user_id" value="' . (int) $r['reported_user_id'] . '">'
                     . '<input type="hidden" name="movie_id" value="' . (int) $r['movie_id'] . '">'
@@ -189,14 +211,14 @@ class Moderation
         // Susturulanlar: yalın satır — kullanıcı adı + yasağı kaldır.
         $bannedHtml = $banned === []
             ? '<p class="empty">Susturulmuş kullanıcı yok.</p>'
-            : implode('', array_map(function (array $u) use ($e, $keyH): string {
+            : implode('', array_map(function (array $u) use ($e, $keyH, $actionUrl): string {
                 $name = trim((string) ($u['display_name'] ?? '')) !== ''
                     ? $u['display_name'] : '@' . ($u['username'] ?? '?');
                 return '<div class="card"><div class="head"><b>' . $e($name) . '</b>'
                     . ' <span class="meta">#' . (int) $u['id'] . '</span></div>'
                     . '<div class="meta">Yeni yorumları otomatik gizleniyor. Yasağı kaldırmak eski'
                     . ' yorumları geri açmaz; onları "Gizlenen Yorumlar"dan tek tek geri açın.</div>'
-                    . '<div class="actions"><form method="post" action="moderation/action">'
+                    . '<div class="actions"><form method="post" action="' . $actionUrl . '">'
                     . '<input type="hidden" name="key" value="' . $keyH . '">'
                     . '<input type="hidden" name="user_id" value="' . (int) $u['id'] . '">'
                     . '<input type="hidden" name="action" value="unban_user">'
