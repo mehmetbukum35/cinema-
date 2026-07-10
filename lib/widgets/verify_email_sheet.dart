@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import 'app_toast.dart';
 
 /// Kayıt sonrası e-posta doğrulama: e-postaya gönderilen 6 haneli kod girilir,
 /// doğrulanınca oturum açılır. Başarı/çakışma sonucu AuthResult olarak
@@ -52,11 +53,10 @@ class _VerifyEmailSheetState extends ConsumerState<VerifyEmailSheet> {
     if (!mounted) return;
 
     if (result.status == AuthStatus.error) {
+      // SnackBar bu açık sheet'in arkasında kalıyordu; toast üstte görünür.
       final errKey = result.errorMessage ?? 'auth_err_generic';
       final err = AppLocalizations.of(context)?.get(errKey) ?? errKey;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err), backgroundColor: context.c.red),
-      );
+      showAppToast(context, err, success: false);
       return;
     }
     Navigator.pop(context, result);
@@ -71,16 +71,12 @@ class _VerifyEmailSheetState extends ConsumerState<VerifyEmailSheet> {
     if (!mounted) return;
     setState(() => _resending = false);
     final tr = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? (tr?.get('auth_verify_resent') ?? 'Kod gönderildi.')
-              : (tr?.get('auth_err_forgot_send_failed') ??
-                    'Kod gönderilemedi.'),
-        ),
-        backgroundColor: ok ? null : context.c.red,
-      ),
+    showAppToast(
+      context,
+      ok
+          ? (tr?.get('auth_verify_resent') ?? 'Kod gönderildi.')
+          : (tr?.get('auth_err_forgot_send_failed') ?? 'Kod gönderilemedi.'),
+      success: ok,
     );
   }
 

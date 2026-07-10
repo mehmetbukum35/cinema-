@@ -20,6 +20,7 @@ import 'taste_dna_screen.dart';
 import 'my_reviews_screen.dart';
 import 'blocked_users_screen.dart';
 import '../widgets/spring_button.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
 import '../widgets/delete_account_dialog.dart';
@@ -122,6 +123,13 @@ class ProfileScreen extends ConsumerWidget {
       ref.invalidate(watchlistProvider);
       ref.invalidate(statsProvider);
       ref.invalidate(swipeProvider);
+      if (context.mounted) {
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('all_data_reset') ??
+              'Tüm veriler sıfırlandı.',
+        );
+      }
     }
   }
 

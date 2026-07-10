@@ -1247,9 +1247,23 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                             : Icons.favorite_border_rounded,
                         color: p.meLiked ? c.red : c.dim,
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         HapticFeedback.lightImpact();
-                        ref.read(socialProvider.notifier).toggleProfileLike(p);
+                        final ok = await ref
+                            .read(socialProvider.notifier)
+                            .toggleProfileLike(p);
+                        // Başarı zaten kalpte görünür; sessiz geri alma
+                        // kafa karıştırdığı için yalnızca hata bildirilir.
+                        if (!ok && mounted) {
+                          showAppToast(
+                            context,
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('profile_like_failed') ??
+                                'Beğeni kaydedilemedi. Lütfen tekrar deneyin.',
+                            success: false,
+                          );
+                        }
                       },
                     ),
                   Text(

@@ -698,6 +698,9 @@ class AppLocalizations {
       'remove_from_watchlist': 'Remove from watchlist?',
       'your_common_watchlist_intersec': 'Your Common Watchlist ({} Titles)',
       'title_removed_from_watchlist': '{} removed from watchlist.',
+      'title_added_to_watchlist': '{} added to watchlist.',
+      'all_data_reset': 'All data has been reset.',
+      'profile_like_failed': 'Could not save your like. Please try again.',
       'synergy_score_match': '{}% Match',
       'error_occurred_msg': 'Error: {}',
       'share_profile_text':
@@ -1397,6 +1400,9 @@ class AppLocalizations {
       'remove_from_watchlist': 'Listeden çıkarılsın mı?',
       'your_common_watchlist_intersec': 'Ortak İzleme Listeniz ({} Film/Dizi)',
       'title_removed_from_watchlist': '{} izleme listesinden çıkarıldı.',
+      'title_added_to_watchlist': '{} izleme listesine eklendi.',
+      'all_data_reset': 'Tüm veriler sıfırlandı.',
+      'profile_like_failed': 'Beğeni kaydedilemedi. Lütfen tekrar deneyin.',
       'synergy_score_match': '%{} Uyumlu',
       'error_occurred_msg': 'Hata oluştu: {}',
       'share_profile_text':

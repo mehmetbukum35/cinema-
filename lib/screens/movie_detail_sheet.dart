@@ -44,13 +44,11 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
     final tr = AppLocalizations.of(context);
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('recommend_need_login') ??
-                'Öneri göndermek için giriş yapmalısın.',
-          ),
-        ),
+      showAppToast(
+        context,
+        tr?.get('recommend_need_login') ??
+            'Öneri göndermek için giriş yapmalısın.',
+        success: false,
       );
       return;
     }
@@ -63,13 +61,11 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
 
     final friends = ref.read(socialProvider).friends;
     if (friends.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('recommend_no_friends') ??
-                'Önce Sosyal sekmesinden arkadaş eklemelisin.',
-          ),
-        ),
+      showAppToast(
+        context,
+        tr?.get('recommend_no_friends') ??
+            'Önce Sosyal sekmesinden arkadaş eklemelisin.',
+        success: false,
       );
       return;
     }
@@ -134,16 +130,12 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
               await PrefsService.blockMovie(movie.id, movie.isTV);
 
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppLocalizations.of(
-                            context,
-                          )?.get('title_hidden_and_removed_from_') ??
-                          'Title hidden and removed from lists.',
-                    ),
-                    backgroundColor: c.green,
-                  ),
+                showAppToast(
+                  context,
+                  AppLocalizations.of(
+                        context,
+                      )?.get('title_hidden_and_removed_from_') ??
+                      'Title hidden and removed from lists.',
                 );
               }
 
@@ -423,31 +415,29 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       data: (list) => list.any((m) => m.id == movie.id && m.isTV == movie.isTV),
       orElse: () => false,
     );
-    final c = context.c;
+    // Not: eski SnackBar (geri al butonuyla) bu modal sheet'in arkasında
+    // kalıyordu — kullanıcı ne mesajı ne de geri al'ı görebiliyordu. Toast
+    // her şeyin üstünde görünür; geri almak isteyen aynı butona tekrar basar.
     if (inWatchlist) {
       await ref.read(watchlistProvider.notifier).remove(movie.id, movie.isTV);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)
-                    ?.get('title_removed_from_watchlist')
-                    .replaceAll('{}', movie.title) ??
-                '${movie.title} removed from watchlist.',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
-            textColor: c.red,
-            onPressed: () async {
-              await ref.read(watchlistProvider.notifier).add(movie);
-            },
-          ),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context)
+                ?.get('title_removed_from_watchlist')
+                .replaceAll('{}', movie.title) ??
+            '${movie.title} removed from watchlist.',
       );
     } else {
       await ref.read(watchlistProvider.notifier).add(movie);
+      if (!mounted) return;
+      showAppToast(
+        context,
+        AppLocalizations.of(context)
+                ?.get('title_added_to_watchlist')
+                .replaceAll('{}', movie.title) ??
+            '${movie.title} added to watchlist.',
+      );
     }
   }
 
@@ -1879,18 +1869,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                             : ' (Saved locally, will sync when logged in.)')
                                       : '';
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '$baseMsg$suffix',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: c.green,
-                                      duration: const Duration(seconds: 3),
-                                    ),
-                                  );
+                                  _showToast('$baseMsg$suffix');
                                   Future.delayed(
                                     const Duration(seconds: 2),
                                     () {
@@ -1904,20 +1883,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                                 }
                               } catch (e) {
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        AppLocalizations.of(context)
-                                                ?.get('error_occurred_msg')
-                                                .replaceAll('{}', '$e') ??
-                                            'Error: $e',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: c.red,
-                                      duration: const Duration(seconds: 2),
-                                    ),
+                                  _showToast(
+                                    AppLocalizations.of(context)
+                                            ?.get('error_occurred_msg')
+                                            .replaceAll('{}', '$e') ??
+                                        'Error: $e',
+                                    success: false,
                                   );
                                 }
                               }
@@ -2100,16 +2071,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
           if (mounted && !ref.read(authProvider).isLoggedIn) {
             final tr = AppLocalizations.of(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  tr?.locale.languageCode == 'tr'
-                      ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
-                      : 'Rating saved locally. Will sync when logged in.',
-                ),
-                backgroundColor: c.red,
-                duration: const Duration(seconds: 3),
-              ),
+            showAppToast(
+              context,
+              tr?.locale.languageCode == 'tr'
+                  ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
+                  : 'Rating saved locally. Will sync when logged in.',
+              success: false,
             );
           }
         }

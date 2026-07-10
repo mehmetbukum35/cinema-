@@ -331,9 +331,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   /// Profil beğenisini değiştirir. Önce iyimser (optimistic) güncelleme yapılır;
-  /// sunucu hata verirse eski duruma geri dönülür. Sıra numaraları sunucu
-  /// sıralaması bozulmasın diye yerinde bırakılır (bir sonraki yüklemede oturur).
-  Future<void> toggleProfileLike(TopProfile profile) async {
+  /// sunucu hata verirse eski duruma geri dönülür ve false döner (çağıran
+  /// kullanıcıya bildirir — kalp sessizce eski haline dönünce anlaşılmıyordu).
+  /// Sıra numaraları sunucu sıralaması bozulmasın diye yerinde bırakılır.
+  Future<bool> toggleProfileLike(TopProfile profile) async {
     final newLiked = !profile.meLiked;
     List<TopProfile> apply(List<TopProfile> list, int likeCount) => [
           for (final p in list)
@@ -353,6 +354,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       state = state.copyWith(
         topProfiles: apply(state.topProfiles, serverCount),
       );
+      return true;
     } catch (e, st) {
       debugPrint("Failed to toggle profile like: $e\n$st");
       // Geri al.
@@ -365,6 +367,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
             if (p.id == profile.id) p.copyWith(meLiked: profile.meLiked) else p,
         ],
       );
+      return false;
     }
   }
 

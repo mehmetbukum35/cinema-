@@ -5,6 +5,7 @@ import '../../models/social.dart';
 import '../../services/localization_service.dart';
 import '../../providers/social_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_toast.dart';
 
 class RecommendSheet extends StatefulWidget {
   final Movie movie;
@@ -137,9 +138,6 @@ class RecommendSheetState extends State<RecommendSheet> {
                   onTap: isAnySending
                       ? null
                       : () async {
-                          final parentSm = ScaffoldMessenger.of(
-                            widget.parentContext,
-                          );
                           final nav = Navigator.of(context);
 
                           setState(() {
@@ -156,21 +154,15 @@ class RecommendSheetState extends State<RecommendSheet> {
 
                           if (ok) {
                             nav.pop();
-                            parentSm.clearSnackBars();
-                            parentSm.showSnackBar(
-                              SnackBar(
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: Colors.green,
-                                content: Text(
-                                  tr?.get('recommend_sent') ??
-                                      'Öneri gönderildi!',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            );
+                            // Film detayı modalı hâlâ açık: SnackBar onun
+                            // arkasında kalırdı, toast üstte görünür.
+                            if (widget.parentContext.mounted) {
+                              showAppToast(
+                                widget.parentContext,
+                                tr?.get('recommend_sent') ??
+                                    'Öneri gönderildi!',
+                              );
+                            }
                           } else {
                             if (context.mounted) {
                               showDialog(
