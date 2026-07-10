@@ -131,12 +131,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
           await PrefsService.setLastAuthenticatedUserId(currentUserId);
         }
 
-        _ref.read(watchlistProvider.notifier).load();
-        _ref.read(statsProvider.notifier).load();
-        _ref.read(socialProvider.notifier).loadFriends();
-        _ref.read(socialProvider.notifier).loadActivityFeed();
-        _ref.read(socialProvider.notifier).loadRecommendations();
-        _ref.read(socialProvider.notifier).loadTopProfiles();
+        Future(() async {
+          await Future.wait([
+            _ref.read(watchlistProvider.notifier).load(),
+            _ref.read(statsProvider.notifier).load(),
+          ]);
+          await Future.wait([
+            _ref.read(socialProvider.notifier).loadFriends(),
+            _ref.read(socialProvider.notifier).loadActivityFeed(),
+            _ref.read(socialProvider.notifier).loadRecommendations(),
+            _ref.read(socialProvider.notifier).loadTopProfiles(),
+          ]);
+        });
       } else {
         state = state.copyWith(loading: false);
       }
@@ -407,6 +413,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await Future.wait([
       _ref.read(watchlistProvider.notifier).load(),
       _ref.read(statsProvider.notifier).load(),
+    ]);
+    await Future.wait([
       _ref.read(socialProvider.notifier).loadFriends(),
       _ref.read(socialProvider.notifier).loadActivityFeed(),
       _ref.read(socialProvider.notifier).loadRecommendations(),

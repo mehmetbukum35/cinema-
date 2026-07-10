@@ -160,7 +160,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
     }
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
-    if (isAuthenticated) {
+    if (isAuthenticated && background) {
       // initState/build sırasında provider state'i değiştirmek yasaktır
       // (Riverpod "Tried to modify a provider while the widget tree was
       // building" hatası). Bu yüzden build bitene kadar erteliyoruz.
