@@ -291,6 +291,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         rethrow;
       }
 
+      // Hesap seçici kapandı — kullanıcı tekrar uygulamada; yükleme UI'ını
+      // yeniden tetikle (loading zaten true olsa da yeni state ataması repaint'i
+      // garanti eder).
+      if (!mounted) {
+        return AuthResult(status: AuthStatus.cancelled);
+      }
+      state = state.copyWith(loading: true, error: null);
+
       final idToken = account.authentication.idToken;
       if (kDebugMode) {
         debugPrint(

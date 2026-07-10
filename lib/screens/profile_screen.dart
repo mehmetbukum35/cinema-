@@ -25,6 +25,7 @@ import '../widgets/wrapped_modal.dart';
 import '../widgets/logout_confirm_dialog.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/auth_conflict_dialog.dart';
+import '../widgets/auth_loading_overlay.dart';
 import '../services/app_config.dart';
 import 'profile/widgets/change_password_sheet.dart';
 import 'profile/widgets/unlink_google_sheet.dart';
@@ -286,6 +287,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
+    final auth = ref.watch(authProvider);
     final watchlistState = ref.watch(watchlistProvider);
     final statsState = ref.watch(statsProvider);
 
@@ -305,7 +307,9 @@ class ProfileScreen extends ConsumerWidget {
       }
     });
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: Colors.transparent,
       body: CinematicBackground(
         animate: true,
@@ -329,6 +333,9 @@ class ProfileScreen extends ConsumerWidget {
                 ),
         ),
       ),
+    ),
+        AuthLoadingOverlay(visible: auth.loading),
+      ],
     );
   }
 
@@ -515,13 +522,28 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   child: auth.loading
                       ? Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: c.dim,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: c.dim,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                tr?.get('auth_signing_in') ??
+                                    'Giriş yapılıyor...',
+                                style: TextStyle(
+                                  color: c.dim,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       : Row(

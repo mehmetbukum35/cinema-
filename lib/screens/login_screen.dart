@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/app_config.dart';
 import '../services/localization_service.dart';
 import '../widgets/auth_conflict_dialog.dart';
+import '../widgets/auth_loading_overlay.dart';
 import '../widgets/forgot_password_sheet.dart';
 import '../widgets/verify_email_sheet.dart';
 
@@ -105,7 +106,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = ref.watch(authProvider);
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       appBar: AppBar(
         title: Text(
           _isRegister
@@ -303,30 +306,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        // Marka görseli eklemeden sade "G" rozeti.
-                        icon: Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black12),
-                          ),
-                          child: const Text(
-                            'G',
-                            style: TextStyle(
-                              color: Color(0xFF4285F4),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
+                        icon: auth.loading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                ),
+                              )
+                            : Container(
+                                width: 22,
+                                height: 22,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.black12),
+                                ),
+                                child: const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Color(0xFF4285F4),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                         label: Text(
-                          AppLocalizations.of(
-                                context,
-                              )?.get('auth_google_button') ??
-                              'Google ile devam et',
+                          auth.loading
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_signing_in') ??
+                                    'Giriş yapılıyor...')
+                              : (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_google_button') ??
+                                    'Google ile devam et'),
                         ),
                       ),
                     ],
@@ -354,6 +369,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    ),
+        AuthLoadingOverlay(visible: auth.loading),
+      ],
     );
   }
 }
