@@ -2,10 +2,15 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 import 'movie_detail/recommend_sheet.dart';
 import 'movie_detail/review_item.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'movie_detail/detail_section_label.dart';
+import 'movie_detail/detail_hero_row.dart';
+import 'movie_detail/detail_action_buttons.dart';
+import 'movie_detail/detail_media_rows.dart';
+import 'movie_detail/seasons_section.dart';
+import 'movie_detail/keywords_wrap.dart';
+import 'movie_detail/tmdb_review_card.dart';
 import '../models/movie.dart';
 import '../models/cast_member.dart';
 import '../models/watch_provider.dart';
@@ -14,7 +19,6 @@ import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
-import 'person_screen.dart';
 import '../models/review.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/auth_provider.dart';
@@ -24,6 +28,8 @@ import 'trailer_player_screen.dart';
 import '../widgets/spring_button.dart';
 import '../widgets/app_toast.dart';
 
+/// Detay alt sayfası orkestratörü: veri yükleme fazları, puan/yorum durumu
+/// ve moderasyon akışları burada; sunumsal bölümler movie_detail/ altında.
 class MovieDetailSheet extends ConsumerStatefulWidget {
   final Movie movie;
   final TmdbService service;
@@ -456,6 +462,46 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
+  void _confirmBlockMovie() {
+    MovieDetailSheet.confirmBlockMovie(
+      context: context,
+      ref: ref,
+      movie: widget.movie,
+      onBlocked: () {
+        if (mounted) {
+          Navigator.pop(context); // Close detail sheet
+        }
+      },
+    );
+  }
+
+  /// "Arkadaşına Öner" akışı: arkadaş seçici alt sayfa açar, seçilince
+  /// öneriyi backend'e gönderir (arkadaş push bildirimi alır).
+  Future<void> _openRecommendSheet() async {
+    await MovieDetailSheet.showRecommendSheet(
+      context: context,
+      ref: ref,
+      movie: widget.movie,
+    );
+  }
+
+  /// Benzer/koleksiyon rayından seçilen yapım: bu sheet kapanır, yenisi açılır.
+  void _openAnotherTitle(Movie m) {
+    Navigator.pop(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => MovieDetailSheet(movie: m, service: widget.service),
+    );
+  }
+
+  Future<void> _toggleSeason(int seasonNumber) async {
+    await PrefsService.toggleSeason(widget.movie.id, seasonNumber);
+    final updated = await PrefsService.getWatchedSeasons(widget.movie.id);
+    if (mounted) setState(() => _watchedSeasons = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final movie = widget.movie;
@@ -507,9 +553,21 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _heroRow(movie),
+                          DetailHeroRow(
+                            movie: movie,
+                            runtime: _details?['runtime'] as int? ?? 0,
+                            communityScore: _communityScore,
+                            onBlock: _confirmBlockMovie,
+                            onRecommend: _openRecommendSheet,
+                          ),
                           const SizedBox(height: 16),
-                          _actionButtons(movie, inWatchlist),
+                          DetailActionButtons(
+                            movie: movie,
+                            inWatchlist: inWatchlist,
+                            hasTrailer: _trailerKey != null,
+                            onToggleWatchlist: _toggleWatchlist,
+                            onOpenTrailer: _openTrailer,
+                          ),
                           const SizedBox(height: 16),
                           _ratingSection(c),
                           _friendsReviewsSection(c),
@@ -531,21 +589,26 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           if (_extrasLoaded) ...[
                             if (_providers.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('detail_where_to_watch'),
+                              const DetailSectionLabel(
+                                'detail_where_to_watch',
+                              ),
                               const SizedBox(height: 10),
-                              _providersRow(),
+                              DetailProvidersRow(providers: _providers),
                             ],
                             if (_cast.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('detail_cast'),
+                              const DetailSectionLabel('detail_cast'),
                               const SizedBox(height: 10),
-                              _castRow(),
+                              DetailCastRow(
+                                cast: _cast,
+                                service: widget.service,
+                              ),
                             ],
                             if (_keywords.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionLabel('detail_keywords'),
+                              const DetailSectionLabel('detail_keywords'),
                               const SizedBox(height: 8),
-                              _keywordsWrap(),
+                              KeywordsWrap(keywords: _keywords),
                             ],
                           ] else ...[
                             const SizedBox(height: 20),
@@ -562,7 +625,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ],
                           if (movie.overview.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('detail_storyline'),
+                            const DetailSectionLabel('detail_storyline'),
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.all(14),
@@ -582,27 +645,39 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           ],
                           if (_reviews.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('detail_reviews'),
+                            const DetailSectionLabel('detail_reviews'),
                             const SizedBox(height: 10),
-                            ..._reviews.take(3).map(_reviewCard),
+                            ..._reviews
+                                .take(3)
+                                .map((r) => TmdbReviewCard(review: r)),
                           ],
                           if (_collection.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('detail_collection'),
+                            const DetailSectionLabel('detail_collection'),
                             const SizedBox(height: 10),
-                            _collectionRow(context),
+                            CollectionRow(
+                              movies: _collection,
+                              onMovieTap: _openAnotherTitle,
+                            ),
                           ],
                           if (widget.movie.isTV && _extrasLoaded) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('detail_seasons'),
+                            const DetailSectionLabel('detail_seasons'),
                             const SizedBox(height: 10),
-                            _seasonsSection(),
+                            SeasonsSection(
+                              details: _details,
+                              watchedSeasons: _watchedSeasons,
+                              onToggle: _toggleSeason,
+                            ),
                           ],
                           if (_similar.isNotEmpty) ...[
                             const SizedBox(height: 20),
-                            _sectionLabel('detail_similar'),
+                            const DetailSectionLabel('detail_similar'),
                             const SizedBox(height: 10),
-                            _similarRow(context),
+                            SimilarTitlesRow(
+                              movies: _similar,
+                              onMovieTap: _openAnotherTitle,
+                            ),
                           ],
                           const SizedBox(height: 8),
                           SizedBox(
@@ -621,1015 +696,11 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-  Widget _heroRow(Movie movie) {
-    final c = context.c;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 100,
-                height: 150,
-                child: movie.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: movie.posterUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 180,
-                        placeholder: (context, url) =>
-                            ColoredBox(color: c.card),
-                        errorWidget: (context, url, error) =>
-                            ColoredBox(color: c.card),
-                      )
-                    : ColoredBox(color: c.card),
-              ),
-            ),
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Tooltip(
-                message:
-                    AppLocalizations.of(context)?.get('block_and_hide_title') ??
-                    'Block and Hide Title',
-                child: SpringButton(
-                  onTap: _confirmBlockMovie,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.visibility_off_rounded,
-                      color: Colors.white,
-                      size: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Tooltip(
-                message:
-                    AppLocalizations.of(context)?.get('recommend_to_friend') ??
-                    'Recommend to Friend',
-                child: SpringButton(
-                  onTap: _openRecommendSheet,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text(
-                movie.title,
-                style: TextStyle(
-                  color: c.ink,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(children: [_synergyBadge(c)]),
-              if (movie.year.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(movie.year, style: TextStyle(color: c.dim, fontSize: 13)),
-              ],
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (movie.isTV ? c.blue : c.red).withValues(
-                        alpha: 0.15,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      movie.isTV
-                          ? (AppLocalizations.of(
-                                  context,
-                                )?.get('onboarding_tv') ??
-                                'Dizi')
-                          : (AppLocalizations.of(
-                                  context,
-                                )?.get('onboarding_movie') ??
-                                'Film'),
-                      style: TextStyle(
-                        color: movie.isTV ? c.blue : c.red,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if ((_details?['runtime'] as int? ?? 0) > 0) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_details!['runtime']} ${AppLocalizations.of(context)?.get('detail_minutes') ?? 'dk'}',
-                      style: TextStyle(color: c.dim, fontSize: 12),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _confirmBlockMovie() {
-    MovieDetailSheet.confirmBlockMovie(
-      context: context,
-      ref: ref,
-      movie: widget.movie,
-      onBlocked: () {
-        if (mounted) {
-          Navigator.pop(context); // Close detail sheet
-        }
-      },
-    );
-  }
-
-  /// "Arkadaşına Öner" akışı: arkadaş seçici alt sayfa açar, seçilince
-  /// öneriyi backend'e gönderir (arkadaş push bildirimi alır).
-  Future<void> _openRecommendSheet() async {
-    await MovieDetailSheet.showRecommendSheet(
-      context: context,
-      ref: ref,
-      movie: widget.movie,
-    );
-  }
-
-  Widget _actionButtons(Movie movie, bool inWatchlist) {
-    final c = context.c;
-    final watchlistLabel = inWatchlist
-        ? (AppLocalizations.of(context)?.get('detail_watchlist_remove') ??
-              'Listeden Çıkar')
-        : (AppLocalizations.of(context)?.get('detail_watchlist_add') ??
-              'İzleme Listesine Ekle');
-
-    return Row(
-      children: [
-        // Watchlist toggle
-        Expanded(
-          child: Tooltip(
-            message: watchlistLabel,
-            child: Semantics(
-              button: true,
-              label: watchlistLabel,
-              child: SpringButton(
-                onTap: _toggleWatchlist,
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: inWatchlist ? c.red.withValues(alpha: 0.15) : c.card,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: inWatchlist ? c.red : c.border,
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        inWatchlist
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
-                        color: inWatchlist ? c.red : c.dim,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        inWatchlist
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('detail_watchlist_remove') ??
-                                  'Listeden Çıkar')
-                            : (AppLocalizations.of(
-                                    context,
-                                  )?.get('detail_watchlist_add_short') ??
-                                  'Watchlist'),
-                        style: TextStyle(
-                          color: inWatchlist ? c.red : c.dim,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Share button
-        const SizedBox(width: 10),
-        Tooltip(
-          message: AppLocalizations.of(context)?.get('share') ?? 'Share',
-          child: Semantics(
-            button: true,
-            label: AppLocalizations.of(context)?.get('share') ?? 'Share',
-            child: SpringButton(
-              onTap: () {
-                final typeLabel = widget.movie.isTV
-                    ? (AppLocalizations.of(context)?.get('onboarding_tv') ??
-                          'Dizi')
-                    : (AppLocalizations.of(context)?.get('onboarding_movie') ??
-                          'Film');
-                final shareTemplate =
-                    AppLocalizations.of(context)?.get('detail_share_text') ??
-                    'What to Watch recommendation: {}';
-                final shareText = shareTemplate.replaceAll(
-                  '{}',
-                  '${widget.movie.title} (${widget.movie.year})\n⭐ ${widget.movie.voteAverage.toStringAsFixed(1)} · $typeLabel',
-                );
-                Share.share(shareText);
-              },
-              child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: c.border),
-                ),
-                child: Icon(Icons.share_rounded, color: c.dim, size: 18),
-              ),
-            ),
-          ),
-        ),
-        // Trailer button (only shown when available)
-        if (_trailerKey != null) ...[
-          const SizedBox(width: 10),
-          Tooltip(
-            message:
-                AppLocalizations.of(context)?.get('detail_trailer') ??
-                'Trailer',
-            child: Semantics(
-              button: true,
-              label:
-                  AppLocalizations.of(context)?.get('detail_trailer') ??
-                  'Trailer',
-              child: SpringButton(
-                onTap: _openTrailer,
-                child: Container(
-                  height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF0000).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFFF0000).withValues(alpha: 0.4),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.play_circle_rounded,
-                        color: Color(0xFFFF0000),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        AppLocalizations.of(context)?.get('detail_trailer') ??
-                            'Trailer',
-                        style: const TextStyle(
-                          color: Color(0xFFFF0000),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _providersRow() {
-    return SizedBox(
-      height: 64,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: _providers.length,
-        itemBuilder: (ctx, i) {
-          final c = ctx.c;
-          final p = _providers[i];
-          return Container(
-            margin: const EdgeInsets.only(right: 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: p.logoUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: p.logoUrl,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 80,
-                            placeholder: (context, url) =>
-                                ColoredBox(color: c.card),
-                            errorWidget: (context, url, error) =>
-                                ColoredBox(color: c.card),
-                          )
-                        : ColoredBox(color: c.card),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    p.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: c.dim,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _castRow() {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: _cast.length,
-        itemBuilder: (ctx, i) {
-          final pal = ctx.c;
-          final c = _cast[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PersonScreen(
-                    personId: c.id,
-                    personName: c.name,
-                    service: widget.service,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              width: 64,
-              margin: const EdgeInsets.only(right: 10),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: c.profileUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: c.profileUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 90,
-                              placeholder: (context, url) =>
-                                  _avatarPlaceholder(c.name),
-                              errorWidget: (context, url, error) =>
-                                  _avatarPlaceholder(c.name),
-                            )
-                          : _avatarPlaceholder(c.name),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    c.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: pal.ink,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    c.character,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: pal.dim, fontSize: 8),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _avatarPlaceholder(String name) {
-    final c = context.c;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    return Container(
-      color: c.border,
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: c.dim,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
-  Widget _similarRow(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: _similar.length,
-        itemBuilder: (ctx, i) {
-          final c = ctx.c;
-          final s = _similar[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.pop(context);
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (_) =>
-                    MovieDetailSheet(movie: s, service: widget.service),
-              );
-            },
-            child: Container(
-              width: 90,
-              margin: const EdgeInsets.only(right: 10),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: s.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: s.posterUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 150,
-                        placeholder: (context, url) =>
-                            ColoredBox(color: c.card),
-                        errorWidget: (context, url, error) =>
-                            ColoredBox(color: c.card),
-                      )
-                    : ColoredBox(color: c.card),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _collectionRow(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: _collection.length,
-        itemBuilder: (ctx, i) {
-          final c = ctx.c;
-          final m = _collection[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.pop(context);
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (_) =>
-                    MovieDetailSheet(movie: m, service: widget.service),
-              );
-            },
-            child: Container(
-              width: 90,
-              margin: const EdgeInsets.only(right: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: m.posterUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: m.posterUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 150,
-                              placeholder: (context, url) =>
-                                  ColoredBox(color: c.card),
-                              errorWidget: (context, url, error) =>
-                                  ColoredBox(color: c.card),
-                            )
-                          : ColoredBox(color: c.card),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(m.year, style: TextStyle(color: c.dim, fontSize: 9)),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _seasonsSection() {
-    final c = context.c;
-    final seasons = (_details?['seasons'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>()
-        .where((s) => (s['season_number'] as int? ?? 0) > 0)
-        .toList();
-    if (seasons.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: seasons.map((s) {
-        final num = s['season_number'] as int;
-        final name =
-            s['name'] as String? ??
-            (AppLocalizations.of(context)
-                    ?.get('detail_season_label')
-                    .replaceAll('{}', num.toString()) ??
-                'Season $num');
-        final eps = s['episode_count'] as int? ?? 0;
-        final year = ((s['air_date'] as String? ?? '').length >= 4)
-            ? (s['air_date'] as String).substring(0, 4)
-            : '';
-        final watched = _watchedSeasons.contains(num);
-        return GestureDetector(
-          onTap: () async {
-            HapticFeedback.mediumImpact();
-            await PrefsService.toggleSeason(widget.movie.id, num);
-            final updated = await PrefsService.getWatchedSeasons(
-              widget.movie.id,
-            );
-            if (mounted) setState(() => _watchedSeasons = updated);
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: watched ? AppColors.green.withValues(alpha: 0.12) : c.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: watched
-                    ? AppColors.green.withValues(alpha: 0.3)
-                    : c.border,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  watched
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color: watched ? AppColors.green : c.dim,
-                  size: 18,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: TextStyle(
-                          color: watched ? AppColors.green : c.ink,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Builder(
-                        builder: (context) {
-                          final suffix =
-                              AppLocalizations.of(
-                                context,
-                              )?.get('detail_episodes_count') ??
-                              'episodes';
-                          return Text(
-                            '$eps $suffix${year.isNotEmpty ? " · $year" : ""}',
-                            style: TextStyle(color: c.dim, fontSize: 11),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _keywordsWrap() {
-    final c = context.c;
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: _keywords
-          .take(15)
-          .map(
-            (kw) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.border),
-              ),
-              child: Text(
-                kw,
-                style: TextStyle(
-                  color: c.dim,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _reviewCard(Review r) {
-    final c = context.c;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  r.author,
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (r.rating != null) ...[
-                Icon(Icons.star_rounded, color: c.gold, size: 12),
-                const SizedBox(width: 3),
-                Text(
-                  r.rating!.toStringAsFixed(1),
-                  style: TextStyle(
-                    color: c.gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (r.date.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(r.date, style: TextStyle(color: c.dim, fontSize: 10)),
-          ],
-          const SizedBox(height: 8),
-          Text(
-            r.content.length > 300
-                ? '${r.content.substring(0, 300)}…'
-                : r.content,
-            style: TextStyle(
-              color: c.isLight ? const Color(0xFF3A352E) : Colors.white70,
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  int _calculateSynergyScore() {
-    final matchVal = widget.movie.matchScore;
-    final tmdbVal = (widget.movie.voteAverage * 10).clamp(0, 100).toInt();
-
-    if (_communityScore != null && _communityScore!['enough'] == true) {
-      final commVal = (_communityScore!['liked_percent'] as num?)?.toInt() ?? 0;
-      return (matchVal * 0.4 + commVal * 0.3 + tmdbVal * 0.3).round();
-    } else {
-      return (matchVal * 0.6 + tmdbVal * 0.4).round();
-    }
-  }
-
-  Widget _synergyBadge(ThemePalette c) {
-    final synergyScore = _calculateSynergyScore();
-
-    return SpringButton(
-      onTap: () => _showScoreBreakdown(context, c, synergyScore),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: c.green.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: c.green.withValues(alpha: 0.3), width: 1),
-          boxShadow: CinemaShadows.glow(c.green, strength: 0.08),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bolt_rounded, color: c.green, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              AppLocalizations.of(context)
-                      ?.get('synergy_score_match')
-                      .replaceAll('{}', '$synergyScore') ??
-                  '$synergyScore% Match',
-              style: TextStyle(
-                color: c.green,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.info_outline_rounded,
-              color: c.green.withValues(alpha: 0.7),
-              size: 12,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showScoreBreakdown(
-    BuildContext context,
-    ThemePalette c,
-    int synergyScore,
-  ) {
-    final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Center(
-          child: Text(
-            AppLocalizations.of(context)?.get('match_details') ??
-                'Match Details',
-            style: TextStyle(
-              color: c.ink,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            // Featured Aggregate Synergy Score
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.green.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: c.green.withValues(alpha: 0.3),
-                  width: 2,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '%$synergyScore',
-                    style: TextStyle(
-                      color: c.green,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)?.get('match_button') ??
-                        'Match',
-                    style: TextStyle(
-                      color: c.green,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildDialogRow(
-              AppLocalizations.of(context)?.get('personal_taste_match') ??
-                  'Personal Taste Match',
-              '%${widget.movie.matchScore}',
-              widget.movie.matchScore / 100.0,
-              c.green,
-            ),
-            _buildDialogRow(
-              AppLocalizations.of(context)?.get('tmdb_rating') ?? 'TMDB Rating',
-              '${widget.movie.voteAverage.toStringAsFixed(1)} / 10',
-              widget.movie.voteAverage / 10.0,
-              c.gold,
-            ),
-            if (_communityScore != null && _communityScore!['total'] > 0)
-              _buildDialogRow(
-                AppLocalizations.of(context)?.get('cinema_member_score') ??
-                    'cinema+ Member Score',
-                _communityScore!['enough'] == true
-                    ? '%${_communityScore!['liked_percent']}'
-                    : (isTr
-                          ? '${_communityScore!['total']} oy'
-                          : '${_communityScore!['total']} votes'),
-                _communityScore!['enough'] == true
-                    ? ((_communityScore!['liked_percent'] as num?)
-                                  ?.toDouble() ??
-                              0.0) /
-                          100.0
-                    : 0.0,
-                c.red,
-              ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.borderSoft),
-              ),
-              child: Text(
-                isTr
-                    ? (_communityScore != null &&
-                              _communityScore!['enough'] == true)
-                          ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
-                          : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
-                    : (_communityScore != null &&
-                          _communityScore!['enough'] == true)
-                    ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
-                    : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).',
-                style: TextStyle(color: c.dim, fontSize: 11, height: 1.4),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              AppLocalizations.of(context)?.get('semantics_close') ?? 'Close',
-              style: TextStyle(color: c.dim, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDialogRow(
-    String label,
-    String value,
-    double fraction,
-    Color color,
-  ) {
-    final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: c.dim,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: fraction.clamp(0.0, 1.0),
-              backgroundColor: color.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String key) {
-    return Builder(
-      builder: (context) {
-        final label = AppLocalizations.of(context)?.get(key) ?? key;
-        return Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: context.c.dim,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.4,
-          ),
-        );
-      },
-    );
-  }
-
   Widget _ratingSection(ThemePalette c) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('detail_rate_title'),
+        const DetailSectionLabel('detail_rate_title'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -1683,7 +754,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        _sectionLabel('detail_your_review'),
+        const DetailSectionLabel('detail_your_review'),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -1962,13 +1033,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       children: [
         if (_friendsReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
-          _sectionLabel('review_friends_title'),
+          const DetailSectionLabel('review_friends_title'),
           const SizedBox(height: 10),
           ..._friendsReviews.map(_buildReviewItem),
         ],
         if (_communityReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
-          _sectionLabel('review_community_title'),
+          const DetailSectionLabel('review_community_title'),
           const SizedBox(height: 10),
           ..._communityReviews.map(_buildReviewItem),
         ],
