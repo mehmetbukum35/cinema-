@@ -179,6 +179,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
             (res['is_public'] as int) == 1,
           );
       state = state.copyWith(loading: false);
+      unawaited(loadFriends());
+      unawaited(loadActivityFeed());
+      unawaited(loadRecommendations());
+      unawaited(loadTopProfiles());
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: () => e.message);

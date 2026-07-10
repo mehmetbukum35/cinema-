@@ -133,6 +133,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         _ref.read(watchlistProvider.notifier).load();
         _ref.read(statsProvider.notifier).load();
+        _ref.read(socialProvider.notifier).loadFriends();
+        _ref.read(socialProvider.notifier).loadActivityFeed();
+        _ref.read(socialProvider.notifier).loadRecommendations();
+        _ref.read(socialProvider.notifier).loadTopProfiles();
       } else {
         state = state.copyWith(loading: false);
       }
@@ -399,9 +403,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
   Future<void> _postAuthSessionRestore() async {
+    _ref.invalidate(socialProvider);
     await Future.wait([
       _ref.read(watchlistProvider.notifier).load(),
       _ref.read(statsProvider.notifier).load(),
+      _ref.read(socialProvider.notifier).loadFriends(),
+      _ref.read(socialProvider.notifier).loadActivityFeed(),
+      _ref.read(socialProvider.notifier).loadRecommendations(),
+      _ref.read(socialProvider.notifier).loadTopProfiles(),
     ]);
     await _ref.read(recommendationEngineProvider).invalidateCache();
     _ref.invalidate(swipeProvider);

@@ -487,15 +487,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
     });
 
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (previous?.isAuthenticated != next.isAuthenticated &&
-          next.isAuthenticated) {
-        ref.read(socialProvider.notifier).loadFriends();
-        ref.read(socialProvider.notifier).loadActivityFeed();
-        ref.read(socialProvider.notifier).loadTopProfiles();
-      }
-    });
-
     return Scaffold(
       backgroundColor: context.c.bg,
       body: CinematicBackground(
