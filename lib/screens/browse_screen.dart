@@ -3,9 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../services/api_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../models/social.dart';
 import '../services/tmdb_service.dart';
@@ -14,114 +11,24 @@ import '../services/db_helper.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/pulsing_placeholder.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
 import '../widgets/tonight_pick_card.dart';
 import 'browse/browse_skeleton.dart';
+import 'browse/browse_card.dart';
+import 'browse/browse_error_view.dart';
+import 'browse/browse_section_header.dart';
+import 'browse/browse_top_profile_card.dart';
+import 'browse/friend_signal_card.dart';
+import 'browse/moods.dart';
+import 'browse/onboarding_banner.dart';
 import 'movie_detail_sheet.dart';
-import 'results_screen.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
-import 'onboarding_screen.dart';
 
-class _Mood {
-  final IconData icon;
-  final String label;
-  final String? genreStr;
-  final double? minRating;
-  final int? maxRuntime;
-  final String? decade;
-  final bool includeTv;
-
-  const _Mood({
-    required this.icon,
-    required this.label,
-    this.genreStr,
-    this.minRating,
-    this.maxRuntime,
-    this.decade,
-    this.includeTv = true,
-  });
-}
-
-// NOT: TMDB with_genres'te virgül VE, pipe VEYA anlamına gelir. Mood'lar
-// niyet olarak VEYA'dır ("gerilim lazım" = gerilim VEYA korku); virgüllü hali
-// kesişim sorguladığı için (üstüne vote_count/minRating filtreleri binince)
-// çoğu zaman boş sayfa döndürüyordu.
-const _moods = [
-  _Mood(
-    icon: Icons.sentiment_very_satisfied_rounded,
-    label: 'mood_funny',
-    genreStr: '35|10402',
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.psychology_rounded,
-    label: 'mood_thrill',
-    genreStr: '53|27|9648',
-    minRating: 7.0,
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.sentiment_very_dissatisfied_rounded,
-    label: 'mood_cry',
-    genreStr: '18|10749',
-    minRating: 7.5,
-  ),
-  _Mood(
-    icon: Icons.bolt_rounded,
-    label: 'mood_action',
-    genreStr: '28|12',
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.spa_rounded,
-    label: 'mood_light',
-    genreStr: '35|16|10751',
-    maxRuntime: 100,
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.lightbulb_outline_rounded,
-    label: 'mood_thought',
-    genreStr: '18|9648|36',
-    minRating: 7.5,
-  ),
-  _Mood(
-    icon: Icons.favorite_rounded,
-    label: 'mood_romance',
-    genreStr: '10749',
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.movie_filter_rounded,
-    label: 'mood_classic',
-    decade: '1990',
-    minRating: 7.0,
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.nights_stay_rounded,
-    label: 'mood_scary',
-    genreStr: '27',
-    minRating: 6.5,
-    includeTv: false,
-  ),
-  _Mood(
-    icon: Icons.public_rounded,
-    label: 'mood_doc',
-    genreStr: '99',
-    minRating: 7.0,
-  ),
-  _Mood(
-    icon: Icons.auto_awesome_rounded,
-    label: 'mood_fantasy',
-    genreStr: '14|878',
-  ),
-  _Mood(icon: Icons.gavel_rounded, label: 'mood_crime', genreStr: '80|53'),
-];
-
+/// Keşfet orkestratörü: öneri motoru kablolaması (günlük tohumlu seçki,
+/// vitrin havuzu, keşif dilimi) ve ray düzeni burada; kartlar ve yardımcı
+/// görünümler browse/ altında yaşar.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -572,26 +479,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     });
   }
 
-  void _goMood(_Mood mood) {
-    HapticFeedback.lightImpact();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ResultsScreen(
-          genreStr: mood.genreStr,
-          minRating: mood.minRating,
-          maxRuntime: mood.maxRuntime,
-          decade: mood.decade,
-          includeTv: mood.includeTv,
-          sortBy: 'vote_average.desc',
-          // Mood bir kısayoldur, sıralaması yine kullanıcının zevkine göre:
-          // aynı "Korku gecesi" iki kullanıcıda farklı dizilir.
-          personalRank: true,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(localeProvider, (previous, next) {
@@ -623,87 +510,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final socialState = ref.watch(socialProvider);
     final isAuthenticated = ref.watch(authProvider).isAuthenticated;
     if (_personal.isEmpty && _trending.isEmpty && _movies.isEmpty) {
-      final errorStr = _error.toString();
-      final isNetworkError =
-          errorStr.contains('No internet connection') ||
-          errorStr.contains('SocketException') ||
-          errorStr.contains('Failed host lookup') ||
-          errorStr.contains('timed out') ||
-          errorStr.contains('TimeoutException');
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isNetworkError
-                  ? Icons.cloud_off_rounded
-                  : Icons.error_outline_rounded,
-              color: c.red,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isNetworkError
-                  ? (AppLocalizations.of(
-                          context,
-                        )?.get('browse_offline_title') ??
-                        'You are Offline')
-                  : (_error.toString().contains('401')
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('browse_api_unauthorized') ??
-                              'Service Unauthorized')
-                        : (AppLocalizations.of(context)?.get('browse_error') ??
-                              'An error occurred while loading content.')),
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                isNetworkError
-                    ? (AppLocalizations.of(
-                            context,
-                          )?.get('browse_offline_desc') ??
-                          'Please check your internet connection and try again.')
-                    : (_error.toString().contains('401')
-                          ? (AppLocalizations.of(
-                                  context,
-                                )?.get('browse_api_unauthorized_desc') ??
-                                'The server is unable to authenticate with the movie service. Please contact support.')
-                          : (AppLocalizations.of(
-                                  context,
-                                )?.get('browse_conn_error') ??
-                                'Check your internet connection and try again.')),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: c.dim, fontSize: 13),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                _load();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: c.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: Text(
-                AppLocalizations.of(context)?.get('browse_retry') ??
-                    'Yeniden Dene',
-              ),
-            ),
-          ],
-        ),
-      );
+      return BrowseErrorView(error: _error, onRetry: _load);
     }
 
     ref.listen<int>(browseScrollTriggerProvider, (previous, next) {
@@ -772,49 +579,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                     ),
                   ),
                 ),
-                SizedBox(
-                  height: 44,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _moods.length,
-                    itemBuilder: (ctx, i) {
-                      final m = _moods[i];
-                      return GestureDetector(
-                        onTap: () => _goMood(m),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.surface,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: c.border, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(m.icon, color: c.red, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                AppLocalizations.of(context)?.get(m.label) ??
-                                    m.label,
-                                style: TextStyle(
-                                  color: c.ink,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                const MoodChipsRow(),
                 const SizedBox(height: 20),
               ],
             ),
@@ -822,7 +587,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
           // ── Onboarding / Taste Banner Reminder ──────────────────────────────
           if (_showOnboardingBanner)
-            SliverToBoxAdapter(child: _buildOnboardingBanner(context, c)),
+            SliverToBoxAdapter(
+              child: OnboardingReminderBanner(
+                onDismissed: () =>
+                    setState(() => _showOnboardingBanner = false),
+              ),
+            ),
 
           // ── Bu Gece Ne İzlesem? (motorun en yüksek skorlu seçimi) ────────────
           if (_tonight != null)
@@ -931,40 +701,15 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     bool showScore = false,
     String? badge,
   }) {
-    final c = context.c;
     return SliverToBoxAdapter(
       child: EntranceFade(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 18,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      gradient: CinemaGradients.gold,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  if (badge != null) ...[
-                    Text(badge, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
+            BrowseSectionHeader(
+              title: title,
+              badge: badge,
+              gradient: CinemaGradients.gold,
             ),
             SizedBox(
               height: 275,
@@ -973,7 +718,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: items.length,
-                itemBuilder: (ctx, i) => _BrowseCard(
+                itemBuilder: (ctx, i) => BrowseCard(
                   movie: items[i],
                   showScore: showScore,
                   onTap: () => _openDetail(items[i]),
@@ -989,39 +734,18 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   }
 
   Widget _friendsActivitySection(List<ActivityItem> feed) {
-    final c = context.c;
     return SliverToBoxAdapter(
       child: EntranceFade(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 18,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      gradient: CinemaGradients.crimson,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(
-                          context,
-                        )?.get('browse_friends_activity') ??
-                        'Arkadaşlarından Son Sinyaller',
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
+            BrowseSectionHeader(
+              title:
+                  AppLocalizations.of(
+                        context,
+                      )?.get('browse_friends_activity') ??
+                      'Arkadaşlarından Son Sinyaller',
+              gradient: CinemaGradients.crimson,
             ),
             SizedBox(
               height: 250,
@@ -1030,189 +754,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: feed.length,
-                itemBuilder: (ctx, i) {
-                  final item = feed[i];
-                  final title = item.title;
-                  final posterPath = item.posterPath ?? '';
-                  final rating = item.rating;
-                  final friendName = item.friendName ?? item.friendUsername;
-
-                  final ratingKey = rating >= 3
-                      ? 'browse_rating_excellent'
-                      : 'browse_rating_good';
-                  final ratingText =
-                      AppLocalizations.of(context)?.get(ratingKey) ??
-                      (rating >= 3 ? 'Harika dedi' : 'İyi dedi');
-
-                  final parsedId = item.movieId;
-                  final isTv = item.isTv;
-
-                  final movie = Movie(
-                    id: parsedId,
-                    isTV: isTv,
-                    title: title,
-                    posterPath: posterPath,
-                    backdropPath: '',
-                    overview: '',
-                    voteAverage: 0,
-                    releaseDate: '',
-                    genreIds: [],
-                  );
-
-                  return GestureDetector(
-                    onTap: () => _openDetail(movie),
-                    child: Container(
-                      width: 120,
-                      margin: const EdgeInsets.only(right: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: CinemaShadows.card,
-                              ),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Container(
-                                      color: c.surface,
-                                      child: posterPath.isNotEmpty
-                                          ? CachedNetworkImage(
-                                              imageUrl:
-                                                  'https://image.tmdb.org/t/p/w342$posterPath',
-                                              fit: BoxFit.cover,
-                                              memCacheWidth: 180,
-                                              placeholder: (context, url) =>
-                                                  const PulsingPlaceholder(),
-                                              errorWidget:
-                                                  (context, url, error) =>
-                                                      const PulsingPlaceholder(),
-                                            )
-                                          : const PulsingPlaceholder(),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    left: 4,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        MovieDetailSheet.confirmBlockMovie(
-                                          context: context,
-                                          ref: ref,
-                                          movie: movie,
-                                          onBlocked: () =>
-                                              _removeBlockedMovie(movie),
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.6,
-                                          ),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.15,
-                                            ),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.visibility_off_rounded,
-                                          color: Colors.white,
-                                          size: 11,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        MovieDetailSheet.showRecommendSheet(
-                                          context: context,
-                                          ref: ref,
-                                          movie: movie,
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.6,
-                                          ),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.15,
-                                            ),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.send_rounded,
-                                          color: Colors.white,
-                                          size: 11,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: c.ink,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(
-                                rating >= 3
-                                    ? Icons.favorite_rounded
-                                    : Icons.thumb_up_rounded,
-                                color: c.red,
-                                size: 11,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '$friendName $ratingText',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: c.dim,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                itemBuilder: (ctx, i) => FriendSignalCard(
+                  item: feed[i],
+                  onOpen: _openDetail,
+                  onBlocked: _removeBlockedMovie,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -1223,37 +769,16 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   }
 
   Widget _topProfilesSection(List<TopProfile> profiles) {
-    final c = context.c;
     return SliverToBoxAdapter(
       child: EntranceFade(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 18,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      gradient: CinemaGradients.crimson,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)?.get('top_lists_title') ??
-                        'Popüler Listeler',
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
+            BrowseSectionHeader(
+              title:
+                  AppLocalizations.of(context)?.get('top_lists_title') ??
+                  'Popüler Listeler',
+              gradient: CinemaGradients.crimson,
             ),
             SizedBox(
               height: 136,
@@ -1262,10 +787,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: profiles.length,
-                itemBuilder: (ctx, i) {
-                  final p = profiles[i];
-                  return _TopProfileCard(profile: p, rank: i + 1);
-                },
+                itemBuilder: (ctx, i) =>
+                    BrowseTopProfileCard(profile: profiles[i], rank: i + 1),
               ),
             ),
             const SizedBox(height: 20),
@@ -1282,538 +805,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => MovieDetailSheet(movie: movie, service: _service),
-    );
-  }
-
-  Widget _buildOnboardingBanner(BuildContext context, ThemePalette c) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            c.gold.withValues(alpha: 0.12),
-            c.goldSoft.withValues(alpha: 0.04),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.gold.withValues(alpha: 0.3), width: 1.5),
-      ),
-      child: Stack(
-        children: [
-          InkWell(
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-              );
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 40, 18),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.gold.withValues(alpha: 0.15),
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome_rounded,
-                      color: c.gold,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(
-                                context,
-                              )?.get('personalize_recommendations') ??
-                              'Personalize Recommendations',
-                          style: TextStyle(
-                            color: c.ink,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppLocalizations.of(
-                                context,
-                              )?.get('complete_the_2minute_survey_fo') ??
-                              'Complete the 2-minute survey for the best matching movies and shows!',
-                          style: TextStyle(
-                            color: c.dim,
-                            fontSize: 11.5,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              icon: Icon(Icons.close_rounded, color: c.dim, size: 18),
-              onPressed: () async {
-                HapticFeedback.lightImpact();
-                await PrefsService.dismissOnboardingBanner();
-                setState(() {
-                  _showOnboardingBanner = false;
-                });
-              },
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(4),
-              splashRadius: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BrowseCard extends ConsumerWidget {
-  final Movie movie;
-  final bool showScore;
-  final VoidCallback onTap;
-  final VoidCallback onBlocked;
-
-  const _BrowseCard({
-    required this.movie,
-    required this.showScore,
-    required this.onTap,
-    required this.onBlocked,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 160,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: CinemaShadows.card,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      movie.posterUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: movie.posterUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 240,
-                              placeholder: (context, url) =>
-                                  const PulsingPlaceholder(),
-                              errorWidget: (context, url, error) =>
-                                  const PulsingPlaceholder(),
-                            )
-                          : const PulsingPlaceholder(),
-                      // İnce iç kenar ışığı
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.06),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 6,
-                        left: 6,
-                        child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            MovieDetailSheet.confirmBlockMovie(
-                              context: context,
-                              ref: ref,
-                              movie: movie,
-                              onBlocked: onBlocked,
-                            );
-                          },
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                width: 1,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.visibility_off_rounded,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            MovieDetailSheet.showRecommendSheet(
-                              context: context,
-                              ref: ref,
-                              movie: movie,
-                            );
-                          },
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                width: 1,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.send_rounded,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (showScore)
-                        Positioned(
-                          bottom: 6,
-                          left: 6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.66),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppColors.green.withValues(alpha: 0.5),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.bolt_rounded,
-                                  color: AppColors.green,
-                                  size: 11,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '${movie.matchScore}',
-                                  style: const TextStyle(
-                                    color: AppColors.green,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              movie.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            // Gerekçe varsa yılın yerine "neden önerildi" satırı — "seni
-            // tanıyor" hissini kart seviyesine taşır (yıl detayda zaten var).
-            Builder(
-              builder: (context) {
-                final reason = showScore
-                    ? recoReasonLabel(context, movie)
-                    : null;
-                if (reason == null) {
-                  return Text(
-                    movie.year,
-                    style: TextStyle(color: c.dim, fontSize: 12.5),
-                  );
-                }
-                return Row(
-                  children: [
-                    Icon(
-                      movie.recoReasonType == 'friend'
-                          ? Icons.favorite_rounded
-                          : Icons.auto_awesome_rounded,
-                      size: 11,
-                      color: c.goldSoft,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        reason,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.goldSoft,
-                          fontSize: 11.5,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TopProfileCard extends ConsumerWidget {
-  final TopProfile profile;
-  final int rank;
-
-  const _TopProfileCard({required this.profile, required this.rank});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    final tr = AppLocalizations.of(context);
-
-    // Ranks 1, 2, 3 have specific colors
-    final rankColor = switch (rank) {
-      1 => const Color(0xFFFFD54F),
-      2 => const Color(0xFFB0BEC5),
-      3 => const Color(0xFFBC8A5F),
-      _ => c.dim,
-    };
-
-    return Container(
-      width: 260,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: rank <= 3
-            ? Border.all(color: rankColor.withValues(alpha: 0.4), width: 1.5)
-            : Border.all(color: c.borderSoft, width: 1),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final url = Uri.parse(
-            ApiService.webProfileUrl(
-              profile.username,
-              lang: ref.read(localeProvider).languageCode,
-            ),
-          );
-          if (await canLaunchUrl(url)) {
-            await launchUrl(url, mode: LaunchMode.externalApplication);
-          }
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    '#$rank',
-                    style: TextStyle(
-                      color: rankColor,
-                      fontSize: rank <= 3 ? 17 : 14,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: CinemaGradients.crimson,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    profile.shownName.isEmpty
-                        ? '?'
-                        : profile.shownName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.shownName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                      Text(
-                        '@${profile.username}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: c.dim, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (profile.isMe)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.gold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      tr?.get('top_lists_you') ?? 'Sen',
-                      style: TextStyle(
-                        color: c.gold,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  )
-                else
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ref
-                          .read(socialProvider.notifier)
-                          .toggleProfileLike(profile);
-                    },
-                    child: Icon(
-                      profile.meLiked
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: profile.meLiked ? c.red : c.dim,
-                      size: 18,
-                    ),
-                  ),
-                const SizedBox(width: 4),
-                Text(
-                  profile.likeCount.toString(),
-                  style: TextStyle(
-                    color: profile.meLiked && !profile.isMe ? c.red : c.dim,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-                if (profile.isMe) ...[
-                  const SizedBox(width: 2),
-                  Icon(Icons.favorite_rounded, color: c.dim, size: 12),
-                ],
-              ],
-            ),
-            if (profile.previews.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 58,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: [
-                      for (final pv in profile.previews.take(10)) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: pv.posterUrl.isEmpty
-                              ? Container(
-                                  width: 38,
-                                  height: 58,
-                                  color: c.bg,
-                                  child: Icon(
-                                    Icons.movie_rounded,
-                                    color: c.dim,
-                                    size: 14,
-                                  ),
-                                )
-                              : CachedNetworkImage(
-                                  imageUrl: pv.posterUrl,
-                                  width: 38,
-                                  height: 58,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, _) => const SizedBox(
-                                    width: 38,
-                                    height: 58,
-                                    child: PulsingPlaceholder(),
-                                  ),
-                                  errorWidget: (_, _, _) => Container(
-                                    width: 38,
-                                    height: 58,
-                                    color: c.bg,
-                                    child: Icon(
-                                      Icons.movie_rounded,
-                                      color: c.dim,
-                                      size: 14,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }
