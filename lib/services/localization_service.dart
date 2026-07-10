@@ -640,7 +640,12 @@ class AppLocalizations {
       'filter_and_list': 'Filter and List',
       'please_enter_a_username': 'Please enter a username.',
       'profile_updated_successfully': 'Profile updated successfully.',
-      'friend_request_sent': 'Friend request sent.',
+      'friend_request_sent':
+          'Friend request sent. You will become friends once they accept.',
+      'friend_request_accepted': 'Friend request accepted. You are now friends.',
+      'friend_request_declined': 'Request declined.',
+      'friend_request_withdrawn': 'Request withdrawn.',
+      'friend_removed': 'Friend removed.',
       'social_network': 'Social Network',
       'requests': 'Requests',
       'activity': 'Activity',
@@ -1332,7 +1337,13 @@ class AppLocalizations {
       'filter_and_list': 'Filtrele ve Listele',
       'please_enter_a_username': 'Lütfen kullanıcı adı girin.',
       'profile_updated_successfully': 'Profil başarıyla güncellendi.',
-      'friend_request_sent': 'Arkadaşlık isteği gönderildi.',
+      'friend_request_sent':
+          'Arkadaşlık isteği gönderildi. Karşı taraf onaylayınca arkadaş olacaksınız.',
+      'friend_request_accepted':
+          'Arkadaşlık isteği kabul edildi. Artık arkadaşsınız.',
+      'friend_request_declined': 'İstek silindi.',
+      'friend_request_withdrawn': 'İstek geri çekildi.',
+      'friend_removed': 'Arkadaşlıktan çıkarıldı.',
       'social_network': 'Sosyal Ağ',
       'requests': 'İstekler',
       'activity': 'Akış',

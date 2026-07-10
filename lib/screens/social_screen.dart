@@ -9,6 +9,7 @@ import '../services/localization_service.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
+import '../widgets/app_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/pulsing_placeholder.dart';
 import 'movie_detail/spoiler_comment.dart';
@@ -90,17 +91,54 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     final success = await ref
         .read(socialProvider.notifier)
         .sendFriendRequest(query);
-    if (success && mounted) {
-      _searchCtrl.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)?.get('friend_request_sent') ??
-                'Friend request sent.',
-          ),
-        ),
+    if (success && mounted) _searchCtrl.clear();
+    _showSocialResult(
+      success,
+      'friend_request_sent',
+      'Arkadaşlık isteği gönderildi. Karşı taraf onaylayınca arkadaş olacaksınız.',
+    );
+  }
+
+  /// Sosyal işlemin sonucunu görünür kılar: başarıda [okKey] mesajı, hatada
+  /// sunucunun döndüğü mesaj (varsa) gösterilir. Bu işlemler daha önce
+  /// sessizdi — kullanıcı işlemin yapılıp yapılmadığını bilemiyordu.
+  void _showSocialResult(bool ok, String okKey, String okFallback) {
+    if (!mounted) return;
+    final tr = AppLocalizations.of(context);
+    if (ok) {
+      showAppToast(context, tr?.get(okKey) ?? okFallback);
+    } else {
+      final err = ref.read(socialProvider).error;
+      showAppToast(
+        context,
+        err ?? (tr?.get('auth_err_generic') ?? 'Bir hata oluştu.'),
+        success: false,
       );
     }
+  }
+
+  Future<void> _acceptRequest(int friendId) async {
+    final ok = await ref.read(socialProvider.notifier).acceptRequest(friendId);
+    _showSocialResult(
+      ok,
+      'friend_request_accepted',
+      'Arkadaşlık isteği kabul edildi. Artık arkadaşsınız.',
+    );
+  }
+
+  Future<void> _declineRequest(int friendId) async {
+    final ok = await ref.read(socialProvider.notifier).rejectRequest(friendId);
+    _showSocialResult(ok, 'friend_request_declined', 'İstek silindi.');
+  }
+
+  Future<void> _withdrawRequest(int friendId) async {
+    final ok = await ref.read(socialProvider.notifier).rejectRequest(friendId);
+    _showSocialResult(ok, 'friend_request_withdrawn', 'İstek geri çekildi.');
+  }
+
+  Future<void> _removeFriend(int friendId) async {
+    final ok = await ref.read(socialProvider.notifier).rejectRequest(friendId);
+    _showSocialResult(ok, 'friend_removed', 'Arkadaşlıktan çıkarıldı.');
   }
 
   @override
@@ -732,10 +770,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                                       TextButton(
                                         onPressed: () async {
                                           Navigator.pop(ctx);
-                                          final id = f.id;
-                                          await ref
-                                              .read(socialProvider.notifier)
-                                              .rejectRequest(id);
+                                          await _removeFriend(f.id);
                                         },
                                         child: Text(
                                           AppLocalizations.of(
@@ -819,17 +854,11 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       Icons.check_circle_rounded,
                       color: Colors.green,
                     ),
-                    onPressed: () {
-                      final id = f.id;
-                      ref.read(socialProvider.notifier).acceptRequest(id);
-                    },
+                    onPressed: () => _acceptRequest(f.id),
                   ),
                   IconButton(
                     icon: Icon(Icons.cancel_rounded, color: c.red),
-                    onPressed: () {
-                      final id = f.id;
-                      ref.read(socialProvider.notifier).rejectRequest(id);
-                    },
+                    onPressed: () => _declineRequest(f.id),
                   ),
                 ],
               ),
@@ -891,10 +920,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       Icons.delete_outline_rounded,
                       color: c.red.withValues(alpha: 0.6),
                     ),
-                    onPressed: () {
-                      final id = f.id;
-                      ref.read(socialProvider.notifier).rejectRequest(id);
-                    },
+                    onPressed: () => _withdrawRequest(f.id),
                   ),
                 ],
               ),

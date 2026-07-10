@@ -22,6 +22,7 @@ import '../providers/social_provider.dart';
 import '../services/providers.dart';
 import 'trailer_player_screen.dart';
 import '../widgets/spring_button.dart';
+import '../widgets/app_toast.dart';
 
 class MovieDetailSheet extends ConsumerStatefulWidget {
   final Movie movie;
@@ -302,14 +303,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   void _showToast(String msg, {bool success = true}) {
     if (!mounted) return;
-    final c = context.c;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(color: Colors.white)),
-        backgroundColor: success ? c.green : c.red,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // SnackBar bu modal sheet'in ARKASINDAKİ Scaffold'a çiziliyordu —
+    // şikayet/engelleme geri bildirimi kullanıcıya hiç görünmüyordu.
+    showAppToast(context, msg, success: success);
   }
 
   Future<void> _reportReview(dynamic rev, String reason) async {
