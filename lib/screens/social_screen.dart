@@ -1550,39 +1550,39 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
         socialState.friendActivities[widget.friendId] ?? [];
     final isLoading = socialState.loading && friendActivities.isEmpty;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return CinematicBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: c.ink,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.friendName,
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: c.ink,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.friendName,
+                style: TextStyle(
+                  color: c.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            Text(
-              '@${widget.friendUsername}',
-              style: TextStyle(color: c.dim, fontSize: 12),
-            ),
-          ],
+              Text(
+                '@${widget.friendUsername}',
+                style: TextStyle(color: c.dim, fontSize: 12),
+              ),
+            ],
+          ),
         ),
-      ),
-      body: CinematicBackground(
-        child: Column(
+        body: Column(
           children: [
             if (widget.tasteScore != null) ...[
               Container(

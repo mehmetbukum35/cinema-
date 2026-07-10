@@ -145,48 +145,48 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         ? watchlist.length
         : rated.length;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return CinematicBackground(
+      animate: widget.isActive,
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: c.ink,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          tooltip:
-              AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            EntranceFade(
-              child: Text(
-                tr?.get('library_title') ?? 'Kütüphanen',
-                style: TextStyle(
-                  color: c.ink,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: c.ink,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+            tooltip:
+                AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              EntranceFade(
+                child: Text(
+                  tr?.get('library_title') ?? 'Kütüphanen',
+                  style: TextStyle(
+                    color: c.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            Text(
-              '$activeCount ${tr?.get('watchlist_items') ?? 'öğe'}',
-              style: TextStyle(
-                color: c.dim,
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
+              Text(
+                '$activeCount ${tr?.get('watchlist_items') ?? 'öğe'}',
+                style: TextStyle(
+                  color: c.dim,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      body: CinematicBackground(
-        animate: widget.isActive,
-        child: Column(
+        body: Column(
           children: [
             _segmentedTabs(c, tr, watchlist.length, rated.length),
             _filterRow(c, tr),

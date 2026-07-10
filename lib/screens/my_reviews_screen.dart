@@ -138,44 +138,44 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     final tr = AppLocalizations.of(context);
     final items = _items;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return CinematicBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: c.ink,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          tooltip: tr?.get('semantics_go_back') ?? 'Back',
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              tr?.get('my_reviews_title') ?? 'Yorumlarım',
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: c.ink,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+            tooltip: tr?.get('semantics_go_back') ?? 'Back',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr?.get('my_reviews_title') ?? 'Yorumlarım',
+                style: TextStyle(
+                  color: c.ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            Text(
-              tr?.get('my_reviews_subtitle') ?? 'Yazdığın tüm yorumlar tek yerde',
-              style: TextStyle(
-                color: c.dim,
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
+              Text(
+                tr?.get('my_reviews_subtitle') ?? 'Yazdığın tüm yorumlar tek yerde',
+                style: TextStyle(
+                  color: c.dim,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      body: CinematicBackground(
-        child: items == null
+        body: items == null
             ? const Center(child: CircularProgressIndicator())
             : items.isEmpty
             ? _emptyState(c, tr)

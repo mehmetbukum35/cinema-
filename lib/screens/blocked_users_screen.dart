@@ -129,31 +129,31 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
     final tr = AppLocalizations.of(context);
     final blocked = _blocked;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return CinematicBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: c.ink,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          tooltip: tr?.get('semantics_go_back') ?? 'Back',
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          tr?.get('blocked_users_title') ?? 'Engellenen Kullanıcılar',
-          style: TextStyle(
-            color: c.ink,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: c.ink,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+            tooltip: tr?.get('semantics_go_back') ?? 'Back',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+          ),
+          title: Text(
+            tr?.get('blocked_users_title') ?? 'Engellenen Kullanıcılar',
+            style: TextStyle(
+              color: c.ink,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-      ),
-      body: CinematicBackground(
-        child: blocked == null
+        body: blocked == null
             ? const Center(child: CircularProgressIndicator())
             : _error
             ? _errorState(c, tr)
