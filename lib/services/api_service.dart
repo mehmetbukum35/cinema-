@@ -191,6 +191,8 @@ class ApiService {
   // ─── Auth Endpoints ──────────────────────────────────────────────────────────
 
   // POST /auth/register
+  // Yeni akış: sunucu token yerine {pending_verification: true} döner; oturum
+  // verifyEmail ile açılır. (Eski sunucu 201 + tokens dönerdi; ikisi de kabul.)
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -209,12 +211,49 @@ class ApiService {
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return data;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Kayıt başarısız.',
+      );
+    }
+  }
+
+  // POST /auth/verify-email — kayıttaki 6 haneli kodu doğrular, oturum açar.
+  Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
+    final response = await _request(
+      'POST',
+      '/auth/verify-email',
+      body: {'email': email, 'code': code},
+      requireAuth: false,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode == 200) {
+      return data;
+    } else {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Doğrulama kodu geçersiz.',
+      );
+    }
+  }
+
+  // POST /auth/resend-verification — doğrulama kodunu yeniden e-postalar.
+  Future<void> resendVerification(String email) async {
+    final response = await _request(
+      'POST',
+      '/auth/resend-verification',
+      body: {'email': email},
+      requireAuth: false,
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Doğrulama kodu gönderilemedi.',
       );
     }
   }

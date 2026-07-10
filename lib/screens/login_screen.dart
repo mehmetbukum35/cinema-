@@ -5,6 +5,7 @@ import '../services/app_config.dart';
 import '../services/localization_service.dart';
 import '../widgets/auth_conflict_dialog.dart';
 import '../widgets/forgot_password_sheet.dart';
+import '../widgets/verify_email_sheet.dart';
 
 /// Giriş + Kayıt ekranı (tek ekranda mod değiştirir).
 /// Mevcut akışı bozmaz; istediğin yerden (ör. Profil) buraya yönlendir:
@@ -42,7 +43,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             displayName: _nameCtrl.text.trim(),
           )
         : await notifier.login(_emailCtrl.text, _passCtrl.text);
-    await _handleAuthResult(result);
+    // Kayıt yolu kodu zaten gönderdi; girişte (doğrulanmamış hesap) kodun
+    // doğrulama ekranı açılırken yeniden gönderilmesi gerekir.
+    await _handleAuthResult(result, verificationCodeSent: _isRegister);
   }
 
   Future<void> _googleSignIn() async {
@@ -50,10 +53,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await _handleAuthResult(result);
   }
 
-  /// Başarı/çakışma sonucunu tek yerden işler (e-posta ve Google ortak).
-  Future<void> _handleAuthResult(AuthResult result) async {
+  /// Başarı/çakışma/doğrulama sonucunu tek yerden işler (e-posta ve Google ortak).
+  Future<void> _handleAuthResult(
+    AuthResult result, {
+    bool verificationCodeSent = false,
+  }) async {
     if (!mounted) return;
-    if (result.status == AuthStatus.success) {
+    if (result.status == AuthStatus.pendingVerification) {
+      // E-posta doğrulanmadan oturum açılmaz: kod giriş ekranını aç. Ekran
+      // doğrulama sonucunu (başarı/çakışma) AuthResult olarak geri verir.
+      // Kapatılabilir: e-posta hiç gelmezse kullanıcı sıkışmasın (tekrar
+      // giriş denediğinde ekran yeniden açılır).
+      final verifyResult = await showModalBottomSheet<AuthResult>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => VerifyEmailSheet(
+          email: _emailCtrl.text.trim().toLowerCase(),
+          sendCodeOnOpen: !verificationCodeSent,
+        ),
+      );
+      if (verifyResult != null && mounted) {
+        await _handleAuthResult(verifyResult);
+      }
+    } else if (result.status == AuthStatus.success) {
       Navigator.of(context).pop();
     } else if (result.status == AuthStatus.conflict) {
       final resolution = await showAuthConflictDialog(context);

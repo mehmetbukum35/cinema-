@@ -190,7 +190,22 @@ CREATE TABLE `users` (
   `is_public` tinyint(1) NOT NULL DEFAULT 1,
   `taste_dna` text DEFAULT NULL,
   `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
-  `google_sub` varchar(255) DEFAULT NULL
+  `google_sub` varchar(255) DEFAULT NULL,
+  `email_verified` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tablo için tablo yapısı `email_verifications` (kayıt doğrulama kodları)
+--
+
+CREATE TABLE `email_verifications` (
+  `email` varchar(255) NOT NULL,
+  `code_hash` varchar(255) NOT NULL,
+  `attempts` int(11) NOT NULL DEFAULT 0,
+  `expires_at` bigint(20) NOT NULL,
+  `created_at` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -251,6 +266,12 @@ ALTER TABLE `friends`
 -- Tablo için indeksler `password_resets`
 --
 ALTER TABLE `password_resets`
+  ADD PRIMARY KEY (`email`);
+
+--
+-- Tablo için indeksler `email_verifications`
+--
+ALTER TABLE `email_verifications`
   ADD PRIMARY KEY (`email`);
 
 --

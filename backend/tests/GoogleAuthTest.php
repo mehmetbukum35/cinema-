@@ -25,8 +25,18 @@ class GoogleAuthTest extends TestCase
                 display_name TEXT,
                 username TEXT,
                 google_sub TEXT UNIQUE,
+                email_verified INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE email_verifications (
+                email TEXT PRIMARY KEY,
+                code_hash TEXT NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                expires_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
             )'
         );
         $this->db->exec(
@@ -138,13 +148,13 @@ class GoogleAuthTest extends TestCase
         $this->assertNotEmpty($row['password_hash']);
     }
 
-    public function testLinksGoogleToExistingEmailAccount(): void
+    public function testLinksGoogleToExistingVerifiedEmailAccount(): void
     {
         $t = time() * 1000;
         $this->db
             ->prepare(
-                'INSERT INTO users (email, password_hash, display_name, username, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?)'
+                'INSERT INTO users (email, password_hash, display_name, username, email_verified, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 1, ?, ?)'
             )
             ->execute([
                 'ali@example.com',
@@ -166,10 +176,60 @@ class GoogleAuthTest extends TestCase
         $this->assertSame('Mevcut Ali', $body['user']['display_name']);
         $this->assertSame('mevcutali', $body['user']['username']);
 
-        $sub = $this->db
-            ->query("SELECT google_sub FROM users WHERE email = 'ali@example.com'")
+        $row = $this->db
+            ->query("SELECT google_sub, password_hash FROM users WHERE email = 'ali@example.com'")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('google-sub-1', $row['google_sub']);
+        // Doğrulanmış hesapta parola korunur.
+        $this->assertTrue(password_verify('mevcut-parola', $row['password_hash']));
+    }
+
+    public function testGoogleTakesOverUnverifiedEmailAccount(): void
+    {
+        // Ön-hesap ele geçirme (pre-account takeover) savunması: saldırgan,
+        // kurbanın e-postasıyla doğrulanmamış hesap açmış olsun. Kurban Google
+        // ile girince hesap ona devredilir; saldırganın parolası geçersizleşir.
+        $t = time() * 1000;
+        $this->db
+            ->prepare(
+                'INSERT INTO users (email, password_hash, display_name, email_verified, created_at, updated_at)
+                 VALUES (?, ?, ?, 0, ?, ?)'
+            )
+            ->execute([
+                'ali@example.com',
+                password_hash('attacker-pass', PASSWORD_BCRYPT),
+                'Sahte Ali',
+                $t,
+                $t,
+            ]);
+        $uid = (int) $this->db->lastInsertId();
+        // Saldırganın olası oturumu da düşmeli.
+        $this->db->prepare('INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)')
+                 ->execute([$uid, 'attacker_token_hash', time() + 3600, time()]);
+
+        $this->auth->googleLogin(
+            ['id_token' => 'x'],
+            self::verifierWith($this->claims())
+        );
+
+        $body = TestHelperRegistry::$lastBody;
+        $this->assertFalse($body['is_new']);
+        // İsim artık Google'daki gerçek sahibin adı.
+        $this->assertSame('Ali Veli', $body['user']['display_name']);
+
+        $row = $this->db
+            ->query("SELECT google_sub, password_hash, email_verified FROM users WHERE email = 'ali@example.com'")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('google-sub-1', $row['google_sub']);
+        $this->assertSame(1, (int) $row['email_verified']);
+        // Saldırganın parolası artık çalışmaz.
+        $this->assertFalse(password_verify('attacker-pass', $row['password_hash']));
+        // Saldırganın refresh token'ı iptal edilmiş olmalı (googleLogin'in bu
+        // oturum için ürettiği YENİ token durur, eskisi silinir).
+        $tokens = $this->db
+            ->query("SELECT COUNT(*) FROM refresh_tokens WHERE token_hash = 'attacker_token_hash'")
             ->fetchColumn();
-        $this->assertSame('google-sub-1', $sub);
+        $this->assertSame(0, (int) $tokens);
     }
 
     public function testReturningGoogleUserMatchedBySubEvenIfEmailChanged(): void

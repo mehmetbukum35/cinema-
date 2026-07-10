@@ -20,6 +20,10 @@ class Auth
     }
 
     // ─── POST /auth/register ────────────────────────────────────────────────
+    // E-posta doğrulamalı kayıt: hesap `email_verified = 0` olarak açılır,
+    // token VERİLMEZ. E-postaya 6 haneli kod gider; oturum ancak
+    // POST /auth/verify-email ile kod doğrulanınca açılır. Böylece kimse
+    // başkasının e-posta adresiyle kullanılabilir bir hesap açamaz.
     public function register(array $in): void
     {
         $email = strtolower(trim($in['email'] ?? ''));
@@ -29,23 +33,205 @@ class Auth
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Geçersiz e-posta.');
         if (strlen($pass) < 8) fail(422, 'Parola en az 8 karakter olmalı.');
 
-        $exists = $this->db->prepare('SELECT 1 FROM users WHERE email = ?');
+        $exists = $this->db->prepare('SELECT id, email_verified FROM users WHERE email = ?');
         $exists->execute([$email]);
-        if ($exists->fetch()) fail(409, 'Bu e-posta zaten kayıtlı.');
+        $u = $exists->fetch();
 
         $t = now_ms();
         $hash = password_hash($pass, PASSWORD_BCRYPT);
-        $ins = $this->db->prepare(
-            'INSERT INTO users (email, password_hash, display_name, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?)'
-        );
-        $ins->execute([$email, $hash, $name, $t, $t]);
-        $uid = (int) $this->db->lastInsertId();
 
-        json_out(201, [
-            'user'   => ['id' => $uid, 'email' => $email, 'display_name' => $name],
+        if ($u && (int) $u['email_verified'] === 1) {
+            fail(409, 'Bu e-posta zaten kayıtlı.');
+        }
+
+        if ($u) {
+            // Doğrulanmamış hesap e-postanın sahibine ait sayılmaz: kaydı kim
+            // yeniden denerse parola/isim onunkiyle güncellenir. Hesabı en
+            // sonunda kodu doğrulayan (= e-postanın gerçek sahibi) kazanır.
+            $up = $this->db->prepare(
+                'UPDATE users SET password_hash = ?, display_name = ?, updated_at = ? WHERE id = ?'
+            );
+            $up->execute([$hash, $name, $t, (int) $u['id']]);
+        } else {
+            $ins = $this->db->prepare(
+                'INSERT INTO users (email, password_hash, display_name, email_verified, created_at, updated_at)
+                 VALUES (?, ?, ?, 0, ?, ?)'
+            );
+            $ins->execute([$email, $hash, $name, $t, $t]);
+        }
+
+        // Önce yanıt döner (forgotPassword ile aynı desen), kod arka planda
+        // e-postalanır — SMTP gecikmesi istemciyi bekletmez.
+        $this->respondThenContinue(200, [
+            'ok' => true,
+            'pending_verification' => true,
+            'email' => $email,
+        ]);
+        $this->sendVerificationCode($email);
+    }
+
+    // ─── POST /auth/verify-email ─────────────────────────────────────────────
+    // Kayıtta gönderilen kodu doğrular; başarılıysa hesap doğrulanmış olur ve
+    // oturum (token çifti) burada açılır.
+    public function verifyEmail(array $in): void
+    {
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
+        $code  = trim((string) ($in['code'] ?? ''));
+        if ($email === '' || $code === '') {
+            fail(422, 'E-posta ve doğrulama kodu gereklidir.');
+        }
+
+        $this->consumeCodeOrFail('email_verifications', $email, $code);
+
+        $st = $this->db->prepare(
+            'SELECT id, display_name, username, google_sub FROM users WHERE email = ?'
+        );
+        $st->execute([$email]);
+        $u = $st->fetch();
+        if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+
+        $up = $this->db->prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?');
+        $up->execute([now_ms(), (int) $u['id']]);
+        $this->db->prepare('DELETE FROM email_verifications WHERE email = ?')->execute([$email]);
+
+        $uid = (int) $u['id'];
+        json_out(200, [
+            'user' => [
+                'id' => $uid,
+                'email' => $email,
+                'display_name' => $u['display_name'],
+                'username' => $u['username'],
+                'google_sub' => $u['google_sub'],
+            ],
             'tokens' => $this->issueTokens($uid),
         ]);
+    }
+
+    // ─── POST /auth/resend-verification ──────────────────────────────────────
+    // Doğrulama kodunu yeniden gönderir. E-posta varlığını sızdırmamak için
+    // her durumda 200 döner (forgotPassword ile aynı ilke).
+    public function resendVerification(array $in): void
+    {
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            fail(422, 'Geçersiz e-posta formatı.');
+        }
+
+        $st = $this->db->prepare('SELECT 1 FROM users WHERE email = ? AND email_verified = 0');
+        $st->execute([$email]);
+        $pending = (bool) $st->fetch();
+
+        $this->respondThenContinue(200, ['ok' => true]);
+        if ($pending) {
+            $this->sendVerificationCode($email);
+        }
+    }
+
+    /**
+     * 6 haneli doğrulama kodunu üretir, email_verifications'a (bcrypt hash)
+     * yazar ve e-postalar. Yanıt çoktan döndüğü için hatalar yalnızca loglanır.
+     */
+    private function sendVerificationCode(string $email): void
+    {
+        try {
+            $code = sprintf('%06d', random_int(0, 999999));
+        } catch (Throwable $e) {
+            $code = strval(rand(100000, 999999));
+        }
+
+        $expiresAt = now_ms() + 15 * 60 * 1000; // 15 dk
+        $codeHash = password_hash($code, PASSWORD_BCRYPT);
+
+        try {
+            // Fırsatçı temizlik: süresi dolan kodlar birikmesin.
+            if (mt_rand(1, 20) === 1) {
+                $this->db->prepare('DELETE FROM email_verifications WHERE expires_at < ?')
+                         ->execute([now_ms()]);
+            }
+
+            $sel = $this->db->prepare('SELECT 1 FROM email_verifications WHERE email = ?');
+            $sel->execute([$email]);
+            $now = now_ms();
+            if ($sel->fetchColumn()) {
+                $this->db->prepare(
+                    'UPDATE email_verifications
+                     SET code_hash = ?, attempts = 0, expires_at = ?, created_at = ?
+                     WHERE email = ?'
+                )->execute([$codeHash, $expiresAt, $now, $email]);
+            } else {
+                $this->db->prepare(
+                    'INSERT INTO email_verifications (email, code_hash, attempts, expires_at, created_at)
+                     VALUES (?, ?, 0, ?, ?)'
+                )->execute([$email, $codeHash, $expiresAt, $now]);
+            }
+
+            $smtp = new Smtp(
+                $this->cfg['smtp']['host'],
+                (int) $this->cfg['smtp']['port'],
+                $this->cfg['smtp']['user'],
+                $this->cfg['smtp']['pass']
+            );
+
+            $subject = "E-posta Doğrulama Kodu";
+            $body = "<h2>Ne İzlesem Üyelik Doğrulama</h2>"
+                  . "<p>Hesabınızı doğrulamak için geçici kodunuz:</p>"
+                  . "<h1 style='color: #FB8C00; font-size: 32px; letter-spacing: 4px; font-family: monospace;'>$code</h1>"
+                  . "<p>Bu kod 15 dakika geçerlidir. Eğer bu kaydı siz yapmadıysanız lütfen bu e-postayı dikkate almayın.</p>";
+
+            $smtp->send($email, $subject, $body);
+        } catch (Throwable $e) {
+            cinema_error("Failed to send verification code for $email: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Yanıtı hemen döndürür, çağıranın kalan işi (e-posta gönderimi) arka
+     * planda sürer. Test ortamında json_out zaten exit etmez; production'da
+     * fastcgi_finish_request bağlantıyı kapatır (bkz. forgotPassword).
+     */
+    private function respondThenContinue(int $status, array $body): void
+    {
+        if (defined('PHPUNIT_TESTING') || class_exists('PHPUnit\Framework\TestCase', false)) {
+            json_out($status, $body);
+            return;
+        }
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($body, JSON_UNESCAPED_UNICODE);
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+    }
+
+    /**
+     * Kod tablosundan (password_resets / email_verifications) kodu doğrular:
+     * süre + 3 deneme sınırı + bcrypt karşılaştırması. Hatalıysa fail() ile
+     * çıkar; başarılıysa sessizce döner (satırı silmek çağırana aittir).
+     */
+    private function consumeCodeOrFail(string $table, string $email, string $code): void
+    {
+        $st = $this->db->prepare("SELECT code_hash, attempts, expires_at FROM $table WHERE email = ?");
+        $st->execute([$email]);
+        $row = $st->fetch();
+
+        if (!$row || now_ms() > (int) $row['expires_at']) {
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+        }
+
+        $attempts = (int) $row['attempts'];
+        if ($attempts >= 3) {
+            $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+        }
+
+        $this->db->prepare("UPDATE $table SET attempts = attempts + 1 WHERE email = ?")->execute([$email]);
+
+        if (!password_verify($code, $row['code_hash'])) {
+            if ($attempts + 1 >= 3) {
+                $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
+            }
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+        }
     }
 
     // ─── POST /auth/login ───────────────────────────────────────────────────
@@ -54,7 +240,7 @@ class Auth
         $email = strtolower(trim($in['email'] ?? ''));
         $pass  = (string) ($in['password'] ?? '');
 
-        $st = $this->db->prepare('SELECT id, password_hash, display_name, username, google_sub FROM users WHERE email = ?');
+        $st = $this->db->prepare('SELECT id, password_hash, display_name, username, google_sub, email_verified FROM users WHERE email = ?');
         $st->execute([$email]);
         $u = $st->fetch();
 
@@ -66,6 +252,11 @@ class Auth
         }
         if (!password_verify($pass, $u['password_hash'])) {
             fail(401, 'E-posta veya parola hatalı.');
+        }
+        if ((int) $u['email_verified'] !== 1) {
+            // Kayıt tamamlanmamış: kod doğrulanmadan oturum açılmaz. İstemci bu
+            // yanıtla doğrulama ekranını açar (kodu yeniden göndererek).
+            fail(403, 'E-posta adresi doğrulanmamış.');
         }
         $uid = (int) $u['id'];
         json_out(200, [
@@ -176,27 +367,50 @@ class Auth
 
         // 2) Aynı e-postalı mevcut hesap → Google'ı bağla.
         $st = $this->db->prepare(
-            'SELECT id, display_name, username FROM users WHERE email = ?'
+            'SELECT id, display_name, username, email_verified FROM users WHERE email = ?'
         );
         $st->execute([$email]);
         $u = $st->fetch();
         if ($u) {
             $uid = (int) $u['id'];
+            if ((int) $u['email_verified'] === 1) {
+                $up = $this->db->prepare(
+                    'UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?'
+                );
+                $up->execute([$sub, now_ms(), $uid]);
+                return [$uid, $email, $u['display_name'], $u['username'], false];
+            }
+
+            // Doğrulanmamış hesap: e-postanın sahibi olduğu hiç kanıtlanmadı —
+            // kaydı başkası (ör. bu adresi gasp etmeye çalışan biri) açmış
+            // olabilir. Google e-postayı doğruladığı için gerçek sahip şu anki
+            // kullanıcıdır: hesap ona devredilir; eski parola rastgele bir
+            // secret ile geçersizleştirilir ve olası oturumlar düşürülür.
             $up = $this->db->prepare(
-                'UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?'
+                'UPDATE users SET google_sub = ?, email_verified = 1, password_hash = ?,
+                        display_name = ?, updated_at = ? WHERE id = ?'
             );
-            $up->execute([$sub, now_ms(), $uid]);
-            return [$uid, $email, $u['display_name'], $u['username'], false];
+            $up->execute([
+                $sub,
+                password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT),
+                ($name !== null && $name !== '') ? $name : $u['display_name'],
+                now_ms(),
+                $uid,
+            ]);
+            $this->db->prepare('DELETE FROM refresh_tokens WHERE user_id = ?')->execute([$uid]);
+            $this->db->prepare('DELETE FROM email_verifications WHERE email = ?')->execute([$email]);
+            return [$uid, $email, ($name !== null && $name !== '') ? $name : $u['display_name'], $u['username'], false];
         }
 
         // 3) Yeni hesap. Parola alanı boş bırakılmaz: rastgele bir secret
         // hash'lenir — bilinmediği için parola girişi imkânsız; kullanıcı isterse
-        // "şifremi unuttum" ile parola belirleyebilir.
+        // "şifremi unuttum" ile parola belirleyebilir. Google e-postayı
+        // doğruladığı için hesap doğrulanmış açılır.
         $t = now_ms();
         $hash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
         $ins = $this->db->prepare(
-            'INSERT INTO users (email, password_hash, display_name, google_sub, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO users (email, password_hash, display_name, google_sub, email_verified, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 1, ?, ?)'
         );
         $ins->execute([$email, $hash, ($name !== null && $name !== '') ? $name : null, $sub, $t, $t]);
         return [(int) $this->db->lastInsertId(), $email, $name, null, true];
@@ -408,32 +622,7 @@ class Auth
             fail(422, 'E-posta ve doğrulama kodu gereklidir.');
         }
 
-        $st = $this->db->prepare('SELECT code_hash, attempts, expires_at FROM password_resets WHERE email = ?');
-        $st->execute([$email]);
-        $row = $st->fetch();
-
-        if (!$row || now_ms() > (int) $row['expires_at']) {
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
-
-        $attempts = (int) $row['attempts'];
-        if ($attempts >= 3) {
-            $del = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
-            $del->execute([$email]);
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
-
-        // Increment attempts
-        $up = $this->db->prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE email = ?');
-        $up->execute([$email]);
-
-        if (!password_verify($code, $row['code_hash'])) {
-            if ($attempts + 1 >= 3) {
-                $del = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
-                $del->execute([$email]);
-            }
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
+        $this->consumeCodeOrFail('password_resets', $email, $code);
 
         json_out(200, ['ok' => true]);
     }
@@ -453,34 +642,12 @@ class Auth
             fail(422, 'Yeni parola en az 8 karakter olmalıdır.');
         }
 
-        $st = $this->db->prepare('SELECT code_hash, attempts, expires_at FROM password_resets WHERE email = ?');
-        $st->execute([$email]);
-        $row = $st->fetch();
+        $this->consumeCodeOrFail('password_resets', $email, $code);
 
-        if (!$row || now_ms() > (int) $row['expires_at']) {
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
-
-        $attempts = (int) $row['attempts'];
-        if ($attempts >= 3) {
-            $del = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
-            $del->execute([$email]);
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
-
-        // Increment attempts
-        $up = $this->db->prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE email = ?');
-        $up->execute([$email]);
-
-        if (!password_verify($code, $row['code_hash'])) {
-            if ($attempts + 1 >= 3) {
-                $del = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
-                $del->execute([$email]);
-            }
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
-        }
-
-        $upUser = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE email = ?');
+        // Kod e-postaya gittiği için sahiplik kanıtlanmıştır: parolayla birlikte
+        // hesap doğrulanmış da işaretlenir (doğrulanmamış hesabın gerçek sahibi
+        // hesabı bu yolla da geri alabilir).
+        $upUser = $this->db->prepare('UPDATE users SET password_hash = ?, email_verified = 1, updated_at = ? WHERE email = ?');
         $upUser->execute([password_hash($newPass, PASSWORD_BCRYPT), now_ms(), $email]);
 
         $delRt = $this->db->prepare(

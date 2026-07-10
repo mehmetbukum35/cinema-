@@ -82,7 +82,13 @@
       "Bash(./vendor/bin/phpunit --no-coverage --display-warnings)",
       "Bash(git checkout *)",
       "Bash(curl -4 -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://cinema.mbkm.com.tr/api/admin/moderation?key=2d1e657171bf59e88a5251221146c6627253ae5e8b1fa6d900a94d228e4a5b12\")",
-      "Bash(curl -4 -s \"https://cinema.mbkm.com.tr/api/admin/moderation?key=2d1e657171bf59e88a5251221146c6627253ae5e8b1fa6d900a94d228e4a5b12\")"
+      "Bash(curl -4 -s \"https://cinema.mbkm.com.tr/api/admin/moderation?key=2d1e657171bf59e88a5251221146c6627253ae5e8b1fa6d900a94d228e4a5b12\")",
+      "Bash(php -l src/Social.php)",
+      "Bash(php -l src/Sync.php)",
+      "Bash(php -l src/Moderation.php)",
+      "Bash(git rm *)",
+      "Bash(php vendor/bin/phpunit --no-coverage --display-warnings --display-deprecations)",
+      "Bash(dart analyze *)"
     ]
   }
 }

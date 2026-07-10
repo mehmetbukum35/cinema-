@@ -37,6 +37,7 @@ class MockApiService implements ApiService {
   bool deleteAccountCalled = false;
   bool changePasswordCalled = false;
   bool forgotPasswordCalled = false;
+  bool resendVerificationCalled = false;
 
   @override
   Future<Map<String, dynamic>> login({
@@ -76,6 +77,16 @@ class MockApiService implements ApiService {
   @override
   Future<void> forgotPassword(String email) async {
     forgotPasswordCalled = true;
+  }
+
+  @override
+  Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
+    return registerResponse;
+  }
+
+  @override
+  Future<void> resendVerification(String email) async {
+    resendVerificationCalled = true;
   }
 
   @override
@@ -138,6 +149,48 @@ void main() {
         expect(state.user!['email'], 'reg@example.com');
       },
     );
+
+    test(
+      'register with pending_verification should NOT authenticate',
+      () async {
+        mockApi.registerResponse = {
+          'ok': true,
+          'pending_verification': true,
+          'email': 'reg@example.com',
+        };
+        final notifier = container.read(authProvider.notifier);
+
+        final result = await notifier.register('reg@example.com', 'secret123');
+
+        expect(result.status, AuthStatus.pendingVerification);
+        // Not: secure-storage mock'u testler arasında sıfırlanmadığı için
+        // PrefsService yerine yalnızca provider state'i doğrulanır.
+        final state = container.read(authProvider);
+        expect(state.isAuthenticated, isFalse);
+        expect(state.accessToken, isNull);
+      },
+    );
+
+    test('verifyEmail should complete login with tokens', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      final result = await notifier.verifyEmail('reg@example.com', '123456');
+
+      expect(result.status, AuthStatus.success);
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, isTrue);
+      expect(state.user!['email'], 'reg@example.com');
+      expect(await PrefsService.getAccessToken(), 'reg_access');
+    });
+
+    test('resendVerificationCode should invoke API', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      final ok = await notifier.resendVerificationCode('reg@example.com');
+
+      expect(ok, isTrue);
+      expect(mockApi.resendVerificationCalled, isTrue);
+    });
 
     test('logout should invoke API, clear auth and clear state', () async {
       final notifier = container.read(authProvider.notifier);

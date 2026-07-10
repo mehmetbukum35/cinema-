@@ -27,6 +27,7 @@ CREATE TABLE users (
   taste_dna     TEXT            NULL,       -- Sinema DNA snapshot'ı (JSON formatında)
   taste_dna_at  BIGINT          NOT NULL DEFAULT 0, -- Sinema DNA'nın oluşturulma zaman damgası
   google_sub    VARCHAR(255)    NULL,       -- Google Sign-In benzersiz kullanıcı kimliği
+  email_verified TINYINT(1)     NOT NULL DEFAULT 0, -- Kayıt e-postası kodla doğrulandı mı? (0 iken giriş yapılamaz)
   created_at    BIGINT          NOT NULL,
   updated_at    BIGINT          NOT NULL,
   PRIMARY KEY (id),
@@ -190,6 +191,17 @@ CREATE TABLE password_resets (
   PRIMARY KEY (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- ─── Kayıt Doğrulama Kodları (email_verifications) ─────────────────
+-- password_resets ile aynı desen; kayıt sırasında e-posta sahipliğini kanıtlar.
+CREATE TABLE email_verifications (
+  email      VARCHAR(255)    NOT NULL,
+  code_hash  VARCHAR(255)    NOT NULL,    -- 6 haneli kodun bcrypt hash'i
+  attempts   INT             NOT NULL DEFAULT 0, -- Maksimum 3 deneme
+  expires_at BIGINT          NOT NULL,    -- 15 dakika geçerlilik süresi
+  created_at BIGINT          NOT NULL,
+  PRIMARY KEY (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- ─── Cihaz Tokenları (device_tokens) ───────────────────────────────
 CREATE TABLE device_tokens (
   token      VARCHAR(255)    NOT NULL,
@@ -237,12 +249,33 @@ CREATE TABLE rate_limits (
 JWT tabanlı. **Access token** ömrü **2 saat**, **refresh token** ömrü **30 gün**dür.
 
 ### POST `/auth/register`
+Hesabı `email_verified = 0` olarak açar ve e-postaya 6 haneli doğrulama kodu gönderir.
+**Token vermez** — oturum `/auth/verify-email` ile açılır. Aynı e-postayla doğrulanmamış
+bir kayıt varsa 409 dönmez; parola/isim yeni istekle güncellenir (hesabı kodu doğrulayan kazanır).
 ```json
 // İstek
 { "email": "a@b.com", "password": "min8karakter", "display_name": "Mehmet" }
-// 201 Yanıt
-{ "user": { "id": 1, "email": "a@b.com", "display_name": "Mehmet", "username": null },
-  "access_token": "eyJ...", "refresh_token": "f3a9..." }
+// 200 Yanıt
+{ "ok": true, "pending_verification": true, "email": "a@b.com" }
+// 409: e-posta doğrulanmış bir hesaba ait
+```
+
+### POST `/auth/verify-email` (Kayıt Kodu Doğrulama)
+Kayıtta gönderilen kodu doğrular; başarılıysa hesap doğrulanır ve oturum açılır (Max 3 deneme, 15 dk geçerlilik).
+```json
+// İstek
+{ "email": "a@b.com", "code": "123456" }
+// 200 Yanıt
+{ "user": { "id": 1, "email": "a@b.com", "display_name": "Mehmet", "username": null, "google_sub": null },
+  "tokens": { "access_token": "eyJ...", "refresh_token": "f3a9...", "expires_in": 7200 } }
+```
+
+### POST `/auth/resend-verification` (Kodu Yeniden Gönder)
+Doğrulanmamış hesaba yeni kod e-postalar. E-posta varlığını sızdırmamak için her durumda 200 döner.
+```json
+{ "email": "a@b.com" }
+// 200 Yanıt
+{ "ok": true }
 ```
 
 ### POST `/auth/login`
@@ -251,6 +284,8 @@ JWT tabanlı. **Access token** ömrü **2 saat**, **refresh token** ömrü **30 
 { "email": "a@b.com", "password": "..." }
 // 200 Yanıt
 { "user": {...}, "access_token": "eyJ...", "refresh_token": "f3a9..." }
+// 403: parola doğru ama e-posta doğrulanmamış ("E-posta adresi doğrulanmamış.")
+//      → istemci doğrulama ekranını açar (resend-verification + verify-email)
 ```
 
 ### POST `/auth/google` (Google Sign-In)

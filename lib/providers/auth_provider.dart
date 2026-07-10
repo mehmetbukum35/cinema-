@@ -13,7 +13,7 @@ import 'swipe_provider.dart';
 import 'social_provider.dart';
 import '../services/providers.dart';
 
-enum AuthStatus { success, conflict, error, cancelled }
+enum AuthStatus { success, conflict, error, cancelled, pendingVerification }
 
 enum ConflictResolution { merge, delete }
 
@@ -94,6 +94,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return 'auth_err_google_unlink_failed';
       case 'Geçersiz veya süresi dolmuş doğrulama kodu.':
         return 'auth_err_verify_code_failed';
+      case 'E-posta adresi doğrulanmamış.':
+        return 'auth_err_email_unverified';
       case 'Giriş başarısız.':
         return 'auth_err_login_failed';
       case 'Kayıt başarısız.':
@@ -140,35 +142,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Sunucudan gelen {user, tokens} yanıtını oturuma çevirir: farklı hesaptan
+  /// kalan yerel veri varsa çakışma döner, yoksa girişi tamamlar.
+  /// login / register / Google / verifyEmail ortak son adımı.
+  Future<AuthResult> _finalizeAuth(Map<String, dynamic> data) async {
+    final user = data['user'] as Map<String, dynamic>;
+    final tokens = data['tokens'] as Map<String, dynamic>;
+
+    final newUserId = user['id']?.toString();
+    final lastUserId = await PrefsService.getLastAuthenticatedUserId();
+    final hasLocalData = await DatabaseHelper().hasAnyLocalData();
+
+    if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
+      state = state.copyWith(loading: false);
+      return AuthResult(
+        status: AuthStatus.conflict,
+        user: user,
+        tokens: tokens,
+      );
+    }
+
+    await completeLogin(
+      user: user,
+      tokens: tokens,
+      resolution: ConflictResolution.merge,
+    );
+    return AuthResult(status: AuthStatus.success);
+  }
+
   // POST /auth/login
   Future<AuthResult> login(String email, String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
       final data = await _apiService.login(email: email, password: password);
-      final user = data['user'] as Map<String, dynamic>;
-      final tokens = data['tokens'] as Map<String, dynamic>;
-
-      final newUserId = user['id']?.toString();
-      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
-      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
-
-      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
-        state = state.copyWith(loading: false);
-        return AuthResult(
-          status: AuthStatus.conflict,
-          user: user,
-          tokens: tokens,
-        );
-      }
-
-      await completeLogin(
-        user: user,
-        tokens: tokens,
-        resolution: ConflictResolution.merge,
-      );
-      return AuthResult(status: AuthStatus.success);
+      return await _finalizeAuth(data);
     } on ApiException catch (e) {
       final mapped = _mapBackendError(e.message);
+      if (mapped == 'auth_err_email_unverified') {
+        // Parola doğru ama kayıt kodla doğrulanmamış → istemci doğrulama
+        // ekranını açar; hata bandı gösterilmez.
+        state = state.copyWith(loading: false, error: null);
+        return AuthResult(status: AuthStatus.pendingVerification);
+      }
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
@@ -191,28 +206,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
         displayName: displayName,
       );
-      final user = data['user'] as Map<String, dynamic>;
-      final tokens = data['tokens'] as Map<String, dynamic>;
-
-      final newUserId = user['id']?.toString();
-      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
-      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
-
-      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
+      if (data['pending_verification'] == true) {
+        // Yeni akış: kod e-postalandı, oturum verifyEmail ile açılacak.
         state = state.copyWith(loading: false);
-        return AuthResult(
-          status: AuthStatus.conflict,
-          user: user,
-          tokens: tokens,
-        );
+        return AuthResult(status: AuthStatus.pendingVerification);
       }
-
-      await completeLogin(
-        user: user,
-        tokens: tokens,
-        resolution: ConflictResolution.merge,
-      );
-      return AuthResult(status: AuthStatus.success);
+      // Eski sunucu davranışı (doğrudan token) — geriye dönük uyumluluk.
+      return await _finalizeAuth(data);
     } on ApiException catch (e) {
       final mapped = _mapBackendError(e.message);
       state = state.copyWith(loading: false, error: mapped);
@@ -221,6 +221,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
       const errMsg = 'auth_err_register_failed';
       state = state.copyWith(loading: false, error: errMsg);
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
+    }
+  }
+
+  // POST /auth/verify-email — kayıttaki kodu doğrular, oturumu açar.
+  Future<AuthResult> verifyEmail(String email, String code) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final data = await _apiService.verifyEmail(email, code);
+      return await _finalizeAuth(data);
+    } on ApiException catch (e) {
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return AuthResult(status: AuthStatus.error, errorMessage: mapped);
+    } catch (e) {
+      const errMsg = 'auth_err_verify_code_failed';
+      state = state.copyWith(loading: false, error: errMsg);
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
+    }
+  }
+
+  // POST /auth/resend-verification — doğrulama kodunu yeniden gönderir.
+  Future<bool> resendVerificationCode(String email) async {
+    try {
+      await _apiService.resendVerification(email);
+      return true;
+    } catch (e) {
+      debugPrint("Resend verification failed: $e");
+      return false;
     }
   }
 
@@ -260,28 +288,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final data = await _apiService.loginWithGoogle(idToken);
-      final user = data['user'] as Map<String, dynamic>;
-      final tokens = data['tokens'] as Map<String, dynamic>;
-
-      final newUserId = user['id']?.toString();
-      final lastUserId = await PrefsService.getLastAuthenticatedUserId();
-      final hasLocalData = await DatabaseHelper().hasAnyLocalData();
-
-      if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
-        state = state.copyWith(loading: false);
-        return AuthResult(
-          status: AuthStatus.conflict,
-          user: user,
-          tokens: tokens,
-        );
-      }
-
-      await completeLogin(
-        user: user,
-        tokens: tokens,
-        resolution: ConflictResolution.merge,
-      );
-      return AuthResult(status: AuthStatus.success);
+      return await _finalizeAuth(data);
     } on ApiException catch (e) {
       final mapped = _mapBackendError(e.message);
       state = state.copyWith(loading: false, error: mapped);

@@ -199,6 +199,13 @@ class AppLocalizations {
           'Failed to send reset code. Please check your connection.',
       'auth_err_verify_code_failed':
           'Verification code is invalid. Please try again.',
+      'auth_err_email_unverified':
+          'Your email is not verified. Enter the code sent to your inbox.',
+      'auth_verify_title': 'Verify Your Email',
+      'auth_verify_desc': 'Enter the 6-digit code sent to {}.',
+      'auth_verify_btn': 'Verify & Sign In',
+      'auth_verify_resend': 'Resend Code',
+      'auth_verify_resent': 'Code sent.',
       'auth_err_reset_pass_failed':
           'Failed to reset password. Please try again.',
       'auth_err_generic': 'An error occurred.',
@@ -896,6 +903,13 @@ class AppLocalizations {
           'Sıfırlama kodu gönderilemedi. Lütfen bağlantınızı kontrol edin.',
       'auth_err_verify_code_failed':
           'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
+      'auth_err_email_unverified':
+          'E-posta adresin doğrulanmamış. Gelen kutundaki kodu gir.',
+      'auth_verify_title': 'E-postanı Doğrula',
+      'auth_verify_desc': '{} adresine gönderilen 6 haneli kodu gir.',
+      'auth_verify_btn': 'Doğrula ve Giriş Yap',
+      'auth_verify_resend': 'Kodu Tekrar Gönder',
+      'auth_verify_resent': 'Kod gönderildi.',
       'auth_err_reset_pass_failed':
           'Şifre sıfırlanamadı. Lütfen tekrar deneyin.',
       'auth_err_generic': 'Bir hata oluştu.',

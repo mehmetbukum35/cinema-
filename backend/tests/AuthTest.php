@@ -16,6 +16,12 @@ class AuthTest extends TestCase
             'jwt_secret' => 'test_jwt_secret_key_123456789_test_jwt_secret',
             'access_ttl' => 3600,
             'refresh_ttl' => 86400 * 30,
+            'smtp' => [
+                'host' => 'localhost',
+                'port' => 25,
+                'user' => 'test@example.com',
+                'pass' => 'test',
+            ],
         ];
     }
 
@@ -32,6 +38,8 @@ class AuthTest extends TestCase
             'password_hash' => $hashed,
             'display_name' => 'John Doe',
             'username' => 'johndoe',
+            'google_sub' => null,
+            'email_verified' => 1,
         ]);
 
         // Mock statement for INSERT refresh token
@@ -119,7 +127,7 @@ class AuthTest extends TestCase
         }
     }
 
-    public function testRegisterSuccess(): void
+    public function testRegisterRespondsPendingVerificationWithoutTokens(): void
     {
         $email = 'new@example.com';
         $password = 'password123';
@@ -128,36 +136,68 @@ class AuthTest extends TestCase
         $stmtExists = $this->createMock(PDOStatement::class);
         $stmtExists->method('fetch')->willReturn(false);
 
-        // insert user stmt
-        $stmtInsertUser = $this->createMock(PDOStatement::class);
-        
-        // token insert stmt
-        $stmtToken = $this->createMock(PDOStatement::class);
-
-        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtExists, $stmtInsertUser, $stmtToken) {
-            if (str_contains($sql, 'SELECT 1 FROM users')) {
+        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtExists) {
+            if (str_contains($sql, 'SELECT id, email_verified FROM users')) {
                 return $stmtExists;
-            }
-            if (str_contains($sql, 'INSERT INTO users')) {
-                return $stmtInsertUser;
-            }
-            if (str_contains($sql, 'INSERT INTO refresh_tokens')) {
-                return $stmtToken;
             }
             return $this->createMock(PDOStatement::class);
         });
 
-        // Set lastInsertId
-        $this->db->method('lastInsertId')->willReturn('101');
-
         $auth = new Auth($this->db, $this->cfg);
         $auth->register(['email' => $email, 'password' => $password, 'display_name' => 'New User']);
 
-        $this->assertEquals(201, TestHelperRegistry::$lastStatus);
+        $this->assertEquals(200, TestHelperRegistry::$lastStatus);
         $body = TestHelperRegistry::$lastBody;
-        $this->assertEquals(101, $body['user']['id']);
-        $this->assertEquals('new@example.com', $body['user']['email']);
-        $this->assertArrayHasKey('tokens', $body);
+        $this->assertTrue($body['pending_verification']);
+        $this->assertEquals('new@example.com', $body['email']);
+        // Kod doğrulanmadan oturum açılmaz: token dönmemeli.
+        $this->assertArrayNotHasKey('tokens', $body);
+        $this->assertArrayNotHasKey('user', $body);
+    }
+
+    public function testRegisterRejectsVerifiedExistingEmail(): void
+    {
+        $stmtExists = $this->createMock(PDOStatement::class);
+        $stmtExists->method('fetch')->willReturn(['id' => '7', 'email_verified' => 1]);
+        $this->db->method('prepare')->willReturn($stmtExists);
+
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(409);
+
+        try {
+            $auth->register(['email' => 'taken@example.com', 'password' => 'password123']);
+        } finally {
+            $this->assertEquals(409, TestHelperRegistry::$lastStatus);
+            $this->assertEquals('Bu e-posta zaten kayıtlı.', TestHelperRegistry::$lastBody['error']);
+        }
+    }
+
+    public function testLoginUnverifiedEmailFails(): void
+    {
+        $password = 'password123';
+        $stmtUser = $this->createMock(PDOStatement::class);
+        $stmtUser->method('fetch')->willReturn([
+            'id' => '42',
+            'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+            'display_name' => 'John Doe',
+            'username' => 'johndoe',
+            'email_verified' => 0,
+        ]);
+        $this->db->method('prepare')->willReturn($stmtUser);
+
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(403);
+
+        try {
+            $auth->login(['email' => 'user@example.com', 'password' => $password]);
+        } finally {
+            $this->assertEquals(403, TestHelperRegistry::$lastStatus);
+            $this->assertEquals('E-posta adresi doğrulanmamış.', TestHelperRegistry::$lastBody['error']);
+        }
     }
 
     public function testLogout(): void

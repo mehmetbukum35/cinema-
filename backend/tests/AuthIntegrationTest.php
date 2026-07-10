@@ -44,6 +44,7 @@ class AuthIntegrationTest extends TestCase
                 google_sub TEXT UNIQUE,
                 taste_dna TEXT,
                 taste_dna_at INTEGER DEFAULT 0,
+                email_verified INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER,
                 updated_at INTEGER
             )'
@@ -66,17 +67,174 @@ class AuthIntegrationTest extends TestCase
                 created_at INTEGER NOT NULL
             )'
         );
+        $this->db->exec(
+            'CREATE TABLE email_verifications (
+                email TEXT PRIMARY KEY,
+                code_hash TEXT NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                expires_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )'
+        );
     }
 
-    private function seedUser(string $email, string $pass = 'password123'): int
+    private function seedUser(string $email, string $pass = 'password123', int $verified = 1): int
     {
         $hash = password_hash($pass, PASSWORD_BCRYPT);
         $t = (int) round(microtime(true) * 1000);
         $st = $this->db->prepare(
-            'INSERT INTO users (email, password_hash, display_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO users (email, password_hash, display_name, email_verified, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $st->execute([$email, $hash, 'Test User', $t, $t]);
+        $st->execute([$email, $hash, 'Test User', $verified, $t, $t]);
         return (int) $this->db->lastInsertId();
+    }
+
+    /** email_verifications'taki kodu bilinen bir değere sabitler (bcrypt saklandığı için). */
+    private function forceVerificationCode(string $email, string $code): void
+    {
+        $this->db->prepare('UPDATE email_verifications SET code_hash = ? WHERE email = ?')
+                 ->execute([password_hash($code, PASSWORD_BCRYPT), $email]);
+    }
+
+    // ── Kayıt + e-posta doğrulama akışı ─────────────────────────────────────
+
+    public function testRegisterCreatesUnverifiedUserWithCodeAndNoTokens(): void
+    {
+        $this->auth->register([
+            'email' => 'yeni@example.com',
+            'password' => 'password123',
+            'display_name' => 'Yeni Üye',
+        ]);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $body = TestHelperRegistry::$lastBody;
+        $this->assertTrue($body['pending_verification']);
+        $this->assertArrayNotHasKey('tokens', $body);
+
+        $row = $this->db->query("SELECT email_verified FROM users WHERE email = 'yeni@example.com'")->fetch();
+        $this->assertSame(0, (int) $row['email_verified']);
+
+        $codes = $this->db->query("SELECT COUNT(*) FROM email_verifications WHERE email = 'yeni@example.com'")->fetchColumn();
+        $this->assertSame(1, (int) $codes);
+    }
+
+    public function testUnverifiedUserCannotLogin(): void
+    {
+        $this->auth->register(['email' => 'yeni@example.com', 'password' => 'password123']);
+
+        try {
+            $this->auth->login(['email' => 'yeni@example.com', 'password' => 'password123']);
+            $this->fail('Doğrulanmamış hesap giriş yapamamalı');
+        } catch (TestExitException $e) {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+            $this->assertSame('E-posta adresi doğrulanmamış.', TestHelperRegistry::$lastBody['error']);
+        }
+    }
+
+    public function testVerifyEmailMarksVerifiedAndIssuesTokens(): void
+    {
+        $this->auth->register([
+            'email' => 'yeni@example.com',
+            'password' => 'password123',
+            'display_name' => 'Yeni Üye',
+        ]);
+        $this->forceVerificationCode('yeni@example.com', '123456');
+
+        TestHelperRegistry::reset();
+        $this->auth->verifyEmail(['email' => 'yeni@example.com', 'code' => '123456']);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $body = TestHelperRegistry::$lastBody;
+        $this->assertSame('yeni@example.com', $body['user']['email']);
+        $this->assertNotEmpty($body['tokens']['access_token']);
+
+        $row = $this->db->query("SELECT email_verified FROM users WHERE email = 'yeni@example.com'")->fetch();
+        $this->assertSame(1, (int) $row['email_verified']);
+
+        // Kod tek kullanımlık: satır silinmiş olmalı.
+        $codes = $this->db->query('SELECT COUNT(*) FROM email_verifications')->fetchColumn();
+        $this->assertSame(0, (int) $codes);
+
+        // Artık normal giriş de çalışır.
+        TestHelperRegistry::reset();
+        $this->auth->login(['email' => 'yeni@example.com', 'password' => 'password123']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+    }
+
+    public function testVerifyEmailRejectsWrongCodeAndLimitsAttempts(): void
+    {
+        $this->auth->register(['email' => 'yeni@example.com', 'password' => 'password123']);
+
+        for ($i = 1; $i <= 3; $i++) {
+            try {
+                $this->auth->verifyEmail(['email' => 'yeni@example.com', 'code' => '000000']);
+                $this->fail('Yanlış kod kabul edilmemeli');
+            } catch (TestExitException $e) {
+                $this->assertSame(400, TestHelperRegistry::$lastStatus);
+            }
+        }
+
+        // 3 hatalı denemeden sonra kod silinir.
+        $codes = $this->db->query('SELECT COUNT(*) FROM email_verifications')->fetchColumn();
+        $this->assertSame(0, (int) $codes);
+    }
+
+    public function testReRegisterOverwritesUnverifiedAccount(): void
+    {
+        // Saldırgan kurbanın e-postasıyla kayıt olur (doğrulayamaz).
+        $this->auth->register(['email' => 'kurban@example.com', 'password' => 'attacker-pass', 'display_name' => 'Sahte']);
+
+        // Gerçek sahip aynı e-postayla kayıt olur → 409 yerine hesap ona devredilir.
+        TestHelperRegistry::reset();
+        $this->auth->register(['email' => 'kurban@example.com', 'password' => 'owner-pass-123', 'display_name' => 'Gerçek Sahip']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertTrue(TestHelperRegistry::$lastBody['pending_verification']);
+
+        // Tek hesap var; parola artık sahibinki.
+        $this->assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn());
+        $hash = $this->db->query("SELECT password_hash FROM users WHERE email = 'kurban@example.com'")->fetchColumn();
+        $this->assertTrue(password_verify('owner-pass-123', $hash));
+        $this->assertFalse(password_verify('attacker-pass', $hash));
+    }
+
+    public function testResendVerificationAlwaysReturns200(): void
+    {
+        $this->auth->register(['email' => 'yeni@example.com', 'password' => 'password123']);
+        $this->db->exec('DELETE FROM email_verifications');
+
+        TestHelperRegistry::reset();
+        $this->auth->resendVerification(['email' => 'yeni@example.com']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM email_verifications')->fetchColumn());
+
+        // Kayıtlı olmayan e-posta: yine 200, kod üretilmez (varlık sızdırılmaz).
+        TestHelperRegistry::reset();
+        $this->auth->resendVerification(['email' => 'yok@example.com']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $codes = $this->db->query("SELECT COUNT(*) FROM email_verifications WHERE email = 'yok@example.com'")->fetchColumn();
+        $this->assertSame(0, (int) $codes);
+    }
+
+    public function testResetPasswordAlsoVerifiesEmail(): void
+    {
+        // Doğrulanmamış hesabın gerçek sahibi "şifremi unuttum" ile hesabı geri alır.
+        $this->seedUser('sahip@example.com', 'attacker-pass', 0);
+        $this->auth->forgotPassword(['email' => 'sahip@example.com']);
+
+        $knownHash = password_hash('123456', PASSWORD_BCRYPT);
+        $this->db->prepare('UPDATE password_resets SET code_hash = ? WHERE email = ?')
+                 ->execute([$knownHash, 'sahip@example.com']);
+
+        TestHelperRegistry::reset();
+        $this->auth->resetPassword([
+            'email' => 'sahip@example.com',
+            'code' => '123456',
+            'new_password' => 'owner-pass-123',
+        ]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+
+        $row = $this->db->query("SELECT email_verified FROM users WHERE email = 'sahip@example.com'")->fetch();
+        $this->assertSame(1, (int) $row['email_verified']);
     }
 
     public function testForgotPasswordAlwaysReturns200(): void

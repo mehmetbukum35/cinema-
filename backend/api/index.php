@@ -143,6 +143,16 @@ switch (true) {
         $auth->register(read_json());
         break;
 
+    case $route === 'POST /auth/verify-email':
+        rate_limit('verify_email', (int) $cfg['rate_limit_per_min'], true);
+        $auth->verifyEmail(read_json());
+        break;
+
+    case $route === 'POST /auth/resend-verification':
+        rate_limit('resend_verification', (int) $cfg['rate_limit_per_min'], true);
+        $auth->resendVerification(read_json());
+        break;
+
     case $route === 'POST /auth/login':
         rate_limit('login', (int) $cfg['rate_limit_per_min'], true);
         $auth->login(read_json());
