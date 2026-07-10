@@ -65,6 +65,11 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 	</array>
+	<!-- FCM: arka planda ve kapalıyken push almak için zorunlu -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<!-- Google Sign-In (iOS): şema, iOS client ID'nin TERSİDİR
 	     (GoogleService-Info.plist > REVERSED_CLIENT_ID) — web client ID değil. -->
 	<key>CFBundleURLTypes</key>
@@ -82,5 +87,9 @@
 	     Xcode hedefine ekli olmadığı için zorunlu). -->
 	<key>GIDClientID</key>
 	<string>925394401867-fjftcvlo842dgvqgqemau5bgdmla4qv9.apps.googleusercontent.com</string>
+	<!-- Backend ID token doğrulaması için Web client ID (aud claim).
+	     Dart initialize(serverClientId) ile aynı değer; native katman için yedek. -->
+	<key>GIDServerClientID</key>
+	<string>925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com</string>
 </dict>
 </plist>

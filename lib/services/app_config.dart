@@ -20,7 +20,8 @@ class AppConfig {
   // Boş bırakılırsa login ekranındaki Google butonu gizlenir.
   static const googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
+    defaultValue:
+        '925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com',
   );
 
   static bool get googleSignInConfigured => googleServerClientId.isNotEmpty;

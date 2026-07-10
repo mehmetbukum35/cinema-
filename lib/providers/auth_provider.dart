@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -272,8 +273,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final GoogleSignInAccount account;
       try {
-        account = await signIn.authenticate(scopeHint: const ['email']);
+        account = await signIn.authenticate(
+          scopeHint: const ['email', 'openid', 'profile'],
+        );
       } on GoogleSignInException catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            'GoogleSignInException: code=${e.code.name} '
+            'description=${e.description}',
+          );
+        }
         // Kullanıcı vazgeçti → hata değil; ekran sessizce devam eder.
         if (e.code == GoogleSignInExceptionCode.canceled) {
           state = state.copyWith(loading: false);
@@ -283,6 +292,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final idToken = account.authentication.idToken;
+      if (kDebugMode) {
+        debugPrint(
+          'Google idToken: ${idToken == null ? "NULL" : "present (${idToken.length} chars)"}',
+        );
+      }
       if (idToken == null) {
         throw Exception('auth_err_google_token_failed');
       }
@@ -290,6 +304,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await _apiService.loginWithGoogle(idToken);
       return await _finalizeAuth(data);
     } on ApiException catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+          'Google backend login failed: HTTP ${e.statusCode} — ${e.message}',
+        );
+        if (e.statusCode == 401) {
+          debugPrint(
+            'Google 401 ipucu: sunucu Config.php → google.client_ids içinde '
+            'Web client ID olmalı (aud): ${AppConfig.googleServerClientId}',
+          );
+        } else if (e.statusCode == 500 &&
+            e.message.contains('google.client_ids eksik')) {
+          debugPrint(
+            'Google 500 ipucu: Config.php dosyasında google.client_ids '
+            'bloğu tanımlı değil.',
+          );
+        }
+      }
       final mapped = _mapBackendError(e.message);
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);

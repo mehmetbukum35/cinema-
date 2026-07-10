@@ -1,8 +1,11 @@
 import 'dart:io' show Platform;
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../firebase_options.dart';
 import 'api_service.dart';
 import '../screens/social_screen.dart';
 import '../models/movie.dart';
@@ -13,7 +16,10 @@ import 'tmdb_service.dart';
 /// top-level handler. Sistem bildirimi otomatik gösterilir; burada ağır iş yapma.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Gerekirse arka plan loglama/işleme buraya. Şimdilik no-op.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (kDebugMode) {
+    debugPrint('FCM background message: ${message.messageId}');
+  }
 }
 
 /// FCM push bildirimlerini yönetir: izin, token kayıt/yenileme, foreground'da
@@ -66,11 +72,27 @@ class NotificationService {
           ?.createNotificationChannel(_channel);
 
       // Bildirim izni (iOS + Android 13+)
-      await FirebaseMessaging.instance.requestPermission(
+      final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
+      if (kDebugMode) {
+        debugPrint(
+          'FCM permission: ${settings.authorizationStatus.name} '
+          '(iOS=${Platform.isIOS})',
+        );
+      }
+
+      // iOS: uygulama ön plandayken sistem bildirimi göster
+      if (Platform.isIOS) {
+        await FirebaseMessaging.instance
+            .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
 
       // Foreground mesajları → yerel bildirim olarak göster
       FirebaseMessaging.onMessage.listen(_showForeground);
@@ -112,6 +134,11 @@ class NotificationService {
   Future<void> registerToken() async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
+      if (kDebugMode) {
+        debugPrint(
+          'FCM registerToken: ${token == null ? "NULL (APNs/Firebase yapılandırmasını kontrol edin)" : "${token.substring(0, 20)}..."}',
+        );
+      }
       if (token != null) await _sendToken(token);
     } catch (e, st) {
       debugPrint('Failed to register FCM token: $e\n$st');

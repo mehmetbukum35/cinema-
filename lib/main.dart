@@ -38,22 +38,18 @@ void main() async {
     ),
   );
 
-  // Firebase'i arka planda başlat (blokajı kaldır)
-  unawaited(
-    Future(() async {
-      try {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
-        FirebaseMessaging.onBackgroundMessage(
-          firebaseMessagingBackgroundHandler,
-        );
-      } catch (e, st) {
-        // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
-        debugPrint("Firebase background initialization failed: $e\n$st");
-      }
-    }),
-  );
+  // Firebase: FCM token alınmadan önce hazır olmalı (NotificationService race'i önler).
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(
+      firebaseMessagingBackgroundHandler,
+    );
+  } catch (e, st) {
+    // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
+    debugPrint("Firebase initialization failed: $e\n$st");
+  }
 
   // TMDB cache verilerinden süresi dolanları arka planda temizle (30 günlük limit)
   unawaited(

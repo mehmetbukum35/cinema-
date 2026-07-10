@@ -33,13 +33,23 @@ return [
         'pass' => 'your_smtp_password',
     ],
 
-    // Google Sign-In (POST /auth/google). client_ids: ID token'ın "aud"
-    // claim'inde kabul edilecek OAuth client ID'leri. Flutter'ın serverClientId
-    // olarak kullandığı WEB client ID mutlaka burada olmalı (Google Cloud
-    // Console > Credentials > OAuth 2.0 Client IDs > Web client).
+    // ── Google Sign-In (POST /auth/google) ─────────────────────────────────
+    // client_ids: ID token'ın "aud" claim'inde kabul edilecek OAuth client ID'leri.
+    //
+    // ÜRETİM (cinema.mbkm.com.tr): Config.php'ye AYNEN şu bloğu ekleyin/güncelleyin.
+    // iOS/Android native client ID'lerini EKLEMEYİN — google_sign_in v7, serverClientId
+    // ile üretilen ID token'ın aud'si her zaman Web client ID olur.
+    //
+    //   'google' => [
+    //       'client_ids' => [
+    //           '925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com',
+    //       ],
+    //   ],
+    //
+    // Eksik/yanlış client_ids → istemci 401 "Google kimliği doğrulanamadı." alır.
     'google' => [
         'client_ids' => [
-            'your_web_client_id.apps.googleusercontent.com',
+            '925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com',
         ],
     ],
 

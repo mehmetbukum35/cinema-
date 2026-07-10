@@ -94,6 +94,19 @@ class GoogleAuthTest extends TestCase
         );
     }
 
+    /** iOS/Android google_sign_in v7 + serverClientId → aud = Web client ID. */
+    public function testValidateClaimsAcceptsProductionWebClientId(): void
+    {
+        $webClientId =
+            '925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com';
+        $this->assertTrue(
+            GoogleAuth::validateClaims(
+                $this->claims(['aud' => $webClientId]),
+                [$webClientId]
+            )
+        );
+    }
+
     public function testValidateClaimsRejectsExpiredToken(): void
     {
         $this->assertFalse(
