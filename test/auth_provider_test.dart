@@ -90,6 +90,25 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<Map<String, dynamic>> getRecommendations() async => {
+    'recommendations': [],
+    'unseen': 0,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getFriends() async => {
+    'friends': [],
+    'pending_received': [],
+    'pending_sent': [],
+  };
+
+  @override
+  Future<List<dynamic>> getActivityFeed({int? friendId}) async => [];
+
+  @override
+  Future<Map<String, dynamic>> getTopProfiles() async => {'profiles': []};
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

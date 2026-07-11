@@ -787,7 +787,7 @@ class ApiService {
       '/social/recommendations',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     } else {
