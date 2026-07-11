@@ -135,6 +135,8 @@ class SocialWebRenderer
                 'empty_watchlist' => 'Nothing in the watchlist yet.',
                 'tv'              => 'TV Show',
                 'movie'           => 'Movie',
+                'sub_movies'      => '🎬 Movies',
+                'sub_tv'          => '📺 TV Shows',
             ];
         }
         return [
@@ -158,6 +160,8 @@ class SocialWebRenderer
             'empty_watchlist' => 'İzleme listesinde henüz bir şey yok.',
             'tv'              => 'Dizi',
             'movie'           => 'Film',
+            'sub_movies'      => '🎬 Filmler',
+            'sub_tv'          => '📺 Diziler',
         ];
     }
 

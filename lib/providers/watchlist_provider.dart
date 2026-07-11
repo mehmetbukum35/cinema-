@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
+import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import 'auth_provider.dart';
@@ -28,6 +29,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       if (mounted) {
         state = AsyncValue.data(list);
       }
+
+      // Çıkış hatırlatıcılarını listeyle hizala (başka cihazdan sync ile
+      // gelen ekleme/çıkarmalar dahil). Best-effort; akışı bloklamaz.
+      NotificationService.instance.syncReleaseReminders(list).catchError((_) {});
     } catch (e, st) {
       if (mounted) {
         state = AsyncValue.error(e, st);
@@ -45,6 +50,11 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           }
         });
       }
+
+      // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
+      NotificationService.instance
+          .scheduleReleaseReminder(movie)
+          .catchError((_) {});
 
       // Background push sync
       final auth = ref.read(authProvider);
@@ -66,6 +76,11 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           );
         });
       }
+
+      // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
+      NotificationService.instance
+          .cancelReleaseReminder(id, isTV)
+          .catchError((_) {});
 
       // Background push sync
       final auth = ref.read(authProvider);

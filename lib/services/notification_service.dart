@@ -5,8 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 import '../firebase_options.dart';
 import 'api_service.dart';
+import 'prefs_service.dart';
 import '../screens/social_screen.dart';
 import '../models/movie.dart';
 import '../screens/movie_detail_sheet.dart';
@@ -40,6 +44,25 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   ApiService? _api;
   bool _ready = false;
+  Future<bool>? _tzInit;
+
+  /// Saat dilimi veritabanını bir kez kurar; zamanlanmış bildirimler için
+  /// gereklidir. init()'ten bağımsız çağrılabilir (ör. açılıştaki watchlist
+  /// yüklemesi init tamamlanmadan koşabilir).
+  Future<bool> _ensureTimezone() {
+    return _tzInit ??= () async {
+      try {
+        tzdata.initializeTimeZones();
+        final localTz = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(localTz));
+        return true;
+      } catch (e) {
+        debugPrint('Timezone init failed: $e');
+        _tzInit = null; // sonraki çağrıda yeniden dene
+        return false;
+      }
+    }();
+  }
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'social_channel',
@@ -47,6 +70,14 @@ class NotificationService {
     description: 'Arkadaşlık istekleri ve sosyal etkileşimler',
     importance: Importance.high,
   );
+
+  static const AndroidNotificationChannel _releaseChannel =
+      AndroidNotificationChannel(
+        'release_channel',
+        'Çıkış Hatırlatıcıları',
+        description: 'İzleme listendeki yapımlar yayınlandığında haber verir',
+        importance: Importance.high,
+      );
 
   /// Uygulama açılışında bir kez çağrılır. Birden çok çağrı güvenlidir.
   Future<void> init(ApiService api) async {
@@ -64,12 +95,16 @@ class NotificationService {
             _routeFromPayload(resp.payload),
       );
 
-      // Android bildirim kanalı
-      await _local
+      // Android bildirim kanalları
+      final androidPlugin = _local
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(_channel);
+          >();
+      await androidPlugin?.createNotificationChannel(_channel);
+      await androidPlugin?.createNotificationChannel(_releaseChannel);
+
+      // Zamanlanmış bildirimler için saat dilimi veritabanı
+      await _ensureTimezone();
 
       // Bildirim izni (iOS + Android 13+)
       final settings = await FirebaseMessaging.instance.requestPermission(
@@ -197,6 +232,108 @@ class NotificationService {
     }
   }
 
+  // ── Çıkış hatırlatıcıları ──────────────────────────────────────────────
+  // Watchlist'teki henüz yayınlanmamış yapımlar için çıkış gününde yerel
+  // bildirim planlar. Bildirim kimliği movie id + tür bitinden türetilir ki
+  // ekleme/çıkarma ve cihazlar arası senkron sonrası tutarlı kalsın.
+
+  static const int _releaseIdMovie = 0x20000000;
+  static const int _releaseIdTv = 0x10000000;
+  static const int _releaseIdMask = 0x30000000;
+
+  static int _releaseNotifId(int movieId, bool isTV) =>
+      (isTV ? _releaseIdTv : _releaseIdMovie) | (movieId & 0x0FFFFFFF);
+
+  /// Çıkış tarihi gelecekteyse o gün saat 10:00'a bildirim planlar.
+  Future<void> scheduleReleaseReminder(Movie movie) async {
+    if (!await _ensureTimezone()) return;
+    try {
+      final raw = movie.releaseDate;
+      if (raw == null || raw.isEmpty) return;
+      final date = DateTime.tryParse(raw);
+      if (date == null) return;
+
+      final when = tz.TZDateTime(tz.local, date.year, date.month, date.day, 10);
+      if (!when.isAfter(tz.TZDateTime.now(tz.local))) return;
+
+      final tr = PrefsService.activeLanguageCode == 'tr';
+      final title = movie.isTV
+          ? (tr ? '📺 Bugün yayında!' : '📺 Streaming today!')
+          : (tr ? '🎬 Bugün vizyonda!' : '🎬 In theaters today!');
+      final body = movie.isTV
+          ? (tr
+                ? '${movie.title} bugün yayınlanıyor. İzleme listende seni bekliyor!'
+                : '${movie.title} premieres today. It\'s waiting on your watchlist!')
+          : (tr
+                ? '${movie.title} bugün vizyona giriyor. İzleme listende seni bekliyor!'
+                : '${movie.title} is out today. It\'s waiting on your watchlist!');
+
+      await _local.zonedSchedule(
+        _releaseNotifId(movie.id, movie.isTV),
+        title,
+        body,
+        when,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _releaseChannel.id,
+            _releaseChannel.name,
+            channelDescription: _releaseChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'release|${movie.id}|${movie.isTV}',
+      );
+    } catch (e, st) {
+      debugPrint('Failed to schedule release reminder: $e\n$st');
+    }
+  }
+
+  Future<void> cancelReleaseReminder(int movieId, bool isTV) async {
+    try {
+      await _local.cancel(_releaseNotifId(movieId, isTV));
+    } catch (e) {
+      debugPrint('Failed to cancel release reminder: $e');
+    }
+  }
+
+  /// Planlanmış hatırlatıcıları watchlist ile hizalar: listeden çıkanları
+  /// iptal eder, eksik olanları planlar. Cihazlar arası senkron sonrası
+  /// (başka cihazda eklenen/çıkarılan yapımlar) tutarlılık için çağrılır.
+  Future<void> syncReleaseReminders(List<Movie> watchlist) async {
+    if (!await _ensureTimezone()) return;
+    try {
+      final expected = <int, Movie>{
+        for (final m in watchlist) _releaseNotifId(m.id, m.isTV): m,
+      };
+
+      final pending = await _local.pendingNotificationRequests();
+      final scheduled = <int>{};
+      for (final p in pending) {
+        if ((p.id & _releaseIdMask) == 0) continue; // hatırlatıcı değil
+        if (!expected.containsKey(p.id)) {
+          await _local.cancel(p.id);
+        } else {
+          scheduled.add(p.id);
+        }
+      }
+
+      for (final entry in expected.entries) {
+        if (!scheduled.contains(entry.key)) {
+          // Geçmiş tarihli olanları scheduleReleaseReminder kendisi eler.
+          await scheduleReleaseReminder(entry.value);
+        }
+      }
+    } catch (e, st) {
+      debugPrint('Failed to sync release reminders: $e\n$st');
+    }
+  }
+
   /// Bildirim payload'una göre ilgili ekrana yönlendirir.
   void _routeFromPayload(String? payload) {
     if (payload == null) return;
@@ -209,7 +346,8 @@ class NotificationService {
       nav.push(
         MaterialPageRoute(builder: (_) => const SocialScreen(initialTab: 1)),
       );
-    } else if (type == 'movie_recommend' ||
+    } else if (type == 'release' ||
+        type == 'movie_recommend' ||
         type == 'recommendation' ||
         type == 'movie_recommendation' ||
         type == 'friend_recommend') {

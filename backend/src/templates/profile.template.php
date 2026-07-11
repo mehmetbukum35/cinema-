@@ -60,6 +60,107 @@
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Sinematik arkaplan ─────────────────────────────────────────
+           Yalnızca transform anime edilir (GPU dostu); içerik .container
+           z-index:1 ile üstte kalır, grain katmanı pointer-events almaz. */
+        .bg-cinema {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-cinema .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            will-change: transform;
+        }
+
+        .orb-red {
+            width: 55vmax;
+            height: 55vmax;
+            top: -22vmax;
+            left: -18vmax;
+            background: radial-gradient(circle, rgba(229, 9, 20, 0.32), transparent 70%);
+            animation: orb-drift-a 26s ease-in-out infinite alternate;
+        }
+
+        .orb-gold {
+            width: 45vmax;
+            height: 45vmax;
+            bottom: -18vmax;
+            right: -14vmax;
+            background: radial-gradient(circle, rgba(255, 179, 0, 0.22), transparent 70%);
+            animation: orb-drift-b 34s ease-in-out infinite alternate;
+        }
+
+        .orb-blue {
+            width: 50vmax;
+            height: 50vmax;
+            top: 30%;
+            left: 55%;
+            background: radial-gradient(circle, rgba(46, 84, 175, 0.28), transparent 70%);
+            animation: orb-drift-c 30s ease-in-out infinite alternate;
+        }
+
+        /* Projeksiyon ışığı: çapraz süpüren çok soluk bant */
+        .beam {
+            position: absolute;
+            top: -60%;
+            left: -40%;
+            width: 45vmax;
+            height: 220%;
+            background: linear-gradient(90deg, transparent, rgba(255, 236, 200, 0.05), transparent);
+            transform: rotate(18deg);
+            animation: beam-sweep 19s ease-in-out infinite;
+        }
+
+        @keyframes orb-drift-a {
+            to { transform: translate(10vmax, 8vmax) scale(1.12); }
+        }
+
+        @keyframes orb-drift-b {
+            to { transform: translate(-9vmax, -7vmax) scale(1.18); }
+        }
+
+        @keyframes orb-drift-c {
+            to { transform: translate(-12vmax, 6vmax) scale(0.9); }
+        }
+
+        @keyframes beam-sweep {
+            0%, 100% { transform: translateX(0) rotate(18deg); }
+            50% { transform: translateX(120vmax) rotate(18deg); }
+        }
+
+        /* Film greni: tüm sayfanın üzerinde çok soluk kumlanma */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: -100px;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation: grain-shift 1.2s steps(6) infinite;
+        }
+
+        @keyframes grain-shift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(60px, -40px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .bg-cinema .orb,
+            .beam,
+            body::after {
+                animation: none;
+            }
         }
 
         /* Header / Profile Card */
@@ -268,6 +369,30 @@
             justify-content: space-between;
         }
 
+        /* Bölüm içi Film / Dizi alt başlıkları */
+        .type-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin: 22px 0 14px;
+        }
+
+        .type-heading::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .type-group + .type-group {
+            margin-top: 28px;
+        }
+
         /* Grid Layout */
         .grid {
             display: grid;
@@ -398,6 +523,12 @@
     </style>
 </head>
 <body>
+    <div class="bg-cinema" aria-hidden="true">
+        <div class="orb orb-red"></div>
+        <div class="orb orb-gold"></div>
+        <div class="orb orb-blue"></div>
+        <div class="beam"></div>
+    </div>
     <div class="container">
         <header>
             <div class="avatar"><?php echo mb_substr($displayName, 0, 1, 'UTF-8'); ?></div>
@@ -445,8 +576,9 @@
                     </div>
                 <?php elseif (!empty($dna['themes'])): ?>
                     <div class="dna-chips">
-                        <?php foreach ($dna['themes'] as $t): ?>
-                            <span class="dna-chip"><?php echo htmlspecialchars($t); ?></span>
+                        <?php /* $t çeviri dizisi; döngü değişkeni onu ezmemeli */ ?>
+                        <?php foreach ($dna['themes'] as $themeName): ?>
+                            <span class="dna-chip"><?php echo htmlspecialchars($themeName); ?></span>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
@@ -473,17 +605,20 @@
             </div>
         <?php endif; ?>
 
-        <!-- Harika Buldukları (Favorites / Top Rated) -->
-        <section>
-            <h2><?php echo htmlspecialchars($t['sec_great']); ?></h2>
-            <?php if (empty($ratings)): ?>
-                <p class="empty-text"><?php echo htmlspecialchars($t['empty_great']); ?></p>
-            <?php else: ?>
+        <?php
+            // Kart gridini basar. Alt başlık (Filmler/Diziler) gruplandığı için
+            // kart metasında tür yerine yıl gösterilir; yıl yoksa tür etiketi.
+            $renderGrid = function (array $items) use ($t): void {
+                ?>
                 <div class="grid">
-                    <?php foreach ($ratings as $r): ?>
+                    <?php foreach ($items as $r): ?>
                         <div class="card">
-                            <?php 
+                            <?php
                                 $tmdbUrl = 'https://www.themoviedb.org/' . ($r['is_tv'] ? 'tv' : 'movie') . '/' . (int)$r['movie_id'];
+                                $year = substr((string)($r['release_date'] ?? ''), 0, 4);
+                                $metaLabel = ctype_digit($year) && strlen($year) === 4
+                                    ? $year
+                                    : ($r['is_tv'] ? $t['tv'] : $t['movie']);
                             ?>
                             <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
                                 <?php if (!empty($r['poster_path'])): ?>
@@ -495,7 +630,7 @@
                             <div class="card-info">
                                 <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
                                 <div class="card-meta">
-                                    <span><?php echo $r['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
+                                    <span><?php echo htmlspecialchars($metaLabel); ?></span>
                                     <?php if (!empty($r['vote_average'])): ?>
                                         <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
                                     <?php endif; ?>
@@ -504,75 +639,46 @@
                         </div>
                     <?php endforeach; ?>
                 </div>
-            <?php endif; ?>
+                <?php
+            };
+
+            // Bölüm içeriği: filmler ve diziler ayrı alt başlıklar altında.
+            $renderSection = function (array $items, string $emptyText) use ($t, $renderGrid): void {
+                if (empty($items)) {
+                    echo '<p class="empty-text">' . htmlspecialchars($emptyText) . '</p>';
+                    return;
+                }
+                $movies = array_values(array_filter($items, fn ($x) => empty($x['is_tv'])));
+                $shows  = array_values(array_filter($items, fn ($x) => !empty($x['is_tv'])));
+                if (!empty($movies)) {
+                    echo '<div class="type-group"><h3 class="type-heading">' . htmlspecialchars($t['sub_movies']) . '</h3>';
+                    $renderGrid($movies);
+                    echo '</div>';
+                }
+                if (!empty($shows)) {
+                    echo '<div class="type-group"><h3 class="type-heading">' . htmlspecialchars($t['sub_tv']) . '</h3>';
+                    $renderGrid($shows);
+                    echo '</div>';
+                }
+            };
+        ?>
+
+        <!-- Harika Buldukları (Favorites / Top Rated) -->
+        <section>
+            <h2><?php echo htmlspecialchars($t['sec_great']); ?></h2>
+            <?php $renderSection($ratings, $t['empty_great']); ?>
         </section>
 
         <!-- İyi Buldukları (Liked / Good) -->
         <section>
             <h2><?php echo htmlspecialchars($t['sec_good']); ?></h2>
-            <?php if (empty($goodRatings)): ?>
-                <p class="empty-text"><?php echo htmlspecialchars($t['empty_good']); ?></p>
-            <?php else: ?>
-                <div class="grid">
-                    <?php foreach ($goodRatings as $r): ?>
-                        <div class="card">
-                            <?php 
-                                $tmdbUrl = 'https://www.themoviedb.org/' . ($r['is_tv'] ? 'tv' : 'movie') . '/' . (int)$r['movie_id'];
-                            ?>
-                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
-                                <?php if (!empty($r['poster_path'])): ?>
-                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($r['poster_path']); ?>" alt="<?php echo htmlspecialchars($r['title']); ?>" class="poster" loading="lazy">
-                                <?php else: ?>
-                                    <div class="poster-placeholder"><?php echo htmlspecialchars($r['title']); ?></div>
-                                <?php endif; ?>
-                            </a>
-                            <div class="card-info">
-                                <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
-                                <div class="card-meta">
-                                    <span><?php echo $r['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
-                                    <?php if (!empty($r['vote_average'])): ?>
-                                        <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+            <?php $renderSection($goodRatings, $t['empty_good']); ?>
         </section>
 
         <!-- İzleme Listesi (Watchlist) -->
         <section>
             <h2><?php echo htmlspecialchars($t['sec_watchlist']); ?></h2>
-            <?php if (empty($watchlist)): ?>
-                <p class="empty-text"><?php echo htmlspecialchars($t['empty_watchlist']); ?></p>
-            <?php else: ?>
-                <div class="grid">
-                    <?php foreach ($watchlist as $w): ?>
-                        <div class="card">
-                            <?php 
-                                $tmdbUrl = 'https://www.themoviedb.org/' . ($w['is_tv'] ? 'tv' : 'movie') . '/' . (int)$w['movie_id'];
-                            ?>
-                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
-                                <?php if (!empty($w['poster_path'])): ?>
-                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($w['poster_path']); ?>" alt="<?php echo htmlspecialchars($w['title']); ?>" class="poster" loading="lazy">
-                                <?php else: ?>
-                                    <div class="poster-placeholder"><?php echo htmlspecialchars($w['title']); ?></div>
-                                <?php endif; ?>
-                            </a>
-                            <div class="card-info">
-                                <div class="card-title"><?php echo htmlspecialchars($w['title']); ?></div>
-                                <div class="card-meta">
-                                    <span><?php echo $w['is_tv'] ? htmlspecialchars($t['tv']) : htmlspecialchars($t['movie']); ?></span>
-                                    <?php if (!empty($w['vote_average'])): ?>
-                                        <span class="rating-badge">★ <?php echo round((float) $w['vote_average'], 1); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+            <?php $renderSection($watchlist, $t['empty_watchlist']); ?>
         </section>
     </div>
 
