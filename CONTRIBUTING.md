@@ -87,3 +87,44 @@ composer test
 ### PHP (Backend)
 *   Ensure compatibility with PHP 8.4+.
 *   Write modular controller logic and unit tests using PHPUnit.
+
+---
+
+## 📝 Commit Messages (Conventional Commits)
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) so history stays readable and changelogs can be generated later.
+
+```
+<type>(<scope>): <short summary>    ← imperative mood, ≤50 chars
+
+Optional body: why the change was made, breaking changes, etc.
+```
+
+### Types
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New user-facing feature |
+| `fix` | Bug fix |
+| `refactor` | Code restructure without behavior change |
+| `perf` | Performance improvement |
+| `test` | Adding or updating tests only |
+| `docs` | Documentation only |
+| `chore` | Tooling, deps, housekeeping |
+| `ci` | CI/CD workflow changes |
+
+### Examples
+
+```
+feat(social): add pending request count badge on tab
+fix(sync): preserve local delete in last-write-wins conflict
+refactor(match): extract couch mode into match/together_body.dart
+test(widget): smoke test for ProfileScreen library header
+ci(android): add release APK/AAB workflow on tag dispatch
+```
+
+### Scope hints
+
+Use the area you touched: `social`, `sync`, `browse`, `match`, `profile`, `backend`, `notifications`, `ci`, etc.
+
+> Past commits may use informal messages; apply this rule **from now on** — no need to rewrite history.

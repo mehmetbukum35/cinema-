@@ -1,0 +1,28 @@
+name: Android Release Build
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+      - name: Build release App Bundle
+        run: flutter build appbundle --release --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab

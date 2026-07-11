@@ -21,7 +21,7 @@ Zaten elinde olanlar (`test/`):
 | `widget_test.dart` | Onboarding + MainShell render |
 | `mocks/secure_storage_mock.dart` | Test altyapısı |
 
-**Sonuç:** İyi bir temel var ve doğru teknikler kullanılmış (HTTP mock, business-logic ayrımı). Eksik olan: (1) kritik modüllerin testi, (2) bunların **otomatik** çalışması (CI), (3) kapsam ölçümü.
+**Sonuç:** İyi bir temel var ve doğru teknikler kullanılmış (HTTP mock, business-logic ayrımı). Eksik olan: (1) bazı ekran alanlarında widget testi (kısmen tamamlandı), (2) kapsam ölçümü hedeflerinin tam karşılanması, (3) README ve repo cilası.
 
 ---
 
@@ -29,28 +29,29 @@ Zaten elinde olanlar (`test/`):
 
 Hiç testi olmayan ve risk taşıyan modüller — yukarıdan başla:
 
-- [ ] **`services/sync_service.dart`** — EN KRİTİK. Delta-sync'in last-write-wins kuralı, `since` zamanı yönetimi, soft-delete senkronu burada. Bir veri kaybı hatası en çok burada canını yakar.
+- [x] **`services/sync_service.dart`** — EN KRİTİK. Delta-sync'in last-write-wins kuralı, `since` zamanı yönetimi, soft-delete senkronu burada. Bir veri kaybı hatası en çok burada canını yakar.
   - Test et: yerelden daha yeni kayıt sunucuyu ezer mi; sunucudan gelen `deleted:true` yereli siler mi; `server_time` doğru saklanıp bir sonraki `since` olarak kullanılıyor mu; boş/çakışan payload davranışı.
-- [ ] **`providers/social_provider.dart`** — arkadaş ekleme/kabul/ret state geçişleri, `pendingReceived` sayacı, hata durumunda state.
-- [ ] **`providers/watchlist_provider.dart`** — ekleme/çıkarma, optimistic update, invalidate sonrası yeniden yükleme.
-- [ ] **`providers/auth_provider.dart`** — login/logout state, token saklama (mock secure storage zaten var).
-- [ ] **`services/api_service.dart`** — endpoint URL/gövde doğruluğu, 401/4xx/5xx hata eşlemesi (MockClient).
-- [ ] **`services/db_helper.dart`** — SQLite CRUD; `sqflite_common_ffi` ile bellek-içi DB kullan (aşağıda).
+- [x] **`providers/social_provider.dart`** — arkadaş ekleme/kabul/ret state geçişleri, `pendingReceived` sayacı, hata durumunda state.
+- [x] **`providers/watchlist_provider.dart`** — ekleme/çıkarma, optimistic update, invalidate sonrası yeniden yükleme.
+- [x] **`providers/auth_provider.dart`** — login/logout state, token saklama (mock secure storage zaten var).
+- [x] **`services/api_service.dart`** — endpoint URL/gövde doğruluğu, 401/4xx/5xx hata eşlemesi (MockClient).
+- [x] **`services/db_helper.dart`** — SQLite CRUD; `sqflite_common_ffi` ile bellek-içi DB kullan (aşağıda).
 
 ### A2. Genişletilmesi gereken mevcut testler
 
 - [ ] `tmdb_service_test.dart`: sadece `searchMulti` var. Ekle → `discoverByGenres`, `getRecommendations`, `getTrending`, hata/timeout yolu, boş sonuç.
 - [ ] `swipe_notifier_test.dart`: undo, dil/platform filtresi, "içerik kalmadı" durumu, `loadMore`.
 - [ ] Widget testleri: en az bir testte **açık tema** ile render (regresyon yakalar).
+- [x] Widget smoke testleri: `profile_screen`, `browse_screen`, `social_screen`, `movie_detail_sheet` (`test/*_widget_test.dart`).
 
 ### A3. Backend testleri (PHP — şu an sıfır)
 
 Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyor. Sosyal mantık ve auth kritik.
 
-- [ ] `composer init` + `composer require --dev phpunit/phpunit`
-- [ ] SQLite in-memory PDO ile test fixture'ı kur (şemayı `database.sql`'den yükle).
-- [ ] Öncelikli sınıflar: `Social` (arkadaşlık akışı, karşılıklı kabul, kesişim yetkisi, feed eşiği), `Jwt` (imzala/doğrula/expired), `Auth` (register çakışma, login yanlış şifre).
-- [ ] Klasör: `backend/tests/`, `backend/phpunit.xml`.
+- [x] `composer init` + `composer require --dev phpunit/phpunit`
+- [x] SQLite in-memory PDO ile test fixture'ı kur (şemayı `database.sql`'den yükle).
+- [x] Öncelikli sınıflar: `Social` (arkadaşlık akışı, karşılıklı kabul, kesişim yetkisi, feed eşiği), `Jwt` (imzala/doğrula/expired), `Auth` (register çakışma, login yanlış şifre).
+- [x] Klasör: `backend/tests/`, `backend/phpunit.xml`.
 
 ### A4. Kapsam ölçümü (coverage)
 
@@ -62,7 +63,7 @@ Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyor. Sosyal mantık 
 
 Testler ancak her push'ta kendiliğinden çalışırsa "otomatik" olur. GitHub kullanıyorsan:
 
-- [ ] `.github/workflows/ci.yml` oluştur (taslak aşağıda).
+- [x] `.github/workflows/ci.yml` oluştur (taslak aşağıda).
 - [ ] PR'larda zorunlu kontrol yap (branch protection → "require status checks").
 - [ ] Rozet ekle: README'ye build/test badge.
 
@@ -144,7 +145,7 @@ Senin son commit'lerinin düzgün karşılığı:
 | `social` | `feat(social): arkadaşlık ve aktivite akışı` |
 | `guvenlik` | `fix(backend): friend request'i transaction'a al` |
 
-- [ ] Bu kuralı `CONTRIBUTING.md`'ye yaz (tek başına çalışsan bile gelecekteki sen için).
+- [x] Bu kuralı `CONTRIBUTING.md`'ye yaz (tek başına çalışsan bile gelecekteki sen için).
 - [ ] İstersen `commitlint` + Husky ile zorunlu kıl (opsiyonel).
 
 > Geçmişi geri yazma (`rebase`) tek başına bir projede gereksiz risk; kuralı **bundan sonrası** için uygula yeter.
@@ -173,16 +174,17 @@ Senin son commit'lerinin düzgün karşılığı:
 - [ ] **Pre-commit hook** — commit öncesi `dart format` + `flutter analyze`.
 - [ ] **Dependabot** — bağımlılık güncellemeleri için.
 - [ ] **Release workflow** — tag atınca otomatik APK/AAB build.
+- [x] **Android release workflow** — `.github/workflows/android-release.yml` (manuel dispatch + `v*` tag).
 
 ---
 
 ## ÖZET KONTROL LİSTESİ (asgari "9+" paketi)
 
-1. [ ] `sync_service` + `api_service` testleri yazıldı
-2. [ ] CI workflow'u push/PR'da test+analyze çalıştırıyor
-3. [ ] Backend için en az `Social` + `Jwt` PHPUnit testi
+1. [x] `sync_service` + `api_service` testleri yazıldı
+2. [x] CI workflow'u push/PR'da test+analyze çalıştırıyor
+3. [x] Backend için en az `Social` + `Jwt` PHPUnit testi
 4. [ ] README gerçek içerikle yeniden yazıldı (+ekran görüntüsü)
-5. [ ] Conventional Commits kuralı `CONTRIBUTING.md`'de, bundan sonra uygulanıyor
+5. [x] Conventional Commits kuralı `CONTRIBUTING.md`'de, bundan sonra uygulanıyor
 6. [ ] `LICENSE` + `.gitignore` denetimi + artık dosyalar silindi
 
 Bu altısı tamamlanınca repo, koduyla aynı olgunluk seviyesine gelir.
