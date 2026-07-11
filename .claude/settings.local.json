@@ -90,7 +90,18 @@
       "Bash(php vendor/bin/phpunit --no-coverage --display-warnings --display-deprecations)",
       "Bash(dart analyze *)",
       "Bash(gh auth *)",
-      "Bash(gh workflow *)"
+      "Bash(gh workflow *)",
+      "Bash(awk -F: '{s+=$NF} END {print \"flutter tests ~\" s}')",
+      "Bash(tasklist //FI \"IMAGENAME eq dart.exe\")",
+      "Bash(tasklist //FI \"IMAGENAME eq flutter.bat\")",
+      "PowerShell(try { $fs = [System.IO.File]::Open\\(\"E:\\\\cinema+\\\\.dart_tool\\\\hooks_runner\\\\shared\\\\sqlite3\\\\.lock\", 'Open', 'ReadWrite', 'None'\\); $fs.Close\\(\\); \"LOCK IS FREE\" } catch { \"LOCK IS HELD: $\\($_.Exception.Message\\)\" }; Get-Process dart -ErrorAction SilentlyContinue | Select-Object Id, StartTime, @{N='CmdLine';E={\\(Get-CimInstance Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List)",
+      "PowerShell(Stop-Process -Id 30912, 33180 -Force -Confirm:$false; Start-Sleep -Seconds 1; try { $fs = [System.IO.File]::Open\\(\"E:\\\\cinema+\\\\.dart_tool\\\\hooks_runner\\\\shared\\\\sqlite3\\\\.lock\", 'Open', 'ReadWrite', 'None'\\); $fs.Close\\(\\); \"LOCK IS FREE\" } catch { \"LOCK STILL HELD\" })",
+      "Bash(php -l E:/cinema+/backend/src/templates/profile.template.php)",
+      "Bash(php -l E:/cinema+/backend/src/SocialWebRenderer.php)",
+      "Bash(php render_profile.php)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(php -S 127.0.0.1:8123)",
+      "PowerShell(try { [xml]\\(Get-Content \"E:\\\\cinema+\\\\android\\\\app\\\\src\\\\main\\\\AndroidManifest.xml\" -Raw\\) | Out-Null; \"XML OK\" } catch { \"XML ERROR: $_\" })"
     ]
   }
 }

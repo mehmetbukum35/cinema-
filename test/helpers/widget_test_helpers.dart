@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ne_izlesem/services/localization_service.dart';
-import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
 
 /// Wraps a widget with MaterialApp, localizations and Riverpod overrides.
