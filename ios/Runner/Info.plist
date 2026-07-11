@@ -66,6 +66,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Yalnızca standart HTTPS kullanılıyor: TestFlight'ta her build için
+	     export compliance sorusunu atlatır. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- FCM: arka planda ve kapalıyken push almak için zorunlu -->
 	<key>UIBackgroundModes</key>
 	<array>
