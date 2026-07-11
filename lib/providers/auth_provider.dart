@@ -382,10 +382,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         throw Exception('auth_err_apple_token_failed');
       }
 
-      final name = [credential.givenName, credential.familyName]
-          .whereType<String>()
-          .join(' ')
-          .trim();
+      final name = [
+        credential.givenName,
+        credential.familyName,
+      ].whereType<String>().join(' ').trim();
 
       final data = await _apiService.loginWithApple(
         idToken,

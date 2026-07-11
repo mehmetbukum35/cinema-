@@ -163,8 +163,7 @@ const Map<String, String> kTrStrings = {
   'auth_err_google_failed':
       'Google ile giriş yapılamadı. Lütfen tekrar deneyin.',
   'auth_err_apple_token_failed': 'Apple kimlik anahtarı alınamadı.',
-  'auth_err_apple_failed':
-      'Apple ile giriş yapılamadı. Lütfen tekrar deneyin.',
+  'auth_err_apple_failed': 'Apple ile giriş yapılamadı. Lütfen tekrar deneyin.',
   'auth_err_register_failed':
       'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.',
   'auth_err_login_failed':

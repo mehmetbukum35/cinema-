@@ -135,9 +135,7 @@ void showAboutSheet(BuildContext context) {
             ),
             const SizedBox(height: 20),
             // TMDB kullanım şartı gereği zorunlu atıf: logo + metin.
-            Center(
-              child: SvgPicture.asset('assets/tmdb_logo.svg', height: 13),
-            ),
+            Center(child: SvgPicture.asset('assets/tmdb_logo.svg', height: 13)),
             const SizedBox(height: 8),
             Text(
               tr?.get('tmdb_attribution') ??
