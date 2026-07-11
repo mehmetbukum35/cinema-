@@ -744,76 +744,85 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                 final double iyiSize = 80.0 * scale;
                 final double harikaSize = 68.0 * scale;
 
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Semantics(
-                      label:
-                          AppLocalizations.of(context)?.get('semantics_undo') ??
-                          'Değerlendirmeyi geri al',
-                      button: true,
-                      enabled: current > 0,
-                      child: SpringButton(
-                        onTap: current > 0 ? _undo : null,
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Center(
-                            child: Container(
-                              width: undoSize,
-                              height: undoSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: c.surface,
-                              ),
-                              child: Icon(
-                                Icons.undo_rounded,
-                                color: current > 0
-                                    ? (c.isLight ? c.dim : Colors.white54)
-                                    : (c.isLight
-                                          ? c.textFaint
-                                          : Colors.white12),
-                                size: 20 * scale,
+                return FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Semantics(
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('semantics_undo') ??
+                            'Değerlendirmeyi geri al',
+                        button: true,
+                        enabled: current > 0,
+                        child: SpringButton(
+                          onTap: current > 0 ? _undo : null,
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Center(
+                              child: Container(
+                                width: undoSize,
+                                height: undoSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: c.surface,
+                                ),
+                                child: Icon(
+                                  Icons.undo_rounded,
+                                  color: current > 0
+                                      ? (c.isLight ? c.dim : Colors.white54)
+                                      : (c.isLight
+                                            ? c.textFaint
+                                            : Colors.white12),
+                                  size: 20 * scale,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    _RatingBtn(
-                      label:
-                          AppLocalizations.of(context)?.get('profile_berbat') ??
-                          'Berbat',
-                      color: c.rBerbat,
-                      size: berbatSize,
-                      onTap: () => _rate(0),
-                    ),
-                    _RatingBtn(
-                      label:
-                          AppLocalizations.of(context)?.get('profile_eh') ??
-                          'Eh',
-                      color: c.rEh,
-                      size: ehSize,
-                      onTap: () => _rate(1),
-                    ),
-                    _RatingBtn(
-                      label:
-                          AppLocalizations.of(context)?.get('profile_iyi') ??
-                          'İyi',
-                      color: c.rIyi,
-                      size: iyiSize,
-                      onTap: () => _rate(2),
-                    ),
-                    _RatingBtn(
-                      label:
-                          AppLocalizations.of(context)?.get('profile_harika') ??
-                          'Harika',
-                      color: c.rHarika,
-                      size: harikaSize,
-                      onTap: () => _rate(3),
-                    ),
-                  ],
+                      _RatingBtn(
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('profile_berbat') ??
+                            'Berbat',
+                        color: c.rBerbat,
+                        size: berbatSize,
+                        onTap: () => _rate(0),
+                      ),
+                      _RatingBtn(
+                        label:
+                            AppLocalizations.of(context)?.get('profile_eh') ??
+                            'Eh',
+                        color: c.rEh,
+                        size: ehSize,
+                        onTap: () => _rate(1),
+                      ),
+                      _RatingBtn(
+                        label:
+                            AppLocalizations.of(context)?.get('profile_iyi') ??
+                            'İyi',
+                        color: c.rIyi,
+                        size: iyiSize,
+                        onTap: () => _rate(2),
+                      ),
+                      _RatingBtn(
+                        label:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('profile_harika') ??
+                            'Harika',
+                        color: c.rHarika,
+                        size: harikaSize,
+                        onTap: () => _rate(3),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

@@ -204,41 +204,49 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   'Friends',
             ),
             Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.get('requests') ?? 'Requests',
-                  ),
-                  if (socialState.pendingReceived.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    _tabBadge(
-                      socialState.pendingReceived.length.toString(),
-                      background: c.red,
-                      foreground: Colors.white,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.get('requests') ??
+                          'Requests',
                     ),
+                    if (socialState.pendingReceived.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      _tabBadge(
+                        socialState.pendingReceived.length.toString(),
+                        background: c.red,
+                        foreground: Colors.white,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
             Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.get('activity') ?? 'Activity',
-                  ),
-                  if (socialState.unseenRecommendations > 0) ...[
-                    const SizedBox(width: 6),
-                    _tabBadge(
-                      socialState.unseenRecommendations.toString(),
-                      background: c.gold,
-                      foreground: Colors.black,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.get('activity') ??
+                          'Activity',
                     ),
+                    if (socialState.unseenRecommendations > 0) ...[
+                      const SizedBox(width: 6),
+                      _tabBadge(
+                        socialState.unseenRecommendations.toString(),
+                        background: c.gold,
+                        foreground: Colors.black,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
             Tab(
