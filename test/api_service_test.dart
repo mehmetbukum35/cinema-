@@ -32,8 +32,10 @@ void main() {
 
         return http.Response(
           jsonEncode({
-            'access_token': 'new_access',
-            'refresh_token': 'new_refresh',
+            'tokens': {
+              'access_token': 'new_access',
+              'refresh_token': 'new_refresh',
+            },
             'user': {
               'id': 1,
               'email': 'test@example.com',
@@ -165,6 +167,28 @@ void main() {
         ),
       );
     });
+
+    test(
+      'should throw ApiException on HTTP 400 with empty JSON body',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('', 400);
+        });
+
+        final apiService = ApiService(client: mockClient);
+
+        expect(
+          () => apiService.login(email: 'test@example.com', password: 'wrong'),
+          throwsA(
+            isA<ApiException>().having(
+              (e) => e.message,
+              'message',
+              'Giriş başarısız.',
+            ),
+          ),
+        );
+      },
+    );
 
     test('should automatically refresh token on 401', () async {
       int requestCount = 0;

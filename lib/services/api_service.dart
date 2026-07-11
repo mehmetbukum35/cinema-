@@ -108,6 +108,13 @@ class ApiService {
     return response;
   }
 
+  Map<String, dynamic> _decodeJsonMap(String body) {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) return {};
+    final decoded = jsonDecode(trimmed);
+    return decoded is Map<String, dynamic> ? decoded : {};
+  }
+
   Never _throwRateLimited(http.Response response) {
     String message = 'auth_err_rate_limited';
     try {
@@ -209,7 +216,7 @@ class ApiService {
       body: body,
       requireAuth: false,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return data;
@@ -229,7 +236,7 @@ class ApiService {
       body: {'email': email, 'code': code},
       requireAuth: false,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;
@@ -270,7 +277,7 @@ class ApiService {
       body: body,
       requireAuth: false,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;

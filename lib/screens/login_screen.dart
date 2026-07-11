@@ -172,6 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ],
 
                         TextFormField(
+                          key: const ValueKey('auth_email_field'),
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -202,6 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 16),
 
                         TextFormField(
+                          key: const ValueKey('auth_password_field'),
                           controller: _passCtrl,
                           obscureText: _obscure,
                           textInputAction: TextInputAction.done,
