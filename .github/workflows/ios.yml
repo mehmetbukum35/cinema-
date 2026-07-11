@@ -1,24 +1,64 @@
-name: iOS Build (unsigned)
+name: iOS TestFlight
 on:
   workflow_dispatch:   # Actions sekmesinden elle tetiklenir
 jobs:
-  build-ios:
+  build-and-upload:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: flutter build ios --release --no-codesign --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
-      - name: IPA paketle
+
+      - name: İmzalama sertifikasını kur (geçici keychain)
+        env:
+          CERT_P12_B64: ${{ secrets.IOS_DIST_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
         run: |
-          cd build/ios/iphoneos
-          mkdir Payload
-          cp -r Runner.app Payload/
-          zip -r app-unsigned.ipa Payload
-      - uses: actions/upload-artifact@v4
+          KEYCHAIN_PASS=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASS" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASS" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          echo "$CERT_P12_B64" | base64 --decode > /tmp/cert.p12
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" build.keychain
+          rm /tmp/cert.p12
+
+      - name: Provisioning profile kur
+        env:
+          PROFILE_B64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROFILE_B64" | base64 --decode \
+            > "$HOME/Library/MobileDevice/Provisioning Profiles/neizlesem-appstore.mobileprovision"
+
+      - run: flutter pub get
+
+      - name: İmzalı IPA derle
+        run: |
+          flutter build ipa --release \
+            --build-number=$GITHUB_RUN_NUMBER \
+            --export-options-plist=ios/ExportOptions.plist \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+
+      - name: TestFlight'a yükle
+        env:
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          echo "$API_PRIVATE_KEY" > "$HOME/private_keys/AuthKey_${API_KEY_ID}.p8"
+          IPA=$(ls build/ios/ipa/*.ipa)
+          xcrun altool --upload-app --type ios -f "$IPA" \
+            --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+
+      - name: IPA'yı artifact olarak da sakla
+        uses: actions/upload-artifact@v4
         with:
-          name: ios-ipa
-          path: build/ios/iphoneos/app-unsigned.ipa
+          name: ios-ipa-signed
+          path: build/ios/ipa/*.ipa
