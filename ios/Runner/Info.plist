@@ -64,6 +64,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<!-- FCM: arka planda ve kapalıyken push almak için zorunlu -->
 	<key>UIBackgroundModes</key>
