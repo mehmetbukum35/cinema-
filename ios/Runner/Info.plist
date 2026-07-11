@@ -79,14 +79,14 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.925394401867-fjftcvlo842dgvqgqemau5bgdmla4qv9</string>
+				<string>com.googleusercontent.apps.925394401867-0qj748iv1kvqg3lrc6ia93hri0dbelup</string>
 			</array>
 		</dict>
 	</array>
 	<!-- google_sign_in v7 iOS client ID'yi buradan okur (GoogleService-Info.plist
 	     Xcode hedefine ekli olmadığı için zorunlu). -->
 	<key>GIDClientID</key>
-	<string>925394401867-fjftcvlo842dgvqgqemau5bgdmla4qv9.apps.googleusercontent.com</string>
+	<string>925394401867-0qj748iv1kvqg3lrc6ia93hri0dbelup.apps.googleusercontent.com</string>
 	<!-- Backend ID token doğrulaması için Web client ID (aud claim).
 	     Dart initialize(serverClientId) ile aynı değer; native katman için yedek. -->
 	<key>GIDServerClientID</key>

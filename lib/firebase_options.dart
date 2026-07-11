@@ -60,20 +60,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBnu-ACXZibICqst8fp9bOleIxebRmX4Eo',
-    appId: '1:925394401867:ios:e45718ae801e471c17abce',
+    appId: '1:925394401867:ios:2ecc1eb10ed052ef17abce',
     messagingSenderId: '925394401867',
     projectId: 'cinema-6bdc3',
     storageBucket: 'cinema-6bdc3.firebasestorage.app',
-    iosBundleId: 'com.example.neIzlesem',
+    iosBundleId: 'com.mehmet.neizlesem',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBnu-ACXZibICqst8fp9bOleIxebRmX4Eo',
-    appId: '1:925394401867:ios:e45718ae801e471c17abce',
+    appId: '1:925394401867:ios:2ecc1eb10ed052ef17abce',
     messagingSenderId: '925394401867',
     projectId: 'cinema-6bdc3',
     storageBucket: 'cinema-6bdc3.firebasestorage.app',
-    iosBundleId: 'com.example.neIzlesem',
+    iosBundleId: 'com.mehmet.neizlesem',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
