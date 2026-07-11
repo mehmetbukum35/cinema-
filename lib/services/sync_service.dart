@@ -53,7 +53,23 @@ class SyncService {
     final pushWatermark = DateTime.now().millisecondsSinceEpoch;
     final db = await DatabaseHelper().database;
     if (db == null) {
-      return; // Silent return if db is mock (e.g. on unsupported platforms/tests)
+      // Web / FLUTTER_TEST mock storage: no SQLite, but cloud handshake still runs.
+      debugPrint(
+        "Starting sync (mock DB). pull since: $lastPull, push since: $lastPush",
+      );
+      final pushResult = await _apiService.push(<String, dynamic>{});
+      debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
+      final pullResult = await _apiService.pull(lastPull);
+      final serverTime = _asInt(pullResult['server_time']);
+      await PrefsService.setLastSyncTime(serverTime);
+      await PrefsService.setLastPushTime(pushWatermark);
+      PrefsService.invalidateGenreWeights();
+      await _ref?.read(recommendationEngineProvider).invalidateCache();
+      debugPrint(
+        "Sync complete (mock DB). pull cursor: $serverTime, push cursor: $pushWatermark",
+      );
+      _autoPublishDnaBackground();
+      return;
     }
 
     debugPrint("Starting sync. pull since: $lastPull, push since: $lastPush");
