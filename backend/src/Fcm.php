@@ -166,6 +166,8 @@ class Fcm
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 10,
             CURLOPT_CONNECTTIMEOUT => 5,
+            // Hosting'de IPv6 çıkışı bozuk: Google API'lerine IPv4 ile bağlan.
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
         ]);
         $resp = curl_exec($ch);
         if ($resp === false) {
