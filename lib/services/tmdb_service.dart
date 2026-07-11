@@ -507,9 +507,10 @@ class TmdbService {
       params: {'api_key': _apiKey},
     );
     if (json == null) return [];
-    final tr =
-        ((json['results'] as Map<String, dynamic>?)?['TR'])
-            as Map<String, dynamic>?;
+    final rawResults = json['results'];
+    final Map<String, dynamic>? resultsByRegion =
+        rawResults is Map<String, dynamic> ? rawResults : null;
+    final tr = resultsByRegion?['TR'] as Map<String, dynamic>?;
     final flatrate = tr?['flatrate'] as List<dynamic>? ?? [];
     final rent = tr?['rent'] as List<dynamic>? ?? [];
     final buy = tr?['buy'] as List<dynamic>? ?? [];

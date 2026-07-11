@@ -55,8 +55,17 @@ TmdbService detailTmdbService({required String title}) {
     if (path.contains('/videos')) {
       return http.Response(jsonEncode({'results': []}), 200);
     }
-    if (path.contains('/watch/providers') ||
-        path.contains('/credits') ||
+    if (path.contains('/watch/providers')) {
+      return http.Response(
+        jsonEncode({
+          'results': {
+            'TR': {'flatrate': [], 'rent': [], 'buy': []},
+          },
+        }),
+        200,
+      );
+    }
+    if (path.contains('/credits') ||
         path.contains('/similar') ||
         path.contains('/reviews') ||
         path.contains('/keywords')) {

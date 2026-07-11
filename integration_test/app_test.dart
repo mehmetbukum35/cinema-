@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:ne_izlesem/main.dart';
+import 'package:ne_izlesem/l10n/en.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
@@ -113,6 +114,11 @@ TmdbService createMockTmdbService() {
     ],
   };
   final mockTv = {'results': []};
+  const emptyProviders = {
+    'results': {
+      'TR': {'flatrate': [], 'rent': [], 'buy': []},
+    },
+  };
 
   final client = MockClient((request) async {
     if (request.url.path.endsWith('/3/movie/popular') ||
@@ -121,6 +127,10 @@ TmdbService createMockTmdbService() {
     } else if (request.url.path.endsWith('/3/tv/popular') ||
         request.url.path.endsWith('/3/discover/tv')) {
       return http.Response(jsonEncode(mockTv), 200);
+    } else if (request.url.path.contains('/watch/providers')) {
+      return http.Response(jsonEncode(emptyProviders), 200);
+    } else if (request.url.path.contains('/3/')) {
+      return http.Response(jsonEncode({'results': []}), 200);
     }
     return http.Response('Not Found', 404);
   });
@@ -143,7 +153,6 @@ void main() {
         final mockApi = MockIntegrationApiService();
         final mockTmdb = createMockTmdbService();
 
-        // 1. Start App with overridden ApiService & TmdbService
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -154,7 +163,6 @@ void main() {
           ),
         );
 
-        // Settle initial async updates
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 2600));
         await tester.pump(const Duration(milliseconds: 380));
@@ -162,28 +170,23 @@ void main() {
         await tester.pump(const Duration(milliseconds: 480));
         await tester.pumpAndSettle();
 
-        // Verify we are on the Browse screen initially
-        expect(find.text('Browse'), findsOneWidget);
+        expect(find.text(kEnStrings['tab_browse']!), findsOneWidget);
 
-        // 2. Navigate to Profile Screen
-        final profileTabFinder = find.text('Profile');
+        final profileTabFinder = find.text(kEnStrings['tab_profile']!);
         expect(profileTabFinder, findsOneWidget);
         await tester.tap(profileTabFinder);
         await tester.pumpAndSettle();
 
-        // Verify we are on Profile and see Cloud Sync section
-        expect(find.text('Cloud Sync'), findsOneWidget);
+        expect(find.text(kEnStrings['profile_guest']!), findsOneWidget);
+        expect(find.text(kEnStrings['profile_not_logged_in']!), findsOneWidget);
 
-        // 3. Click "Sign In" button to open AuthSheet
-        final signInBtnFinder = find.text('Sign In');
+        final signInBtnFinder = find.text(kEnStrings['auth_title_login']!);
         expect(signInBtnFinder, findsOneWidget);
         await tester.tap(signInBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify the AuthSheet/Modal is displayed
-        expect(find.text('Sign in to continue'), findsOneWidget);
+        expect(find.text(kEnStrings['auth_login_subtitle']!), findsOneWidget);
 
-        // 4. Fill in Email and Password fields
         final emailFieldFinder = find.byKey(const ValueKey('auth_email_field'));
         final passwordFieldFinder = find.byKey(
           const ValueKey('auth_password_field'),
@@ -195,34 +198,25 @@ void main() {
         await tester.enterText(passwordFieldFinder, 'password123');
         await tester.pump();
 
-        // 5. Submit Form / Click Login Button
-        final loginBtnFinder = find.byType(ElevatedButton);
+        final loginBtnFinder = find.byType(FilledButton);
         await tester.tap(loginBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify login api was successfully called
         expect(mockApi.loginCalled, isTrue);
-
-        // Verify we are logged in (displays display_name "Integration User" and logout icon)
         expect(find.text('Integration User'), findsOneWidget);
         expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
 
-        // 6. Click "Sync Now" button to execute Sync flow
-        final syncNowBtnFinder = find.text('Sync Now');
+        final syncNowBtnFinder = find.text(kEnStrings['sync_now']!);
         expect(syncNowBtnFinder, findsOneWidget);
         await tester.tap(syncNowBtnFinder);
 
-        // Let sync finish and SnackBar settle
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 1000));
         await tester.pumpAndSettle();
 
-        // Verify pull/push sync api was successfully executed
         expect(mockApi.pullCalled, isTrue);
         expect(mockApi.pushCalled, isTrue);
-
-        // Verify last sync time / status is displayed on the cloud sync card
-        expect(find.text('Successfully synced'), findsOneWidget);
+        expect(find.text(kEnStrings['sync_success']!), findsOneWidget);
       },
     );
 
@@ -242,20 +236,17 @@ void main() {
           ),
         );
 
-        // Settle onboarding animations and loading
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 2600));
         await tester.pumpAndSettle();
 
-        // Verify we are on onboarding (Skip button should be visible)
-        final skipBtnFinder = find.text('Skip');
+        final skipBtnFinder = find.text(kEnStrings['onboarding_skip']!);
         expect(skipBtnFinder, findsOneWidget);
 
         await tester.tap(skipBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify we landed on the Browse screen after skipping
-        expect(find.text('Browse'), findsOneWidget);
+        expect(find.text(kEnStrings['tab_browse']!), findsOneWidget);
       },
     );
 
@@ -277,30 +268,24 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // 1. Navigate to Rate Tab (tab_swipe is 'Rate')
-      final rateTabFinder = find.text('Rate');
+      final rateTabFinder = find.text(kEnStrings['tab_swipe']!);
       expect(rateTabFinder, findsOneWidget);
       await tester.tap(rateTabFinder);
       await tester.pumpAndSettle();
 
-      // Settle page loading
       await tester.pump(const Duration(milliseconds: 150));
       await tester.pump();
 
-      // 2. Verify movie title is visible
       expect(find.text('Swipe Integration Test Movie'), findsOneWidget);
 
-      // 3. Tap on "Amazing" rating button
-      final rateBtnFinder = find.text('Amazing');
+      final rateBtnFinder = find.text(kEnStrings['profile_harika']!);
       expect(rateBtnFinder, findsOneWidget);
       await tester.tap(rateBtnFinder);
 
-      // Settle swipe animations
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
       await tester.pumpAndSettle();
 
-      // 4. Verify that rating is saved in shared preferences mock database
       final ratedIds = await PrefsService.getRatedIds();
       expect(ratedIds.contains('movie_1001'), isTrue);
     });
@@ -323,19 +308,16 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // 1. Navigate to Profile Screen
-        final profileTabFinder = find.text('Profile');
+        final profileTabFinder = find.text(kEnStrings['tab_profile']!);
         expect(profileTabFinder, findsOneWidget);
         await tester.tap(profileTabFinder);
         await tester.pumpAndSettle();
 
-        // 2. Click Sign In
-        final signInBtnFinder = find.text('Sign In');
+        final signInBtnFinder = find.text(kEnStrings['auth_title_login']!);
         expect(signInBtnFinder, findsOneWidget);
         await tester.tap(signInBtnFinder);
         await tester.pumpAndSettle();
 
-        // 3. Enter credentials and click Login
         final emailFieldFinder = find.byKey(const ValueKey('auth_email_field'));
         final passwordFieldFinder = find.byKey(
           const ValueKey('auth_password_field'),
@@ -344,30 +326,26 @@ void main() {
         await tester.enterText(passwordFieldFinder, 'password123');
         await tester.pump();
 
-        final loginBtnFinder = find.byType(ElevatedButton);
+        final loginBtnFinder = find.byType(FilledButton);
         await tester.tap(loginBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify we are logged in
         expect(find.text('Integration User'), findsOneWidget);
 
-        // 4. Click Logout (find by logout icon)
         final logoutBtnFinder = find.byIcon(Icons.logout_rounded);
         expect(logoutBtnFinder, findsOneWidget);
         await tester.tap(logoutBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify Logout Confirm Dialog is shown (displays Sign Out button in dialog)
         final confirmBtnFinder = find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.text('Sign Out'),
+          matching: find.text(kEnStrings['auth_logout']!),
         );
         expect(confirmBtnFinder, findsOneWidget);
         await tester.tap(confirmBtnFinder);
         await tester.pumpAndSettle();
 
-        // Verify we are back in guest mode (Sign In button is visible, Integration User is not)
-        expect(find.text('Sign In'), findsOneWidget);
+        expect(find.text(kEnStrings['auth_title_login']!), findsOneWidget);
         expect(find.text('Integration User'), findsNothing);
       },
     );
