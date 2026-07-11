@@ -850,8 +850,10 @@ class _FavoritePickStepState extends State<_FavoritePickStep> {
                               color: c.dim,
                               size: 18,
                             ),
-                            tooltip: AppLocalizations.of(context)
-                                    ?.get('semantics_close') ??
+                            tooltip:
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('semantics_close') ??
                                 'Close',
                             onPressed: () {
                               HapticFeedback.lightImpact();

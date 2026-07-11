@@ -133,9 +133,7 @@ void main() {
   setupSecureStorageMock();
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({
-      'selected_language': 'en',
-    });
+    SharedPreferences.setMockInitialValues({'selected_language': 'en'});
   });
 
   group('Integration Tests for Authentication and Sync Flows', () {
@@ -261,52 +259,51 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Should navigate to Rate tab and submit a rating',
-      (WidgetTester tester) async {
-        final mockApi = MockIntegrationApiService();
-        final mockTmdb = createMockTmdbService();
+    testWidgets('Should navigate to Rate tab and submit a rating', (
+      WidgetTester tester,
+    ) async {
+      final mockApi = MockIntegrationApiService();
+      final mockTmdb = createMockTmdbService();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              apiServiceProvider.overrideWithValue(mockApi),
-              tmdbServiceProvider.overrideWithValue(mockTmdb),
-            ],
-            child: const NeIzlesemApp(showOnboarding: false),
-          ),
-        );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            apiServiceProvider.overrideWithValue(mockApi),
+            tmdbServiceProvider.overrideWithValue(mockTmdb),
+          ],
+          child: const NeIzlesemApp(showOnboarding: false),
+        ),
+      );
 
-        await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-        // 1. Navigate to Rate Tab (tab_swipe is 'Rate')
-        final rateTabFinder = find.text('Rate');
-        expect(rateTabFinder, findsOneWidget);
-        await tester.tap(rateTabFinder);
-        await tester.pumpAndSettle();
+      // 1. Navigate to Rate Tab (tab_swipe is 'Rate')
+      final rateTabFinder = find.text('Rate');
+      expect(rateTabFinder, findsOneWidget);
+      await tester.tap(rateTabFinder);
+      await tester.pumpAndSettle();
 
-        // Settle page loading
-        await tester.pump(const Duration(milliseconds: 150));
-        await tester.pump();
+      // Settle page loading
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump();
 
-        // 2. Verify movie title is visible
-        expect(find.text('Swipe Integration Test Movie'), findsOneWidget);
+      // 2. Verify movie title is visible
+      expect(find.text('Swipe Integration Test Movie'), findsOneWidget);
 
-        // 3. Tap on "Amazing" rating button
-        final rateBtnFinder = find.text('Amazing');
-        expect(rateBtnFinder, findsOneWidget);
-        await tester.tap(rateBtnFinder);
+      // 3. Tap on "Amazing" rating button
+      final rateBtnFinder = find.text('Amazing');
+      expect(rateBtnFinder, findsOneWidget);
+      await tester.tap(rateBtnFinder);
 
-        // Settle swipe animations
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 250));
-        await tester.pumpAndSettle();
+      // Settle swipe animations
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
 
-        // 4. Verify that rating is saved in shared preferences mock database
-        final ratedIds = await PrefsService.getRatedIds();
-        expect(ratedIds.contains('movie_1001'), isTrue);
-      },
-    );
+      // 4. Verify that rating is saved in shared preferences mock database
+      final ratedIds = await PrefsService.getRatedIds();
+      expect(ratedIds.contains('movie_1001'), isTrue);
+    });
 
     testWidgets(
       'Should start application, log in, and then log out to return to guest mode',
@@ -340,7 +337,9 @@ void main() {
 
         // 3. Enter credentials and click Login
         final emailFieldFinder = find.byKey(const ValueKey('auth_email_field'));
-        final passwordFieldFinder = find.byKey(const ValueKey('auth_password_field'));
+        final passwordFieldFinder = find.byKey(
+          const ValueKey('auth_password_field'),
+        );
         await tester.enterText(emailFieldFinder, 'integration@neizlesem.com');
         await tester.enterText(passwordFieldFinder, 'password123');
         await tester.pump();

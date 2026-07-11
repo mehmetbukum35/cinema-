@@ -509,10 +509,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     } catch (e, st) {
       debugPrint("Account deletion failed: $e\n$st");
-      state = state.copyWith(
-        loading: false,
-        error: 'auth_err_delete_failed',
-      );
+      state = state.copyWith(loading: false, error: 'auth_err_delete_failed');
       return false;
     }
   }

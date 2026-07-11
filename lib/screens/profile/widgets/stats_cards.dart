@@ -37,11 +37,7 @@ class StatsOverviewCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: c.red.withValues(alpha: 0.15),
                 ),
-                child: Icon(
-                  Icons.movie_filter_rounded,
-                  color: c.red,
-                  size: 22,
-                ),
+                child: Icon(Icons.movie_filter_rounded, color: c.red, size: 22),
               ),
               const SizedBox(width: 14),
               Column(

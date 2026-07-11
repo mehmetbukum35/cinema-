@@ -48,11 +48,7 @@ class DnaLockedCard extends StatelessWidget {
                   tr?.locale.languageCode == 'tr'
                       ? 'Zevk kimliğini oluşturmak için en az 5 filmi oylamalısın. Şu ana kadar $total film oyladın.'
                       : 'Rate at least 5 movies to unlock your taste identity. You have rated $total movies so far.',
-                  style: TextStyle(
-                    color: c.dim,
-                    fontSize: 11.5,
-                    height: 1.35,
-                  ),
+                  style: TextStyle(color: c.dim, fontSize: 11.5, height: 1.35),
                 ),
               ],
             ),
@@ -74,15 +70,12 @@ class DnaBanner extends StatelessWidget {
     return SpringButton(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const TasteDnaScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const TasteDnaScreen()));
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 14,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -127,8 +120,7 @@ class DnaBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    tr?.get('dna_banner_desc') ??
-                        'Zevkinin kimliğini keşfet.',
+                    tr?.get('dna_banner_desc') ?? 'Zevkinin kimliğini keşfet.',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 11.5,
@@ -171,10 +163,7 @@ class WrappedBanner extends ConsumerWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 14,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFFFF2E93), Color(0xFFFF8A00)],

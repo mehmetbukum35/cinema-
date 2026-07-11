@@ -32,7 +32,9 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
 
       // Çıkış hatırlatıcılarını listeyle hizala (başka cihazdan sync ile
       // gelen ekleme/çıkarmalar dahil). Best-effort; akışı bloklamaz.
-      NotificationService.instance.syncReleaseReminders(list).catchError((_) {});
+      NotificationService.instance
+          .syncReleaseReminders(list)
+          .catchError((_) {});
     } catch (e, st) {
       if (mounted) {
         state = AsyncValue.error(e, st);

@@ -392,9 +392,7 @@ class DatabaseHelper {
     final delVal = deleted ?? 0;
 
     final existing = await getRating(finalMovieId, finalIsTV);
-    final createdAt = existing != null
-        ? (existing['created_at'] as int)
-        : now;
+    final createdAt = existing != null ? (existing['created_at'] as int) : now;
     final String? finalComment = identical(comment, unset)
         ? (existing?['comment'] as String?)
         : comment as String?;

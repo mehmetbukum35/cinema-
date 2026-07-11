@@ -161,8 +161,7 @@ class SynergyBadge extends StatelessWidget {
                           ? '${communityScore!['total']} oy'
                           : '${communityScore!['total']} votes'),
                 communityScore!['enough'] == true
-                    ? ((communityScore!['liked_percent'] as num?)
-                                  ?.toDouble() ??
+                    ? ((communityScore!['liked_percent'] as num?)?.toDouble() ??
                               0.0) /
                           100.0
                     : 0.0,

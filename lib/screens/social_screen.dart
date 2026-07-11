@@ -174,10 +174,13 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   shareMessage(
                     context: context,
                     anchorContext: shareBtnContext,
-                    message: tr?.get('share_profile_text')
+                    message:
+                        tr
+                            ?.get('share_profile_text')
                             .replaceAll('{}', profileUrl) ??
                         'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
-                    failureMessage: tr?.get('profile_share_failed') ??
+                    failureMessage:
+                        tr?.get('profile_share_failed') ??
                         'Paylaşım açılamadı. Lütfen tekrar deneyin.',
                   );
                 },

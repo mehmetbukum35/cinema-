@@ -36,10 +36,13 @@ class MatchTogetherBody extends StatelessWidget {
         MatchIntroBanner(
           palette: c,
           icon: Icons.people_rounded,
-          title: AppLocalizations.of(context)?.get('couch_mode_matcher') ??
+          title:
+              AppLocalizations.of(context)?.get('couch_mode_matcher') ??
               'Couch Mode Matcher',
-          description: AppLocalizations.of(context)
-                  ?.get('pass_the_phone_to_the_person_n') ??
+          description:
+              AppLocalizations.of(
+                context,
+              )?.get('pass_the_phone_to_the_person_n') ??
               'Pass the phone to the person next to you. Both select your favorite genres, and we\'ll discover matches you\'ll both enjoy.',
         ),
         Padding(
@@ -50,7 +53,8 @@ class MatchTogetherBody extends StatelessWidget {
                 child: _PersonTab(
                   person: 1,
                   activePerson: activePerson,
-                  label: AppLocalizations.of(context)?.get('match_you') ?? 'You',
+                  label:
+                      AppLocalizations.of(context)?.get('match_you') ?? 'You',
                   genres: p1,
                   onTap: onPersonChanged,
                 ),
@@ -62,7 +66,7 @@ class MatchTogetherBody extends StatelessWidget {
                   activePerson: activePerson,
                   label:
                       AppLocalizations.of(context)?.get('match_friend') ??
-                          'Friend',
+                      'Friend',
                   genres: p2,
                   onTap: onPersonChanged,
                 ),
@@ -76,12 +80,14 @@ class MatchTogetherBody extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: Text(
               activePerson == 1
-                  ? (AppLocalizations.of(context)
-                          ?.get('player_1_you_select_your_favor') ??
-                      '👉 Player 1 (You): Select your favorite genres...')
-                  : (AppLocalizations.of(context)
-                          ?.get('player_2_friend_now_its_your_t') ??
-                      '👉 Player 2 (Friend): Now it\'s your turn...'),
+                  ? (AppLocalizations.of(
+                          context,
+                        )?.get('player_1_you_select_your_favor') ??
+                        '👉 Player 1 (You): Select your favorite genres...')
+                  : (AppLocalizations.of(
+                          context,
+                        )?.get('player_2_friend_now_its_your_t') ??
+                        '👉 Player 2 (Friend): Now it\'s your turn...'),
               key: ValueKey<int>(activePerson),
               style: TextStyle(
                 color: activePerson == 1 ? c.red : c.blue,
@@ -106,14 +112,14 @@ class MatchTogetherBody extends StatelessWidget {
                 color: c.blue,
                 label:
                     AppLocalizations.of(context)?.get('match_friend') ??
-                        'Friend',
+                    'Friend',
               ),
               const SizedBox(width: 14),
               MatchLegendItem(
                 color: Colors.purple,
                 label:
                     AppLocalizations.of(context)?.get('common_match') ??
-                        'Common Match',
+                    'Common Match',
               ),
             ],
           ),
@@ -216,7 +222,8 @@ class MatchTogetherBody extends StatelessWidget {
             children: [
               if (p1.isNotEmpty || p2.isNotEmpty) ...[
                 Semantics(
-                  label: AppLocalizations.of(context)?.get('semantics_reset') ??
+                  label:
+                      AppLocalizations.of(context)?.get('semantics_reset') ??
                       'Seçimleri sıfırla',
                   button: true,
                   child: GestureDetector(
@@ -258,12 +265,14 @@ class MatchTogetherBody extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       canFind
-                          ? (AppLocalizations.of(context)
-                                  ?.get('match_find_suggestions') ??
-                              'Find Common Suggestions')
-                          : (AppLocalizations.of(context)
-                                  ?.get('match_select_at_least_one') ??
-                              'Both choose at least 1 genre'),
+                          ? (AppLocalizations.of(
+                                  context,
+                                )?.get('match_find_suggestions') ??
+                                'Find Common Suggestions')
+                          : (AppLocalizations.of(
+                                  context,
+                                )?.get('match_select_at_least_one') ??
+                                'Both choose at least 1 genre'),
                       style: TextStyle(
                         color: canFind ? Colors.white : context.c.textFaint,
                         fontSize: 15,

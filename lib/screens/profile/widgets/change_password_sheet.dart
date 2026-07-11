@@ -46,21 +46,26 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
 
     if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
       setState(() {
-        _localError = tr?.get('auth_forgot_err_name_empty') ?? 'Boş alan bırakılamaz.';
+        _localError =
+            tr?.get('auth_forgot_err_name_empty') ?? 'Boş alan bırakılamaz.';
       });
       return;
     }
 
     if (newPass.length < 6) {
       setState(() {
-        _localError = tr?.get('change_password_error_short') ?? 'Yeni şifre en az 6 karakter olmalıdır.';
+        _localError =
+            tr?.get('change_password_error_short') ??
+            'Yeni şifre en az 6 karakter olmalıdır.';
       });
       return;
     }
 
     if (newPass != confirmPass) {
       setState(() {
-        _localError = tr?.get('change_password_error_mismatch') ?? 'Yeni şifreler eşleşmiyor.';
+        _localError =
+            tr?.get('change_password_error_mismatch') ??
+            'Yeni şifreler eşleşmiyor.';
       });
       return;
     }
@@ -72,7 +77,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       _isLoading = true;
     });
 
-    final success = await widget.ref.read(authProvider.notifier).changePassword(oldPass, newPass);
+    final success = await widget.ref
+        .read(authProvider.notifier)
+        .changePassword(oldPass, newPass);
 
     if (mounted) {
       setState(() {
@@ -82,12 +89,13 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       if (success) {
         // Close the sheet
         Navigator.pop(context);
-        
+
         // Show success snackbar
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              tr?.get('change_password_success') ?? 'Şifreniz başarıyla değiştirildi. Tekrar giriş yapın.',
+              tr?.get('change_password_success') ??
+                  'Şifreniz başarıyla değiştirildi. Tekrar giriş yapın.',
               style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.green,
@@ -97,7 +105,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       } else {
         final authState = widget.ref.read(authProvider);
         setState(() {
-          _localError = authState.error != null ? tr?.get(authState.error!) ?? authState.error : 'İşlem başarısız.';
+          _localError = authState.error != null
+              ? tr?.get(authState.error!) ?? authState.error
+              : 'İşlem başarısız.';
         });
       }
     }
@@ -131,7 +141,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             ),
           ),
           const SizedBox(height: 18),
-          
+
           Text(
             tr?.get('change_password_title') ?? 'Şifre Değiştir',
             style: TextStyle(
@@ -143,11 +153,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            tr?.get('change_password_desc') ?? 'Şifreniz değiştirildiğinde tüm cihazlardan çıkış yapılacaktır.',
-            style: TextStyle(
-              color: c.dim,
-              fontSize: 12,
-            ),
+            tr?.get('change_password_desc') ??
+                'Şifreniz değiştirildiğinde tüm cihazlardan çıkış yapılacaktır.',
+            style: TextStyle(color: c.dim, fontSize: 12),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -162,7 +170,11 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
               child: Text(
                 _localError!,
-                style: TextStyle(color: c.red, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: c.red,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -174,7 +186,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             controller: _oldPasswordCtrl,
             obscureText: _obscureOld,
             decoration: InputDecoration(
-              labelText: tr?.get('change_password_old_password') ?? 'Mevcut Şifre',
+              labelText:
+                  tr?.get('change_password_old_password') ?? 'Mevcut Şifre',
               labelStyle: TextStyle(color: c.dim, fontSize: 13),
               filled: true,
               fillColor: c.surface,
@@ -192,7 +205,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureOld ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  _obscureOld
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
                   color: c.dim,
                   size: 20,
                 ),
@@ -208,7 +223,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             controller: _newPasswordCtrl,
             obscureText: _obscureNew,
             decoration: InputDecoration(
-              labelText: tr?.get('change_password_new_password') ?? 'Yeni Şifre',
+              labelText:
+                  tr?.get('change_password_new_password') ?? 'Yeni Şifre',
               labelStyle: TextStyle(color: c.dim, fontSize: 13),
               filled: true,
               fillColor: c.surface,
@@ -226,7 +242,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureNew ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  _obscureNew
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
                   color: c.dim,
                   size: 20,
                 ),
@@ -242,7 +260,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             controller: _confirmPasswordCtrl,
             obscureText: _obscureConfirm,
             decoration: InputDecoration(
-              labelText: tr?.get('change_password_confirm_password') ?? 'Yeni Şifreyi Onayla',
+              labelText:
+                  tr?.get('change_password_confirm_password') ??
+                  'Yeni Şifreyi Onayla',
               labelStyle: TextStyle(color: c.dim, fontSize: 13),
               filled: true,
               fillColor: c.surface,
@@ -260,11 +280,14 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  _obscureConfirm
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
                   color: c.dim,
                   size: 20,
                 ),
-                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
               ),
             ),
             style: TextStyle(color: c.ink, fontSize: 14),
@@ -294,7 +317,10 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                   )
                 : Text(
                     tr?.get('change_password_button') ?? 'Şifreyi Güncelle',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
           ),
         ],

@@ -78,7 +78,11 @@ class _AuthRequiredView extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: palette.surface,
               ),
-              child: Icon(Icons.lock_outline_rounded, color: palette.red, size: 32),
+              child: Icon(
+                Icons.lock_outline_rounded,
+                color: palette.red,
+                size: 32,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -92,8 +96,9 @@ class _AuthRequiredView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              AppLocalizations.of(context)
-                      ?.get('please_sign_in_to_view_watchli') ??
+              AppLocalizations.of(
+                    context,
+                  )?.get('please_sign_in_to_view_watchli') ??
                   'Please sign in to view watchlist intersections with your friends.',
               style: TextStyle(color: palette.dim, fontSize: 13),
               textAlign: TextAlign.center,
@@ -157,7 +162,11 @@ class _FriendPickerView extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: palette.surface,
                 ),
-                child: Icon(Icons.people_alt_rounded, color: palette.gold, size: 32),
+                child: Icon(
+                  Icons.people_alt_rounded,
+                  color: palette.gold,
+                  size: 32,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -171,8 +180,9 @@ class _FriendPickerView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                AppLocalizations.of(context)
-                        ?.get('you_must_add_friends_first_to_') ??
+                AppLocalizations.of(
+                      context,
+                    )?.get('you_must_add_friends_first_to_') ??
                     'You must add friends first to match with them.',
                 style: TextStyle(color: palette.dim, fontSize: 13),
                 textAlign: TextAlign.center,
@@ -209,10 +219,13 @@ class _FriendPickerView extends StatelessWidget {
         MatchIntroBanner(
           palette: palette,
           icon: Icons.group_add_rounded,
-          title: AppLocalizations.of(context)?.get('online_friend_match') ??
+          title:
+              AppLocalizations.of(context)?.get('online_friend_match') ??
               'Online Friend Match',
-          description: AppLocalizations.of(context)
-                  ?.get('select_a_friend_to_find_common') ??
+          description:
+              AppLocalizations.of(
+                context,
+              )?.get('select_a_friend_to_find_common') ??
               'Select a friend to find common titles in your watchlists and get joint recommendations based on your shared interests.',
         ),
         Padding(
@@ -221,8 +234,9 @@ class _FriendPickerView extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  AppLocalizations.of(context)
-                          ?.get('select_a_friend_to_match_with') ??
+                  AppLocalizations.of(
+                        context,
+                      )?.get('select_a_friend_to_match_with') ??
                       'Select a friend to match with:',
                   style: TextStyle(
                     color: palette.dim,
@@ -335,8 +349,7 @@ class _FriendIntersectionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final friendName =
-        selectedFriend.displayName ?? selectedFriend.username;
+    final friendName = selectedFriend.displayName ?? selectedFriend.username;
     final intersection = socialState.intersection;
 
     return Column(
@@ -377,165 +390,159 @@ class _FriendIntersectionView extends StatelessWidget {
           child: socialState.loading
               ? Center(child: CircularProgressIndicator(color: palette.gold))
               : socialState.error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              color: palette.red,
-                              size: 40,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              socialState.error!,
-                              style: TextStyle(
-                                color: palette.red,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: palette.red,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          socialState.error!,
+                          style: TextStyle(
+                            color: palette.red,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : intersection.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.get('no_common_movies') ??
+                              'No Common Movies',
+                          style: TextStyle(
+                            color: palette.ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.get('neither_of_you_have_added_the_') ??
+                              'Neither of you have added the same movies to your watchlists.',
+                          style: TextStyle(color: palette.dim, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context)
+                                ?.get('your_common_watchlist_intersec')
+                                .replaceAll('{}', '${intersection.length}') ??
+                            'Your Common Watchlist (${intersection.length} Titles)',
+                        style: TextStyle(
+                          color: palette.gold,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          letterSpacing: 1.1,
                         ),
                       ),
-                    )
-                  : intersection.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context)
-                                          ?.get('no_common_movies') ??
-                                      'No Common Movies',
-                                  style: TextStyle(
-                                    color: palette.ink,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  AppLocalizations.of(context)
-                                          ?.get('neither_of_you_have_added_the_') ??
-                                      'Neither of you have added the same movies to your watchlists.',
-                                  style: TextStyle(
-                                    color: palette.dim,
-                                    fontSize: 13,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 2 / 3.4,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
                             ),
+                        itemCount: intersection.length,
+                        itemBuilder: (context, idx) {
+                          final m = intersection[idx];
+                          return _IntersectionPoster(
+                            movie: m,
+                            palette: palette,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              showModalBottomSheet(
+                                context: context,
+                                backgroundColor: Colors.transparent,
+                                isScrollControlled: true,
+                                builder: (_) => MovieDetailSheet(
+                                  movie: m,
+                                  service: service,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final genres = intersection
+                              .expand((m) => m.genreIds)
+                              .toSet()
+                              .toList();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ResultsScreen(
+                                genreStr: genres.isNotEmpty
+                                    ? genres.join(',')
+                                    : null,
+                                sortBy: 'vote_average.desc',
+                                jointGenres: genres,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: palette.gold,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 8,
-                              ),
-                              child: Text(
-                                AppLocalizations.of(context)
-                                        ?.get('your_common_watchlist_intersec')
-                                        .replaceAll(
-                                          '{}',
-                                          '${intersection.length}',
-                                        ) ??
-                                    'Your Common Watchlist (${intersection.length} Titles)',
-                                style: TextStyle(
-                                  color: palette.gold,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                  letterSpacing: 1.1,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GridView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  childAspectRatio: 2 / 3.4,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
-                                itemCount: intersection.length,
-                                itemBuilder: (context, idx) {
-                                  final m = intersection[idx];
-                                  return _IntersectionPoster(
-                                    movie: m,
-                                    palette: palette,
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      showModalBottomSheet(
-                                        context: context,
-                                        backgroundColor: Colors.transparent,
-                                        isScrollControlled: true,
-                                        builder: (_) => MovieDetailSheet(
-                                          movie: m,
-                                          service: service,
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  final genres = intersection
-                                      .expand((m) => m.genreIds)
-                                      .toSet()
-                                      .toList();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ResultsScreen(
-                                        genreStr: genres.isNotEmpty
-                                            ? genres.join(',')
-                                            : null,
-                                        sortBy: 'vote_average.desc',
-                                        jointGenres: genres,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: palette.gold,
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  AppLocalizations.of(context)
-                                          ?.get('find_joint_recommendations') ??
-                                      'Find Joint Recommendations',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          elevation: 0,
                         ),
+                        child: Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.get('find_joint_recommendations') ??
+                              'Find Joint Recommendations',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ],
     );
@@ -567,7 +574,8 @@ class _IntersectionPoster extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: movie.posterUrl,
                       fit: BoxFit.cover,
-                      placeholder: (ctx, url) => ColoredBox(color: palette.card),
+                      placeholder: (ctx, url) =>
+                          ColoredBox(color: palette.card),
                       errorWidget: (ctx, url, err) =>
                           ColoredBox(color: palette.card),
                     )

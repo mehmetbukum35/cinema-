@@ -27,10 +27,7 @@ class DangerZoneCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: c.red.withValues(alpha: 0.35),
-          width: 1,
-        ),
+        border: Border.all(color: c.red.withValues(alpha: 0.35), width: 1),
         boxShadow: c.cardShadow,
       ),
       child: Column(
@@ -38,11 +35,7 @@ class DangerZoneCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: c.red,
-                size: 15,
-              ),
+              Icon(Icons.warning_amber_rounded, color: c.red, size: 15),
               const SizedBox(width: 6),
               Text(
                 (tr?.get('danger_zone') ?? 'Tehlike Bölgesi').toUpperCase(),

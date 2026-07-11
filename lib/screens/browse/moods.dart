@@ -142,10 +142,7 @@ class MoodChipsRow extends StatelessWidget {
             onTap: () => _goMood(context, m),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: c.surface,
                 borderRadius: BorderRadius.circular(22),

@@ -1,4 +1,3 @@
-
 /// Arkadaşların yüksek puan verdiği yapımlar: `movie_123` / `tv_456` → isim listesi.
 class FriendSignals {
   final Map<String, List<String>> byTitleKey;
@@ -81,13 +80,19 @@ class ActivityItem {
   factory ActivityItem.fromJson(Map<String, dynamic> json) {
     return ActivityItem(
       movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
-      isTv: json['is_tv'] == true || json['is_tv'] == 1 || json['is_tv']?.toString() == '1',
+      isTv:
+          json['is_tv'] == true ||
+          json['is_tv'] == 1 ||
+          json['is_tv']?.toString() == '1',
       rating: int.tryParse(json['rating']?.toString() ?? '') ?? 0,
       title: json['title'] as String? ?? '',
       posterPath: json['poster_path'] as String?,
       updatedAt: int.tryParse(json['updated_at']?.toString() ?? '') ?? 0,
       comment: json['comment'] as String?,
-      isSpoiler: json['is_spoiler'] == true || json['is_spoiler'] == 1 || json['is_spoiler']?.toString() == '1',
+      isSpoiler:
+          json['is_spoiler'] == true ||
+          json['is_spoiler'] == 1 ||
+          json['is_spoiler']?.toString() == '1',
       friendId: int.tryParse(json['friend_id']?.toString() ?? '') ?? 0,
       friendName: json['friend_name'] as String?,
       friendUsername: json['friend_username'] as String? ?? '',
@@ -140,11 +145,17 @@ class RecommendationInboxItem {
     return RecommendationInboxItem(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
-      isTv: json['is_tv'] == true || json['is_tv'] == 1 || json['is_tv']?.toString() == '1',
+      isTv:
+          json['is_tv'] == true ||
+          json['is_tv'] == 1 ||
+          json['is_tv']?.toString() == '1',
       title: json['title'] as String? ?? '',
       posterPath: json['poster_path'] as String?,
       note: json['note'] as String?,
-      seen: json['seen'] == true || json['seen'] == 1 || json['seen']?.toString() == '1',
+      seen:
+          json['seen'] == true ||
+          json['seen'] == 1 ||
+          json['seen']?.toString() == '1',
       createdAt: int.tryParse(json['created_at']?.toString() ?? '') ?? 0,
       fromId: int.tryParse(json['from_id']?.toString() ?? '') ?? 0,
       fromName: json['from_name'] as String?,
@@ -189,7 +200,8 @@ class TopProfilePreview {
       title: json['title'] as String?,
       posterPath: json['poster_path'] as String?,
       movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
-      isTv: json['is_tv'] == true ||
+      isTv:
+          json['is_tv'] == true ||
           json['is_tv'] == 1 ||
           json['is_tv']?.toString() == '1',
     );
@@ -220,8 +232,8 @@ class TopProfile {
 
   String get shownName =>
       (displayName != null && displayName!.trim().isNotEmpty)
-          ? displayName!
-          : username;
+      ? displayName!
+      : username;
 
   TopProfile copyWith({int? likeCount, bool? meLiked}) {
     return TopProfile(
@@ -242,15 +254,20 @@ class TopProfile {
       username: json['username'] as String? ?? '',
       displayName: json['display_name'] as String?,
       likeCount: int.tryParse(json['like_count']?.toString() ?? '') ?? 0,
-      meLiked: json['me_liked'] == true ||
+      meLiked:
+          json['me_liked'] == true ||
           json['me_liked'] == 1 ||
           json['me_liked']?.toString() == '1',
-      isMe: json['is_me'] == true ||
+      isMe:
+          json['is_me'] == true ||
           json['is_me'] == 1 ||
           json['is_me']?.toString() == '1',
       likedTitles: int.tryParse(json['liked_titles']?.toString() ?? '') ?? 0,
-      previews: (json['previews'] as List<dynamic>?)
-              ?.map((x) => TopProfilePreview.fromJson(x as Map<String, dynamic>))
+      previews:
+          (json['previews'] as List<dynamic>?)
+              ?.map(
+                (x) => TopProfilePreview.fromJson(x as Map<String, dynamic>),
+              )
               .toList() ??
           const [],
     );

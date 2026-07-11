@@ -48,8 +48,9 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
       _isLoading = true;
     });
 
-    final success =
-        await widget.ref.read(authProvider.notifier).unlinkGoogle(pass);
+    final success = await widget.ref
+        .read(authProvider.notifier)
+        .unlinkGoogle(pass);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -145,7 +146,8 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
             controller: _passwordCtrl,
             obscureText: _obscure,
             decoration: InputDecoration(
-              labelText: tr?.get('change_password_old_password') ?? 'Mevcut Şifre',
+              labelText:
+                  tr?.get('change_password_old_password') ?? 'Mevcut Şifre',
               labelStyle: TextStyle(color: c.dim, fontSize: 13),
               filled: true,
               fillColor: c.surface,

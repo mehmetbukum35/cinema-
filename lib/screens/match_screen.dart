@@ -133,7 +133,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           .map((m) => "${m.isTV ? 'tv' : 'movie'}_${m.id}")
           .toSet();
 
-      final ranked = await ref.read(recommendationEngineProvider).rankSimilarTo(
+      final ranked = await ref
+          .read(recommendationEngineProvider)
+          .rankSimilarTo(
             movie,
             candidates: [...recommended, ...similar, ...discovered],
             excludedKeys: {movieKey, ...ratedKeys},
@@ -204,8 +206,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ),
             ),
             content: Text(
-              AppLocalizations.of(context)
-                      ?.get('you_have_no_common_genres_sele') ??
+              AppLocalizations.of(
+                    context,
+                  )?.get('you_have_no_common_genres_sele') ??
                   'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
               style: TextStyle(color: c.dim, fontSize: 14, height: 1.45),
             ),
@@ -321,16 +324,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                           child: Text(
                             switch (_matchMode) {
                               0 =>
-                                (AppLocalizations.of(context)
-                                        ?.get('movie_match') ??
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('movie_match') ??
                                     'Movie Match'),
                               1 =>
-                                (AppLocalizations.of(context)
-                                        ?.get('together_couch_title') ??
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('together_couch_title') ??
                                     'Couch Mode'),
                               _ =>
-                                (AppLocalizations.of(context)
-                                        ?.get('together_friend_match_title') ??
+                                (AppLocalizations.of(
+                                      context,
+                                    )?.get('together_friend_match_title') ??
                                     'Friend Match'),
                             },
                             style: TextStyle(
@@ -355,42 +361,39 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               Expanded(
                 child: switch (_matchMode) {
                   0 => MatchMovieBody(
-                      searchController: _ctrl,
-                      onSearch: _search,
-                      onClear: _clearSearch,
-                      searchResults: _searchResults,
-                      searching: _searching,
-                      selected: _selected,
-                      similar: _similar,
-                      loadingSimilar: _loadingSimilar,
-                      onSelectMovie: _selectMovie,
-                      service: _service,
-                      onSimilarTap: (movie) => showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        isScrollControlled: true,
-                        builder: (_) => MovieDetailSheet(
-                          movie: movie,
-                          service: _service,
-                        ),
-                      ),
+                    searchController: _ctrl,
+                    onSearch: _search,
+                    onClear: _clearSearch,
+                    searchResults: _searchResults,
+                    searching: _searching,
+                    selected: _selected,
+                    similar: _similar,
+                    loadingSimilar: _loadingSimilar,
+                    onSelectMovie: _selectMovie,
+                    service: _service,
+                    onSimilarTap: (movie) => showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (_) =>
+                          MovieDetailSheet(movie: movie, service: _service),
                     ),
+                  ),
                   1 => MatchTogetherBody(
-                      p1: _p1,
-                      p2: _p2,
-                      activePerson: _activePerson,
-                      onPersonChanged: (p) =>
-                          setState(() => _activePerson = p),
-                      onToggleGenre: _toggleGenre,
-                      onFind: _findTogether,
-                      onReset: _resetTogether,
-                    ),
+                    p1: _p1,
+                    p2: _p2,
+                    activePerson: _activePerson,
+                    onPersonChanged: (p) => setState(() => _activePerson = p),
+                    onToggleGenre: _toggleGenre,
+                    onFind: _findTogether,
+                    onReset: _resetTogether,
+                  ),
                   _ => MatchFriendBody(
-                      selectedFriend: _selectedFriend,
-                      onSelectFriend: _onSelectFriend,
-                      onDeselectFriend: () =>
-                          setState(() => _selectedFriend = null),
-                    ),
+                    selectedFriend: _selectedFriend,
+                    onSelectFriend: _onSelectFriend,
+                    onDeselectFriend: () =>
+                        setState(() => _selectedFriend = null),
+                  ),
                 },
               ),
             ],

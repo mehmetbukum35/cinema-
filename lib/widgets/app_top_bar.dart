@@ -156,7 +156,8 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
       context: context,
       anchorContext: anchorContext,
       message: message,
-      failureMessage: tr?.get('profile_share_failed') ??
+      failureMessage:
+          tr?.get('profile_share_failed') ??
           'Paylaşım açılamadı. Lütfen tekrar deneyin.',
     );
   }

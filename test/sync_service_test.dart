@@ -235,120 +235,133 @@ void main() {
       expect(mockApi.pullCount, 1);
     });
 
-    test('should sync all tables (favorites, watched_seasons, search_history)', () async {
-      // 1. Arrange local data
-      await testDb.insert('favorites', {
-        'id': 111,
-        'is_tv': 0,
-        'title': 'Fav Movie',
-        'poster_path': '/fav.jpg',
-        'backdrop_path': '/fav_back.jpg',
-        'overview': 'Fav overview',
-        'vote_average': 9.0,
-        'release_date': '2026-05-01',
-        'genre_ids': jsonEncode([28]),
-        'created_at': 1005,
-        'updated_at': 1020, // > lastPush (1000)
-        'deleted': 0,
-      });
+    test(
+      'should sync all tables (favorites, watched_seasons, search_history)',
+      () async {
+        // 1. Arrange local data
+        await testDb.insert('favorites', {
+          'id': 111,
+          'is_tv': 0,
+          'title': 'Fav Movie',
+          'poster_path': '/fav.jpg',
+          'backdrop_path': '/fav_back.jpg',
+          'overview': 'Fav overview',
+          'vote_average': 9.0,
+          'release_date': '2026-05-01',
+          'genre_ids': jsonEncode([28]),
+          'created_at': 1005,
+          'updated_at': 1020, // > lastPush (1000)
+          'deleted': 0,
+        });
 
-      await testDb.insert('watched_seasons', {
-        'tv_id': 222,
-        'season_number': 2,
-        'updated_at': 1030, // > lastPush (1000)
-        'deleted': 0,
-      });
+        await testDb.insert('watched_seasons', {
+          'tv_id': 222,
+          'season_number': 2,
+          'updated_at': 1030, // > lastPush (1000)
+          'deleted': 0,
+        });
 
-      await testDb.insert('search_history', {
-        'query': 'inception',
-        'created_at': 1005,
-        'updated_at': 1040, // > lastPush (1000)
-        'deleted': 0,
-      });
+        await testDb.insert('search_history', {
+          'query': 'inception',
+          'created_at': 1005,
+          'updated_at': 1040, // > lastPush (1000)
+          'deleted': 0,
+        });
 
-      // Mock remote pull data
-      mockApi.pullResponse = {
-        'server_time': 3000,
-        'ratings': [],
-        'watchlist': [],
-        'favorites': [
-          {
-            'id': 333,
-            'is_tv': 0,
-            'title': 'Remote Fav',
-            'poster_path': '/rf.jpg',
-            'backdrop_path': '/rfb.jpg',
-            'overview': 'Remote fav desc',
-            'vote_average': 8.2,
-            'release_date': '2026-06-01',
-            'genre_ids': [18],
-            'created_at': 1500,
-            'updated_at': 1600,
-            'deleted': false,
-          }
-        ],
-        'watched_seasons': [
-          {
-            'tv_id': 444,
-            'season_number': 1,
-            'updated_at': 1700,
-            'deleted': false,
-          }
-        ],
-        'search_history': [
-          {
-            'query': 'interstellar',
-            'created_at': 1500,
-            'updated_at': 1800,
-            'deleted': false,
-          }
-        ],
-      };
+        // Mock remote pull data
+        mockApi.pullResponse = {
+          'server_time': 3000,
+          'ratings': [],
+          'watchlist': [],
+          'favorites': [
+            {
+              'id': 333,
+              'is_tv': 0,
+              'title': 'Remote Fav',
+              'poster_path': '/rf.jpg',
+              'backdrop_path': '/rfb.jpg',
+              'overview': 'Remote fav desc',
+              'vote_average': 8.2,
+              'release_date': '2026-06-01',
+              'genre_ids': [18],
+              'created_at': 1500,
+              'updated_at': 1600,
+              'deleted': false,
+            },
+          ],
+          'watched_seasons': [
+            {
+              'tv_id': 444,
+              'season_number': 1,
+              'updated_at': 1700,
+              'deleted': false,
+            },
+          ],
+          'search_history': [
+            {
+              'query': 'interstellar',
+              'created_at': 1500,
+              'updated_at': 1800,
+              'deleted': false,
+            },
+          ],
+        };
 
-      // 2. Act
-      await syncService.sync();
+        // 2. Act
+        await syncService.sync();
 
-      // 3. Assert Pushed data
-      expect(mockApi.pushedPayload, isNotNull);
-      final favsPushed = mockApi.pushedPayload!['favorites'] as List;
-      expect(favsPushed, hasLength(1));
-      expect(favsPushed[0]['id'], 111);
+        // 3. Assert Pushed data
+        expect(mockApi.pushedPayload, isNotNull);
+        final favsPushed = mockApi.pushedPayload!['favorites'] as List;
+        expect(favsPushed, hasLength(1));
+        expect(favsPushed[0]['id'], 111);
 
-      final seasonsPushed = mockApi.pushedPayload!['watched_seasons'] as List;
-      expect(seasonsPushed, hasLength(1));
-      expect(seasonsPushed[0]['tv_id'], 222);
+        final seasonsPushed = mockApi.pushedPayload!['watched_seasons'] as List;
+        expect(seasonsPushed, hasLength(1));
+        expect(seasonsPushed[0]['tv_id'], 222);
 
-      final searchPushed = mockApi.pushedPayload!['search_history'] as List;
-      expect(searchPushed, hasLength(1));
-      expect(searchPushed[0]['query'], 'inception');
+        final searchPushed = mockApi.pushedPayload!['search_history'] as List;
+        expect(searchPushed, hasLength(1));
+        expect(searchPushed[0]['query'], 'inception');
 
-      // 4. Assert Pulled data is written to DB
-      final dbFavs = await testDb.query('favorites', where: 'id = 333');
-      expect(dbFavs, hasLength(1));
-      expect(dbFavs[0]['title'], 'Remote Fav');
+        // 4. Assert Pulled data is written to DB
+        final dbFavs = await testDb.query('favorites', where: 'id = 333');
+        expect(dbFavs, hasLength(1));
+        expect(dbFavs[0]['title'], 'Remote Fav');
 
-      final dbSeasons = await testDb.query('watched_seasons', where: 'tv_id = 444');
-      expect(dbSeasons, hasLength(1));
-      expect(dbSeasons[0]['season_number'], 1);
+        final dbSeasons = await testDb.query(
+          'watched_seasons',
+          where: 'tv_id = 444',
+        );
+        expect(dbSeasons, hasLength(1));
+        expect(dbSeasons[0]['season_number'], 1);
 
-      final dbSearch = await testDb.query('search_history', where: 'query = ?', whereArgs: ['interstellar']);
-      expect(dbSearch, hasLength(1));
-      expect(dbSearch[0]['deleted'], 0);
-    });
+        final dbSearch = await testDb.query(
+          'search_history',
+          where: 'query = ?',
+          whereArgs: ['interstellar'],
+        );
+        expect(dbSearch, hasLength(1));
+        expect(dbSearch[0]['deleted'], 0);
+      },
+    );
 
-    test('should propagate errors and allow SyncNotifier to update state accordingly', () async {
-      mockApi.shouldThrow = true;
-      final notifier = SyncNotifier(syncService);
+    test(
+      'should propagate errors and allow SyncNotifier to update state accordingly',
+      () async {
+        mockApi.shouldThrow = true;
+        final notifier = SyncNotifier(syncService);
 
-      expect(notifier.state, SyncStatus.idle);
+        expect(notifier.state, SyncStatus.idle);
 
-      try {
-        await notifier.performSync();
-        fail('Should have thrown an exception');
-      } catch (e) {
-        expect(notifier.state, SyncStatus.error);
-      }
-    });
+        try {
+          await notifier.performSync();
+          fail('Should have thrown an exception');
+        } catch (e) {
+          expect(notifier.state, SyncStatus.error);
+        }
+      },
+    );
 
     test('should handle device time behind server time using dual watermark', () async {
       // 1. Arrange: Device time is behind server time.
@@ -359,7 +372,8 @@ void main() {
 
       final now = DateTime.now().millisecondsSinceEpoch;
       final t1 = now - 5000;
-      final serverTimeFarAhead = now + 10 * 24 * 60 * 60 * 1000; // 10 days in future
+      final serverTimeFarAhead =
+          now + 10 * 24 * 60 * 60 * 1000; // 10 days in future
 
       // Create a local rating at device time t1
       await testDb.insert('ratings', {

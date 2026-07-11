@@ -165,7 +165,8 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
                 ),
               ),
               Text(
-                tr?.get('my_reviews_subtitle') ?? 'Yazdığın tüm yorumlar tek yerde',
+                tr?.get('my_reviews_subtitle') ??
+                    'Yazdığın tüm yorumlar tek yerde',
                 style: TextStyle(
                   color: c.dim,
                   fontSize: 12,

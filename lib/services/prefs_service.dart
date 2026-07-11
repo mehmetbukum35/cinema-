@@ -463,11 +463,11 @@ class PrefsService {
       _getTimestampMap(_keyTonightHistory);
 
   static Future<void> recordTonightPick(String key) => _recordTimestamps(
-        _keyTonightHistory,
-        [key],
-        maxAgeMs: 30 * 24 * 3600 * 1000,
-        maxEntries: 60,
-      );
+    _keyTonightHistory,
+    [key],
+    maxAgeMs: 30 * 24 * 3600 * 1000,
+    maxEntries: 60,
+  );
 
   static Map<int, double>? _cachedGenreWeights;
 
@@ -782,7 +782,9 @@ class PrefsService {
   /// sync_last_time'a düşer.
   static Future<int> getLastPushTime() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyLastPushTime) ?? prefs.getInt(_keyLastSyncTime) ?? 0;
+    return prefs.getInt(_keyLastPushTime) ??
+        prefs.getInt(_keyLastSyncTime) ??
+        0;
   }
 
   static Future<void> setLastPushTime(int time) async {

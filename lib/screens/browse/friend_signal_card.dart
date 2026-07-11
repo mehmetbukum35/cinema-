@@ -168,9 +168,7 @@ class FriendSignalCard extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  rating >= 3
-                      ? Icons.favorite_rounded
-                      : Icons.thumb_up_rounded,
+                  rating >= 3 ? Icons.favorite_rounded : Icons.thumb_up_rounded,
                   color: c.red,
                   size: 11,
                 ),

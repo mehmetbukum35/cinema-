@@ -12,7 +12,8 @@ class ForgotPasswordSheet extends ConsumerStatefulWidget {
   const ForgotPasswordSheet({super.key});
 
   @override
-  ConsumerState<ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
+  ConsumerState<ForgotPasswordSheet> createState() =>
+      _ForgotPasswordSheetState();
 }
 
 class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
@@ -20,7 +21,7 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
   final _emailCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  
+
   _ForgotStep _step = _ForgotStep.email;
   bool _obscurePass = true;
 
@@ -117,17 +118,23 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                 ),
               ),
               const SizedBox(height: 6),
-              
+
               // Subtitle description based on step
               Text(
                 _step == _ForgotStep.email
-                    ? (AppLocalizations.of(context)?.get('auth_forgot_email_desc') ??
-                        'Enter email to receive reset code')
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_email_desc') ??
+                          'Enter email to receive reset code')
                     : _step == _ForgotStep.code
-                    ? (AppLocalizations.of(context)?.get('auth_forgot_code_desc') ??
-                        'Enter 6-digit verification code')
-                    : (AppLocalizations.of(context)?.get('auth_forgot_reset_desc') ??
-                        'Enter your new password'),
+                    ? (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_code_desc') ??
+                          'Enter 6-digit verification code')
+                    : (AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_reset_desc') ??
+                          'Enter your new password'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.dim, fontSize: 13),
               ),
@@ -140,7 +147,9 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(color: c.ink, fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)?.get('auth_email') ?? 'Email',
+                    labelText:
+                        AppLocalizations.of(context)?.get('auth_email') ??
+                        'Email',
                     labelStyle: TextStyle(color: c.dim, fontSize: 13),
                     filled: true,
                     fillColor: c.bg,
@@ -156,7 +165,9 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty || !val.contains('@')) {
-                      return AppLocalizations.of(context)?.get('auth_forgot_err_email_invalid') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_email_invalid') ??
                           'Enter valid email';
                     }
                     return null;
@@ -177,7 +188,10 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)?.get('auth_forgot_label_code') ??
+                    labelText:
+                        AppLocalizations.of(
+                          context,
+                        )?.get('auth_forgot_label_code') ??
                         '6-Digit Code',
                     labelStyle: TextStyle(
                       color: c.dim,
@@ -193,7 +207,9 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   ),
                   validator: (val) {
                     if (val == null || val.length != 6) {
-                      return AppLocalizations.of(context)?.get('auth_forgot_err_code_length') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_code_length') ??
                           'Enter 6 digits';
                     }
                     return null;
@@ -208,7 +224,10 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   obscureText: _obscurePass,
                   style: TextStyle(color: c.ink, fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)?.get('auth_forgot_label_new_pass') ??
+                    labelText:
+                        AppLocalizations.of(
+                          context,
+                        )?.get('auth_forgot_label_new_pass') ??
                         'New Password',
                     labelStyle: TextStyle(color: c.dim, fontSize: 13),
                     filled: true,
@@ -224,16 +243,21 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        _obscurePass
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
                         color: c.dim,
                         size: 18,
                       ),
-                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                      onPressed: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
                   ),
                   validator: (val) {
                     if (val == null || val.length < 8) {
-                      return AppLocalizations.of(context)?.get('auth_forgot_err_pass_length') ??
+                      return AppLocalizations.of(
+                            context,
+                          )?.get('auth_forgot_err_pass_length') ??
                           'Password must be at least 8 chars';
                     }
                     return null;
@@ -268,13 +292,19 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                         )
                       : Text(
                           _step == _ForgotStep.email
-                              ? (AppLocalizations.of(context)?.get('auth_forgot_btn_send_code') ??
-                                  'Send Code')
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_send_code') ??
+                                    'Send Code')
                               : _step == _ForgotStep.code
-                              ? (AppLocalizations.of(context)?.get('auth_forgot_btn_verify') ??
-                                  'Verify Code')
-                              : (AppLocalizations.of(context)?.get('auth_forgot_btn_reset') ??
-                                  'Update Password'),
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_verify') ??
+                                    'Verify Code')
+                              : (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_btn_reset') ??
+                                    'Update Password'),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
@@ -297,7 +327,8 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                   }
                 },
                 child: Text(
-                  AppLocalizations.of(context)?.get('auth_forgot_btn_back') ?? 'Back',
+                  AppLocalizations.of(context)?.get('auth_forgot_btn_back') ??
+                      'Back',
                   style: TextStyle(color: c.dim, fontWeight: FontWeight.w600),
                 ),
               ),

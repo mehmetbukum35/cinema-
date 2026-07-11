@@ -156,7 +156,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
             tooltip:
-                AppLocalizations.of(context)?.get('semantics_go_back') ?? 'Back',
+                AppLocalizations.of(context)?.get('semantics_go_back') ??
+                'Back',
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.pop(context);

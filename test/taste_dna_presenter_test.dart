@@ -43,7 +43,9 @@ void main() {
     final file = File('assets/lexicon/theme_tr.json');
     final jsonStr = file.readAsStringSync();
     final Map<String, dynamic> decoded = json.decode(jsonStr);
-    TasteDnaPresenter.themeTr = decoded.map((k, v) => MapEntry(k, v.toString()));
+    TasteDnaPresenter.themeTr = decoded.map(
+      (k, v) => MapEntry(k, v.toString()),
+    );
   });
 
   group('TasteDnaPresenter — arketip', () {

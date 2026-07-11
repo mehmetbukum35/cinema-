@@ -214,8 +214,10 @@ class SyncService {
       // Ratings
       final remoteRatings = pullResult['ratings'] as List<dynamic>? ?? [];
       for (final r in remoteRatings) {
-        if (!await shouldApply(txn, 'ratings', 'movie_id = ? AND is_tv = ?',
-            [r['movie_id'], r['is_tv']], r['updated_at'])) {
+        if (!await shouldApply(txn, 'ratings', 'movie_id = ? AND is_tv = ?', [
+          r['movie_id'],
+          r['is_tv'],
+        ], r['updated_at'])) {
           continue;
         }
         await txn.insert('ratings', {
@@ -243,8 +245,10 @@ class SyncService {
       // Watchlist
       final remoteWatchlist = pullResult['watchlist'] as List<dynamic>? ?? [];
       for (final w in remoteWatchlist) {
-        if (!await shouldApply(txn, 'watchlist', 'id = ? AND is_tv = ?',
-            [w['id'], w['is_tv']], w['updated_at'])) {
+        if (!await shouldApply(txn, 'watchlist', 'id = ? AND is_tv = ?', [
+          w['id'],
+          w['is_tv'],
+        ], w['updated_at'])) {
           continue;
         }
         await txn.insert('watchlist', {
@@ -267,8 +271,10 @@ class SyncService {
       // Favorites
       final remoteFavorites = pullResult['favorites'] as List<dynamic>? ?? [];
       for (final f in remoteFavorites) {
-        if (!await shouldApply(txn, 'favorites', 'id = ? AND is_tv = ?',
-            [f['id'], f['is_tv']], f['updated_at'])) {
+        if (!await shouldApply(txn, 'favorites', 'id = ? AND is_tv = ?', [
+          f['id'],
+          f['is_tv'],
+        ], f['updated_at'])) {
           continue;
         }
         await txn.insert('favorites', {
@@ -293,11 +299,12 @@ class SyncService {
           pullResult['watched_seasons'] as List<dynamic>? ?? [];
       for (final ws in remoteWatchedSeasons) {
         if (!await shouldApply(
-            txn,
-            'watched_seasons',
-            'tv_id = ? AND season_number = ?',
-            [ws['tv_id'], ws['season_number']],
-            ws['updated_at'])) {
+          txn,
+          'watched_seasons',
+          'tv_id = ? AND season_number = ?',
+          [ws['tv_id'], ws['season_number']],
+          ws['updated_at'],
+        )) {
           continue;
         }
         await txn.insert('watched_seasons', {
@@ -313,8 +320,9 @@ class SyncService {
       final remoteSearchHistory =
           pullResult['search_history'] as List<dynamic>? ?? [];
       for (final sh in remoteSearchHistory) {
-        if (!await shouldApply(txn, 'search_history', 'query = ?',
-            [sh['query']], sh['updated_at'])) {
+        if (!await shouldApply(txn, 'search_history', 'query = ?', [
+          sh['query'],
+        ], sh['updated_at'])) {
           continue;
         }
         await txn.insert('search_history', {
@@ -336,7 +344,9 @@ class SyncService {
     await _ref?.read(recommendationEngineProvider).invalidateCache();
 
     if (appliedCount > 0) {
-      debugPrint("Sync pulled $appliedCount database changes. Invalidating UI providers.");
+      debugPrint(
+        "Sync pulled $appliedCount database changes. Invalidating UI providers.",
+      );
       _ref?.invalidate(watchlistProvider);
       _ref?.invalidate(statsProvider);
       _ref?.invalidate(swipeProvider);
@@ -359,7 +369,9 @@ class SyncService {
     Future.microtask(() async {
       try {
         final userId = auth.user?['id']?.toString();
-        final dna = await ref.read(tasteDnaServiceProvider).generate(userId: userId);
+        final dna = await ref
+            .read(tasteDnaServiceProvider)
+            .generate(userId: userId);
 
         final cachedData = await PrefsService.getCachedDna();
         final currentHash = cachedData?['hash'];

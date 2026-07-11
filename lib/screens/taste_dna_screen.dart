@@ -89,7 +89,8 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       context: context,
       anchorContext: anchorContext,
       message: p.shareText(profileUrl),
-      failureMessage: tr?.get('profile_share_failed') ??
+      failureMessage:
+          tr?.get('profile_share_failed') ??
           'Paylaşım açılamadı. Lütfen tekrar deneyin.',
     );
   }
@@ -142,8 +143,7 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
                 onPressed: () =>
                     _share(TasteDnaPresenter(tr, _dna!), shareBtnContext),
                 tooltip: tr?.get('dna_share') ?? 'Paylaş',
-                constraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ),
         ],
@@ -427,39 +427,43 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       builder: (shareBtnContext) => GestureDetector(
         onTap: () => _share(p, shareBtnContext),
         child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          gradient: CinemaGradients.gold,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: c.isLight
-              ? [
-                  BoxShadow(
-                    color: c.gold.withValues(alpha: 0.24),
-                    blurRadius: 16,
-                    spreadRadius: -2,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : CinemaShadows.card,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.ios_share_rounded, color: Colors.black, size: 19),
-            const SizedBox(width: 10),
-            Text(
-              tr?.get('dna_share_button') ?? 'DNA\'nı paylaş',
-              style: const TextStyle(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            gradient: CinemaGradients.gold,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: c.isLight
+                ? [
+                    BoxShadow(
+                      color: c.gold.withValues(alpha: 0.24),
+                      blurRadius: 16,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : CinemaShadows.card,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.ios_share_rounded,
                 color: Colors.black,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
+                size: 19,
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Text(
+                tr?.get('dna_share_button') ?? 'DNA\'nı paylaş',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 

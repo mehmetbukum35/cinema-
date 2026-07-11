@@ -105,16 +105,19 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.getFriends();
-      
-      final friendsList = (res['friends'] as List<dynamic>?)
+
+      final friendsList =
+          (res['friends'] as List<dynamic>?)
               ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const [];
-      final pendingReceivedList = (res['pending_received'] as List<dynamic>?)
+      final pendingReceivedList =
+          (res['pending_received'] as List<dynamic>?)
               ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const [];
-      final pendingSentList = (res['pending_sent'] as List<dynamic>?)
+      final pendingSentList =
+          (res['pending_sent'] as List<dynamic>?)
               ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const [];
@@ -138,7 +141,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final feed = await _apiService.getActivityFeed();
-      final feedList = (feed as List<dynamic>?)
+      final feedList =
+          (feed as List<dynamic>?)
               ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const [];
@@ -154,7 +158,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final feed = await _apiService.getActivityFeed(friendId: friendId);
-      final feedList = (feed as List<dynamic>?)
+      final feedList =
+          (feed as List<dynamic>?)
               ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const [];
@@ -265,8 +270,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadRecommendations() async {
     try {
       final res = await _apiService.getRecommendations();
-      final recList = (res['recommendations'] as List<dynamic>?)
-              ?.map((x) => RecommendationInboxItem.fromJson(x as Map<String, dynamic>))
+      final recList =
+          (res['recommendations'] as List<dynamic>?)
+              ?.map(
+                (x) =>
+                    RecommendationInboxItem.fromJson(x as Map<String, dynamic>),
+              )
               .toList() ??
           const [];
       state = state.copyWith(
@@ -322,7 +331,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(topProfilesLoading: true, error: () => null);
     try {
       final res = await _apiService.getTopProfiles();
-      final list = (res['profiles'] as List<dynamic>?)
+      final list =
+          (res['profiles'] as List<dynamic>?)
               ?.map((x) => TopProfile.fromJson(x as Map<String, dynamic>))
               .toList() ??
           const <TopProfile>[];
@@ -330,7 +340,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
     } on ApiException catch (e) {
       state = state.copyWith(topProfilesLoading: false, error: () => e.message);
     } catch (e) {
-      state = state.copyWith(topProfilesLoading: false, error: () => e.toString());
+      state = state.copyWith(
+        topProfilesLoading: false,
+        error: () => e.toString(),
+      );
     }
   }
 
@@ -341,12 +354,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<bool> toggleProfileLike(TopProfile profile) async {
     final newLiked = !profile.meLiked;
     List<TopProfile> apply(List<TopProfile> list, int likeCount) => [
-          for (final p in list)
-            if (p.id == profile.id)
-              p.copyWith(meLiked: newLiked, likeCount: likeCount)
-            else
-              p,
-        ];
+      for (final p in list)
+        if (p.id == profile.id)
+          p.copyWith(meLiked: newLiked, likeCount: likeCount)
+        else
+          p,
+    ];
 
     final optimisticCount = profile.likeCount + (newLiked ? 1 : -1);
     state = state.copyWith(

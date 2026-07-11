@@ -14,8 +14,7 @@ class AuthLoadingOverlay extends StatelessWidget {
 
     final cs = Theme.of(context).colorScheme;
     final message =
-        AppLocalizations.of(context)?.get('auth_signing_in') ??
-        'Signing in...';
+        AppLocalizations.of(context)?.get('auth_signing_in') ?? 'Signing in...';
 
     return Positioned.fill(
       child: AbsorbPointer(

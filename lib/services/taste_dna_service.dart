@@ -346,14 +346,18 @@ class TasteDnaService {
   Future<({List<String> themes, Map<String, List<DnaMovieRef>> evidence})>
   _aggregateThemes(List<Map<String, dynamic>> rawRatings) async {
     try {
-      final liked = rawRatings
-          .where((r) =>
-              (r['rating'] as int) >= 2 &&
-              (r['is_private'] as int? ?? 0) == 0)
-          .toList()
-        ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
-        );
+      final liked =
+          rawRatings
+              .where(
+                (r) =>
+                    (r['rating'] as int) >= 2 &&
+                    (r['is_private'] as int? ?? 0) == 0,
+              )
+              .toList()
+            ..sort(
+              (a, b) =>
+                  (b['created_at'] as int).compareTo(a['created_at'] as int),
+            );
 
       // Adaptif seed: Beğeni sayısına göre 8 ile 20 arası.
       final seedCount = (liked.length <= 8)

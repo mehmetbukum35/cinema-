@@ -15,8 +15,12 @@ void main() {
     });
 
     test('toRecommendationMap returns engine-compatible map', () {
-      const signals = FriendSignals({'movie_5': ['Dave']});
-      expect(signals.toRecommendationMap(), {'movie_5': ['Dave']});
+      const signals = FriendSignals({
+        'movie_5': ['Dave'],
+      });
+      expect(signals.toRecommendationMap(), {
+        'movie_5': ['Dave'],
+      });
     });
   });
 }

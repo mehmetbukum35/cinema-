@@ -439,9 +439,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       if (!mounted) return;
       showAppToast(
         context,
-        AppLocalizations.of(context)
-                ?.get('title_added_to_watchlist')
-                .replaceAll('{}', movie.title) ??
+        AppLocalizations.of(
+              context,
+            )?.get('title_added_to_watchlist').replaceAll('{}', movie.title) ??
             '${movie.title} added to watchlist.',
       );
     }
@@ -589,9 +589,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                           if (_extrasLoaded) ...[
                             if (_providers.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              const DetailSectionLabel(
-                                'detail_where_to_watch',
-                              ),
+                              const DetailSectionLabel('detail_where_to_watch'),
                               const SizedBox(height: 10),
                               DetailProvidersRow(providers: _providers),
                             ],

@@ -241,8 +241,16 @@ void main() {
       });
 
       test('re-rating preserves created_at but bumps updated_at', () async {
-        await helper.saveRating(movie: movie(1, 'Film A'), rating: 2, updatedAt: 1000);
-        await helper.saveRating(movie: movie(1, 'Film A'), rating: 3, updatedAt: 2000);
+        await helper.saveRating(
+          movie: movie(1, 'Film A'),
+          rating: 2,
+          updatedAt: 1000,
+        );
+        await helper.saveRating(
+          movie: movie(1, 'Film A'),
+          rating: 3,
+          updatedAt: 2000,
+        );
 
         final row = await helper.getRating(1, false);
         expect(row!['rating'], 3);
@@ -282,7 +290,11 @@ void main() {
       });
 
       test('deleteRating is a soft delete visible to sync', () async {
-        await helper.saveRating(movie: movie(1, 'Film A'), rating: 3, updatedAt: 1000);
+        await helper.saveRating(
+          movie: movie(1, 'Film A'),
+          rating: 3,
+          updatedAt: 1000,
+        );
         await helper.deleteRating(1, false);
 
         // Görünür API'lerden düşer...
@@ -299,8 +311,16 @@ void main() {
       });
 
       test('getRatings maps rows to Movie and sorts oldest first', () async {
-        await helper.saveRating(movie: movie(2, 'Yeni'), rating: 3, updatedAt: 2000);
-        await helper.saveRating(movie: movie(1, 'Eski'), rating: 2, updatedAt: 1000);
+        await helper.saveRating(
+          movie: movie(2, 'Yeni'),
+          rating: 3,
+          updatedAt: 2000,
+        );
+        await helper.saveRating(
+          movie: movie(1, 'Eski'),
+          rating: 2,
+          updatedAt: 1000,
+        );
 
         final rows = await helper.getRatings();
         expect(rows, hasLength(2));
@@ -313,17 +333,23 @@ void main() {
         expect(rows.first['genreIds'], [18, 28]);
       });
 
-      test('getRatingsForWeights and getRatedIds exclude deleted rows', () async {
-        await helper.saveRating(movie: movie(1, 'Kalan'), rating: 3);
-        await helper.saveRating(movie: movie(2, 'Silinen', isTV: true), rating: 0);
-        await helper.deleteRating(2, true);
+      test(
+        'getRatingsForWeights and getRatedIds exclude deleted rows',
+        () async {
+          await helper.saveRating(movie: movie(1, 'Kalan'), rating: 3);
+          await helper.saveRating(
+            movie: movie(2, 'Silinen', isTV: true),
+            rating: 0,
+          );
+          await helper.deleteRating(2, true);
 
-        final weights = await helper.getRatingsForWeights();
-        expect(weights, hasLength(1));
-        expect(weights.first['id'], 1);
+          final weights = await helper.getRatingsForWeights();
+          expect(weights, hasLength(1));
+          expect(weights.first['id'], 1);
 
-        expect(await helper.getRatedIds(), {'movie_1'});
-      });
+          expect(await helper.getRatedIds(), {'movie_1'});
+        },
+      );
 
       test('sync path: explicit deleted=1 rating stays hidden', () async {
         await helper.saveRating(
@@ -467,10 +493,7 @@ void main() {
         expect(favs.map((m) => m.title).toList(), ['C', 'A']);
 
         // Listeden çıkan eski favori soft-delete edilir.
-        final gone = await db.query(
-          'favorites',
-          where: 'id = 2 AND is_tv = 0',
-        );
+        final gone = await db.query('favorites', where: 'id = 2 AND is_tv = 0');
         expect(gone, hasLength(1));
         expect(gone.first['deleted'], 1);
       });
@@ -480,10 +503,9 @@ void main() {
         await helper.saveFavorites([movie(2, 'Dizi', isTV: true)], true);
         await helper.saveFavorites([movie(3, 'Başka Film')], false);
 
-        expect(
-          (await helper.getFavorites(true)).map((m) => m.title).toList(),
-          ['Dizi'],
-        );
+        expect((await helper.getFavorites(true)).map((m) => m.title).toList(), [
+          'Dizi',
+        ]);
         expect(
           (await helper.getFavorites(false)).map((m) => m.title).toList(),
           ['Başka Film'],
@@ -515,7 +537,11 @@ void main() {
 
     group('clear / reset', () {
       Future<void> seedAllTables() async {
-        await helper.saveRating(movie: movie(1, 'Film'), rating: 3, updatedAt: 1000);
+        await helper.saveRating(
+          movie: movie(1, 'Film'),
+          rating: 3,
+          updatedAt: 1000,
+        );
         await helper.addToWatchlist(movie(2, 'Liste'), updatedAt: 1000);
         await helper.addSearchHistory('matrix');
         await helper.toggleSeason(100, 1, updatedAt: 1000);
@@ -618,9 +644,9 @@ void main() {
 
         await helper.deleteExpiredTmdbCache(5000);
 
-        final keys = (await db.query('tmdb_cache'))
-            .map((r) => r['cache_key'])
-            .toList();
+        final keys = (await db.query(
+          'tmdb_cache',
+        )).map((r) => r['cache_key']).toList();
         expect(keys, ['fresh']);
       });
 
@@ -630,23 +656,26 @@ void main() {
 
         await helper.deleteTmdbCachePaths(['/3/movie/popular']);
 
-        final keys = (await db.query('tmdb_cache'))
-            .map((r) => r['cache_key'])
-            .toList();
+        final keys = (await db.query(
+          'tmdb_cache',
+        )).map((r) => r['cache_key']).toList();
         expect(keys, ['v2:/3/tv/popular?page=1']);
       });
 
-      test('deleteTmdbCacheNotPrefixed keeps only current generation', () async {
-        await helper.saveTmdbCache('v2:/3/movie/1', '{}', 'tr');
-        await helper.saveTmdbCache('/3/movie/2', '{}', 'tr'); // eski nesil
+      test(
+        'deleteTmdbCacheNotPrefixed keeps only current generation',
+        () async {
+          await helper.saveTmdbCache('v2:/3/movie/1', '{}', 'tr');
+          await helper.saveTmdbCache('/3/movie/2', '{}', 'tr'); // eski nesil
 
-        await helper.deleteTmdbCacheNotPrefixed('v2:');
+          await helper.deleteTmdbCacheNotPrefixed('v2:');
 
-        final keys = (await db.query('tmdb_cache'))
-            .map((r) => r['cache_key'])
-            .toList();
-        expect(keys, ['v2:/3/movie/1']);
-      });
+          final keys = (await db.query(
+            'tmdb_cache',
+          )).map((r) => r['cache_key']).toList();
+          expect(keys, ['v2:/3/movie/1']);
+        },
+      );
 
       test('deleteTmdbCacheKeysContaining removes all matches', () async {
         await helper.saveTmdbCache('v2:/3/movie/1?lang=tr', '{}', 'tr');
@@ -655,9 +684,9 @@ void main() {
 
         await helper.deleteTmdbCacheKeysContaining(['/3/movie/1']);
 
-        final keys = (await db.query('tmdb_cache'))
-            .map((r) => r['cache_key'])
-            .toList();
+        final keys = (await db.query(
+          'tmdb_cache',
+        )).map((r) => r['cache_key']).toList();
         expect(keys, ['v2:/3/tv/9']);
       });
 

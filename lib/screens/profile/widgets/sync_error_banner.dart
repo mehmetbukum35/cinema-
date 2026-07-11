@@ -14,17 +14,11 @@ class SyncErrorBanner extends ConsumerWidget {
     final c = context.c;
     final tr = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: c.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: c.red.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: c.red.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -45,16 +39,10 @@ class SyncErrorBanner extends ConsumerWidget {
           TextButton(
             onPressed: () {
               HapticFeedback.lightImpact();
-              ref
-                  .read(syncProvider.notifier)
-                  .performSync()
-                  .catchError((_) {});
+              ref.read(syncProvider.notifier).performSync().catchError((_) {});
             },
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),

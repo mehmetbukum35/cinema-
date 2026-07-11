@@ -76,9 +76,7 @@ class _AppToastState extends State<_AppToast>
             position: Tween<Offset>(
               begin: const Offset(0, 0.3),
               end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic),
-            ),
+            ).animate(CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic)),
             child: Material(
               color: Colors.transparent,
               child: Container(

@@ -234,7 +234,10 @@ class RecommendationEngine {
   /// [rng] verilirse tohumlar "hep en son beğenilenler" yerine son 12 beğeniden
   /// yeniliğe eğilimli ağırlıklı örneklemeyle seçilir: güne bağlı bir rng ile
   /// her gün farklı tohumlar → farklı benzer-film adayları (vitrin tazeliği).
-  Future<List<Movie>> fetchSeedCandidates({int seedCount = 3, Random? rng}) async {
+  Future<List<Movie>> fetchSeedCandidates({
+    int seedCount = 3,
+    Random? rng,
+  }) async {
     final candidates = <Movie>[];
     try {
       final db = DatabaseHelper();

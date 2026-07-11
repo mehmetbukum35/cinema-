@@ -111,21 +111,22 @@ class DetailActionButtons extends StatelessWidget {
                     context: context,
                     anchorContext: shareBtnContext,
                     message: shareText,
-                    failureMessage: tr?.get('profile_share_failed') ??
+                    failureMessage:
+                        tr?.get('profile_share_failed') ??
                         'Paylaşım açılamadı. Lütfen tekrar deneyin.',
                   );
                 },
                 child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: c.border),
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: c.border),
+                  ),
+                  child: Icon(Icons.share_rounded, color: c.dim, size: 18),
                 ),
-                child: Icon(Icons.share_rounded, color: c.dim, size: 18),
               ),
-            ),
             ),
           ),
         ),

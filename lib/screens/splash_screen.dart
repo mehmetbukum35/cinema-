@@ -164,9 +164,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       scale: _markScale.value * (1 + 0.03 * _exit.value),
                       child: Opacity(
                         opacity: _markFade.value,
-                        child: _Wordmark(
-                          tracking: _tracking.value,
-                        ),
+                        child: _Wordmark(tracking: _tracking.value),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -228,7 +226,8 @@ class _Wordmark extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: AppLocalizations.of(context)?.get('splash_tagline') ??
+            text:
+                AppLocalizations.of(context)?.get('splash_tagline') ??
                 ' | What to Watch?',
             style: style.copyWith(
               color: c.ink.withValues(alpha: 0.8),

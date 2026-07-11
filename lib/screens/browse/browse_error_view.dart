@@ -9,7 +9,11 @@ class BrowseErrorView extends StatelessWidget {
   final Object? error;
   final VoidCallback onRetry;
 
-  const BrowseErrorView({super.key, required this.error, required this.onRetry});
+  const BrowseErrorView({
+    super.key,
+    required this.error,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +39,7 @@ class BrowseErrorView extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             isNetworkError
-                ? (AppLocalizations.of(
-                        context,
-                      )?.get('browse_offline_title') ??
+                ? (AppLocalizations.of(context)?.get('browse_offline_title') ??
                       'You are Offline')
                 : (errorStr.contains('401')
                       ? (AppLocalizations.of(
@@ -57,9 +59,7 @@ class BrowseErrorView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               isNetworkError
-                  ? (AppLocalizations.of(
-                          context,
-                        )?.get('browse_offline_desc') ??
+                  ? (AppLocalizations.of(context)?.get('browse_offline_desc') ??
                         'Please check your internet connection and try again.')
                   : (errorStr.contains('401')
                         ? (AppLocalizations.of(

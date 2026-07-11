@@ -733,9 +733,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             BrowseSectionHeader(
               title:
                   AppLocalizations.of(
-                        context,
-                      )?.get('browse_friends_activity') ??
-                      'Arkadaşlarından Son Sinyaller',
+                    context,
+                  )?.get('browse_friends_activity') ??
+                  'Arkadaşlarından Son Sinyaller',
               gradient: CinemaGradients.crimson,
             ),
             SizedBox(

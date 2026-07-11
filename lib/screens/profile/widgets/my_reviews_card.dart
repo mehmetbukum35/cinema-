@@ -29,10 +29,7 @@ class MyReviewsCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: c.gold.withValues(alpha: 0.35),
-            width: 1,
-          ),
+          border: Border.all(color: c.gold.withValues(alpha: 0.35), width: 1),
           boxShadow: c.cardShadow,
         ),
         child: Row(
@@ -44,11 +41,7 @@ class MyReviewsCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: c.gold.withValues(alpha: 0.15),
               ),
-              child: Icon(
-                Icons.rate_review_rounded,
-                color: c.gold,
-                size: 22,
-              ),
+              child: Icon(Icons.rate_review_rounded, color: c.gold, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -86,9 +79,7 @@ class MyReviewsCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: c.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: c.gold.withValues(alpha: 0.3),
-                    ),
+                    border: Border.all(color: c.gold.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     '$count',

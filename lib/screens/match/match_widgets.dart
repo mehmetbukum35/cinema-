@@ -123,8 +123,10 @@ class MatchModeSelector extends StatelessWidget {
                       mode: 0,
                       activeMode: matchMode,
                       icon: Icons.compare_arrows_rounded,
-                      label: AppLocalizations.of(context)
-                              ?.get('movie_match_alt') ??
+                      label:
+                          AppLocalizations.of(
+                            context,
+                          )?.get('movie_match_alt') ??
                           'Movie Match',
                       onTap: onModeChanged,
                     ),
@@ -134,8 +136,10 @@ class MatchModeSelector extends StatelessWidget {
                       mode: 1,
                       activeMode: matchMode,
                       icon: Icons.people_rounded,
-                      label: AppLocalizations.of(context)
-                              ?.get('together_couch_title') ??
+                      label:
+                          AppLocalizations.of(
+                            context,
+                          )?.get('together_couch_title') ??
                           'Couch Mode',
                       onTap: onModeChanged,
                     ),
@@ -147,7 +151,7 @@ class MatchModeSelector extends StatelessWidget {
                       icon: Icons.group_add_rounded,
                       label:
                           AppLocalizations.of(context)?.get('with_friend') ??
-                              'With Friend',
+                          'With Friend',
                       onTap: onModeChanged,
                     ),
                   ),

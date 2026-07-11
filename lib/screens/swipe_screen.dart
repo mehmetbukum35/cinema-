@@ -1124,10 +1124,7 @@ class _SwipeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     final signals = ref.watch(socialProvider).signals;
-    final friendNames = signals.friendsFor(
-      movieId: movie.id,
-      isTv: movie.isTV,
-    );
+    final friendNames = signals.friendsFor(movieId: movie.id, isTv: movie.isTV);
 
     final isRecommended =
         likedGenreIds.isNotEmpty &&

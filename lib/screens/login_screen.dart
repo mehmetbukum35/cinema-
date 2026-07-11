@@ -93,9 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
         // sunucuda iptal et ki yetim refresh token kalmasın.
-        await ref
-            .read(authProvider.notifier)
-            .cancelPendingLogin(result.tokens);
+        await ref.read(authProvider.notifier).cancelPendingLogin(result.tokens);
       }
     }
     // error → auth.error zaten ekranda gösteriliyor; cancelled → sessiz.
@@ -109,267 +107,280 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Stack(
       children: [
         Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isRegister
-              ? (AppLocalizations.of(context)?.get('auth_title_register') ??
-                    'Sign Up')
-              : (AppLocalizations.of(context)?.get('auth_title_login') ??
-                    'Sign In'),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: AutofillGroup(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(Icons.movie_outlined, size: 56, color: cs.primary),
-                    const SizedBox(height: 12),
-                    Text(
-                      _isRegister
-                          ? (AppLocalizations.of(
-                                  context,
-                                )?.get('auth_register_subtitle') ??
-                                'Create your account, keep your taste profile with you on all devices.')
-                          : (AppLocalizations.of(
-                                  context,
-                                )?.get('auth_login_subtitle') ??
-                                'Sign in to your account, continue from where you left off.'),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 28),
-
-                    if (_isRegister) ...[
-                      TextFormField(
-                        controller: _nameCtrl,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.name],
-                        decoration: InputDecoration(
-                          labelText:
-                              AppLocalizations.of(
-                                context,
-                              )?.get('auth_display_name') ??
-                              'Display Name',
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: const OutlineInputBorder(),
-                        ),
-                        validator: (val) => val == null || val.trim().isEmpty
-                            ? (AppLocalizations.of(
-                                    context,
-                                  )?.get('auth_forgot_err_name_empty') ??
-                                  'Name field cannot be empty.')
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.email],
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('auth_email_label') ??
-                            'Email',
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        final s = (v ?? '').trim();
-                        if (s.isEmpty || !s.contains('@') || !s.contains('.')) {
-                          return AppLocalizations.of(
-                                context,
-                              )?.get('auth_forgot_err_email_invalid') ??
-                              'Enter a valid email.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _passCtrl,
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('auth_password_label') ??
-                            'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure ? Icons.visibility_off : Icons.visibility,
-                          ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      validator: (v) => (v ?? '').length < 8
-                          ? (AppLocalizations.of(
-                                  context,
-                                )?.get('auth_forgot_err_pass_length') ??
-                                'Password must be at least 8 characters.')
-                          : null,
-                    ),
-                    if (!_isRegister) ...[
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (_) => const ForgotPasswordSheet(),
-                            );
-                          },
-                          child: Text(
-                            AppLocalizations.of(context)
-                                    ?.get('auth_forgot_password_link') ??
-                                'Forgot Password?',
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    if (auth.error != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        AppLocalizations.of(context)?.get(auth.error!) ?? auth.error!,
-                        style: TextStyle(color: cs.error),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: auth.loading ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: auth.loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                              ),
-                            )
-                          : Text(
-                              _isRegister
-                                  ? (AppLocalizations.of(
-                                          context,
-                                        )?.get('auth_button_register') ??
-                                        'Register')
-                                  : (AppLocalizations.of(
-                                          context,
-                                        )?.get('auth_button_login') ??
-                                        'Login'),
-                            ),
-                    ),
-                    if (AppConfig.googleSignInConfigured) ...[
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              AppLocalizations.of(context)?.get('auth_or') ??
-                                  'veya',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          const Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        onPressed: auth.loading ? null : _googleSignIn,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        icon: auth.loading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                ),
-                              )
-                            : Container(
-                                width: 22,
-                                height: 22,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.black12),
-                                ),
-                                child: const Text(
-                                  'G',
-                                  style: TextStyle(
-                                    color: Color(0xFF4285F4),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                        label: Text(
-                          auth.loading
+          appBar: AppBar(
+            title: Text(
+              _isRegister
+                  ? (AppLocalizations.of(context)?.get('auth_title_register') ??
+                        'Sign Up')
+                  : (AppLocalizations.of(context)?.get('auth_title_login') ??
+                        'Sign In'),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: AutofillGroup(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Icon(Icons.movie_outlined, size: 56, color: cs.primary),
+                        const SizedBox(height: 12),
+                        Text(
+                          _isRegister
                               ? (AppLocalizations.of(
                                       context,
-                                    )?.get('auth_signing_in') ??
-                                    'Giriş yapılıyor...')
+                                    )?.get('auth_register_subtitle') ??
+                                    'Create your account, keep your taste profile with you on all devices.')
                               : (AppLocalizations.of(
                                       context,
-                                    )?.get('auth_google_button') ??
-                                    'Google ile devam et'),
+                                    )?.get('auth_login_subtitle') ??
+                                    'Sign in to your account, continue from where you left off.'),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: auth.loading
-                          ? null
-                          : () => setState(() => _isRegister = !_isRegister),
-                      child: Text(
-                        _isRegister
-                            ? (AppLocalizations.of(
+                        const SizedBox(height: 28),
+
+                        if (_isRegister) ...[
+                          TextFormField(
+                            controller: _nameCtrl,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.name],
+                            decoration: InputDecoration(
+                              labelText:
+                                  AppLocalizations.of(
                                     context,
-                                  )?.get('auth_toggle_to_login') ??
-                                  'Already have an account? Sign In')
-                            : (AppLocalizations.of(
+                                  )?.get('auth_display_name') ??
+                                  'Display Name',
+                              prefixIcon: const Icon(Icons.person_outline),
+                              border: const OutlineInputBorder(),
+                            ),
+                            validator: (val) =>
+                                val == null || val.trim().isEmpty
+                                ? (AppLocalizations.of(
+                                        context,
+                                      )?.get('auth_forgot_err_name_empty') ??
+                                      'Name field cannot be empty.')
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          autocorrect: false,
+                          decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('auth_email_label') ??
+                                'Email',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            final s = (v ?? '').trim();
+                            if (s.isEmpty ||
+                                !s.contains('@') ||
+                                !s.contains('.')) {
+                              return AppLocalizations.of(
                                     context,
-                                  )?.get('auth_toggle_to_register') ??
-                                  "Don't have an account? Sign Up"),
-                      ),
+                                  )?.get('auth_forgot_err_email_invalid') ??
+                                  'Enter a valid email.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _passCtrl,
+                          obscureText: _obscure,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('auth_password_label') ??
+                                'Password',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
+                            ),
+                          ),
+                          validator: (v) => (v ?? '').length < 8
+                              ? (AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_err_pass_length') ??
+                                    'Password must be at least 8 characters.')
+                              : null,
+                        ),
+                        if (!_isRegister) ...[
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => const ForgotPasswordSheet(),
+                                );
+                              },
+                              child: Text(
+                                AppLocalizations.of(
+                                      context,
+                                    )?.get('auth_forgot_password_link') ??
+                                    'Forgot Password?',
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        if (auth.error != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(context)?.get(auth.error!) ??
+                                auth.error!,
+                            style: TextStyle(color: cs.error),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: auth.loading ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: auth.loading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.4,
+                                  ),
+                                )
+                              : Text(
+                                  _isRegister
+                                      ? (AppLocalizations.of(
+                                              context,
+                                            )?.get('auth_button_register') ??
+                                            'Register')
+                                      : (AppLocalizations.of(
+                                              context,
+                                            )?.get('auth_button_login') ??
+                                            'Login'),
+                                ),
+                        ),
+                        if (AppConfig.googleSignInConfigured) ...[
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  AppLocalizations.of(
+                                        context,
+                                      )?.get('auth_or') ??
+                                      'veya',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                              const Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          OutlinedButton.icon(
+                            onPressed: auth.loading ? null : _googleSignIn,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: auth.loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                    ),
+                                  )
+                                : Container(
+                                    width: 22,
+                                    height: 22,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.black12),
+                                    ),
+                                    child: const Text(
+                                      'G',
+                                      style: TextStyle(
+                                        color: Color(0xFF4285F4),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                            label: Text(
+                              auth.loading
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_signing_in') ??
+                                        'Giriş yapılıyor...')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_google_button') ??
+                                        'Google ile devam et'),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: auth.loading
+                              ? null
+                              : () =>
+                                    setState(() => _isRegister = !_isRegister),
+                          child: Text(
+                            _isRegister
+                                ? (AppLocalizations.of(
+                                        context,
+                                      )?.get('auth_toggle_to_login') ??
+                                      'Already have an account? Sign In')
+                                : (AppLocalizations.of(
+                                        context,
+                                      )?.get('auth_toggle_to_register') ??
+                                      "Don't have an account? Sign Up"),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    ),
         AuthLoadingOverlay(visible: auth.loading),
       ],
     );

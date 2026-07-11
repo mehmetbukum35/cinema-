@@ -18,15 +18,11 @@ Future<void> shareMessage({
   required String message,
   String? failureMessage,
 }) async {
-  final shareOrigin = sharePositionOrigin ??
-      (anchorContext != null
-          ? sharePositionOriginFrom(anchorContext)
-          : null);
+  final shareOrigin =
+      sharePositionOrigin ??
+      (anchorContext != null ? sharePositionOriginFrom(anchorContext) : null);
   try {
-    await Share.share(
-      message,
-      sharePositionOrigin: shareOrigin,
-    );
+    await Share.share(message, sharePositionOrigin: shareOrigin);
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -47,10 +43,9 @@ Future<void> shareFiles({
   String? text,
   String? failureMessage,
 }) async {
-  final shareOrigin = sharePositionOrigin ??
-      (anchorContext != null
-          ? sharePositionOriginFrom(anchorContext)
-          : null);
+  final shareOrigin =
+      sharePositionOrigin ??
+      (anchorContext != null ? sharePositionOriginFrom(anchorContext) : null);
   try {
     await Share.shareXFiles(
       files,

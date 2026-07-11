@@ -25,7 +25,9 @@ void main() async {
   try {
     final jsonStr = await rootBundle.loadString('assets/lexicon/theme_tr.json');
     final Map<String, dynamic> decoded = json.decode(jsonStr);
-    TasteDnaPresenter.themeTr = decoded.map((k, v) => MapEntry(k, v.toString()));
+    TasteDnaPresenter.themeTr = decoded.map(
+      (k, v) => MapEntry(k, v.toString()),
+    );
   } catch (e) {
     debugPrint("Failed to load theme_tr.json at startup: $e");
   }
@@ -43,9 +45,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    FirebaseMessaging.onBackgroundMessage(
-      firebaseMessagingBackgroundHandler,
-    );
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e, st) {
     // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
     debugPrint("Firebase initialization failed: $e\n$st");

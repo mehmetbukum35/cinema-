@@ -46,10 +46,13 @@ class MatchMovieBody extends StatelessWidget {
           MatchIntroBanner(
             palette: c,
             icon: Icons.movie_filter_rounded,
-            title: AppLocalizations.of(context)?.get('movie_matcher') ??
+            title:
+                AppLocalizations.of(context)?.get('movie_matcher') ??
                 'Movie Matcher',
-            description: AppLocalizations.of(context)
-                    ?.get('search_for_a_movie_or_tv_show_') ??
+            description:
+                AppLocalizations.of(
+                  context,
+                )?.get('search_for_a_movie_or_tv_show_') ??
                 'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
           ),
         Padding(
@@ -66,20 +69,18 @@ class MatchMovieBody extends StatelessWidget {
               onChanged: onSearch,
               style: TextStyle(color: c.ink, fontSize: 15),
               decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)?.get('search_hint') ??
+                hintText:
+                    AppLocalizations.of(context)?.get('search_hint') ??
                     'Film veya dizi ara...',
                 hintStyle: TextStyle(color: c.dim, fontSize: 15),
-                prefixIcon:
-                    Icon(Icons.search_rounded, color: c.dim, size: 20),
+                prefixIcon: Icon(Icons.search_rounded, color: c.dim, size: 20),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: c.dim,
-                          size: 18,
-                        ),
-                        tooltip: AppLocalizations.of(context)
-                                ?.get('semantics_close') ??
+                        icon: Icon(Icons.close_rounded, color: c.dim, size: 18),
+                        tooltip:
+                            AppLocalizations.of(
+                              context,
+                            )?.get('semantics_close') ??
                             'Close',
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -220,12 +221,14 @@ class MatchMovieBody extends StatelessWidget {
                             ),
                             child: Text(
                               m.isTV
-                                  ? (AppLocalizations.of(context)
-                                          ?.get('onboarding_tv') ??
-                                      'Dizi')
-                                  : (AppLocalizations.of(context)
-                                          ?.get('onboarding_movie') ??
-                                      'Film'),
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_tv') ??
+                                        'Dizi')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_movie') ??
+                                        'Film'),
                               style: TextStyle(
                                 color: m.isTV ? c.blue : c.red,
                                 fontSize: 10,
@@ -283,7 +286,7 @@ class MatchMovieBody extends StatelessWidget {
             builder: (context) {
               final template =
                   AppLocalizations.of(context)?.get('match_similar_to') ??
-                      'Similar to "{}"';
+                  'Similar to "{}"';
               final titleIndex = template.indexOf('{}');
               if (titleIndex == -1) {
                 return Text(

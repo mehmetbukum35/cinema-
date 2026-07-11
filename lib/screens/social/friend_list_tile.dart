@@ -103,11 +103,7 @@ class FriendListTile extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.favorite_rounded,
-                            color: c.gold,
-                            size: 12,
-                          ),
+                          Icon(Icons.favorite_rounded, color: c.gold, size: 12),
                           const SizedBox(width: 4),
                           Text(
                             AppLocalizations.of(context)

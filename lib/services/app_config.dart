@@ -1,8 +1,6 @@
 class AppConfig {
-  static const _defaultApiBaseUrl =
-      'https://cinema.mbkm.com.tr/api';
-  static const _defaultWebProfileBaseUrl =
-      'https://cinema.mbkm.com.tr/profile';
+  static const _defaultApiBaseUrl = 'https://cinema.mbkm.com.tr/api';
+  static const _defaultWebProfileBaseUrl = 'https://cinema.mbkm.com.tr/profile';
 
   static const _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',

@@ -36,7 +36,8 @@ class _WrappedModalState extends State<WrappedModal> {
 
   Future<void> _shareRecap(BuildContext anchorContext) async {
     final l10n = AppLocalizations.of(context);
-    final failureMessage = l10n?.get('profile_share_failed') ??
+    final failureMessage =
+        l10n?.get('profile_share_failed') ??
         'Paylaşım açılamadı. Lütfen tekrar deneyin.';
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
@@ -741,43 +742,43 @@ class _WrappedModalState extends State<WrappedModal> {
             builder: (shareBtnContext) => SpringButton(
               onTap: () => _shareRecap(shareBtnContext),
               child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF2E93), Color(0xFFFF8A00)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF2E93).withValues(alpha: 0.35),
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF2E93), Color(0xFFFF8A00)],
                   ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.share_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context)?.get('recap_share_button') ??
-                        'Share Your Recap',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF2E93).withValues(alpha: 0.35),
+                      blurRadius: 15,
+                      offset: const Offset(0, 6),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.share_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocalizations.of(context)?.get('recap_share_button') ??
+                          'Share Your Recap',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ],
       ),

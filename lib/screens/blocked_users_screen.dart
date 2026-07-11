@@ -59,9 +59,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
           style: TextStyle(color: c0.ink, fontSize: 16),
         ),
         content: Text(
-          tr
-                  ?.get('blocked_users_unblock_confirm_msg')
-                  .replaceAll('{}', name) ??
+          tr?.get('blocked_users_unblock_confirm_msg').replaceAll('{}', name) ??
               '$name kullanıcısının engeli kaldırılacak ve yorumları tekrar görünebilir.',
           style: TextStyle(color: c0.dim, fontSize: 13),
         ),
@@ -224,8 +222,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
 
   Widget _userRow(dynamic user, ThemePalette c, AppLocalizations? tr) {
     final userId = int.tryParse(user['id']?.toString() ?? '');
-    final name =
-        (user['display_name'] as String?)?.trim().isNotEmpty == true
+    final name = (user['display_name'] as String?)?.trim().isNotEmpty == true
         ? user['display_name'] as String
         : '@${user['username'] ?? '?'}';
     final username = user['username'] as String?;
