@@ -57,7 +57,12 @@ class NotificationService {
         tz.setLocalLocation(tz.getLocation(localTz));
         return true;
       } catch (e) {
-        debugPrint('Timezone init failed: $e');
+        final isTest =
+            const bool.fromEnvironment('dart.library.io') &&
+            Platform.environment.containsKey('FLUTTER_TEST');
+        if (!isTest) {
+          debugPrint('Timezone init failed: $e');
+        }
         _tzInit = null; // sonraki çağrıda yeniden dene
         return false;
       }
@@ -160,7 +165,12 @@ class NotificationService {
       }
     } catch (e, st) {
       // Firebase yapılandırılmamış olabilir; sessizce geç.
-      debugPrint('Firebase messaging init failed: $e\n$st');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Firebase messaging init failed: $e\n$st');
+      }
     }
   }
 
@@ -176,7 +186,12 @@ class NotificationService {
       }
       if (token != null) await _sendToken(token);
     } catch (e, st) {
-      debugPrint('Failed to register FCM token: $e\n$st');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to register FCM token: $e\n$st');
+      }
     }
   }
 
@@ -187,7 +202,12 @@ class NotificationService {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _api?.unregisterDevice(token);
     } catch (e, st) {
-      debugPrint('Failed to unregister FCM token: $e\n$st');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to unregister FCM token: $e\n$st');
+      }
     }
   }
 
@@ -290,7 +310,12 @@ class NotificationService {
         payload: 'release|${movie.id}|${movie.isTV}',
       );
     } catch (e, st) {
-      debugPrint('Failed to schedule release reminder: $e\n$st');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to schedule release reminder: $e\n$st');
+      }
     }
   }
 
@@ -298,7 +323,12 @@ class NotificationService {
     try {
       await _local.cancel(_releaseNotifId(movieId, isTV));
     } catch (e) {
-      debugPrint('Failed to cancel release reminder: $e');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to cancel release reminder: $e');
+      }
     }
   }
 
@@ -330,7 +360,12 @@ class NotificationService {
         }
       }
     } catch (e, st) {
-      debugPrint('Failed to sync release reminders: $e\n$st');
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to sync release reminders: $e\n$st');
+      }
     }
   }
 

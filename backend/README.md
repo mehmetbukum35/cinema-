@@ -161,5 +161,4 @@ The PHP/MySQL backend is deployed and verified. To perform a production smoke te
 
 4. **Verify Hosting Configuration:**
    - The fallback for `$SRC` directory structure inside `backend/api/index.php` dynamically checks `/home/mbkmcomt/etc/src` and falls back to `dirname(__DIR__) . '/src'`.
-   - Ensure the server runs with PHP 8.2+ and has proper `.htaccess` configuration to route requests to `index.php`.
-
+   - Ensure the server runs with PHP 8.4+ and has proper `.htaccess` configuration to route requests to `index.php`.

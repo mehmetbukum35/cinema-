@@ -50,3 +50,9 @@ app.*.map.json
 /android/key.properties
 **/*.jks
 **/*.keystore
+
+# Local development and workspace configurations
+.claude/
+.cursor/
+.env
+

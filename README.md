@@ -1,5 +1,7 @@
 # cinema+
 
+[![CI](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml/badge.svg)](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml)
+
 **cinema+** (Ne Izlesem?), film ve dizi karar felcini azaltmak icin tasarlanmis, swipe arayuzlu modern bir mobil kesif ve sosyal paylasim uygulamasidir.
 
 Bu depo, hem Flutter mobil uygulamasini hem de PHP backend API servisini barindiran bir monorepodur.
@@ -46,7 +48,7 @@ flutter test
 
 ### Backend (PHP)
 
-PHP backend API'si PHP 8.2+ ve MySQL/MariaDB kullanir.
+PHP backend API'si PHP 8.4+ ve MySQL/MariaDB kullanir.
 
 Bagimliliklari kurun:
 
@@ -72,7 +74,7 @@ composer test
 - **State management**: Riverpod
 - **Yerel veri**: SQLite (sqflite) ve Shared Preferences
 - **Network ve sync**: HTTP, JWT token rotasyonu ve delta senkronizasyonu
-- **Backend**: PHP 8.2+, minimalist router ve MySQL/MariaDB
+- **Backend**: PHP 8.4+, minimalist router ve MySQL/MariaDB
 
 ## Kalite Kontrolleri
 

@@ -191,7 +191,8 @@ CREATE TABLE `users` (
   `taste_dna` text DEFAULT NULL,
   `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
   `google_sub` varchar(255) DEFAULT NULL,
-  `email_verified` tinyint(1) NOT NULL DEFAULT 0
+  `email_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `review_banned` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -459,6 +460,21 @@ CREATE TABLE IF NOT EXISTS `rate_limits` (
   `window_time` int(11) NOT NULL,
   `request_count` int(11) NOT NULL DEFAULT 1,
   PRIMARY KEY (`ip_bucket`,`window_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tablo yapısı: `profile_likes` (Profil beğenileri)
+--
+CREATE TABLE IF NOT EXISTS `profile_likes` (
+  `voter_id` bigint(20) UNSIGNED NOT NULL,
+  `owner_id` bigint(20) UNSIGNED NOT NULL,
+  `created_at` bigint(20) NOT NULL,
+  PRIMARY KEY (`voter_id`,`owner_id`),
+  KEY `idx_profile_likes_owner` (`owner_id`),
+  CONSTRAINT `fk_profile_likes_voter` FOREIGN KEY (`voter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_profile_likes_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 COMMIT;

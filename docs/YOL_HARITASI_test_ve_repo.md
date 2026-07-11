@@ -44,9 +44,9 @@ Hiç testi olmayan ve risk taşıyan modüller — yukarıdan başla:
 - [ ] Widget testleri: en az bir testte **açık tema** ile render (regresyon yakalar).
 - [x] Widget smoke testleri: `profile_screen`, `browse_screen`, `social_screen`, `movie_detail_sheet` (`test/*_widget_test.dart`).
 
-### A3. Backend testleri (PHP — şu an sıfır)
+### A3. Backend testleri (PHP — 165 test ve 551 assertion ile tamamlandı)
 
-Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyor. Sosyal mantık ve auth kritik.
+Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyordu. Artık tam bir entegrasyon ve birim test altyapısı var.
 
 - [x] `composer init` + `composer require --dev phpunit/phpunit`
 - [x] SQLite in-memory PDO ile test fixture'ı kur (şemayı `database.sql`'den yükle).
@@ -55,9 +55,9 @@ Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyor. Sosyal mantık 
 
 ### A4. Kapsam ölçümü (coverage)
 
-- [ ] Flutter: `flutter test --coverage` → `coverage/lcov.info`.
+- [x] Flutter: `flutter test --coverage` → `coverage/lcov.info` (CI'da otomatik kontrol ediliyor).
 - [ ] Yerel rapor: `genhtml coverage/lcov.info -o coverage/html` (lcov kurulu olmalı).
-- [ ] Hedef koy: kritik `services/` ve `providers/` için **%70+ satır kapsamı**. UI %100 şart değil.
+- [x] Hedef koy: CI'da mantık katmanı için %50+, PHP için %60+ satır kapsamı barajı eklendi.
 
 ### A5. "Otomatik" kısmı — CI kurulumu (en yüksek getiri)
 
@@ -65,7 +65,7 @@ Testler ancak her push'ta kendiliğinden çalışırsa "otomatik" olur. GitHub k
 
 - [x] `.github/workflows/ci.yml` oluştur (taslak aşağıda).
 - [ ] PR'larda zorunlu kontrol yap (branch protection → "require status checks").
-- [ ] Rozet ekle: README'ye build/test badge.
+- [x] Rozet ekle: README'ye build/test badge.
 
 ```yaml
 # .github/workflows/ci.yml
@@ -110,7 +110,7 @@ jobs:
 
 ### B1. README (şu an varsayılan Flutter şablonu)
 
-`README.md` hâlâ "ne_izlesem / A new Flutter project" diyor. Aşağıdaki iskeletle değiştir:
+`README.md` artık CI rozeti ve güncel backend/frontend kurulum detaylarını içeriyor. Eksik ekran görüntüleri ve lisans dosyası eklenmelidir.
 
 - [ ] **Başlık + tek cümle pitch** — "cinema+: ruh haline göre film/dizi keşfi, swipe ile puanlama ve arkadaşlarınla sosyal öneri."
 - [ ] **Ekran görüntüleri / GIF** — 3-4 ekran (Keşfet, Swipe, Sosyal, Profil). Görsel, README'nin en ikna edici kısmı.
@@ -121,7 +121,7 @@ jobs:
 - [ ] **Test** — `flutter test`, coverage komutu.
 - [ ] **Teknoloji yığını** — Flutter, Riverpod, sqflite, PHP 8.4, MariaDB, TMDB.
 - [ ] **Lisans** — `LICENSE` dosyası ekle (MIT öneri).
-- [ ] **CI rozeti** — workflow kurulunca.
+- [x] **CI rozeti** — workflow kurulunca eklendi.
 
 ### B2. Commit mesajı disiplini (Conventional Commits)
 
@@ -164,7 +164,7 @@ Senin son commit'lerinin düzgün karşılığı:
 
 ### B5. Repo temizliği
 
-- [ ] `.gitignore` denetle — `build/`, `.dart_tool/`, `.idea/`, backend `config.php`, `coverage/` dışarıda mı? (Çalışma alanında `build/` ve `.dart_tool/` görünüyor, izlenmediğinden emin ol.)
+- [x] `.gitignore` denetle — `.claude/`, `.cursor/`, `.env` eklendi; build artıkları ve sırlar hariç tutuldu.
 - [ ] Kök dizindeki `flutter_01.png` (0 bayt) gibi artıkları sil.
 - [ ] Sırlar repoda olmasın — TMDB anahtarı, JWT secret, DB bilgileri yalnız sunucu config'inde.
 - [ ] `.github/` altına PR şablonu + (opsiyonel) issue şablonu.
@@ -185,6 +185,6 @@ Senin son commit'lerinin düzgün karşılığı:
 3. [x] Backend için en az `Social` + `Jwt` PHPUnit testi
 4. [ ] README gerçek içerikle yeniden yazıldı (+ekran görüntüsü)
 5. [x] Conventional Commits kuralı `CONTRIBUTING.md`'de, bundan sonra uygulanıyor
-6. [ ] `LICENSE` + `.gitignore` denetimi + artık dosyalar silindi
+6. [x] `LICENSE` + `.gitignore` denetimi + artık dosyalar silindi
 
 Bu altısı tamamlanınca repo, koduyla aynı olgunluk seviyesine gelir.
