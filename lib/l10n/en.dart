@@ -91,6 +91,7 @@ const Map<String, String> kEnStrings = {
   'auth_or': 'or',
   'auth_signing_in': 'Signing in...',
   'auth_google_button': 'Continue with Google',
+  'auth_apple_button': 'Continue with Apple',
   'auth_button_register': 'Register',
   'auth_toggle_to_register': "Don't have an account? Sign Up",
   'auth_toggle_to_login': 'Already have an account? Sign In',
@@ -158,6 +159,8 @@ const Map<String, String> kEnStrings = {
       'Google sign-in is not configured for this build.',
   'auth_err_google_token_failed': 'Failed to retrieve Google ID token.',
   'auth_err_google_failed': 'Google sign-in failed. Please try again.',
+  'auth_err_apple_token_failed': 'Failed to retrieve Apple identity token.',
+  'auth_err_apple_failed': 'Apple sign-in failed. Please try again.',
   'auth_err_register_failed':
       'Registration failed. Please check your connection.',
   'auth_err_login_failed': 'Login failed. Please check your connection.',

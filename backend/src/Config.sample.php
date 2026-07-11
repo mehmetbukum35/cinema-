@@ -53,6 +53,14 @@ return [
         ],
     ],
 
+    // Sign in with Apple: identity token'ın aud claim'i uygulamanın BUNDLE ID'sidir.
+    // Eksik/yanlış bundle_ids → istemci 401 "Apple kimliği doğrulanamadı." alır.
+    'apple' => [
+        'bundle_ids' => [
+            'com.mehmet.neizlesem',
+        ],
+    ],
+
     // Yalnızca sunucuda tutulur; client'a asla gönderilmez (bkz. src/Tmdb.php).
     'tmdb_api_key' => 'your_tmdb_api_key_here',
     // GET /tmdb/* proxy'si için IP başına dakikalık istek sınırı.

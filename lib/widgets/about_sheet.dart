@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
@@ -116,18 +118,27 @@ void showAboutSheet(BuildContext context) {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  '1.0.0 (Build 1)',
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (_, snap) => Text(
+                    snap.hasData
+                        ? '${snap.data!.version} (Build ${snap.data!.buildNumber})'
+                        : '…',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            // TMDB kullanım şartı gereği zorunlu atıf metni.
+            // TMDB kullanım şartı gereği zorunlu atıf: logo + metin.
+            Center(
+              child: SvgPicture.asset('assets/tmdb_logo.svg', height: 13),
+            ),
+            const SizedBox(height: 8),
             Text(
               tr?.get('tmdb_attribution') ??
                   'Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından '

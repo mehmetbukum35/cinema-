@@ -50,6 +50,9 @@ dependencies:
   flutter_timezone: ^4.1.1
   webview_flutter: ^4.10.0
   google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
+  flutter_svg: ^2.0.10
+  package_info_plus: ^8.0.2
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +83,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/logo.jpg
+    - assets/tmdb_logo.svg
     - assets/lexicon/theme_tr.json
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -53,6 +56,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = await ref.read(authProvider.notifier).signInWithGoogle();
     await _handleAuthResult(result);
   }
+
+  Future<void> _appleSignIn() async {
+    final result = await ref.read(authProvider.notifier).signInWithApple();
+    await _handleAuthResult(result);
+  }
+
+  /// App Store 4.8: üçüncü taraf giriş sunulan platformda (iOS) Sign in with
+  /// Apple da sunulmalı. Android'de gösterilmez (web akışı yapılandırılmadı).
+  bool get _appleSignInAvailable => !kIsWeb && Platform.isIOS;
 
   /// Başarı/çakışma/doğrulama sonucunu tek yerden işler (e-posta ve Google ortak).
   Future<void> _handleAuthResult(
@@ -355,6 +367,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           context,
                                         )?.get('auth_google_button') ??
                                         'Google ile devam et'),
+                            ),
+                          ),
+                        ],
+                        if (_appleSignInAvailable) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: auth.loading ? null : _appleSignIn,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: auth.loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                    ),
+                                  )
+                                : const Icon(Icons.apple, size: 24),
+                            label: Text(
+                              auth.loading
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_signing_in') ??
+                                        'Giriş yapılıyor...')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('auth_apple_button') ??
+                                        'Apple ile devam et'),
                             ),
                           ),
                         ],

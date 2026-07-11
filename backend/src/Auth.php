@@ -416,6 +416,145 @@ class Auth
         return [(int) $this->db->lastInsertId(), $email, $name, null, true];
     }
 
+    // ─── POST /auth/apple ───────────────────────────────────────────────────
+    // Sign in with Apple: istemcinin gönderdiği identity token doğrulanır,
+    // kullanıcı apple_sub ile bulunur; yoksa AYNI e-postalı hesaba bağlanır
+    // (Apple e-postayı doğruladığı için güvenli); o da yoksa yeni hesap açılır.
+    // Ad, token'da bulunmaz: istemci İLK yetkilendirmede display_name gönderir.
+    // $verifier: testler için enjekte edilebilir (identityToken → claims|null).
+    public function appleLogin(array $in, ?callable $verifier = null): void
+    {
+        $idToken = (string) ($in['identity_token'] ?? '');
+        if ($idToken === '') {
+            fail(422, 'identity_token gerekli.');
+        }
+
+        $bundleIds = (array) ($this->cfg['apple']['bundle_ids'] ?? []);
+        if ($bundleIds === []) {
+            fail(500, 'Apple girişi sunucuda yapılandırılmamış (apple.bundle_ids eksik).');
+        }
+
+        $verifier ??= fn (string $t) => AppleAuth::verifyIdentityToken($t, $bundleIds);
+        $claims = $verifier($idToken);
+        if ($claims === null) {
+            fail(401, 'Apple kimliği doğrulanamadı.');
+        }
+
+        $sub = (string) $claims['sub'];
+        $email = strtolower(trim((string) ($claims['email'] ?? '')));
+        $name = isset($in['display_name']) ? trim((string) $in['display_name']) : null;
+
+        [$uid, $email, $name, $username, $isNew] =
+            $this->resolveAppleAccount($sub, $email, $name);
+
+        json_out(200, [
+            'user' => [
+                'id' => $uid,
+                'email' => $email,
+                'display_name' => $name,
+                'username' => $username,
+                'apple_sub' => $sub,
+            ],
+            'tokens' => $this->issueTokens($uid),
+            'is_new' => $isNew,
+        ]);
+    }
+
+    /** resolveGoogleAccount'un Apple eşleniği: transaction + tek retry. */
+    private function resolveAppleAccount(string $sub, string $email, ?string $name): array
+    {
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                $this->db->beginTransaction();
+                $result = $this->findOrCreateAppleUser($sub, $email, $name);
+                $this->db->commit();
+                return $result;
+            } catch (\PDOException $e) {
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
+                if ($attempt === 0) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+        throw new \RuntimeException('resolveAppleAccount: beklenmeyen durum');
+    }
+
+    /** apple_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar. */
+    private function findOrCreateAppleUser(string $sub, string $email, ?string $name): array
+    {
+        // 1) Daha önce Apple ile bağlanmış hesap.
+        $st = $this->db->prepare(
+            'SELECT id, email, display_name, username FROM users WHERE apple_sub = ?'
+        );
+        $st->execute([$sub]);
+        $u = $st->fetch();
+        if ($u) {
+            return [
+                (int) $u['id'],
+                (string) $u['email'],
+                $u['display_name'],
+                $u['username'],
+                false,
+            ];
+        }
+
+        // Yeni bağlama/hesap için e-posta şart. Apple, e-postayı yalnızca
+        // kullanıcı izin verdiyse token'a koyar; izin daha önce verilip claim
+        // yine de gelmediyse kullanıcı Apple ID ayarlarından uygulama iznini
+        // kaldırıp yeniden denemelidir.
+        if ($email === '') {
+            fail(422, 'Apple hesabınızdan e-posta alınamadı. Apple ID ayarlarından '
+                . '"Apple ile Oturum Açma" iznini kaldırıp tekrar deneyin.');
+        }
+
+        // 2) Aynı e-postalı mevcut hesap → Apple'ı bağla.
+        $st = $this->db->prepare(
+            'SELECT id, display_name, username, email_verified FROM users WHERE email = ?'
+        );
+        $st->execute([$email]);
+        $u = $st->fetch();
+        if ($u) {
+            $uid = (int) $u['id'];
+            if ((int) $u['email_verified'] === 1) {
+                $up = $this->db->prepare(
+                    'UPDATE users SET apple_sub = ?, updated_at = ? WHERE id = ?'
+                );
+                $up->execute([$sub, now_ms(), $uid]);
+                return [$uid, $email, $u['display_name'], $u['username'], false];
+            }
+
+            // Doğrulanmamış hesap: e-postanın gerçek sahibi şu anki kullanıcı
+            // (Apple doğruladı) → hesap ona devredilir (Google akışıyla aynı).
+            $up = $this->db->prepare(
+                'UPDATE users SET apple_sub = ?, email_verified = 1, password_hash = ?,
+                        display_name = ?, updated_at = ? WHERE id = ?'
+            );
+            $up->execute([
+                $sub,
+                password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT),
+                ($name !== null && $name !== '') ? $name : $u['display_name'],
+                now_ms(),
+                $uid,
+            ]);
+            $this->db->prepare('DELETE FROM refresh_tokens WHERE user_id = ?')->execute([$uid]);
+            $this->db->prepare('DELETE FROM email_verifications WHERE email = ?')->execute([$email]);
+            return [$uid, $email, ($name !== null && $name !== '') ? $name : $u['display_name'], $u['username'], false];
+        }
+
+        // 3) Yeni hesap (Google akışıyla aynı: rastgele parola, doğrulanmış).
+        $t = now_ms();
+        $hash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+        $ins = $this->db->prepare(
+            'INSERT INTO users (email, password_hash, display_name, apple_sub, email_verified, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 1, ?, ?)'
+        );
+        $ins->execute([$email, $hash, ($name !== null && $name !== '') ? $name : null, $sub, $t, $t]);
+        return [(int) $this->db->lastInsertId(), $email, $name, null, true];
+    }
+
     // ─── POST /auth/refresh ─────────────────────────────────────────────────
     public function refresh(array $in): void
     {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../services/api_service.dart';
 import '../services/app_config.dart';
 import '../services/prefs_service.dart';
@@ -347,6 +348,64 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final errMsg = e.toString().contains('auth_err_google_token_failed')
           ? 'auth_err_google_token_failed'
           : 'auth_err_google_failed';
+      state = state.copyWith(loading: false, error: errMsg);
+      return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
+    }
+  }
+
+  /// Sign in with Apple (yalnızca iOS'ta gösterilir): Apple kimliği doğrular,
+  /// identity token'ı backend'e gönderir; oturum yine bizim JWT/refresh boru
+  /// hattımızla kurulur. Ad-soyad yalnızca İLK yetkilendirmede gelir ve
+  /// backend'e display_name olarak iletilir.
+  Future<AuthResult> signInWithApple() async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final AuthorizationCredentialAppleID credential;
+      try {
+        credential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
+      } on SignInWithAppleAuthorizationException catch (e) {
+        // Kullanıcı vazgeçti → hata değil; ekran sessizce devam eder.
+        if (e.code == AuthorizationErrorCode.canceled) {
+          state = state.copyWith(loading: false);
+          return AuthResult(status: AuthStatus.cancelled);
+        }
+        rethrow;
+      }
+
+      final idToken = credential.identityToken;
+      if (idToken == null) {
+        throw Exception('auth_err_apple_token_failed');
+      }
+
+      final name = [credential.givenName, credential.familyName]
+          .whereType<String>()
+          .join(' ')
+          .trim();
+
+      final data = await _apiService.loginWithApple(
+        idToken,
+        displayName: name.isEmpty ? null : name,
+      );
+      return await _finalizeAuth(data);
+    } on ApiException catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+          'Apple backend login failed: HTTP ${e.statusCode} — ${e.message}',
+        );
+      }
+      final mapped = _mapBackendError(e.message);
+      state = state.copyWith(loading: false, error: mapped);
+      return AuthResult(status: AuthStatus.error, errorMessage: mapped);
+    } catch (e) {
+      debugPrint("Apple sign-in failed: $e");
+      final errMsg = e.toString().contains('auth_err_apple_token_failed')
+          ? 'auth_err_apple_token_failed'
+          : 'auth_err_apple_failed';
       state = state.copyWith(loading: false, error: errMsg);
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }

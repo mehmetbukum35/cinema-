@@ -310,6 +310,34 @@ class ApiService {
     }
   }
 
+  // POST /auth/apple — Apple identity token ile giriş/kayıt. Ad token'da
+  // bulunmadığından ilk yetkilendirmede displayName ayrıca gönderilir.
+  Future<Map<String, dynamic>> loginWithApple(
+    String identityToken, {
+    String? displayName,
+  }) async {
+    final response = await _request(
+      'POST',
+      '/auth/apple',
+      body: {
+        'identity_token': identityToken,
+        if (displayName != null && displayName.isNotEmpty)
+          'display_name': displayName,
+      },
+      requireAuth: false,
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode == 200) {
+      return data;
+    } else {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'auth_err_apple_failed',
+      );
+    }
+  }
+
   // POST /auth/logout
   Future<void> logout() async {
     final refreshToken = await PrefsService.getRefreshToken();

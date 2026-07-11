@@ -93,6 +93,7 @@ const Map<String, String> kTrStrings = {
   'auth_or': 'veya',
   'auth_signing_in': 'Giriş yapılıyor...',
   'auth_google_button': 'Google ile devam et',
+  'auth_apple_button': 'Apple ile devam et',
   'auth_button_register': 'Kayıt Ol',
   'auth_toggle_to_register': 'Hesabınız yok mu? Kayıt Olun',
   'auth_toggle_to_login': 'Zaten hesabınız var mı? Giriş Yapın',
@@ -161,6 +162,9 @@ const Map<String, String> kTrStrings = {
   'auth_err_google_token_failed': 'Google ID token alınamadı.',
   'auth_err_google_failed':
       'Google ile giriş yapılamadı. Lütfen tekrar deneyin.',
+  'auth_err_apple_token_failed': 'Apple kimlik anahtarı alınamadı.',
+  'auth_err_apple_failed':
+      'Apple ile giriş yapılamadı. Lütfen tekrar deneyin.',
   'auth_err_register_failed':
       'Kayıt yapılamadı. Lütfen bağlantınızı kontrol edin.',
   'auth_err_login_failed':

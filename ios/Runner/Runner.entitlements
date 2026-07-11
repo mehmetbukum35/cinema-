@@ -6,5 +6,11 @@
 	     Push Notifications yetkisini içermelidir; aksi halde FCM token alınamaz. -->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- Sign in with Apple (App Store 4.8: üçüncü taraf girişin yanında zorunlu).
+	     App ID'de capability açık ve profil bunu içeriyor olmalı. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

@@ -14,6 +14,7 @@ require_once "$SRC/Helpers.php";
 require_once "$SRC/Db.php";
 require_once "$SRC/Jwt.php";
 require_once "$SRC/GoogleAuth.php";
+require_once "$SRC/AppleAuth.php";
 require_once "$SRC/Auth.php";
 require_once "$SRC/Sync.php";
 require_once "$SRC/Smtp.php";
@@ -161,6 +162,11 @@ switch (true) {
     case $route === 'POST /auth/google':
         rate_limit('google_login', (int) $cfg['rate_limit_per_min'], true);
         $auth->googleLogin(read_json());
+        break;
+
+    case $route === 'POST /auth/apple':
+        rate_limit('apple_login', (int) $cfg['rate_limit_per_min'], true);
+        $auth->appleLogin(read_json());
         break;
 
     case $route === 'POST /auth/forgot-password':
