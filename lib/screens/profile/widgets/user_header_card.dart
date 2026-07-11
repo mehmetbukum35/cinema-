@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,15 +15,24 @@ import '../../../widgets/auth_conflict_dialog.dart';
 import '../../login_screen.dart';
 import 'sync_header_action.dart';
 
-/// Kimlik kartı: kullanıcı bilgisi, giriş/çıkış, Google ile giriş ve
+/// Kimlik kartı: kullanıcı bilgisi, giriş/çıkış, Google/Apple ile giriş ve
 /// (girişliyse) manuel eşitleme eylemi.
 class UserHeaderCard extends ConsumerWidget {
   const UserHeaderCard({super.key});
 
-  Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
+  /// App Store 4.8: üçüncü taraf giriş sunulan platformda (iOS) Sign in with
+  /// Apple da sunulmalı. Android'de gösterilmez (web akışı yapılandırılmadı).
+  static bool get _appleSignInAvailable => !kIsWeb && Platform.isIOS;
+
+  /// Google ve Apple girişlerinin ortak sonuç işleyicisi.
+  Future<void> _handleSignIn(
+    BuildContext context,
+    WidgetRef ref,
+    Future<AuthResult> Function() signIn,
+  ) async {
     final c = context.c;
     try {
-      final result = await ref.read(authProvider.notifier).signInWithGoogle();
+      final result = await signIn();
       if (!context.mounted) return;
 
       if (result.status == AuthStatus.success) {
@@ -192,7 +204,9 @@ class UserHeaderCard extends ConsumerWidget {
                   ),
               ],
             ),
-            if (!isLoggedIn && AppConfig.googleSignInConfigured) ...[
+            if (!isLoggedIn &&
+                (AppConfig.googleSignInConfigured ||
+                    _appleSignInAvailable)) ...[
               const SizedBox(height: 16),
               Divider(
                 color: c.isLight
@@ -201,10 +215,17 @@ class UserHeaderCard extends ConsumerWidget {
                 height: 1,
               ),
               const SizedBox(height: 14),
+            ],
+            if (!isLoggedIn && AppConfig.googleSignInConfigured)
               SpringButton(
                 onTap: auth.loading
                     ? null
-                    : () => _handleGoogleSignIn(context, ref),
+                    : () => _handleSignIn(
+                        context,
+                        ref,
+                        () =>
+                            ref.read(authProvider.notifier).signInWithGoogle(),
+                      ),
                 child: Container(
                   height: 44,
                   decoration: BoxDecoration(
@@ -277,6 +298,47 @@ class UserHeaderCard extends ConsumerWidget {
                             ),
                           ],
                         ),
+                ),
+              ),
+            if (!isLoggedIn && _appleSignInAvailable) ...[
+              if (AppConfig.googleSignInConfigured) const SizedBox(height: 10),
+              SpringButton(
+                onTap: auth.loading
+                    ? null
+                    : () => _handleSignIn(
+                        context,
+                        ref,
+                        () => ref.read(authProvider.notifier).signInWithApple(),
+                      ),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: c.isLight
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: c.isLight
+                          ? c.border
+                          : Colors.white.withValues(alpha: 0.12),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.apple, size: 20, color: c.ink),
+                      const SizedBox(width: 10),
+                      Text(
+                        tr?.get('auth_apple_button') ?? 'Apple ile devam et',
+                        style: TextStyle(
+                          color: c.ink,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
