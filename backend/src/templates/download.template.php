@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uygulamayı İndir | Ne İzlesem</title>
+    <title>Uygulamayı İndir | Cinema+ | Ne İzlesem?</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -24,6 +24,9 @@
             padding: 0;
         }
 
+        [data-lang="tr"] .en { display: none !important; }
+        [data-lang="en"] .tr { display: none !important; }
+
         body {
             background-color: var(--bg);
             color: var(--ink);
@@ -35,6 +38,22 @@
             min-height: 100vh;
             padding: 40px 20px;
         }
+
+        .lang-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 99px;
+            padding: 5px 14px;
+            color: var(--dim);
+            font: inherit;
+            font-size: 0.82rem;
+        }
+
+        .lang-btn span.on { color: var(--gold); font-weight: 600; }
 
         .container {
             max-width: 500px;
@@ -159,37 +178,67 @@
     </style>
 </head>
 <body>
+    <button class="lang-btn" id="langBtn" aria-label="Dil değiştir / Change language"><span id="lt" class="on">TR</span> / <span id="le">EN</span></button>
+
     <div class="container">
         <div class="logo-wrap">🎬</div>
-        <h1>Ne İzlesem?</h1>
-        <p>Arkadaşlarınla ortak film ve dizilerini bulup karar felcinden kurtulmak için hemen uygulamayı indir!</p>
+        <h1><span class="tr">Cinema+ | Ne İzlesem?</span><span class="en">Cinema+ | What to Watch?</span></h1>
+        <p>
+            <span class="tr">Arkadaşlarınla ortak film ve dizilerini bulup karar felcinden kurtulmak için hemen uygulamayı indir!</span>
+            <span class="en">Download now and discover what to watch with friends — no more decision paralysis!</span>
+        </p>
 
-        <!-- Android APK Download -->
         <a href="https://cinema.mbkm.com.tr/app-release.apk" class="download-btn">
             <svg viewBox="0 0 24 24">
                 <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
             </svg>
-            Android (.APK) İndir
+            <span class="tr">Android (.APK) İndir</span><span class="en">Download Android (.APK)</span>
         </a>
 
-        <!-- iOS Store Button (Disabled/Soon) -->
         <div class="store-btn">
             <svg viewBox="0 0 24 24">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.51-.64.74-1.2 1.88-1.05 3 .1.01.21.02.32.02.89 0 2.02-.66 2.68-1.47z"/>
             </svg>
-            App Store (Yakında)
+            <span class="tr">App Store (Yakında)</span><span class="en">App Store (Coming soon)</span>
         </div>
 
-        <!-- Installation Guide -->
         <div class="instructions">
-            <div class="instructions-title">Yükleme Kılavuzu</div>
-            <ol>
+            <div class="instructions-title"><span class="tr">Yükleme Kılavuzu</span><span class="en">Installation Guide</span></div>
+            <ol class="tr">
                 <li>Yukarıdaki <strong>Android (.APK) İndir</strong> butonuna basarak dosyayı indirin.</li>
                 <li>İndirme tamamlandığında bildirimden veya dosya yöneticinizden dosyaya tıklayın.</li>
                 <li>Eğer sistem güvenlik uyarısı verirse, <strong>Ayarlar</strong> seçeneğine tıklayıp <strong>"Bu kaynaktan izin ver"</strong> seçeneğini aktif edin.</li>
                 <li>Geri dönerek <strong>Yükle</strong> butonuna basın ve uygulamanın tadını çıkarın!</li>
             </ol>
+            <ol class="en">
+                <li>Tap <strong>Download Android (.APK)</strong> above to download the file.</li>
+                <li>When the download completes, open it from the notification or your file manager.</li>
+                <li>If you see a security warning, tap <strong>Settings</strong> and enable <strong>"Allow from this source"</strong>.</li>
+                <li>Go back, tap <strong>Install</strong>, and enjoy the app!</li>
+            </ol>
         </div>
     </div>
+
+    <script>
+    (function(){
+        var root = document.documentElement, btn = document.getElementById('langBtn'),
+            lt = document.getElementById('lt'), le = document.getElementById('le');
+        var titles = {
+            tr: 'Uygulamayı İndir | Cinema+ | Ne İzlesem?',
+            en: 'Download App | Cinema+ | What to Watch?'
+        };
+        function setLang(l, persist) {
+            root.dataset.lang = l; root.lang = l; document.title = titles[l];
+            lt.classList.toggle('on', l === 'tr'); le.classList.toggle('on', l === 'en');
+            if (persist) { try { localStorage.setItem('cp-lang', l); } catch (e) {} }
+        }
+        var saved = null; try { saved = localStorage.getItem('cp-lang'); } catch (e) {}
+        if (saved !== 'tr' && saved !== 'en') {
+            saved = ((navigator.language || '').toLowerCase().indexOf('tr') === 0) ? 'tr' : 'en';
+        }
+        setLang(saved);
+        btn.addEventListener('click', function() { setLang(root.dataset.lang === 'tr' ? 'en' : 'tr', true); });
+    })();
+    </script>
 </body>
 </html>

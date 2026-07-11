@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hesap Silme — Cinema+ | What to Watch?</title>
-<meta name="description" content="Cinema+ | What to Watch? hesabınızı ve verilerinizi nasıl sileceğiniz: uygulama içi silme adımları ve e-posta ile talep yöntemi.">
+<title>Hesap Silme — Cinema+ | Ne İzlesem?</title>
+<meta name="description" content="Cinema+ | Ne İzlesem? / What to Watch? hesabınızı ve verilerinizi nasıl sileceğiniz: uygulama içi silme adımları ve e-posta ile talep yöntemi.">
 <meta name="robots" content="index,follow">
 <meta name="theme-color" content="#0A0A0C">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A0A0C'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' text-anchor='middle' fill='%23F5F5F7'%3Ec%3Ctspan fill='%23E9B872'%3E%2B%3C/tspan%3E%3C/text%3E%3C/svg%3E">
@@ -60,7 +60,7 @@ footer a{color:var(--dim);margin:0 10px}
 <!-- ─────────────────────────── TÜRKÇE ─────────────────────────── -->
 <div class="tr">
   <h1>Hesap Silme</h1>
-  <p class="date">Cinema+ | What to Watch? — Son güncelleme: 8 Temmuz 2026</p>
+  <p class="date">Cinema+ | Ne İzlesem? — Son güncelleme: 11 Temmuz 2026</p>
 
   <p>Cinema+ hesabınızı ve hesabınıza bağlı tüm verileri istediğiniz zaman silebilirsiniz. İki yöntem sunuyoruz:</p>
 
@@ -68,8 +68,8 @@ footer a{color:var(--dim);margin:0 10px}
     <h2>Yöntem 1 — Uygulama içinden <span class="tag fast">ANINDA</span></h2>
     <ol>
       <li>Cinema+ uygulamasını açın ve <strong>Profil</strong> sekmesine gidin.</li>
-      <li>Hesap kartınızdaki <strong>"Hesabı Sil"</strong> seçeneğine dokunun.</li>
-      <li>Onay penceresinde işlemi doğrulayın.</li>
+      <li><strong>Tehlike Bölgesi</strong> bölümünü açın.</li>
+      <li><strong>"Hesabı Sil"</strong> seçeneğine dokunun ve onay penceresinde işlemi doğrulayın.</li>
     </ol>
     <p>Hesabınız ve tüm bulut verileriniz <strong>anında ve kalıcı olarak</strong> silinir.</p>
   </div>
@@ -100,7 +100,7 @@ footer a{color:var(--dim);margin:0 10px}
 <!-- ─────────────────────────── ENGLISH ─────────────────────────── -->
 <div class="en">
   <h1>Account Deletion</h1>
-  <p class="date">Cinema+ | What to Watch? — Last updated: July 8, 2026</p>
+  <p class="date">Cinema+ | What to Watch? — Last updated: July 11, 2026</p>
 
   <p>You can delete your Cinema+ account and all data linked to it at any time. We offer two methods:</p>
 
@@ -108,8 +108,8 @@ footer a{color:var(--dim);margin:0 10px}
     <h2>Method 1 — In the app <span class="tag fast">INSTANT</span></h2>
     <ol>
       <li>Open the Cinema+ app and go to the <strong>Profile</strong> tab.</li>
-      <li>Tap <strong>"Delete Account"</strong> on your account card.</li>
-      <li>Confirm the action in the dialog.</li>
+      <li>Open the <strong>Danger Zone</strong> section.</li>
+      <li>Tap <strong>"Delete Account"</strong> and confirm the action in the dialog.</li>
     </ol>
     <p>Your account and all cloud data are deleted <strong>immediately and permanently</strong>.</p>
   </div>
@@ -143,7 +143,9 @@ footer a{color:var(--dim);margin:0 10px}
   <div class="wrap">
     <a href="index.html"><span class="tr">Ana sayfa</span><span class="en">Home</span></a>
     <a href="gizlilik-politikasi.html"><span class="tr">Gizlilik politikası</span><span class="en">Privacy policy</span></a>
-    <div style="margin-top:10px">© 2026 Cinema+ | What to Watch?</div>
+    <a href="kullanim-sartlari.html"><span class="tr">Kullanım şartları</span><span class="en">Terms of service</span></a>
+    <a href="https://cinema.mbkm.com.tr/download"><span class="tr">Uygulamayı indir</span><span class="en">Download app</span></a>
+    <div style="margin-top:10px">© 2026 Cinema+ | <span class="tr">Ne İzlesem?</span><span class="en">What to Watch?</span></div>
   </div>
 </footer>
 
@@ -151,7 +153,7 @@ footer a{color:var(--dim);margin:0 10px}
 (function(){
   var root=document.documentElement, btn=document.getElementById('langBtn'),
       lt=document.getElementById('lt'), le=document.getElementById('le');
-  var titles={tr:'Hesap Silme — Cinema+ | What to Watch?',en:'Account Deletion — Cinema+ | What to Watch?'};
+  var titles={tr:'Hesap Silme — Cinema+ | Ne İzlesem?',en:'Account Deletion — Cinema+ | What to Watch?'};
   function setLang(l,persist){
     root.dataset.lang=l; root.lang=l; document.title=titles[l];
     lt.classList.toggle('on',l==='tr'); le.classList.toggle('on',l==='en');
