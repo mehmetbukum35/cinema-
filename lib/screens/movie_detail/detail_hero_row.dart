@@ -179,7 +179,7 @@ class DetailHeroRow extends StatelessWidget {
                                 'Film'),
                       style: TextStyle(
                         color: movie.isTV ? c.blue : c.red,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

@@ -113,7 +113,7 @@ class SearchFilterSheet {
                               'COUNTRY / REGION',
                           style: TextStyle(
                             color: c.dim,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
                           ),
@@ -165,7 +165,7 @@ class SearchFilterSheet {
                               'PLATFORM',
                           style: TextStyle(
                             color: c.dim,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
                           ),
@@ -211,7 +211,7 @@ class SearchFilterSheet {
                               'MINIMUM TMDB SCORE',
                           style: TextStyle(
                             color: c.dim,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
                           ),

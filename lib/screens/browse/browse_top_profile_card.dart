@@ -115,7 +115,7 @@ class BrowseTopProfileCard extends ConsumerWidget {
                         '@${profile.username}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: c.dim, fontSize: 11),
+                        style: TextStyle(color: c.dim, fontSize: 12),
                       ),
                     ],
                   ),
@@ -135,7 +135,7 @@ class BrowseTopProfileCard extends ConsumerWidget {
                       tr?.get('top_lists_you') ?? 'Sen',
                       style: TextStyle(
                         color: c.gold,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),

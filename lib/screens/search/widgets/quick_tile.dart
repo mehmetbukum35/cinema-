@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/spring_button.dart';
 
 /// Arama ekranı hızlı erişim kutucuğu.
 class SearchQuickTile extends StatelessWidget {
@@ -23,7 +24,7 @@ class SearchQuickTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
-      child: GestureDetector(
+      child: SpringButton(
         onTap: () {
           HapticFeedback.lightImpact();
           onTap();

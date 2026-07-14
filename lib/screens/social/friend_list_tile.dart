@@ -112,7 +112,7 @@ class FriendListTile extends StatelessWidget {
                                 '$tasteScore% match',
                             style: TextStyle(
                               color: c.gold,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
