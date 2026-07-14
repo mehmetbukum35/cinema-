@@ -73,7 +73,7 @@ class _SentRecommendationsCardState
                 children: [
                   Text(
                     tr?.get('sent_recommendations_title') ??
-                        'Arkadaşlarına Önerdiklerin',
+                        'Önerdiklerim',
                     style: TextStyle(
                       color: c.ink,
                       fontSize: 16,
@@ -83,7 +83,7 @@ class _SentRecommendationsCardState
                   const SizedBox(height: 2),
                   Text(
                     tr?.get('sent_recommendations_subtitle') ??
-                        'Arkadaşlarına gönderdiğin film ve diziler',
+                        'Arkadaşlarına gönderdiklerin',
                     style: TextStyle(color: c.dim, fontSize: 12),
                   ),
                 ],

@@ -741,14 +741,13 @@ const Map<String, String> kEnStrings = {
   'semantics_spoiler_toggle': 'Toggle spoiler flag',
   'semantics_private_toggle': 'Toggle private review',
   'semantics_save_review': 'Save review',
-  'sent_recommendations_title': 'Recommended to Friends',
-  'sent_recommendations_subtitle': 'Films and shows you shared with friends',
+  'sent_recommendations_title': 'Sent',
+  'sent_recommendations_subtitle': 'Films and shows you sent',
   'sent_recommendations_empty':
       'You haven\'t recommended anything to friends yet.',
   'sent_recommendation_to': 'To {} · {}',
-  'received_recommendations_title': 'Recommended by Friends',
-  'received_recommendations_subtitle':
-      'Films and shows friends shared with you',
+  'received_recommendations_title': 'Recommended',
+  'received_recommendations_subtitle': 'Films and shows recommended to you',
   'received_recommendations_empty': 'No recommendations from friends yet.',
   'received_recommendation_from': 'From {} · {}',
   'username_prompt_title': 'Choose a Username',

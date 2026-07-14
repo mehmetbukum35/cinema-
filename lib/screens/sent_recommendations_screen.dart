@@ -67,7 +67,7 @@ class _SentRecommendationsScreenState
             children: [
               Text(
                 tr?.get('sent_recommendations_title') ??
-                    'Arkadaşlarına Önerdiklerin',
+                    'Önerdiklerim',
                 style: TextStyle(
                   color: c.ink,
                   fontSize: 18,
@@ -76,7 +76,7 @@ class _SentRecommendationsScreenState
               ),
               Text(
                 tr?.get('sent_recommendations_subtitle') ??
-                    'Arkadaşlarına gönderdiğin film ve diziler',
+                    'Arkadaşlarına gönderdiklerin',
                 style: TextStyle(
                   color: c.dim,
                   fontSize: 12,

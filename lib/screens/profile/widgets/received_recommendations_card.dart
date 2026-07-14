@@ -75,7 +75,7 @@ class _ReceivedRecommendationsCardState
                 children: [
                   Text(
                     tr?.get('received_recommendations_title') ??
-                        'Arkadaşlarımın Bana Önerdikleri',
+                        'Önerilenler',
                     style: TextStyle(
                       color: c.ink,
                       fontSize: 16,
@@ -85,7 +85,7 @@ class _ReceivedRecommendationsCardState
                   const SizedBox(height: 2),
                   Text(
                     tr?.get('received_recommendations_subtitle') ??
-                        'Arkadaşlarının sana gönderdiği film ve diziler',
+                        'Sana gelen film ve diziler',
                     style: TextStyle(color: c.dim, fontSize: 12),
                   ),
                 ],
