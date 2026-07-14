@@ -10,6 +10,7 @@ import '../services/db_helper.dart';
 import '../services/notification_service.dart';
 import '../services/localization_service.dart';
 import '../screens/login_screen.dart';
+import '../widgets/app_toast.dart';
 import 'watchlist_provider.dart';
 import 'swipe_provider.dart';
 import 'social_provider.dart';
@@ -553,35 +554,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _endLocalSession(wipeLocalData: wipeLocalData);
   }
 
+  /// [PrefsService.resetAll] sonrası: depolama zaten temiz; bellekteki oturumu
+  /// sıfırla. Oturum süresi doldu snackbar'ı göstermez.
+  Future<void> resetAfterDataWipe() async {
+    await NotificationService.instance.unregisterToken();
+    if (_googleInitialized) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint("Google sign-out after data wipe failed (ignored): $e");
+      }
+    }
+    state = AuthState();
+    await _invalidateGuestProviders();
+  }
+
   Future<void> clearSession() async {
     await _endLocalSession(wipeLocalData: false);
 
     final context = NotificationService.navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context)?.get('session_expired_message') ??
-              'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label:
-              AppLocalizations.of(context)?.get('auth_title_login') ??
-              'Giriş Yap',
-          textColor: Colors.white,
-          onPressed: () {
-            if (context.mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            }
-          },
-        ),
-      ),
+    showAppSnackBar(
+      context,
+      AppLocalizations.of(context)?.get('session_expired_message') ??
+          'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
+      backgroundColor: Theme.of(context).colorScheme.error,
+      duration: const Duration(seconds: 5),
+      actionLabel:
+          AppLocalizations.of(context)?.get('auth_title_login') ?? 'Giriş Yap',
+      onAction: () {
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
+      },
     );
   }
 

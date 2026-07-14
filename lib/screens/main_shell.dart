@@ -9,6 +9,7 @@ import '../providers/couch_provider.dart';
 import '../providers/social_provider.dart';
 import '../utils/username_helper.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/app_toast.dart';
 import 'browse_screen.dart';
 import 'swipe_screen.dart';
 import 'together_screen.dart';
@@ -70,20 +71,15 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (couch.hasPendingInvite) {
       _handledCouchResumeId = session.id;
       final name = session.friendName;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('couch_invite_waiting').replaceAll('{}', name) ??
-                '$name seni bekliyor!',
-          ),
-          action: SnackBarAction(
-            label: tr?.get('couch_live_title') ?? 'Birlikte Seç',
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CouchScreen())),
-          ),
-          duration: const Duration(seconds: 8),
-        ),
+      showAppSnackBar(
+        context,
+        tr?.get('couch_invite_waiting').replaceAll('{}', name) ??
+            '$name seni bekliyor!',
+        duration: const Duration(seconds: 8),
+        actionLabel: tr?.get('couch_live_title') ?? 'Birlikte Seç',
+        onAction: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CouchScreen())),
       );
     } else if (session.status == 'active' || session.status == 'matched') {
       _handledCouchResumeId = session.id;

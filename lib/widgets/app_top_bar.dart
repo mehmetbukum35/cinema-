@@ -16,6 +16,7 @@ import '../screens/my_reviews_screen.dart';
 import '../screens/social_screen.dart';
 import '../utils/username_helper.dart';
 import '../widgets/about_sheet.dart';
+import '../widgets/app_toast.dart';
 
 /// Her sekmenin üstünde duran global bar: marka + sürpriz zarı + rozetli
 /// avatar. Avatar, Sosyal / Tercihler / Hesap gruplu açılır menüyü açar.
@@ -84,14 +85,11 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
       }
       if (!mounted) return;
       if (results.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('browse_conn_error') ??
-                  'Bağlantı hatası veya sonuç bulunamadı.',
-            ),
-            backgroundColor: AppColors.red,
-          ),
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('browse_conn_error') ??
+              'Bağlantı hatası veya sonuç bulunamadı.',
+          success: false,
         );
         return;
       }
@@ -104,9 +102,7 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.red),
-      );
+      showAppToast(context, e.toString(), success: false);
     } finally {
       _luckyBusy = false;
     }

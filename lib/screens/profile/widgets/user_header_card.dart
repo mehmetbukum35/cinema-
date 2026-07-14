@@ -13,6 +13,7 @@ import '../../../widgets/spring_button.dart';
 import '../../../utils/username_helper.dart';
 import '../../../widgets/logout_confirm_dialog.dart';
 import '../../../widgets/auth_conflict_dialog.dart';
+import '../../../widgets/app_toast.dart';
 import '../../login_screen.dart';
 import 'sync_header_action.dart';
 
@@ -31,7 +32,6 @@ class UserHeaderCard extends ConsumerWidget {
     WidgetRef ref,
     Future<AuthResult> Function() signIn,
   ) async {
-    final c = context.c;
     try {
       final result = await signIn();
       if (!context.mounted) return;
@@ -67,18 +67,14 @@ class UserHeaderCard extends ConsumerWidget {
       } else if (result.status == AuthStatus.error) {
         final errKey = result.errorMessage ?? 'auth_err_login_failed';
         final message = AppLocalizations.of(context)?.get(errKey) ?? errKey;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: c.red),
-        );
+        showAppToast(context, message, success: false);
       }
     } catch (e) {
       if (context.mounted) {
         final tr = AppLocalizations.of(context);
         final formatString = tr?.get('error_occurred_msg') ?? 'Error: {}';
         final message = formatString.replaceFirst('{}', e.toString());
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: c.red),
-        );
+        showAppToast(context, message, success: false);
       }
     }
   }

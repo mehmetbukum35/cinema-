@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
+import '../widgets/app_toast.dart';
 import 'movie_detail_sheet.dart';
 import 'swipe/widgets/dna_milestone_sheet.dart';
 import 'swipe/widgets/filter_labels.dart';
@@ -79,13 +80,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
       } catch (e) {
         debugPrint("Error rating movie: $e");
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)?.get('error_saving_rating') ??
-                    'Error saving rating.',
-              ),
-            ),
+          showAppToast(
+            context,
+            AppLocalizations.of(context)?.get('error_saving_rating') ??
+                'Error saving rating.',
+            success: false,
           );
         }
       }
@@ -101,13 +100,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     } catch (e) {
       debugPrint("Error rating movie: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('error_saving_rating') ??
-                  'Error saving rating.',
-            ),
-          ),
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('error_saving_rating') ??
+              'Error saving rating.',
+          success: false,
         );
       }
     } finally {
@@ -146,13 +143,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
       } catch (e) {
         debugPrint("Error undoing rating: $e");
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)?.get('error_undoing_rating') ??
-                    'Error undoing rating.',
-              ),
-            ),
+          showAppToast(
+            context,
+            AppLocalizations.of(context)?.get('error_undoing_rating') ??
+                'Error undoing rating.',
+            success: false,
           );
         }
       }
@@ -164,13 +159,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     } catch (e) {
       debugPrint("Error undoing rating: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('error_undoing_rating') ??
-                  'Error undoing rating.',
-            ),
-          ),
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('error_undoing_rating') ??
+              'Error undoing rating.',
+          success: false,
         );
       }
     } finally {

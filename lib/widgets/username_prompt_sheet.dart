@@ -4,6 +4,7 @@ import '../providers/social_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/username_helper.dart';
+import '../widgets/app_toast.dart';
 
 /// Web profili ve sosyal özellikler için kullanıcı adı belirleme sheet'i.
 /// Giriş sonrası (allowSkip: true) veya halka açık profil açılırken
@@ -36,15 +37,13 @@ class _UsernamePromptSheetState extends ConsumerState<UsernamePromptSheet> {
 
   Future<void> _save() async {
     final tr = AppLocalizations.of(context);
-    final c = context.c;
     final username = _usernameCtrl.text.trim().toLowerCase();
     final validationKey = validateUsername(username);
     if (validationKey != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr?.get(validationKey) ?? validationKey),
-          backgroundColor: c.red,
-        ),
+      showAppToast(
+        context,
+        tr?.get(validationKey) ?? validationKey,
+        success: false,
       );
       return;
     }
@@ -58,20 +57,14 @@ class _UsernamePromptSheetState extends ConsumerState<UsernamePromptSheet> {
 
     if (success) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('profile_updated_successfully') ??
-                'Profile updated successfully.',
-          ),
-          backgroundColor: c.gold,
-        ),
+      showAppToast(
+        context,
+        tr?.get('profile_updated_successfully') ??
+            'Profile updated successfully.',
       );
     } else {
       final err = ref.read(socialProvider).error ?? 'Bir hata oluştu';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(err), backgroundColor: c.red));
+      showAppToast(context, err, success: false);
     }
   }
 

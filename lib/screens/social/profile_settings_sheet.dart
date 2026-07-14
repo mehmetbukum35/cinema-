@@ -4,6 +4,7 @@ import '../../providers/social_provider.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/username_helper.dart';
+import '../../widgets/app_toast.dart';
 
 /// Profil özelleştirme alt sayfası: kullanıcı adı + herkese açık anahtarı.
 /// Controller ve isPublic durumu üst ekranda yaşar (sheet kapansa da
@@ -12,12 +13,14 @@ class ProfileSettingsSheet extends ConsumerStatefulWidget {
   final TextEditingController usernameCtrl;
   final bool isPublic;
   final ValueChanged<bool> onPublicChanged;
+  final bool allowSkip;
 
   const ProfileSettingsSheet({
     super.key,
     required this.usernameCtrl,
     required this.isPublic,
     required this.onPublicChanged,
+    this.allowSkip = false,
   });
 
   @override
@@ -134,15 +137,13 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
               onPressed: () async {
                 final username = widget.usernameCtrl.text.trim().toLowerCase();
                 if (username.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(
-                              context,
-                            )?.get('please_enter_a_username') ??
-                            'Please enter a username.',
-                      ),
-                    ),
+                  showAppToast(
+                    context,
+                    AppLocalizations.of(
+                          context,
+                        )?.get('please_enter_a_username') ??
+                        'Please enter a username.',
+                    success: false,
                   );
                   return;
                 }
@@ -152,23 +153,17 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
                     .setupProfile(username, _isPublic);
                 if (success && context.mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(
-                              context,
-                            )?.get('profile_updated_successfully') ??
-                            'Profile updated successfully.',
-                      ),
-                      backgroundColor: c.gold,
-                    ),
+                  showAppToast(
+                    context,
+                    AppLocalizations.of(
+                          context,
+                        )?.get('profile_updated_successfully') ??
+                        'Profile updated successfully.',
                   );
                 } else if (context.mounted) {
                   final err =
                       ref.read(socialProvider).error ?? 'Bir hata oluştu';
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(err), backgroundColor: c.red),
-                  );
+                  showAppToast(context, err, success: false);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -186,6 +181,17 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
+            if (widget.allowSkip) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  AppLocalizations.of(context)?.get('username_prompt_later') ??
+                      'Later',
+                  style: TextStyle(color: c.dim, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ],
         ),
       ),

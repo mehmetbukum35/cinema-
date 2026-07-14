@@ -6,7 +6,6 @@ import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../providers/watchlist_provider.dart';
-import '../providers/swipe_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
@@ -124,10 +123,10 @@ class ProfileScreen extends ConsumerWidget {
         }
       }
       await PrefsService.resetAll();
-      ref.invalidate(watchlistProvider);
-      ref.invalidate(statsProvider);
-      ref.invalidate(swipeProvider);
+      await ref.read(authProvider.notifier).resetAfterDataWipe();
+      ref.invalidate(syncProvider);
       if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         showAppToast(
           context,
           AppLocalizations.of(context)?.get('all_data_reset') ??
