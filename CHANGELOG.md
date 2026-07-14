@@ -5,6 +5,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- **Pick Together (live couch mode)**: two friends swipe the same deck on their own phones; the first mutual like wins. Deck is built from the shared watchlist intersection plus the recommendation engine's picks; realtime via short polling (shared-hosting friendly), FCM pushes for invite and match, one-active-session rule, and the opponent's individual votes are never exposed (only progress). New `/social/couch/*` endpoints, `couch_sessions` table (migration 014), Together-tab LIVE card with pending-invite badge, full session screen (friend picker → voting → match celebration / no-match retry)
 - DNA milestone moments in the swipe loop: a one-time invite sheet at the 5th/25th/50th rating surfaces Cinema DNA inside the core loop (its only entry point was a Profile-tab banner) and shows the measured recommendation hit rate for the first time
 - Release-reminder disclosure: adding an unreleased title to the watchlist now tells the user "we'll remind you on release day" (the reminder was already scheduled silently)
 - End-to-end auth+sync flow test (`test/auth_sync_flow_test.dart`): real ApiService/SyncService/SQLite against a stateful fake backend — covers push/pull, second-device pull, last-write-wins both ways, silent token refresh with rotation, session expiry keeping local data, and idempotent re-push after re-login

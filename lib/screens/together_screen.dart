@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
+import '../providers/couch_provider.dart';
 import '../providers/social_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/spring_button.dart';
+import 'couch_screen.dart';
 import 'match_screen.dart';
 import 'social_screen.dart';
 
@@ -21,6 +24,17 @@ class TogetherScreen extends ConsumerStatefulWidget {
 }
 
 class _TogetherScreenState extends ConsumerState<TogetherScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Bekleyen "Birlikte Seç" daveti var mı? (kartta rozet gösterilir)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(authProvider).isAuthenticated) {
+        ref.read(couchProvider.notifier).checkActive();
+      }
+    });
+  }
+
   void _push(Widget screen) {
     HapticFeedback.lightImpact();
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
@@ -70,6 +84,22 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
             ),
             const SizedBox(height: 12),
 
+            // ── Birlikte Seç (CANLI): iki telefon, aynı deste, ilk ortak
+            // beğeni kazanır. Bekleyen davet varsa kart bunu duyurur. ──────
+            Builder(
+              builder: (context) {
+                final couch = ref.watch(couchProvider);
+                final invite = couch.hasPendingInvite ? couch.session : null;
+                return _liveCard(
+                  c: c,
+                  tr: tr,
+                  inviteFrom: invite?.friendName,
+                  onTap: () => _push(const CouchScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
             // ── Bento: iki kompakt eşleştirme modu ────────────────────────
             Row(
               children: [
@@ -104,6 +134,108 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "Birlikte Seç" canlı oturum kartı: crimson vurgulu, CANLI rozetli.
+  /// Bekleyen davet varsa alt metin davetle değişir ve nabız noktası yanar.
+  Widget _liveCard({
+    required ThemePalette c,
+    required AppLocalizations? tr,
+    String? inviteFrom,
+    required VoidCallback onTap,
+  }) {
+    final subtitle = inviteFrom != null
+        ? (tr?.get('couch_invite_waiting').replaceAll('{}', inviteFrom) ??
+              '$inviteFrom seni bekliyor!')
+        : (tr?.get('couch_live_subtitle') ?? 'Canlı: iki telefon, tek karar');
+    return SpringButton(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: c.crimson.withValues(alpha: inviteFrom != null ? 0.7 : 0.35),
+            width: 1.5,
+          ),
+          boxShadow: CinemaShadows.card,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.crimson.withValues(alpha: 0.14),
+              ),
+              alignment: Alignment.center,
+              child: const Text('🍿', style: TextStyle(fontSize: 26)),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          tr?.get('couch_live_title') ?? 'Birlikte Seç',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.crimson,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          tr?.get('couch_live_badge') ?? 'CANLI',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: inviteFrom != null ? c.crimson : c.dim,
+                      fontSize: 12,
+                      fontWeight: inviteFrom != null
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: c.dim, size: 24),
           ],
         ),
       ),
