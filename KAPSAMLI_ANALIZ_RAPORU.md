@@ -1,250 +1,165 @@
-# cinema+ (Ne İzlesem?) — Kapsamlı Uygulama Analizi
+# cinema+ — Kapsamlı Uygulama Analizi (2. Tur)
 
-*Tarih: 5 Temmuz 2026 — Yöntem: kaynak kodun statik incelemesi, git geçmişi taraması, repodaki `UI_UX_ANALIZ.md` (2 Temmuz 2026) bulgularının kod üzerinde doğrulanması.*
+*Tarih: 14 Temmuz 2026 — Yöntem: kaynak kodun statik incelemesi (Flutter servis/provider katmanı satır satır, backend tüm src/), 5 Temmuz raporundaki bulguların kod üzerinde tek tek doğrulanması, `flutter analyze` + tam test takımlarının çalıştırılması.*
 
-**Yöntem ve sınırlar (dürüstlük notu):** Ekran görüntüsü verilmediği için görsel değerlendirme kod üzerinden yapıldı; çalışma zamanı performansı (FPS, bellek) ölçülmedi — bu alanlardaki tespitler kod desenlerinden çıkarımdır ve öyle işaretlendi. Son commit'in (9666f63) `UI_UX_ANALIZ.md`'deki bazı maddeleri zaten düzelttiği doğrulandı; düzeltilmiş şeyler tekrar eleştirilmedi.
+**Doğrulama durumu:** `flutter analyze` → 0 sorun. Flutter testleri → **199/199 geçti**. PHP testleri → **165/165 geçti** (551 assertion). Çalışma zamanı performansı (FPS/bellek) yine ölçülmedi; o alandaki tespitler kod deseninden çıkarımdır.
 
----
-
-## 1. Genel Mimari — 78/100
-
-**İyi olanlar:**
-- Katmanlama net: `models / providers / services / screens / theme / widgets`. Servisler Riverpod provider'ları üzerinden erişiliyor (`lib/services/providers.dart`) — DI fiilen var, testlerde mock'lanabiliyor (13 test dosyası bunu kanıtlıyor).
-- TMDB proxy mimarisi doğru bir karar: API anahtarı yalnızca sunucuda (`backend/src/Tmdb.php`), client'ta sıfır secret.
-- İki yönlü delta sync tasarımı (`sync_service.dart` ↔ `backend/src/Sync.php`) offline-first için sağlam: transaction'lı uygulama, eşzamanlı sync çağrılarının tek Future'a coalesce edilmesi (`sync_service.dart:12-28`).
-- Backend'de framework'süz minimalist router bilinçli bir tercih (paylaşımlı hosting kısıtı, `Jwt.php:3`'teki yorum bunu açıklıyor) ve mevcut ölçek için savunulabilir.
-
-**Kötü olanlar:**
-- 🟠 **God-class ekranlar:** `movie_detail_sheet.dart` 2.128, `profile_screen.dart` 2.012, `match_screen.dart` 1.762, `browse_screen.dart` 1.656 satır. Ekran katmanı toplam ~15.5k satır ve iş mantığı, UI ve formatlama iç içe. Provider'lar temizken ekranlar dev.
-- 🟠 **`Social.php` monoliti:** 667 satır, 19 public metod; arkadaşlık, aktivite akışı, öneri, puanlama, web render tetikleme tek sınıfta. Shotgun surgery riski.
-- 🟡 Widget deseni karışık: 15 ekran `StatefulWidget`, 13'ü `ConsumerWidget/ConsumerStatefulWidget`. Seçim kuralı görünmüyor.
-- 🟡 `api/index.php` 275 satırlık switch-router (28 route). Bugün okunabilir; 50+ route'ta bakım sorunu olur. Middleware kavramı yok — CORS, istek loglama, response zarfı eklemek her route'a dokunmayı gerektirir.
+> **Güncelleme (aynı gün):** Bölüm 8'deki öncelik listesinin 1-6. maddeleri + ölü kod temizliği (madde 8), e-posta marka düzeltmesi ve `/me`'ye `apple_sub` eklenmesi (madde 9) uygulandı — ayrıntılar `CHANGELOG.md` [Unreleased] bölümünde. Test durumu düzeltmeler sonrası: Flutter 200/200, PHP 167/167.
 
 ---
 
-## 2. Kod Kalitesi — 70/100
+## 0. 5 Temmuz Raporunun Karnesi — Ne Kapatıldı?
 
-- 🔴 **Sessiz hata yutma — en yaygın kod sorunu:** `lib/` altında **26 adet `catch (_)`**, bunların **10'u tamamen boş** (`catch (_) {}`). Örnek: `api_service.dart`'ta logout sırasında ağ hatası sessizce yutuluyor; `notification_service.dart`'ta foreground bildirim gösterimi başarısız olursa iz yok. *Neden problem:* prod'da "bildirim gelmiyor" şikâyeti teşhis edilemez. *Çözüm:*
-  ```dart
-  } catch (e, st) {
-    debugPrint('notif foreground fail: $e');
-    // ileride: crashlytics.recordError(e, st);
-  }
-  ```
-  Bilinçli best-effort ise en azından yorumla gerekçelendirin.
-- 🟠 **117 adet inline `isTr ? '...' : '...'` üçlüsü** — 649 satırlık düzgün bir `localization_service.dart` varken iki çeviri deseni yarışıyor. Yeni dil eklemek şu an fiilen imkânsız (üçlüler ikili). Tek `get()` desenine toplanmalı.
-- 🟡 Magic number'lar: cache TTL'leri milisaniye sabiti (43200000 yerine `const Duration(hours: 12)`), oy eşiği 15/3, rating skalası 0-3 hem Dart'ta hem PHP'de (`Social.php:506`) sabit — paylaşılan sözleşme tek yerde tanımlı değil.
-- 🟡 `Movie.fromJson` (`movie.dart:28-64`) `isTV` için 1/'1'/true/param dört biçimi kontrol ediyor — API sözleşmesinin gevşek olduğunun belirtisi. Backend'in tek tip döndürmesi kökten çözüm.
-- ✅ Artı: kod tabanında **gerçek TODO/FIXME neredeyse yok**; ölü kod izine rastlanmadı; PHP tarafında `declare(strict_types=1)` tutarlı.
-- 🟡 Kalıntı kod: `results_screen.dart:582` ve `search_screen.dart:256`'da artık geçersiz olan `TMDB_API_KEY` hata mesajı kontrolleri duruyor (anahtar artık client'ta yok) — yanıltıcı, silinmeli. `CONTRIBUTING.md` de hâlâ eski dart-define akışını anlatıyor.
+Önceki raporun **kritik ve yüksek öncelikli maddelerinin tamamına yakını kapatılmış** ve düzeltmeler kodda doğrulandı:
+
+| Eski bulgu | Durum |
+|---|---|
+| 26 sessiz `catch (_)` (10'u boş) | ✅ **5'e indi** (1 boş kaldı — `my_reviews_screen.dart:49`); kalanlar gerekçeli best-effort |
+| Swipe overlay yeşil/turuncu uyumsuzluğu | ✅ Overlay artık `c.rIyi`/`c.rBerbat` puan renklerini kullanıyor |
+| `rate()` hatasında geri bildirim yok | ✅ `swipe_screen._rate` SnackBar gösteriyor |
+| `db_helper` mobilde sessiz in-memory fallback | ✅ Android/iOS'ta `rethrow` (db_helper.dart:55-58) |
+| Rate-limit `/tmp` dosyaları | ✅ DB tablosuna taşındı (`Helpers.php::rate_limit`) |
+| Backend merkezi loglama yok | ✅ `cinema_error()` (uid+route+IP bağlamlı) |
+| 117 inline `isTr ?` çeviri üçlüsü | ✅ **3'e indi** (kalanlar URL dil parametresi — meşru); `lib/l10n/tr.dart` + `en.dart` katmanı kuruldu |
+| textScaler 1.15 kilidi | ✅ 1.3'e çıkarıldı (main.dart:151-154) |
+| HTTP timeout belirsizliği | ✅ ApiService 20 sn, TmdbService 12 sn timeout |
+| `TMDB_API_KEY` kalıntı hata yolları | ✅ Silindi |
+| `Image.network` karışık kullanımı | ✅ Kalmadı |
+| IndexedStack altında 5 eşzamanlı ticker | ✅ Her sekme `TickerMode(enabled: _tab == n)` ile sarıldı; `CinematicBackground`/`Shimmer` artık `disableAnimations`'a saygılı |
+| Prod URL'nin sessiz default'u | ✅ `AppConfig.warnIfProductionApiWithoutDefine()` |
+| God-class ekranlar | 🟡 Kısmen: swipe (1085→ana dosya + 9 widget) ve search bölündü; `movie_detail_sheet` 1.235, `onboarding` 1.220, `results` 1.068 satır hâlâ büyük |
+| `Social.php` monoliti | ✅ 9 trait'e bölündü (facade 32 satır) |
+| Dev fragman TR→EN çift isteği | ✅ EN sonucu TR anahtarına cache'leniyor |
+| `Colors.blue` yabancı renk, emoji rozetler | ✅ `Colors.blue` kalmadı |
+
+Bu tempo ve isabet oranı dikkate değer: 9 günde ~40 commit, iki kritik veri-kalitesi hatası ve tüm görünürlük eksikleri kapanmış.
 
 ---
 
-## 3. Performans Analizi — 65/100 *(statik çıkarım, ölçüm değil)*
+## 1. Puan Tablosu
 
-| Sorun | Etki | Öncelik | Çözüm |
+| Metrik | 5 Tem | 14 Tem | Not |
 |---|---|---|---|
-| `CinematicBackground`: 7 ekranda 14 sn sonsuz döngülü tam ekran `CustomPaint`; `MainShell` `IndexedStack` kullandığı için **5 sekmenin ticker'ı aynı anda çalışıyor** (`cinematic_background.dart`) | Pil tüketimi, her karede uyanan controller'lar | 🟠 | Sekme dışı ekranlarda `TickerMode(enabled: false)`; `disableAnimations`'ta `animate:false` |
-| Fragman aramada TR→EN iki ardışık istek (`tmdb_service.dart:354-407`), sonuç cache'lenmiyor | Detay her açılışta 2 istek | 🟡 | Tek istekle çöz veya sonucu TTL cache'e yaz |
-| `browse_screen`'de `SingleChildScrollView` içine gömülü çok sayıda `ListView.builder` (385, 431, 463, 498...) | Layout maliyeti; liste büyürse jank | 🟡 | `CustomScrollView` + `SliverList` |
-| `social_screen.dart:757, 1089`'da `Image.network` — projenin geri kalanı `CachedNetworkImage` | Önbelleksiz tekrar indirme | 🟢 | CachedNetworkImage'a geçir |
-| Keyword vektörü her `init()`'te yeniden kuruluyor, Future'larda timeout yok (`swipe_provider.dart:122-150`) | Bir istek asılırsa öneri hesabı bloklanır | 🟢 | Memoize + `Future.timeout` |
-
-✅ Artılar ciddi: TTL katmanlı cache + **stale-while-revalidate** (`tmdb_service.dart:665-775`) bu ölçekte bir uygulama için sofistike; token refresh coalescing gereksiz paralel refresh'i engelliyor; sync coalescing var.
+| Mimari | 78 | **84** | Trait bölünmesi, ekran refactor'ları, l10n katmanı |
+| Kod kalitesi | 70 | **81** | Sessiz catch'ler ve çeviri ikiliği bitti; ölü kod kalıntıları var |
+| Performans *(statik)* | 65 | **74** | Ticker/SWR iyi; DNA zinciri ve sync-bloklu yükleme düşürüyor |
+| Güvenlik | 78 | **80** | DB rate-limit + refresh grace + hesap devri akışı; e-posta sızıntısı ve JWT rotasyonu düşürüyor |
+| Hata yönetimi | 60 | **78** | Kalan risk: hata yolundaki korumasız `jsonDecode` |
+| Erişilebilirlik | 55 | **75** | Semantics kapsama commit'leri + 1.3 scaler (görsel doğrulama yapılmadı) |
+| Test edilebilirlik | 68 | **80** | 199+165 test, hepsi yeşil |
+| Bakım kolaylığı | 70 | **80** | Teknik borç ~3/10'a indi |
+| **Genel** | **71** | **79** | |
 
 ---
 
-## 4. Güvenlik Analizi — 78/100
+## 2. 🔴 En Önemli Yeni Bulgu: DNA Yayınlama Zinciri (mantık hatası + performans kaybı)
 
-**Doğrulanmış güçlü temeller** (birçok üretim uygulamasından iyi):
-- JWT: `hash_equals` ile timing-safe imza kontrolü + `exp` kontrolü (`Jwt.php:22,25`). Algoritma karışıklığı saldırısına da kapalı — header'daki `alg` hiç okunmuyor, imza her zaman HS256 ile hesaplanıyor.
-- Parolalar bcrypt; refresh token'lar DB'de SHA-256 hash + kullanımda rotasyon + parola değişiminde iptal (`Auth.php:76-97, 139, 341`).
-- SQL injection fiilen kapalı: her yerde PDO prepared statement, `ATTR_EMULATE_PREPARES=false` (`Db.php:16`).
-- XSS: kullanıcı verileri `htmlspecialchars` ile escape (`SocialWebRenderer.php:49-50`, template'ler).
-- Forgot-password'de user-enumeration'a karşı sabit-cevap + arka planda işleme (`Auth.php:152-177`).
-- Client'ta token'lar `flutter_secure_storage`'da; eski plaintext'ten migration yazılmış (`prefs_service.dart:493-533`).
-- **Git geçmişi tarandı: `Config.php`, keystore, service-account hiçbir zaman commit edilmemiş.** Gitignore doğru kurulmuş.
+**Zincir:** `RecommendationEngine.invalidateCache()` → `PrefsService.clearDnaCache()` → bu üç anahtarı da siler: `last_dna_json`, `last_dna_input_hash` **ve `last_published_dna_hash`** (prefs_service.dart:883-888).
 
-**Riskler:**
+`SyncService._performSync` her sync sonunda koşulsuz `invalidateCache()` çağırıyor (sync_service.dart:360) ve ardından `_autoPublishDnaBackground()` çalışıyor. Sonuç, **her sync'te**:
+
+1. DNA cache'i silindiği için `TasteDnaService.generate()` sıfırdan hesaplıyor (DB taraması + 20'ye kadar seed'in keyword listesi),
+2. `lastPublishedHash` silindiği için `currentHash != lastPublishedHash` her zaman doğru → **veri değişmese bile `POST /social/dna` sunucuya yeniden gönderiliyor**.
+
+Sync ise sık tetikleniyor: her swipe (5 sn debounce), watchlist ekleme/çıkarma, watchlist/stats ekran yüklemeleri. Yani hash mekanizmasının tüm amacı ("değişmediyse yayınlama") fiilen devre dışı. Ek yük: cihazda gereksiz hesap, sunucuda gereksiz UPDATE, `social_dna` rate-limit bütçesinin (varsayılan 20/dk) boşa tüketilmesi.
+
+**Çözüm:** `clearDnaCache()` yayın hash'ini silmesin (yalnızca `last_dna_json` + `last_dna_input_hash`); `last_published_dna_hash` yalnızca `clearAuthData()`'da temizlensin. Tek satırlık ayrım, zincirin tamamını düzeltir.
+
+İlgili ikinci israf: `watchlistProvider.load()` her çağrıda `invalidateCache(isNegativeChange: false)` yapıyor (watchlist_provider.dart:22-24) — sync zaten invalidate ediyor; bu çağrı fazlalık.
+
+---
+
+## 3. Mantık Hataları ve Kırılgan Sözleşmeler
+
+1. 🟠 **Hata sözleşmesi metin tabanlı:** İstemci, backend'in *Türkçe hata cümlelerini* birebir eşliyor (`auth_provider._mapBackendError` ~30 satırlık string switch; `api_service._throwRateLimited` aynı desen). En riskli örnek: `'E-posta adresi doğrulanmamış.'` cümlesi **doğrulama ekranına yönlendirme akışını** tetikliyor (auth_provider.dart:193-198). Backend'de bir yazım düzeltmesi bu akışı sessizce bozar. *Çözüm:* backend `['error' => msg, 'code' => 'email_unverified']` gibi makine anahtarı da dönsün; istemci yalnızca `code`'a baksın.
+
+2. 🟠 **Hata yolunda korumasız `jsonDecode`:** `api_service.dart`'ta ~25 metod hata durumunda `jsonDecode(response.body) as Map<String, dynamic>` yapıyor. Paylaşımlı hosting 503/504'te **HTML** hata sayfası döndürdüğünde bu `FormatException` fırlatır — kullanıcı `ApiException`'ın okunur mesajı yerine ham format hatası görür. Güvenli `_decodeJsonMap` zaten yazılmış ama yalnızca 3 metodda kullanılıyor. *Çözüm:* tüm decode'ları `_decodeJsonMap`'e geçirin (mekanik, düşük riskli değişiklik).
+
+3. 🟡 **`_sanitizeList`'in `forceEnforce` parametresi hiçbir şey yapmıyor** (tmdb_service.dart:1180 — gövdede hiç okunmuyor). `sanitizeListForTesting` bu parametreyi geçiriyor; test, var olmayan bir davranışı test ettiğini sanıyor. Ya davranışı gerçekten ekleyin ya parametreyi silin.
+
+4. 🟡 **Cache'lenmiş `Movie` nesneleri paylaşımlı-mutable:** `TmdbService._similarCache/_recommendationsCache` aynı `Movie` **örneklerini** döndürür; `RecommendationEngine.fetchSeedCandidates` ve `pickExplorationCandidates` bu paylaşılan nesnelerin `recoReason/recoSource` alanlarını yerinde yazar (recommendation_engine.dart:366-377, 429-435). Swipe kuyruğundaki bir kartın rozet gerekçesi, sonradan çalışan bir browse sıralamasıyla değişebilir; telemetri kaynağı da (`recoSource`) yarışa açık. *Çözüm:* cache'ten dönerken kopya listesi (`List.of`) + atıf alanlarını kopyada yazmak, ya da atıfları `Movie` dışında bir `Map<key, Attribution>`'da taşımak.
+
+5. 🟡 **`getWatchProviders` bölgeyi sabitliyor:** `resultsByRegion?['TR']` (tmdb_service.dart:529) — sınıfın `_region` alanı dururken. Bugün `_region` hep 'TR' olduğu için görünmez; EN kullanıcılar veya gelecekte bölge desteği eklendiğinde ilk kırılacak yer.
+
+6. 🟡 **`buildUserKeywordVector`:** yorum "en son 25 oylama" diyor, kod 15 alıyor (recommendation_engine.dart:193-197). Küçük ama sözleşme kayması sinyali.
+
+7. 🟡 **`sendFriendRequest` aramasında normalizasyon yok:** e-postalar DB'ye lowercase yazılıyor ama arama sorgusu lowercase'lenmiyor (FriendsTrait.php:9-14). MySQL'in ci collation'ı bugün örtüyor; SQLite testlerinde ve olası collation değişiminde davranış farklılaşır. `strtolower(trim(...))` yeterli.
+
+---
+
+## 4. Güvenlik / Gizlilik
+
+**Güçlü kalanlar:** timing-safe JWT + refresh rotasyonu ve **60 sn grace penceresi** (Auth.php:574-583 — mobil için incelikli çözüm), bcrypt + sahte-hash timing eşitleme, doğrulanmamış hesabın Google/Apple girişinde güvenli devri (parola sıfırlama + oturum düşürme), iki katmanlı adult filtresi, küfür/spam filtresi + topluluk şikayeti + moderasyon paneli, sırların gitignore ile korunması (doğrulandı: `Config.php` ve `*-service-account.json` izlenmiyor).
+
+**Yeni/kalan riskler:**
 
 | Risk | Seviye | Detay |
 |---|---|---|
-| Rate limit dosyaları `sys_get_temp_dir()`'de (`Helpers.php:48`) | 🟠 Orta | Paylaşımlı hosting'de izolasyon garantisi yok; başka süreç silebilir/okuyabilir. DB tablosuna taşıyın. |
-| JWT secret rotasyonu yok, `kid` desteği yok | 🟡 Orta | Secret sızarsa tüm oturumları öldürmeden rotasyon imkânsız. Header'a key-id ekleyin. |
-| Prod URL Flutter'da default (`app_config.dart:3-5`) | 🟡 Orta | dart-define unutulan dev build prod DB'ye yazar. Debug modda default'u boş bırakıp fail-fast yapın. |
-| CSRF | 🟢 Düşük | API token-based olduğu için klasik CSRF yüzeyi dar; public web profil sayfaları salt-okunur olduğu sürece sorun değil. |
-| Hassas veri loglama | 🟢 | Belirgin bir token/parola loglama izi görülmedi. |
+| **`GET /social/friends` e-posta sızdırıyor** | 🟠 | `friends`, `pending_received` **ve `pending_sent`** listeleri `u.email` içeriyor (FriendsTrait.php:132-170). Saldırı: kullanıcı adını ara → istek gönder → pending_sent'ten hedefin e-postasını oku. **UI e-postayı hiçbir yerde göstermiyor** (grep doğrulandı) — alan yanıttan tamamen çıkarılabilir; KVKK açısından da doğrusu bu. |
+| JWT secret rotasyonu / `kid` yok | 🟡 | 5 Temmuz'dan taşınan madde; hâlâ geçerli. |
+| `/me` yanıtında `apple_sub` yok, Apple bağlantı kaldırma ucu yok | 🟡 | Google için ikisi de var (Auth.php:600-634). Apple girişli kullanıcı profil ekranında bağlantı durumunu /me'den tazeleyemez; simetri eksik. |
+| `getFriends`/`activity` sayfalama yok | 🟢 | LIMIT'ler var; mevcut ölçekte yeterli. |
 
 ---
 
-## 5. Hata Yönetimi — 60/100
+## 5. Performans Kayıpları
 
-- ✅ `ApiException` ile durum kodu + mesaj eşlemesi, 401→sessiz refresh→retry döngüsü (`api_service.dart:59-135`) iyi tasarım.
-- ✅ Backend'de transaction + rollback disiplini var (`Sync.php:72-86`).
-- 🔴 26 sessiz catch (yukarıda) — en büyük eksik.
-- 🟠 `swipe_provider.dart`'ta `rate()`/`loadMore()` başarısızlığında **kullanıcıya hiçbir geri bildirim yok**: kullanıcı puan verir, sync sessizce düşer, kullanıcı bilmez. En azından SnackBar + otomatik retry kuyruğu gerekli (offline kuyruk zaten SQLite'ta var, eksik olan görünürlük).
-- 🟠 Backend'de merkezi loglama yok; `error_log()` bağlamsız (kullanıcı id, route, correlation id yok). Basit bir `Logger::error($route, $uid, $e)` sarmalayıcısı bile büyük fark yaratır.
-- 🟡 `db_helper.dart:50`: SQLite açılamazsa **sessizce in-memory mock'a düşüyor** — kırık migration prod'da fark edilmez, kullanıcı verisi uçucu belleğe yazılır. Bu fallback yalnızca test/web için sınırlandırılmalı, mobilde hata fırlatmalı.
-- Timeout/offline: HTTP timeout'larının varlığı doğrulanmadı — **emin değilim**, kontrol edilmeli (`http` paketi default'ta timeout'suz).
+1. 🟠 **Watchlist/istatistik ekranı sunucu sync'ini BEKLİYOR:** `WatchlistNotifier.load()` önce `performSync()`'i `await` ediyor, yerel listeyi ancak ondan sonra okuyor (watchlist_provider.dart:16-31; `StatsNotifier.load` aynı). Yavaş ağda kullanıcı, cihazında hazır duran veriye 20 sn'ye kadar (timeout) spinner arkasından bakıyor. Offline-first mimarinin vaadinin tersi. *Çözüm:* önce yerelden `state = AsyncValue.data(list)`, sync arkada; dönünce tazele.
 
----
+2. 🟠 **`loadTasteScores` N+1 HTTP:** her arkadaş için ayrı `GET /social/match/taste/{id}` — 20 arkadaş = seri 20 istek, her `loadFriends` sonrası (social_provider.dart:251-267). Backend'de `getFriends` yanıtına skorları gömmek ya da toplu `/social/match/taste` ucu tek istekte çözer.
 
-## 6–7. UI & UX Analizi — UI 72/100, UX 70/100
+3. 🟡 **İlk sync tek parça:** login sonrası `lastPush=0` → tüm yerel DB tek POST'ta gidiyor (overview metinleri dahil); sunucu tarafında kayıt başına SELECT+INSERT/UPDATE döngüsü (Sync.php:154-259, tablo başına 10k tavan). Binlerce puanı olan kullanıcıda paylaşımlı hosting `post_max_size`/zaman aşımı sınırına yaklaşır. Parça parça (ör. 500'lük) push güvenli olur.
 
-*(Ekran görüntüsü yok; repodaki WCAG-hesaplı denetim + kod doğrulamasına dayanıyor. Not: 5 Temmuz'daki 9666f63 commit'i puan butonu kontrastını ve bazı lokalizasyonları düzeltmiş — doğrulandı, tekrar sayılmıyor.)*
+4. 🟡 **`getTopProfiles` N+1 sorgu:** 20 profil × (2 korele alt sorgu + 1 poster sorgusu). Sınırlı olduğu için bugün sorun değil; yorum olarak işaretlemeye değer.
 
-**Hâlâ geçerli olanlar:**
-- 🔴 **textScaler `1.15`'e kilitli** (`main.dart:127`). Taşmayı önlüyor ama `UI_UX_ANALIZ.md`'nin önerdiği 1.3 yerine 1.15 seçilmiş — %130+ sistem yazısı kullanan yaşlı/az gören kullanıcıya fiilen "büyük yazı yok" deniyor. Sabit yükseklikler (`height: 64/48/275`) responsive yapılıp clamp 1.3'e çıkarılmalı; 9-11px fontlar (58 yer) tasfiye edilmeli.
-- 🟠 **Dokunma geri bildirimi kapalı:** `splashFactory: NoSplash` + transparan highlight + yaygın `GestureDetector`. Haptic kapalı cihazda "bastım mı?" belirsizliği. 80-120ms `AnimatedScale` pressed durumu ekleyin.
-- 🟠 **Swipe jest-renk uyumsuzluğu:** sağa kaydırma `rate(2)` (İyi/turuncu) veriyor ama overlay yeşil "LIKED" gösteriyor (`swipe_screen.dart:637,1078`). Kullanıcı Harika verdiğini sanıyor — **veri kalitesini de bozan** bir UX hatası (öneri motoru yanlış sinyal alıyor).
-- 🟡 Dokunma hedefleri: browse başlık ikonları 36px + 2px aralık (`browse_screen.dart:604-757`), arama temizle ikonu ~18px. Standart: ≥44-48px.
-- 🟡 Açık temada `browse_screen._skeleton()` koyu tema sabitleri kullanıyor → iskelet simsiyah bloklar (`browse_screen.dart:326-464`).
-- 🟡 `matchScore` rozeti bağlamsız yeşil sayı — yeni kullanıcı "87 ne?" der. İlk kullanımda tooltip/coach-mark hak ediyor.
-- 🟢 `login_screen`'de `autofillHints` yok — parola yöneticileri çalışmıyor; iki satırlık iş.
+5. 🟡 **TmdbService bellek cache'leri sınırsız** (`_similarCache`, `_recommendationsCache`, `_keywordIdsCache`) — oturum boyu büyür. Uzun oturumda yüzlerce girdi olabilir; basit bir 200-girdi LRU tavanı yeter. TTL sabitleri de hâlâ ham milisaniye (43200000) — `Duration` sabitine çevrilmedi (eski 🟡 madde, duruyor).
 
-**İyi olanlar:** tasarım token disiplini (`ThemePalette` + `context.c`), 150-320ms easeOut animasyon tutarlılığı, gerçek skeleton ekranlar, ayrımlı hata ekranları (bağlantı/401/genel + retry), swipe'ın buton alternatifi olması, bilinçli haptic dili. Bunlar sektör ortalamasının üstünde.
+6. 🟢 **Çifte sync coalescing:** hem `SyncService._syncFuture` hem `SyncNotifier._syncFuture` aynı korumayı yapıyor — zararsız ama tek yerde olmalı.
 
 ---
 
-## 8. Tutarsızlıklar
+## 6. Gereksiz Durumlar / Ölü Kod
 
-1. İki çeviri deseni (`get()` vs 117 inline üçlü) — kod standardı tutarsızlığının en büyüğü.
-2. `Image.network` vs `CachedNetworkImage` karışık kullanımı.
-3. Emoji ('🎬','📺','🌐') vs ikon karışımı — "premium sinematik" kimlikle çelişiyor.
-4. `movie_detail_sheet.dart:384` 'Dizi' rozeti `Colors.blue` — palette olmayan tek yabancı renk.
-5. Marka: `MaterialApp.title` "Ne İzlesem?", repo/README "cinema+", paket adı `ne_izlesem` — üç isim dolaşıyor.
-6. StatefulWidget/ConsumerWidget seçimi kuralsız.
-7. Backend'de input trim bazı uçlarda var (`Auth.php:25,54`) bazılarında yok (`Social.php:18,93`).
-
----
-
-## 9. Ürün Analizi
-
-**Ne iyi:** "Karar felci" problemi gerçek ve swipe + sosyal sinyal (arkadaş aktivitesi, ortak izleme listesi, taste-match) kombinasyonu doğru tez. Delta sync ile offline çalışma, bu kategorideki çoğu rakipte yok.
-
-**Eleştiriler:**
-- **Dönüşümü en çok düşürecek nokta:** puanlama hatasının sessiz kaybı + swipe renk karışıklığı → öneri motoru yanlış beslenirse ürünün çekirdek vaadi ("sana ne izleyeceğini söyleyeyim") çöker.
-- Sosyal özellikler arkadaş gerektiriyor; **cold-start** (arkadaşsız yeni kullanıcı) deneyimi kritik — arkadaş davet akışının (davet linki/deep link) sürtünmesizliği ağ etkisi için belirleyici.
-- "Nerede izlenir?" bilgisi var — JustWatch'ın tüm değer önerisi bu. Daha görünür olmalı (kart üstünde platform rozeti).
-- Eksik olabilecekler: bildirim tercihleri granülaritesi, izleme geçmişi dışa aktarma. Terk riski: swipe destesi bitince boş durum stratejisi kritik.
+1. **`PrefsService.getMovieRating` ölü kod** (prefs_service.dart:836-846) — hiçbir yerden çağrılmıyor; üstelik tüm ratings'i çekip O(n) tarıyor (aynı iş için indeksli `getRating` var). Silin.
+2. **`_apiKey => ''` mirası:** tmdb_service'te her parametre haritasına boş `'api_key'` ekleniyor, `_tmdbUri` geri atıyor; cache anahtarlarına da `api_key=` sızıyor (zararsız ama gürültü). Temizlik, cache anahtar sürümü v3 ile yapılabilir.
+3. **`invalidateTasteVector`** geriye-uyumluluk sarmalayıcısı — çağıran kalmadıysa silinmeli.
+4. **`SocialState.loading` tek bayrak, ~6 farklı işlemi temsil ediyor** (arkadaşlar, akış, kesişim, arkadaş aktivitesi, istekler…): bir ekranın yüklemesi diğerinin spinner'ını oynatabiliyor. `topProfilesLoading` için ayrışma zaten yapılmış — aynı desen geri kalanına da uygulanmalı.
+5. **`AuthState.copyWith` tutarsız semantik:** `error` için sentinel deseni özenle kurulmuş, ama `user`/`accessToken` hâlâ `?? this` — null'a çekilemiyor (logout `state = AuthState()` ile dolanıyor). Aynı sınıf içinde iki farklı copyWith felsefesi kafa karıştırır.
+6. **İki rakip tür-ağırlık modeli:** `getLikedGenreIds` (1/3/2 ağırlık, decay yok — discover filtresini besliyor) vs `getGenreWeights` (decay'li, negatif cezalı — benzerlik skorunu besliyor). Bilinçliyse bir yorumla belgelenmeli; değilse tek modele inilmeli.
 
 ---
 
-## 10. Görsel İyileştirme Önerileri
+## 7. Tutarsızlıklar
 
-- Sarı/turuncu dolgulu butonlarda koyu metin (siyah/sarı 15:1) — kısmen yapıldı, açık temadaki altın metinler için `#7A5A20` seviyesine inin.
-- Emoji rozetleri → `Icons.movie_outlined / tv_outlined` + tema rengi.
-- Detay sheet'te ekstralar yüklenirken spinner yerine sabit yükseklikli bölüm iskeleti (içerik zıplamasını keser).
-- Arama boş durumuna popüler arama chip'leri.
-- Match skoru için ilk-kullanım coach-mark'ı + ikon.
-
----
-
-## 11. Erişilebilirlik — 55/100 (en zayıf alan)
-
-- Semantics kapsaması adalı: swipe(4), browse(9), profile(6) var; **movie_detail_sheet, search, social, watchlist, login: 0**. İkon-only butonlar (paylaş, fragman, öner) TalkBack'te anlamsız. En ucuz çözüm: `tooltip` (hem görsel hem semantik çözer).
-- `CinematicBackground` ve `Shimmer` `disableAnimations`'ı yok sayıyor (vestibüler hassasiyet); oysa `swipe_screen._rate/_undo` kontrol ediyor — bilinç var, tutarlılık yok.
-- textScaler 1.15 kilidi + 58 yerde 9-11px font.
-- Kontrast ihlallerinin bir kısmı düzeltildi, açık tema altın metinler bekliyor.
+1. **Marka üçlemesi sürüyor:** paket `ne_izlesem`, uygulama "Cinema+ | What to Watch?", **doğrulama e-postaları hâlâ "Ne İzlesem Üyelik Doğrulama" başlığıyla gidiyor** (Auth.php:176, 741) — kullanıcıya dokunan en görünür tutarsızlık bu; e-posta şablonları öncelikli.
+2. `matchScore` iki farklı ölçek gösteriyor: kişisel skor 40-98 sigmoid, fallback `voteAverage*10` 1-99 (movie.dart:79-80). Aynı rozette iki dağılım — kullanıcı 72'nin hangi anlama geldiğini bilemez.
+3. `Tmdb::filterResponse` `json_encode`'u `JSON_UNESCAPED_UNICODE`'suz çağırıyor (Tmdb.php:134) — projenin geri kalanıyla çelişik; Türkçe karakterler \u escape'li gider (işlevsel zarar yok).
+4. `rate_limit` anahtarı kullanıcı-bazlı kovalarda bile IP içeriyor (`sync_u5-1.2.3.4`) — mobilde IP değişince pencere sıfırlanıyor; "kullanıcı bazlı sınır" yorumuyla tam örtüşmüyor.
+5. `respondThenContinue` deseni `register`/`resendVerification`'da ortak metod, `forgotPassword`'de kopya inline blok (Auth.php:681-690) — aynı iş iki üslup.
 
 ---
 
-## 12. Code Smells
+## 8. Öncelik Sırası
 
-**God Class:** `movie_detail_sheet`, `profile_screen`, `match_screen`, `browse_screen`, `Social.php` · **Long Method:** `browse_screen._skeleton()` (~140 satır), 200+ satırlık build metodları · **Magic Number:** TTL'ler, rating 0-3, oy eşikleri · **Duplicate Code:** 117 inline çeviri üçlüsü; backend'de çifte rate-limit stratejisi (dosya-IP + DB-attempt) · **Primitive Obsession:** rating'in int olarak dolaşması (enum/`Rating` value-type yok) · **Dead Code:** TMDB_API_KEY hata yolu kalıntıları · **Data Clumps:** `movie_id, is_tv` çifti her yerde beraber dolaşıyor — bir `TitleRef` tipi hak ediyor.
+**🔴 Bu hafta**
+1. `clearDnaCache`'ten `last_published_dna_hash`'i ayırın (Bölüm 2 — tek satır, her sync'teki gereksiz üretim + POST biter).
+2. `GET /social/friends` yanıtından `email` alanını çıkarın (Bölüm 4 — istemci zaten kullanmıyor, kırılma yok).
 
----
+**🟠 Bu sprint**
+3. Backend hatalarına makine-okur `code` alanı + istemcide metin eşlemesinin emekliye ayrılması.
+4. `api_service` hata yollarının `_decodeJsonMap`'e geçirilmesi.
+5. Watchlist/stats: önce yerel veri, sync arkada.
+6. Taste-match skorlarının tek istekte dönmesi.
 
-## 13. Test Edilebilirlik — 68/100
-
-- ✅ 13 Flutter test dosyası (provider/servis/model/widget), mock altyapısı, `sqflite_common_ffi`; backend'de 46 test metodu; **CI'de coverage eşiği zorunlu (Flutter mantık katmanı ≥%50, PHP ≥%60) + ratchet notu** — bu disiplin nadirdir.
-- 🟠 Eksikler: JWT saldırı testleri yok (imza kurcalama, `alg:none`, exp sınırı, refresh-token yeniden kullanımı — `JwtTest`'te 8 metod var ama saldırı senaryoları değil), Flutter'da integration test yok (auth akışı, offline→online sync, çakışma çözümü), `SyncTest` sadece 2 metod (last-write-wins çakışması test edilmemiş).
-- 🟡 2.000 satırlık ekranlar widget-test edilemez boyutta — bölmek test edilebilirliği de açar.
-
----
-
-## 14. Bakım Kolaylığı — 70/100
-
-- ✅ README/CONTRIBUTING/API_VE_SEMA.md/UI_UX_ANALIZ.md — dokümantasyon ortalamanın çok üstünde. PHP'de Türkçe açıklayıcı yorumlar gerekçeli.
-- 🟠 Yeni geliştirici servis katmanını hızla kavrar ama 2.000 satırlık bir ekrana özellik eklemek mayın tarlası. CONTRIBUTING.md güncel değil (TMDB_API_KEY).
-- **Teknik borç: 4.5/10** — borç var ama izole (ekran katmanı + lokalizasyon); çekirdek (sync, auth, cache) temiz olduğu için faiz düşük.
-
----
-
-## 15. Gelecekte Sorun Çıkaracak Noktalar
-
-1. **Dosya tabanlı rate-limit** kullanıcı artışında ilk kırılacak parça (tmp temizliği, yarış koşulları).
-2. **Switch-router** 50+ route'ta; middleware ihtiyacı (CORS, versiyonlama) doğduğunda yeniden yazım baskısı.
-3. **JWT rotasyonsuzluğu:** ilk güvenlik olayında tüm kullanıcıları logout etmek zorunda kalırsınız.
-4. **Aktivite/rating tablolarının büyümesi:** `getFriendSignals` `LIMIT 1000` ile çekiyor (`Social.php:639`) — arkadaş sayısı arttıkça sorgu maliyeti; index stratejisi migrations'ta gözden geçirilmeli.
-5. **TMDB API değişiklikleri:** proxy tek geçiş noktası olduğu için iyi konumdasınız — bu bir artı.
-6. **`isTr` üçlüleri:** üçüncü dil istendiği gün 117 nokta elle taranacak.
+**🟡 Sıradaki**
+7. Movie atıf alanlarının paylaşımlı-mutasyon sorunu; cache kopyalama.
+8. Ölü kod temizliği (getMovieRating, forceEnforce, invalidateTasteVector, _apiKey mirası).
+9. E-posta şablonlarında marka güncellemesi; `/me`'ye apple_sub + Apple unlink ucu.
+10. `movie_detail_sheet` / `onboarding` / `results` ekranlarının bölünmesi (kalan god-class'lar).
+11. JWT `kid`/rotasyon desteği (taşınan madde).
 
 ---
 
-## 16. Rakip Karşılaştırması *(genel bilgi, doğrulanmış ölçüm değil)*
+## 9. Sonuç
 
-| Rakip | Onlarda olup sizde zayıf olan |
-|---|---|
-| **Letterboxd** | Derin sosyal profil, listeler, inceleme kültürü — yorum/inceleme tarafı daha sığ |
-| **TV Time** | Bölüm-bazlı dizi takibi ve "sonraki bölüm" hatırlatması — dizi takibi başlık seviyesinde |
-| **JustWatch** | Platform bazlı fiyat/kiralama bilgisi ve platform-öncelikli keşif — "nerede izlenir" var ama ikincil |
-| **Trakt** | Açık API/entegrasyon ekosistemi, scrobbling |
-
-**Fark:** swipe keşif + arkadaş taste-match + offline-first sync kombinasyonu — üçü bir arada rakiplerde yok. Odak tavsiyesi: bölüm takibi gibi TV Time alanına girmek yerine "arkadaşınla ne izleyeceğine 2 dakikada karar ver" (together/match) hattını derinleştirmek.
-
----
-
-## 17. Önceliklendirme
-
-**🔴 Kritik**
-1. Sessiz `catch (_)` bloklarına log + `rate()` başarısızlığında kullanıcı geri bildirimi (veri bütünlüğü + teşhis)
-2. Swipe overlay renk/puan uyumsuzluğu (yanlış veri üretiyor)
-3. `db_helper` sessiz in-memory fallback'inin mobilde kapatılması (veri kaybı riski)
-
-**🟠 Yüksek**
-4. Rate-limit'i `/tmp`'den DB'ye taşımak
-5. Dev ekranların bölünmesi (önce `movie_detail_sheet`)
-6. textScaler 1.3 + sabit yüksekliklerin esnetilmesi
-7. Lokalizasyonun tek desene toplanması
-8. Backend merkezi loglama
-
-**🟡 Orta**
-9. JWT key-id/rotasyon desteği; JWT saldırı testleri
-10. Dokunma hedefleri + pressed feedback + Semantics/tooltip kapsaması
-11. `CinematicBackground` TickerMode/reduced-motion
-12. Flutter integration testleri (auth + sync)
-
-**🟢 Düşük**
-13. TMDB_API_KEY kalıntıları, CONTRIBUTING güncelleme, autofillHints, emoji→ikon, `Image.network`→cached, fragman çift isteği
-
----
-
-## 18. Sonuç Raporu
-
-**En başarılı yönler:** güvenlik temelleri (JWT/bcrypt/prepared statements/secure storage — hepsi kod üzerinde doğrulandı), TMDB proxy mimarisi, SWR'li cache, delta sync, CI coverage disiplini, tasarım token sistemi, dokümantasyon kültürü.
-
-**En büyük problemler:** God-class ekranlar, sistematik sessiz hata yutma, yarım lokalizasyon, erişilebilirlik açıkları.
-
-**Kullanıcı deneyimini en çok bozanlar:** puanlama hatasının sessiz kaybı, swipe renk karışıklığı, dokunma geri bildirimi yokluğu, büyük yazı kullanıcılarında 1.15 kilidi.
-
-**En kritik güvenlik sorunu:** kritik seviyede açık **yok** (bu nadirdir); en önemlisi `/tmp` rate-limit ve JWT rotasyonsuzluğu — ikisi de orta seviye.
-
-**En kritik performans sorunu:** IndexedStack altında 5 eşzamanlı animasyon ticker'ı (pil).
-
-**İlk 10 düzeltme:** yukarıdaki 🔴1-3 + 🟠4-8 + JWT testleri + Semantics/tooltip.
-
-| Metrik | Puan |
-|---|---|
-| Teknik borç | **4.5/10** (yönetilebilir, izole) |
-| Kod kalitesi | **70** |
-| Mimari | **78** |
-| UI | **72** |
-| UX | **70** |
-| Performans | **65** *(statik çıkarım)* |
-| Güvenlik | **78** |
-| Erişilebilirlik | **55** |
-| Bakım kolaylığı | **70** |
-| **Genel** | **71/100** |
-
-**Özet yargı:** Temelleri doğru atılmış, güvenlik ve altyapı kararları çoğu hobi projesinin (ve epey ticari projenin) üstünde bir kod tabanı. Zayıflıklar "yanlış mimari" değil, "büyüyen ekran katmanının disiplinsizleşmesi + görünürlük eksikliği (log/hata geri bildirimi) + erişilebilirliğin sona bırakılması" kategorisinde — hepsi kademeli, riski düşük refactor'larla kapatılabilir. En acil iş listesi bir sprint'lik: sessiz catch'ler, swipe rengi, rate hatası geri bildirimi ve rate-limit'in DB'ye taşınması.
+İki tur arasındaki fark bir olgunlaşma hikâyesi: önceki raporun "görünürlük eksikliği" teması (sessiz hatalar, geri bildirimsiz kayıplar) fiilen kapanmış; test tabanı büyümüş ve tamamı yeşil; mimari borç (monolit ekranlar/sınıflar) sistemli biçimde eritiliyor. Bugünkü sorunlar artık "yanlış davranış" değil, ağırlıkla **verimsizlik ve sözleşme kırılganlığı** kategorisinde — en ciddi ikisi (DNA yayın zinciri, arkadaş listesindeki e-posta alanı) toplamda yarım günlük iş. Genel puan **71 → 79**; ilk iki 🔴 madde ve hata-kodu sözleşmesi kapanırsa 82-83 bandı gerçekçi.

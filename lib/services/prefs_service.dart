@@ -833,18 +833,6 @@ class PrefsService {
     await clearDnaCache();
   }
 
-  static Future<int?> getMovieRating(int movieId, bool isTV) async {
-    final ratings = await DatabaseHelper().getRatings();
-    final match = ratings.firstWhere(
-      (r) =>
-          r['movie_id'] == movieId &&
-          (r['is_tv'] == 1) == isTV &&
-          r['deleted'] != 1,
-      orElse: () => <String, dynamic>{},
-    );
-    return match.isNotEmpty ? match['rating'] as int : null;
-  }
-
   // ─── DNA Caching ─────────────────────────────────────────────────────────────
   static const _keyLastDnaJson = 'last_dna_json';
   static const _keyLastDnaInputHash = 'last_dna_input_hash';

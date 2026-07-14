@@ -1177,7 +1177,6 @@ class TmdbService {
   Future<List<Movie>> _sanitizeList(
     List<Movie> list, {
     bool isSearch = false,
-    bool forceEnforce = false,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1217,7 +1216,7 @@ class TmdbService {
     List<Movie> list, {
     bool isSearch = false,
   }) {
-    return _sanitizeList(list, isSearch: isSearch, forceEnforce: true);
+    return _sanitizeList(list, isSearch: isSearch);
   }
 
   void _handleNon200Response(http.Response response) {
