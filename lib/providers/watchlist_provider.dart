@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
-import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
 
@@ -15,20 +14,27 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
 
   Future<void> load() async {
     try {
+      // Offline-first: yerel liste sync beklenmeden gösterilir — yavaş ağda
+      // kullanıcı cihazında hazır duran veriye 20 sn spinner arkasından
+      // bakmasın. Sync bittiğinde liste yeniden okunup tazelenir.
+      var list = await PrefsService.getWatchlist();
+      if (mounted) {
+        state = AsyncValue.data(list);
+      }
+
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
-          await ref
-              .read(recommendationEngineProvider)
-              .invalidateCache(isNegativeChange: false);
+          // Not: recommendation cache'i sync'in kendisi zaten invalidate
+          // ediyor; buradaki ikinci çağrı kaldırıldı.
+          list = await PrefsService.getWatchlist();
+          if (mounted) {
+            state = AsyncValue.data(list);
+          }
         } catch (e) {
           // SyncNotifier captures the error state globally
         }
-      }
-      final list = await PrefsService.getWatchlist();
-      if (mounted) {
-        state = AsyncValue.data(list);
       }
 
       // Çıkış hatırlatıcılarını listeyle hizala (başka cihazdan sync ile
@@ -116,17 +122,24 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   /// swipe akışı zaten kendi debounce'lu sync'ini planlıyor.
   Future<void> load({bool skipSync = false}) async {
     try {
+      // Offline-first: yerel istatistikler sync beklenmeden gösterilir;
+      // sync bitince yeniden hesaplanıp tazelenir (bkz. WatchlistNotifier.load).
+      var stats = await PrefsService.getStats();
+      if (mounted) {
+        state = AsyncValue.data(stats);
+      }
+
       final auth = ref.read(authProvider);
       if (!skipSync && auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
+          stats = await PrefsService.getStats();
+          if (mounted) {
+            state = AsyncValue.data(stats);
+          }
         } catch (e) {
           // SyncNotifier captures the error state globally
         }
-      }
-      final stats = await PrefsService.getStats();
-      if (mounted) {
-        state = AsyncValue.data(stats);
       }
     } catch (e, st) {
       if (mounted) {
