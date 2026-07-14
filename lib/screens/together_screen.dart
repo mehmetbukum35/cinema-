@@ -29,6 +29,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
     super.initState();
     // Bekleyen "Birlikte Seç" daveti var mı? (kartta rozet gösterilir)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (ref.read(authProvider).isAuthenticated) {
         ref.read(couchProvider.notifier).checkActive();
       }

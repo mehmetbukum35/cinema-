@@ -29,13 +29,18 @@ class CouchScreen extends ConsumerStatefulWidget {
 }
 
 class _CouchScreenState extends ConsumerState<CouchScreen> {
+  // dispose() içinde ref KULLANILAMAZ ("Cannot use ref after the widget was
+  // disposed"); notifier referansı initState'te alınır, dispose ref'siz çalışır.
+  late final CouchNotifier _couch;
+
   @override
   void initState() {
     super.initState();
+    _couch = ref.read(couchProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final notifier = ref.read(couchProvider.notifier);
-      notifier.checkActive();
-      notifier.startPolling();
+      if (!mounted) return;
+      _couch.checkActive();
+      _couch.startPolling();
       if (ref.read(socialProvider).friends.isEmpty) {
         ref.read(socialProvider.notifier).loadFriends();
       }
@@ -45,7 +50,7 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
   @override
   void dispose() {
     // Poll yalnızca bu ekran açıkken çalışır (pil/istek tasarrufu).
-    ref.read(couchProvider.notifier).stopPolling();
+    _couch.stopPolling();
     super.dispose();
   }
 
