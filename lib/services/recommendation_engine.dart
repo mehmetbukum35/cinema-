@@ -19,7 +19,8 @@ class ScoredMovie {
 /// Boru hattı (recall → rank):
 ///  1. Aday toplama: tür-bazlı discover + son "Harika"lardan TMDB
 ///     similar/recommendations (seed) + arkadaş sinyalleri (boost).
-///  2. Kaba sıralama: tür kosinüs benzerliği + TMDB puanı harmanı.
+///  2. Kaba sıralama: tür kosinüs benzerliği + TMDB puanı harmanı; birden
+///     fazla tohumun benzerlerinde geçen adaya kesişim bonusu eklenir.
 ///  3. Hassas re-rank: görünecek ilk dilim (top-K) keyword zevk vektörüyle
 ///     yeniden puanlanır.
 ///  4. Çeşitlilik (MMR-lite): birbirinin kopyası türdeki adaylar cezalandırılır
@@ -115,6 +116,20 @@ class RecommendationEngine {
         ..recoReasonType = 'friend'
         ..recoSource = 'friend';
     }
+  }
+
+  /// Çoklu tohum kesişimi bonusu: aday kaç FARKLI tohumun benzer/öneri
+  /// listesinde göründüyse, ilkinden sonraki her tohum için +[perSeed] alır
+  /// (en fazla [maxSeeds] tohum sayılır). Tek tohumdan gelen aday bonus almaz;
+  /// böylece seed/discover dengesi bozulmaz ama 2-3 beğeninin kesişimindeki
+  /// aday — zevkin ortak noktası, tekil benzerlikten güçlü sinyal — öne çıkar.
+  static double seedOverlapBoost(
+    int seedCount, {
+    double perSeed = 0.05,
+    int maxSeeds = 3,
+  }) {
+    if (seedCount <= 1) return 0.0;
+    return perSeed * (min(seedCount, maxSeeds) - 1);
   }
 
   /// İki id listesinin Jaccard benzerliği: |kesişim| / |birleşim|.
@@ -503,6 +518,18 @@ class RecommendationEngine {
         .where((t) => t.length >= 5)
         .toList();
 
+    // Çoklu tohum kesişimi: aynı aday kaç FARKLI tohumun benzer/öneri
+    // listesinden geldi? Tekilleştirme ilk kopyayı tutup gerisini atacağı
+    // için sayım burada, tekilleştirmeden ÖNCE yapılmalı.
+    final seedTitlesByKey = <String, Set<String>>{};
+    for (final m in candidates) {
+      final reason = m.recoReason;
+      if (m.recoSource == 'seed' && reason != null) {
+        final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+        (seedTitlesByKey[key] ??= <String>{}).add(reason);
+      }
+    }
+
     // Tekilleştir + dışlananları ele.
     final seen = <String>{};
     final fresh = <Movie>[];
@@ -546,9 +573,13 @@ class RecommendationEngine {
       if (cooldownKeys.contains(key)) {
         penalty -= cooldownPenalty;
       }
+      // Çoklu tohum kesişimi: 2+ beğeninin benzerlerinde geçen aday öne çıkar.
+      final overlap = seedOverlapBoost(seedTitlesByKey[key]?.length ?? 0);
 
       final raw =
-          blend(genreSim: genreSim, voteAverage: m.voteAverage) + penalty;
+          blend(genreSim: genreSim, voteAverage: m.voteAverage) +
+          penalty +
+          overlap;
       m.personalizedMatchScore = toDisplayScore(raw);
       m.recoSource ??= 'discover';
       scored.add(ScoredMovie(m, raw));
@@ -584,6 +615,7 @@ class RecommendationEngine {
         if (cooldownKeys.contains(key)) {
           penalty -= cooldownPenalty;
         }
+        final overlap = seedOverlapBoost(seedTitlesByKey[key]?.length ?? 0);
 
         final raw =
             blend(
@@ -591,7 +623,8 @@ class RecommendationEngine {
               kwSim: kwSim,
               voteAverage: m.voteAverage,
             ) +
-            penalty;
+            penalty +
+            overlap;
         m.personalizedMatchScore = toDisplayScore(raw);
         top[i].score = raw;
       }

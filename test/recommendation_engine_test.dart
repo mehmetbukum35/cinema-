@@ -165,6 +165,22 @@ void main() {
     });
   });
 
+  group('RecommendationEngine.seedOverlapBoost', () {
+    test('tek tohumdan gelen aday bonus almaz', () {
+      expect(RecommendationEngine.seedOverlapBoost(0), 0.0);
+      expect(RecommendationEngine.seedOverlapBoost(1), 0.0);
+    });
+
+    test('2+ tohum kesişimi tohum başına +0.05 verir', () {
+      expect(RecommendationEngine.seedOverlapBoost(2), closeTo(0.05, 1e-9));
+      expect(RecommendationEngine.seedOverlapBoost(3), closeTo(0.10, 1e-9));
+    });
+
+    test('bonus en fazla maxSeeds tohum sayar', () {
+      expect(RecommendationEngine.seedOverlapBoost(5), closeTo(0.10, 1e-9));
+    });
+  });
+
   group('RecommendationEngine.jaccard', () {
     test('kesişim/birleşim oranını doğru hesaplar', () {
       expect(
@@ -407,6 +423,94 @@ void main() {
         // Sadece 'Inception' (99) kalmalı
         expect(ranked.length, 1);
         expect(ranked.first.id, 99);
+      },
+    );
+  });
+
+  group('RecommendationEngine Seed Overlap Integration Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    test(
+      'rankForYou, birden fazla tohumun benzerlerinde geçen adayı öne çıkarmalıdır',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'results': [], 'keywords': []}),
+            200,
+          );
+        });
+        final engine = RecommendationEngine(TmdbService(client: client));
+
+        // Aynı aday (id 1) iki farklı tohumun listesinden gelmiş: iki kopya,
+        // farklı recoReason. id 2 tek tohumdan, id 3 discover'dan — üçünün de
+        // tür/puanı aynı, tek ayrıştırıcı kesişim bonusu olmalı.
+        final overlapA = _movie(1, title: 'Overlap Candidate')
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed A'
+          ..recoReasonType = 'seed';
+        final overlapB = _movie(1, title: 'Overlap Candidate')
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed B'
+          ..recoReasonType = 'seed';
+        final singleSeed = _movie(2, title: 'Single Seed Candidate')
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed A'
+          ..recoReasonType = 'seed';
+        final discover = _movie(3, title: 'Discover Candidate');
+
+        final ranked = await engine.rankForYou([
+          discover,
+          singleSeed,
+          overlapA,
+          overlapB,
+        ], diversify: false);
+
+        expect(ranked.length, 3);
+        expect(
+          ranked.first.id,
+          1,
+          reason: 'İki tohumun kesişimindeki aday en üste çıkmalı',
+        );
+      },
+    );
+
+    test(
+      'rankForYou, aynı tohumdan gelen kopyaları kesişim saymamalıdır',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'results': [], 'keywords': []}),
+            200,
+          );
+        });
+        final engine = RecommendationEngine(TmdbService(client: client));
+
+        // id 1 aynı tohumdan iki kez (recommendations + similar uçları aynı
+        // filmi dönebilir) — bu kesişim DEĞİL, bonus almamalı. id 2'nin puanı
+        // hafif yüksek; sahte bonus olsaydı id 1 öne geçerdi.
+        final dupA = _movie(1, title: 'Duplicate Candidate', vote: 7.0)
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed A'
+          ..recoReasonType = 'seed';
+        final dupB = _movie(1, title: 'Duplicate Candidate', vote: 7.0)
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed A'
+          ..recoReasonType = 'seed';
+        final better = _movie(2, title: 'Better Candidate', vote: 7.5)
+          ..recoSource = 'seed'
+          ..recoReason = 'Seed B'
+          ..recoReasonType = 'seed';
+
+        final ranked = await engine.rankForYou([
+          dupA,
+          dupB,
+          better,
+        ], diversify: false);
+
+        expect(ranked.first.id, 2);
       },
     );
   });
