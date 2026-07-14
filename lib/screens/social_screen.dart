@@ -212,58 +212,77 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: [
             Tab(
-              text:
-                  AppLocalizations.of(context)?.get('together_friends') ??
-                  'Friends',
-            ),
-            Tab(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)?.get('requests') ??
-                          'Requests',
-                    ),
-                    if (socialState.pendingReceived.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      _tabBadge(
-                        socialState.pendingReceived.length.toString(),
-                        background: c.red,
-                        foreground: Colors.white,
-                      ),
-                    ],
-                  ],
+              child: Semantics(
+                label: tr?.get('semantics_tab_friends') ?? 'Friends tab',
+                child: Text(
+                  tr?.get('together_friends') ?? 'Friends',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ),
             Tab(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)?.get('activity') ??
-                          'Activity',
-                    ),
-                    if (socialState.unseenRecommendations > 0) ...[
-                      const SizedBox(width: 6),
-                      _tabBadge(
-                        socialState.unseenRecommendations.toString(),
-                        background: c.gold,
-                        foreground: Colors.black,
+              child: Semantics(
+                label:
+                    tr?.get('semantics_tab_requests') ?? 'Friend requests tab',
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tr?.get('requests') ?? 'Requests',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
+                      if (socialState.pendingReceived.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        _tabBadge(
+                          socialState.pendingReceived.length.toString(),
+                          background: c.red,
+                          foreground: Colors.white,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
             Tab(
-              text: AppLocalizations.of(context)?.get('top_lists') ?? 'Popular',
+              child: Semantics(
+                label: tr?.get('semantics_tab_activity') ?? 'Activity tab',
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tr?.get('activity') ?? 'Activity',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      if (socialState.unseenRecommendations > 0) ...[
+                        const SizedBox(width: 6),
+                        _tabBadge(
+                          socialState.unseenRecommendations.toString(),
+                          background: c.gold,
+                          foreground: Colors.black,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Tab(
+              child: Semantics(
+                label:
+                    tr?.get('semantics_tab_top_profiles') ??
+                    'Popular profiles tab',
+                child: Text(
+                  tr?.get('top_lists') ?? 'Popular',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
           ],
         ),

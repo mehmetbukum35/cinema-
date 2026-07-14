@@ -771,7 +771,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                 decoration: InputDecoration(
                   hintText:
                       tr?.get('review_comment_hint') ??
-                      'Düşüncelerini paylaş...',
+                      'Share your thoughts...',
                   hintStyle: TextStyle(color: c.dim, fontSize: 13),
                   border: InputBorder.none,
                   counterText: '',
@@ -780,90 +780,113 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() {
-                        _isSpoiler = !_isSpoiler;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isSpoiler
-                            ? c.rBerbat.withValues(alpha: 0.15)
-                            : c.borderSoft.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isSpoiler ? c.rBerbat : c.borderSoft,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isSpoiler
-                                ? Icons.warning_amber_rounded
-                                : Icons.check_circle_outline_rounded,
-                            size: 14,
-                            color: _isSpoiler ? c.rBerbat : c.dim,
+                  Tooltip(
+                    message:
+                        tr?.get('semantics_spoiler_toggle') ??
+                        'Toggle spoiler flag',
+                    child: Semantics(
+                      button: true,
+                      label:
+                          tr?.get('semantics_spoiler_toggle') ??
+                          'Toggle spoiler flag',
+                      child: SpringButton(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _isSpoiler = !_isSpoiler;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            tr?.get('review_spoiler') ?? 'Spoiler İçerir',
-                            style: TextStyle(
-                              color: _isSpoiler ? c.rBerbat : c.ink,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: _isSpoiler
+                                ? c.rBerbat.withValues(alpha: 0.15)
+                                : c.borderSoft.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isSpoiler ? c.rBerbat : c.borderSoft,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isSpoiler
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.check_circle_outline_rounded,
+                                size: 14,
+                                color: _isSpoiler ? c.rBerbat : c.dim,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr?.get('review_spoiler') ??
+                                    'Contains spoilers',
+                                style: TextStyle(
+                                  color: _isSpoiler ? c.rBerbat : c.ink,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() {
-                        _isPrivate = !_isPrivate;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isPrivate
-                            ? c.gold.withValues(alpha: 0.15)
-                            : c.borderSoft.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isPrivate ? c.gold : c.borderSoft,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isPrivate
-                                ? Icons.lock_rounded
-                                : Icons.lock_open_rounded,
-                            size: 14,
-                            color: _isPrivate ? c.gold : c.dim,
+                  Tooltip(
+                    message:
+                        tr?.get('semantics_private_toggle') ??
+                        'Toggle private review',
+                    child: Semantics(
+                      button: true,
+                      label:
+                          tr?.get('semantics_private_toggle') ??
+                          'Toggle private review',
+                      child: SpringButton(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _isPrivate = !_isPrivate;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            tr?.get('review_private') ?? 'Gizli',
-                            style: TextStyle(
-                              color: _isPrivate ? c.gold : c.ink,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: _isPrivate
+                                ? c.gold.withValues(alpha: 0.15)
+                                : c.borderSoft.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isPrivate ? c.gold : c.borderSoft,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isPrivate
+                                    ? Icons.lock_rounded
+                                    : Icons.lock_open_rounded,
+                                size: 14,
+                                color: _isPrivate ? c.gold : c.dim,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr?.get('review_private') ?? 'Private',
+                                style: TextStyle(
+                                  color: _isPrivate ? c.gold : c.ink,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -879,111 +902,115 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                     valueListenable: _commentController,
                     builder: (_, value, _) => Text(
                       '${value.text.length} / 280',
-                      style: TextStyle(color: c.dim, fontSize: 11),
+                      style: TextStyle(color: c.dim, fontSize: 12),
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: _justSavedComment
-                        ? null
-                        : () async {
-                            HapticFeedback.mediumImpact();
-                            FocusScope.of(context).unfocus();
-                            if (_currentRating != null) {
-                              try {
-                                final commentText = _commentController.text
-                                    .trim();
-                                await PrefsService.saveRating(
-                                  movie: widget.movie,
-                                  rating: _currentRating!,
-                                  comment: commentText.isEmpty
-                                      ? null
-                                      : commentText,
-                                  isSpoiler: _isSpoiler ? 1 : 0,
-                                  isPrivate: _isPrivate ? 1 : 0,
-                                );
-                                ref
-                                    .read(recommendationEngineProvider)
-                                    .invalidateCache(
-                                      isNegativeChange: _currentRating! <= 1,
-                                    )
-                                    .catchError((_) => {});
-                                ref.invalidate(statsProvider);
-                                ref
-                                    .read(syncServiceProvider)
-                                    .sync()
-                                    .catchError((_) => {});
-                                ref
-                                    .read(socialProvider.notifier)
-                                    .loadActivityFeed()
-                                    .catchError((_) => {});
-
-                                if (mounted) {
-                                  setState(() {
-                                    _justSavedComment = true;
-                                  });
-                                  final isGuest = !ref
-                                      .read(authProvider)
-                                      .isLoggedIn;
-                                  final baseMsg =
-                                      AppLocalizations.of(
-                                        context,
-                                      )?.get('review_saved_successfully') ??
-                                      'Review saved successfully';
-                                  final suffix = isGuest
-                                      ? (AppLocalizations.of(
-                                                  context,
-                                                )?.locale.languageCode ==
-                                                'tr'
-                                            ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
-                                            : ' (Saved locally, will sync when logged in.)')
-                                      : '';
-
-                                  _showToast('$baseMsg$suffix');
-                                  Future.delayed(
-                                    const Duration(seconds: 2),
-                                    () {
-                                      if (mounted) {
-                                        setState(() {
-                                          _justSavedComment = false;
-                                        });
-                                      }
-                                    },
+                  Semantics(
+                    button: true,
+                    label: tr?.get('semantics_save_review') ?? 'Save review',
+                    child: ElevatedButton(
+                      onPressed: _justSavedComment
+                          ? null
+                          : () async {
+                              HapticFeedback.mediumImpact();
+                              FocusScope.of(context).unfocus();
+                              if (_currentRating != null) {
+                                try {
+                                  final commentText = _commentController.text
+                                      .trim();
+                                  await PrefsService.saveRating(
+                                    movie: widget.movie,
+                                    rating: _currentRating!,
+                                    comment: commentText.isEmpty
+                                        ? null
+                                        : commentText,
+                                    isSpoiler: _isSpoiler ? 1 : 0,
+                                    isPrivate: _isPrivate ? 1 : 0,
                                   );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  _showToast(
-                                    AppLocalizations.of(context)
-                                            ?.get('error_occurred_msg')
-                                            .replaceAll('{}', '$e') ??
-                                        'Error: $e',
-                                    success: false,
-                                  );
+                                  ref
+                                      .read(recommendationEngineProvider)
+                                      .invalidateCache(
+                                        isNegativeChange: _currentRating! <= 1,
+                                      )
+                                      .catchError((_) => {});
+                                  ref.invalidate(statsProvider);
+                                  ref
+                                      .read(syncServiceProvider)
+                                      .sync()
+                                      .catchError((_) => {});
+                                  ref
+                                      .read(socialProvider.notifier)
+                                      .loadActivityFeed()
+                                      .catchError((_) => {});
+
+                                  if (mounted) {
+                                    setState(() {
+                                      _justSavedComment = true;
+                                    });
+                                    final isGuest = !ref
+                                        .read(authProvider)
+                                        .isLoggedIn;
+                                    final baseMsg =
+                                        AppLocalizations.of(
+                                          context,
+                                        )?.get('review_saved_successfully') ??
+                                        'Review saved successfully';
+                                    final suffix = isGuest
+                                        ? (AppLocalizations.of(
+                                                    context,
+                                                  )?.locale.languageCode ==
+                                                  'tr'
+                                              ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
+                                              : ' (Saved locally, will sync when logged in.)')
+                                        : '';
+
+                                    _showToast('$baseMsg$suffix');
+                                    Future.delayed(
+                                      const Duration(seconds: 2),
+                                      () {
+                                        if (mounted) {
+                                          setState(() {
+                                            _justSavedComment = false;
+                                          });
+                                        }
+                                      },
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    _showToast(
+                                      AppLocalizations.of(context)
+                                              ?.get('error_occurred_msg')
+                                              .replaceAll('{}', '$e') ??
+                                          'Error: $e',
+                                      success: false,
+                                    );
+                                  }
                                 }
                               }
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _justSavedComment ? c.green : c.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _justSavedComment ? c.green : c.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      _justSavedComment
-                          ? (AppLocalizations.of(context)?.get('saved') ??
-                                'Saved ✔')
-                          : (tr?.get('review_save') ?? 'Kaydet'),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      child: Text(
+                        _justSavedComment
+                            ? (AppLocalizations.of(context)?.get('saved') ??
+                                  'Saved ✔')
+                            : (tr?.get('review_save') ?? 'Save'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -1078,101 +1105,128 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   Widget _ratingButton(int rating, Color color, String label, ThemePalette c) {
     final active = _currentRating == rating;
-    return SpringButton(
-      onTap: () async {
-        HapticFeedback.lightImpact();
-        if (active) {
-          // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
-          // götürür — kullanıcıdan onay al.
-          if (_commentController.text.trim().isNotEmpty) {
-            final confirmed = await _confirmRatingDelete();
-            if (!confirmed) return;
-          }
-          final oldRating = _currentRating;
-          await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+    final tr = AppLocalizations.of(context);
+    final semanticsKey = switch (rating) {
+      0 => 'semantics_rate_awful',
+      1 => 'semantics_rate_meh',
+      2 => 'semantics_rate_good',
+      3 => 'semantics_rate_amazing',
+      _ => 'semantics_rate_good',
+    };
+    final semanticsLabel = active
+        ? (tr?.get('semantics_rate_undo').replaceAll('{}', label) ??
+              'Remove $label rating')
+        : (tr?.get(semanticsKey) ?? label);
+    return Tooltip(
+      message: semanticsLabel,
+      child: Semantics(
+        button: true,
+        label: semanticsLabel,
+        selected: active,
+        child: SpringButton(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            if (active) {
+              // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
+              // götürür — kullanıcıdan onay al.
+              if (_commentController.text.trim().isNotEmpty) {
+                final confirmed = await _confirmRatingDelete();
+                if (!confirmed) return;
+              }
+              final oldRating = _currentRating;
+              await PrefsService.deleteRating(
+                widget.movie.id,
+                widget.movie.isTV,
+              );
 
-          final recoSource = widget.movie.recoSource;
-          if (recoSource != null && oldRating != null) {
-            PrefsService.revertRecoOutcome(
-              source: recoSource,
-              liked: oldRating >= 2,
-            ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
-          }
+              final recoSource = widget.movie.recoSource;
+              if (recoSource != null && oldRating != null) {
+                PrefsService.revertRecoOutcome(
+                  source: recoSource,
+                  liked: oldRating >= 2,
+                ).catchError(
+                  (e) => debugPrint("Reco telemetry revert failed: $e"),
+                );
+              }
 
-          ref
-              .read(recommendationEngineProvider)
-              .invalidateCache(isNegativeChange: true)
-              .catchError((_) => {});
-          setState(() {
-            _currentRating = null;
-            _commentController.clear();
-            _isSpoiler = false;
-            _isPrivate = false;
-          });
-        } else {
-          final commentText = _commentController.text.trim();
-          await PrefsService.saveRating(
-            movie: widget.movie,
-            rating: rating,
-            comment: commentText.isEmpty ? null : commentText,
-            isSpoiler: _isSpoiler ? 1 : 0,
-            isPrivate: _isPrivate ? 1 : 0,
-          );
-          ref
-              .read(recommendationEngineProvider)
-              .invalidateCache(isNegativeChange: rating <= 1)
-              .catchError((_) => {});
+              ref
+                  .read(recommendationEngineProvider)
+                  .invalidateCache(isNegativeChange: true)
+                  .catchError((_) => {});
+              setState(() {
+                _currentRating = null;
+                _commentController.clear();
+                _isSpoiler = false;
+                _isPrivate = false;
+              });
+            } else {
+              final commentText = _commentController.text.trim();
+              await PrefsService.saveRating(
+                movie: widget.movie,
+                rating: rating,
+                comment: commentText.isEmpty ? null : commentText,
+                isSpoiler: _isSpoiler ? 1 : 0,
+                isPrivate: _isPrivate ? 1 : 0,
+              );
+              ref
+                  .read(recommendationEngineProvider)
+                  .invalidateCache(isNegativeChange: rating <= 1)
+                  .catchError((_) => {});
 
-          // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
-          // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
-          // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
-          final recoSource = widget.movie.recoSource;
-          if (recoSource != null) {
-            PrefsService.recordRecoOutcome(
-              source: recoSource,
-              liked: rating >= 2,
-            ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
-          }
+              // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
+              // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
+              // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
+              final recoSource = widget.movie.recoSource;
+              if (recoSource != null) {
+                PrefsService.recordRecoOutcome(
+                  source: recoSource,
+                  liked: rating >= 2,
+                ).catchError(
+                  (e) => debugPrint("Reco telemetry write failed: $e"),
+                );
+              }
 
-          setState(() {
-            _currentRating = rating;
-          });
+              setState(() {
+                _currentRating = rating;
+              });
 
-          if (mounted && !ref.read(authProvider).isLoggedIn) {
-            final tr = AppLocalizations.of(context);
-            showAppToast(
-              context,
-              tr?.locale.languageCode == 'tr'
-                  ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
-                  : 'Rating saved locally. Will sync when logged in.',
-              success: false,
-            );
-          }
-        }
-        ref.invalidate(statsProvider);
-        ref.read(syncServiceProvider).sync();
-      },
-      child: Container(
-        height: 38,
-        decoration: BoxDecoration(
-          color: active ? color : c.card,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: active ? color : c.borderSoft,
-            width: active ? 1.5 : 1,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active
-                ? ((color == c.rEh || color == c.rIyi || color == c.rHarika)
-                      ? Colors.black87
-                      : Colors.white)
-                : c.dim,
-            fontSize: 11,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+              if (mounted && !ref.read(authProvider).isLoggedIn) {
+                final tr = AppLocalizations.of(context);
+                showAppToast(
+                  context,
+                  tr?.locale.languageCode == 'tr'
+                      ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
+                      : 'Rating saved locally. Will sync when logged in.',
+                  success: false,
+                );
+              }
+            }
+            ref.invalidate(statsProvider);
+            ref.read(syncServiceProvider).sync();
+          },
+          child: Container(
+            height: 38,
+            decoration: BoxDecoration(
+              color: active ? color : c.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: active ? color : c.borderSoft,
+                width: active ? 1.5 : 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: active
+                    ? ((color == c.rEh || color == c.rIyi || color == c.rHarika)
+                          ? Colors.black87
+                          : Colors.white)
+                    : c.dim,
+                fontSize: 12,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),

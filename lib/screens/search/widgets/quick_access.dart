@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/spring_button.dart';
 import '../../match_screen.dart';
 import '../../results_screen.dart';
 import 'quick_tile.dart';
@@ -29,7 +30,7 @@ class SearchQuickAccess extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
+          SpringButton(
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.push(
@@ -109,8 +110,7 @@ class SearchQuickAccess extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  AppLocalizations.of(context)?.get('search_history') ??
-                      'Son Aramalar',
+                  tr?.get('search_history') ?? 'Search History',
                   style: TextStyle(
                     color: c.ink,
                     fontSize: 15,
@@ -139,35 +139,42 @@ class SearchQuickAccess extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            ...history.map(
-              (q) => GestureDetector(
+            ...history.map((q) {
+              final historyLabel =
+                  tr?.get('semantics_search_history').replaceAll('{}', q) ??
+                  'Search $q';
+              return SpringButton(
                 onTap: () => onSearchFromHistory(q),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.history_rounded, color: c.dim, size: 16),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          q,
-                          style: TextStyle(color: c.ink, fontSize: 14),
+                child: Semantics(
+                  button: true,
+                  label: historyLabel,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.history_rounded, color: c.dim, size: 16),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            q,
+                            style: TextStyle(color: c.ink, fontSize: 14),
+                          ),
                         ),
-                      ),
-                      Icon(Icons.north_west_rounded, color: c.dim, size: 14),
-                    ],
+                        Icon(Icons.north_west_rounded, color: c.dim, size: 14),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
             const SizedBox(height: 20),
           ],
           Text(

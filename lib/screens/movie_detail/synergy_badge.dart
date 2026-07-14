@@ -33,39 +33,57 @@ class SynergyBadge extends StatelessWidget {
     final c = context.c;
     final synergyScore = _calculateSynergyScore();
 
-    return SpringButton(
-      onTap: () => _showScoreBreakdown(context, c, synergyScore),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: c.green.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: c.green.withValues(alpha: 0.3), width: 1),
-          boxShadow: CinemaShadows.glow(c.green, strength: 0.08),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bolt_rounded, color: c.green, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              AppLocalizations.of(context)
-                      ?.get('synergy_score_match')
-                      .replaceAll('{}', '$synergyScore') ??
-                  '$synergyScore% Match',
-              style: TextStyle(
-                color: c.green,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+    return Tooltip(
+      message:
+          AppLocalizations.of(
+            context,
+          )?.get('semantics_synergy_score').replaceAll('{}', '$synergyScore') ??
+          '$synergyScore percent match. Tap for details',
+      child: Semantics(
+        button: true,
+        label:
+            AppLocalizations.of(context)
+                ?.get('semantics_synergy_score')
+                .replaceAll('{}', '$synergyScore') ??
+            '$synergyScore percent match. Tap for details',
+        child: SpringButton(
+          onTap: () => _showScoreBreakdown(context, c, synergyScore),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: c.green.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: c.green.withValues(alpha: 0.3),
+                width: 1,
               ),
+              boxShadow: CinemaShadows.glow(c.green, strength: 0.08),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.info_outline_rounded,
-              color: c.green.withValues(alpha: 0.7),
-              size: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bolt_rounded, color: c.green, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  AppLocalizations.of(context)
+                          ?.get('synergy_score_match')
+                          .replaceAll('{}', '$synergyScore') ??
+                      '$synergyScore% Match',
+                  style: TextStyle(
+                    color: c.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: c.green.withValues(alpha: 0.7),
+                  size: 12,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -185,7 +203,7 @@ class SynergyBadge extends StatelessWidget {
                           communityScore!['enough'] == true)
                     ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
                     : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).',
-                style: TextStyle(color: c.dim, fontSize: 11, height: 1.4),
+                style: TextStyle(color: c.dim, fontSize: 12, height: 1.4),
               ),
             ),
           ],
