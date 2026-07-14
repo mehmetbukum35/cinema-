@@ -16,6 +16,7 @@ import 'services/localization_service.dart';
 import 'services/notification_service.dart';
 import 'services/providers.dart';
 import 'services/taste_dna_presenter.dart';
+import 'services/app_config.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -52,6 +53,7 @@ void main() async {
   }
 
   // TMDB cache verilerinden süresi dolanları arka planda temizle (30 günlük limit)
+  AppConfig.warnIfProductionApiWithoutDefine();
   unawaited(
     Future(() async {
       try {

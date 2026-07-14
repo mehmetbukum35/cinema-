@@ -1,6 +1,13 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   static const _defaultApiBaseUrl = 'https://cinema.mbkm.com.tr/api';
   static const _defaultWebProfileBaseUrl = 'https://cinema.mbkm.com.tr/profile';
+
+  static const _apiBaseUrlDefined = bool.hasEnvironment('API_BASE_URL');
+  static const _webProfileBaseUrlDefined = bool.hasEnvironment(
+    'WEB_PROFILE_BASE_URL',
+  );
 
   static const _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -26,6 +33,33 @@ class AppConfig {
 
   static String get apiBaseUrl => _trimTrailingSlash(_apiBaseUrl);
   static String get webProfileBaseUrl => _trimTrailingSlash(_webProfileBaseUrl);
+
+  /// Debug/profile builds should not silently hit production without an
+  /// explicit `--dart-define=API_BASE_URL=...`.
+  static void warnIfProductionApiWithoutDefine() {
+    if (kReleaseMode) return;
+    if (!_apiBaseUrlDefined && _apiBaseUrl == _defaultApiBaseUrl) {
+      debugPrint(
+        'WARNING [AppConfig]: Using production API ($_defaultApiBaseUrl) in '
+        '${kProfileMode ? "profile" : "debug"} mode without '
+        '--dart-define=API_BASE_URL. Pass a local/staging URL for development.',
+      );
+      assert(() {
+        debugPrint(
+          'TIP: flutter run --dart-define=API_BASE_URL=http://localhost:8000',
+        );
+        return true;
+      }());
+    }
+    if (!_webProfileBaseUrlDefined &&
+        _webProfileBaseUrl == _defaultWebProfileBaseUrl) {
+      debugPrint(
+        'WARNING [AppConfig]: Using production web profile URL in '
+        '${kProfileMode ? "profile" : "debug"} mode without '
+        '--dart-define=WEB_PROFILE_BASE_URL.',
+      );
+    }
+  }
 
   static String _trimTrailingSlash(String value) {
     if (value.endsWith('/')) {

@@ -2,84 +2,77 @@
 
 [![CI](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml/badge.svg)](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml)
 
-**cinema+** (Ne Izlesem?), film ve dizi karar felcini azaltmak icin tasarlanmis, swipe arayuzlu modern bir mobil kesif ve sosyal paylasim uygulamasidir.
+**cinema+** (Ne İzlesem?) is a Flutter mobile app with a PHP backend for movie and TV discovery, swipe-based ratings, social features, and offline-first sync.
 
-Bu depo, hem Flutter mobil uygulamasini hem de PHP backend API servisini barindiran bir monorepodur.
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
-## Proje Yapisi
+## Repository layout
 
-- `/` - Flutter mobil uygulamasi (Android/iOS/Web/Desktop hedefleri).
-- `/backend` - MySQL/MariaDB veritabani ile delta senkronizasyonu saglayan PHP backend API servisi.
+| Path | Purpose |
+|------|---------|
+| `/` | Flutter app (Android, iOS, Web, Desktop targets) |
+| `/backend` | PHP 8.4+ REST API, MySQL/MariaDB, JWT auth |
+| `/docs` | Project docs and [screenshots placeholder](docs/screenshots/README.md) |
 
-## One Cikan Ozellikler
+## Features
 
-- **Swipe arayuzu**: Hizli ve dinamik kart kaydirma arayuzu ile film/dizi puanlama.
-- **Detayli arama ve filtreleme**: Yil araligi, puan, orijinal dil ve yayin servisi filtreleri.
-- **Film/dizi detaylari**: Fragman, oyuncu kadrosu, yorumlar ve yayin platformlari.
-- **Istatistikler**: Tur tercihleri ve puan dagilimi.
-- **Sosyal akis**: Arkadas ekleme, arkadas aktiviteleri ve ortak izleme listeleri.
-- **Iki yonlu delta sync**: Cevrimdisi degisiklikleri yerel SQLite'tan PHP backend'e senkronize eder.
+- **Swipe UI** — Fast card-based rating (Awful → Amazing)
+- **Search & filters** — Year, rating, language, streaming provider filters
+- **Detail sheets** — Trailers, cast, seasons, watch providers, community score
+- **Match modes** — Similar titles and together/genre match
+- **Social** — Friends, activity feed, recommendations inbox, top public profiles
+- **Offline sync** — SQLite cache with delta sync to PHP backend
+- **Localization** — Turkish (default) and English
+- **Sign in** — Email/password, Google, Apple (where configured)
 
-## Kurulum ve Calistirma
+## Setup
 
-### Frontend (Flutter)
-
-Bagimliliklari kurun:
+### Flutter
 
 ```bash
 flutter pub get
 ```
 
-Uygulama TMDB isteklerini artik dogrudan degil, backend/ altindaki PHP API'nin `GET /tmdb/*` proxy ucu uzerinden yapiyor (bkz. backend/src/Tmdb.php). TMDB API anahtari yalnizca sunucudaki `Config.php` icinde (`tmdb_api_key`) tutulur; Flutter tarafinda **artik TMDB_API_KEY dart-define'ina gerek yoktur**. Backend adresi ortam bazli degistirilebilir.
+TMDB requests go through the backend proxy (`GET /tmdb/*`). The client does **not** need a TMDB API key.
+
+For local development, point at your API explicitly:
 
 ```bash
 flutter run \
-  --dart-define=API_BASE_URL=https://your-domain.example/cinema/api \
-  --dart-define=WEB_PROFILE_BASE_URL=https://your-domain.example/cinema/profile
+  --dart-define=API_BASE_URL=http://localhost:8000 \
+  --dart-define=WEB_PROFILE_BASE_URL=http://localhost:8000/profile
 ```
 
-`API_BASE_URL` ve `WEB_PROFILE_BASE_URL` verilmezse uygulama varsayilan production adreslerini kullanir.
+Without `API_BASE_URL`, the app uses the production default. In **debug/profile** builds, a console warning is printed if you hit production without an explicit define.
 
-Testleri calistirma:
-
-```bash
-flutter test
-```
-
-### Backend (PHP)
-
-PHP backend API'si PHP 8.4+ ve MySQL/MariaDB kullanir.
-
-Bagimliliklari kurun:
+### Backend
 
 ```bash
 cd backend
 composer install
-```
-
-Yerel gelistirme sunucusu:
-
-```bash
 php -S localhost:8000 -t api
 ```
 
-Backend testleri:
+Copy `backend/config.example.php` to `backend/config.php` and set DB credentials, JWT secret, and TMDB key (see backend README).
+
+## Tests & quality
 
 ```bash
-composer test
-```
-
-## Teknik Mimari
-
-- **State management**: Riverpod
-- **Yerel veri**: SQLite (sqflite) ve Shared Preferences
-- **Network ve sync**: HTTP, JWT token rotasyonu ve delta senkronizasyonu
-- **Backend**: PHP 8.4+, minimalist router ve MySQL/MariaDB
-
-## Kalite Kontrolleri
-
-```bash
+dart format .
 flutter analyze
 flutter test
 cd backend && composer test
 ```
+
+CI runs format check, analyze, Flutter tests with coverage, and PHPUnit on push/PR to `main`.
+
+## Architecture
+
+- **State:** Riverpod
+- **Local data:** SQLite (sqflite) + SharedPreferences
+- **Network:** HTTP, JWT rotation, delta sync
+- **Backend modules:** Auth, Sync, Tmdb proxy, Social (split under `backend/src/Social/`)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for style guides, branch protection setup, and commit conventions.

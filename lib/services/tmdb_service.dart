@@ -472,16 +472,32 @@ class TmdbService {
       }
       // Fallback: English (only if primary language is not English)
       if (_language == 'en-US' || _language == 'en') return null;
-      final enJson = await _fetchRawWithCache(
-        path: path,
-        params: {'api_key': _apiKey, 'language': 'en-US'},
-      );
+      final enParams = {'api_key': _apiKey, 'language': 'en-US'};
+      final enJson = await _fetchRawWithCache(path: path, params: enParams);
       if (enJson != null) {
         final results =
             (((enJson as Map<String, dynamic>)['results'] as List<dynamic>?) ??
                     [])
                 .cast<Map<String, dynamic>>();
-        return pickKey(results);
+        final key = pickKey(results);
+        if (key != null) {
+          // TR miss + EN hit: cache EN payload under the primary language key
+          // so the next open does not refetch videos twice.
+          final trCacheKey = _cacheKey(path, {
+            'api_key': _apiKey,
+            'language': _language,
+          });
+          try {
+            await DatabaseHelper().saveTmdbCache(
+              trCacheKey,
+              jsonEncode(enJson),
+              _language,
+            );
+          } catch (e) {
+            debugPrint('Trailer EN fallback cache write failed: $e');
+          }
+          return key;
+        }
       }
       return null;
     } catch (e) {

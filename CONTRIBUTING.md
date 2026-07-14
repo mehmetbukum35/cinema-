@@ -128,3 +128,44 @@ ci(android): add release APK/AAB workflow on tag dispatch
 Use the area you touched: `social`, `sync`, `browse`, `match`, `profile`, `backend`, `notifications`, `ci`, etc.
 
 > Past commits may use informal messages; apply this rule **from now on** — no need to rewrite history.
+
+---
+
+## Branch protection (`main`)
+
+If you maintain the repo on GitHub, enable protection on `main` so CI must pass before merge:
+
+### With GitHub CLI (recommended)
+
+```bash
+gh auth login
+gh api repos/mehmetbukum35/cinema-/branches/main/protection \
+  --method PUT \
+  --input - <<'EOF'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["CI"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 0
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
+```
+
+Adjust the `contexts` array if your workflow job name differs (check the green check name on a recent PR).
+
+### Manual (GitHub web UI)
+
+1. Open **Settings → Branches → Add branch protection rule**
+2. Branch name pattern: `main`
+3. Enable **Require status checks to pass before merging** and select the **CI** workflow
+4. Enable **Require branches to be up to date before merging**
+5. Disable force pushes and branch deletion (recommended)
+
+If `gh` is not authenticated locally, use the web UI steps above — no CLI is required.
