@@ -5,12 +5,14 @@ import '../services/localization_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/couch_provider.dart';
 import '../providers/social_provider.dart';
 import '../utils/username_helper.dart';
 import '../widgets/app_top_bar.dart';
 import 'browse_screen.dart';
 import 'swipe_screen.dart';
 import 'together_screen.dart';
+import 'couch_screen.dart';
 import 'search_screen.dart';
 import 'profile_screen.dart';
 
@@ -24,6 +26,7 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   int _tab = 0;
   bool _usernamePromptShown = false;
+  int? _handledCouchResumeId;
 
   static const _items = [
     (Icons.home_rounded, 'tab_browse'),
@@ -52,10 +55,51 @@ class _MainShellState extends ConsumerState<MainShell> {
     showUsernamePromptIfNeeded(context, ref);
   }
 
+  Future<void> _checkCouchOnLaunch() async {
+    if (!mounted || !ref.read(authProvider).isAuthenticated) return;
+    await ref.read(couchProvider.notifier).checkActive();
+    if (!mounted) return;
+    _maybeResumeCouch(ref.read(couchProvider));
+  }
+
+  void _maybeResumeCouch(CouchState couch) {
+    final session = couch.session;
+    if (session == null || _handledCouchResumeId == session.id) return;
+
+    final tr = AppLocalizations.of(context);
+    if (couch.hasPendingInvite) {
+      _handledCouchResumeId = session.id;
+      final name = session.friendName;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr?.get('couch_invite_waiting').replaceAll('{}', name) ??
+                '$name seni bekliyor!',
+          ),
+          action: SnackBarAction(
+            label: tr?.get('couch_live_title') ?? 'Birlikte Seç',
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CouchScreen())),
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } else if (session.status == 'active' || session.status == 'matched') {
+      _handledCouchResumeId = session.id;
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const CouchScreen()));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybePromptUsername());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybePromptUsername();
+      _checkCouchOnLaunch();
+    });
   }
 
   @override
@@ -66,10 +110,17 @@ class _MainShellState extends ConsumerState<MainShell> {
     ref.listen(authProvider, (prev, next) {
       if (!next.isAuthenticated) {
         _usernamePromptShown = false;
+        _handledCouchResumeId = null;
         return;
       }
       final becameAuthenticated = prev == null || !prev.isAuthenticated;
       final userChanged = prev?.user?['id'] != next.user?['id'];
+      if (becameAuthenticated || userChanged) {
+        _handledCouchResumeId = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _checkCouchOnLaunch();
+        });
+      }
       if ((becameAuthenticated || userChanged) && needsUsername(next.user)) {
         _usernamePromptShown = false;
         WidgetsBinding.instance.addPostFrameCallback(
@@ -78,10 +129,13 @@ class _MainShellState extends ConsumerState<MainShell> {
       }
     });
 
-    // "Birlikte" sekmesi rozeti: bekleyen istek + okunmamış öneri.
+    // "Birlikte" sekmesi rozeti: bekleyen istek + okunmamış öneri + kanepe daveti.
     final social = ref.watch(socialProvider);
+    final couch = ref.watch(couchProvider);
     final togetherBadge =
-        social.pendingReceived.length + social.unseenRecommendations;
+        social.pendingReceived.length +
+        social.unseenRecommendations +
+        (couch.hasPendingInvite ? 1 : 0);
     return Scaffold(
       backgroundColor: pal.bg,
       body: SafeArea(

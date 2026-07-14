@@ -136,11 +136,17 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
   void _apply(Map<String, dynamic>? json) {
     if (!mounted) return;
+    final prev = state.session;
     final session = json == null ? null : CouchSession.fromJson(json);
+    final becameCancelled =
+        prev != null &&
+        prev.isOpen &&
+        session != null &&
+        session.status == 'cancelled';
     state = state.copyWith(
       session: () => session,
       loading: false,
-      error: () => null,
+      error: () => becameCancelled ? 'couch_session_closed' : null,
     );
     _syncPolling();
   }
@@ -241,9 +247,11 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
   /// Sıradaki karta oy verir. Sunucu yanıtı eşleşmeyi anında yansıtır.
   Future<void> vote(bool liked) async {
+    if (_voteInFlight) return;
     final session = state.session;
     final card = session?.nextCard;
     if (session == null || card == null || !session.isOpen) return;
+    _voteInFlight = true;
     try {
       final updated = await _api.voteCouchSession(
         sessionId: session.id,
@@ -261,8 +269,12 @@ class CouchNotifier extends StateNotifier<CouchState> {
       }
     } catch (e) {
       debugPrint('Couch vote failed: $e');
+    } finally {
+      _voteInFlight = false;
     }
   }
+
+  bool _voteInFlight = false;
 
   Future<void> refresh() async {
     final session = state.session;

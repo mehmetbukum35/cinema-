@@ -215,9 +215,40 @@ void main() {
         await notifier.vote(true);
 
         expect(container.read(couchProvider).session!.status, 'cancelled');
-        expect(container.read(couchProvider).error, isNull);
+        expect(container.read(couchProvider).error, 'couch_session_closed');
       },
     );
+
+    test('refresh to cancelled sets couch_session_closed error', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(status: 'active'));
+
+      mockApi.getResponse = sessionJson(status: 'cancelled');
+      await notifier.refresh();
+
+      expect(container.read(couchProvider).session!.status, 'cancelled');
+      expect(container.read(couchProvider).error, 'couch_session_closed');
+    });
+
+    test('leave does not set session closed error', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(status: 'active'));
+
+      await notifier.leave();
+
+      expect(container.read(couchProvider).session, isNull);
+      expect(container.read(couchProvider).error, isNull);
+    });
+
+    test('vote ignores duplicate taps while request is in flight', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson());
+
+      mockApi.voteResponse = sessionJson(myVotes: {'movie_101': true});
+      await Future.wait([notifier.vote(true), notifier.vote(true)]);
+
+      expect(mockApi.voteCalls, 1);
+    });
 
     test('leave cancels server session and clears local state', () async {
       final notifier = container.read(couchProvider.notifier);

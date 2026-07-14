@@ -100,10 +100,14 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
     ref.listen<CouchState>(couchProvider, (prev, next) {
       final err = next.error;
       if (err != null && err != prev?.error) {
-        final msg = err == 'couch_server_outdated'
-            ? (tr?.get('couch_server_outdated') ??
-                  'Sunucu bu özelliği henüz tanımıyor. Backend güncellemesi gerekli.')
-            : err;
+        final msg = switch (err) {
+          'couch_server_outdated' =>
+            tr?.get('couch_server_outdated') ??
+                'Sunucu bu özelliği henüz tanımıyor. Backend güncellemesi gerekli.',
+          'couch_session_closed' =>
+            tr?.get('couch_session_closed') ?? 'Oturum kapandı.',
+          _ => err,
+        };
         showAppToast(context, msg, success: false);
       }
     });

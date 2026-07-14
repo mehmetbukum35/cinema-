@@ -12,6 +12,7 @@ import '../firebase_options.dart';
 import 'api_service.dart';
 import 'prefs_service.dart';
 import '../screens/social_screen.dart';
+import '../screens/couch_screen.dart';
 import '../models/movie.dart';
 import '../screens/movie_detail_sheet.dart';
 import 'tmdb_service.dart';
@@ -139,9 +140,7 @@ class NotificationService {
 
       // Bildirime tıklanınca (uygulama arka plandayken)
       FirebaseMessaging.onMessageOpenedApp.listen(
-        (m) => _routeFromPayload(
-          "${m.data['type']}|${m.data['movie_id']}|${m.data['is_tv'] ?? m.data['isTV']}",
-        ),
+        (m) => _routeFromPayload(payloadFromData(m.data)),
       );
 
       // Soğuk başlatma: uygulama bir bildirime tıklanarak açıldıysa
@@ -150,9 +149,7 @@ class NotificationService {
         // Navigator'ın hazır olması için kısa bir gecikme
         Future.delayed(
           const Duration(milliseconds: 700),
-          () => _routeFromPayload(
-            "${initial.data['type']}|${initial.data['movie_id']}|${initial.data['is_tv'] ?? initial.data['isTV']}",
-          ),
+          () => _routeFromPayload(payloadFromData(initial.data)),
         );
       }
 
@@ -226,10 +223,6 @@ class NotificationService {
     final n = m.notification;
     if (n == null) return;
     try {
-      final type = m.data['type'] as String? ?? '';
-      final movieId = m.data['movie_id']?.toString() ?? '';
-      final isTv =
-          m.data['is_tv']?.toString() ?? m.data['isTV']?.toString() ?? '';
       await _local.show(
         n.hashCode,
         n.title,
@@ -245,7 +238,7 @@ class NotificationService {
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        payload: "$type|$movieId|$isTv",
+        payload: payloadFromData(m.data),
       );
     } catch (e, st) {
       debugPrint('Failed to show foreground notification: $e\n$st');
@@ -369,9 +362,27 @@ class NotificationService {
     }
   }
 
+  /// FCM `data` haritasından yerel bildirim / deep-link payload'u üretir.
+  @visibleForTesting
+  static String? payloadFromData(Map<String, dynamic> data) {
+    final type = data['type'] as String? ?? '';
+    if (type.isEmpty) return null;
+    if (type == 'couch_invite' || type == 'couch_match') {
+      final sessionId = data['session_id']?.toString() ?? '';
+      if (sessionId.isEmpty) return null;
+      return '$type|$sessionId';
+    }
+    if (type == 'friend_request' || type == 'friend_accept') {
+      return type;
+    }
+    final movieId = data['movie_id']?.toString() ?? '';
+    final isTv = data['is_tv']?.toString() ?? data['isTV']?.toString() ?? '';
+    return '$type|$movieId|$isTv';
+  }
+
   /// Bildirim payload'una göre ilgili ekrana yönlendirir.
   void _routeFromPayload(String? payload) {
-    if (payload == null) return;
+    if (payload == null || payload.isEmpty) return;
     final parts = payload.split('|');
     if (parts.isEmpty) return;
     final type = parts[0];
@@ -381,6 +392,10 @@ class NotificationService {
       nav.push(
         MaterialPageRoute(builder: (_) => const SocialScreen(initialTab: 1)),
       );
+    } else if (type == 'couch_invite' || type == 'couch_match') {
+      final nav = navigatorKey.currentState;
+      if (nav == null) return;
+      nav.push(MaterialPageRoute(builder: (_) => const CouchScreen()));
     } else if (type == 'release' ||
         type == 'movie_recommend' ||
         type == 'recommendation' ||
