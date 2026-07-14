@@ -1,13 +1,16 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'movie_detail/recommend_sheet.dart';
-import 'movie_detail/review_item.dart';
+import 'movie_detail/comment_editor.dart';
+import 'movie_detail/detail_actions.dart';
 import 'movie_detail/detail_section_label.dart';
+import 'movie_detail/detail_sheet_shell.dart';
 import 'movie_detail/detail_hero_row.dart';
 import 'movie_detail/detail_action_buttons.dart';
 import 'movie_detail/detail_media_rows.dart';
+import 'movie_detail/detail_text_sections.dart';
+import 'movie_detail/friends_reviews_section.dart';
+import 'movie_detail/rating_section.dart';
 import 'movie_detail/seasons_section.dart';
 import 'movie_detail/keywords_wrap.dart';
 import 'movie_detail/tmdb_review_card.dart';
@@ -25,7 +28,6 @@ import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
 import '../services/providers.dart';
 import 'trailer_player_screen.dart';
-import '../widgets/spring_button.dart';
 import '../widgets/app_toast.dart';
 
 /// Detay alt sayfası orkestratörü: veri yükleme fazları, puan/yorum durumu
@@ -40,124 +42,26 @@ class MovieDetailSheet extends ConsumerStatefulWidget {
     required this.service,
   });
 
-  /// "Arkadaşına Öner" akışı: arkadaş seçici alt sayfa açar, seçilince
-  /// öneriyi backend'e gönderir (arkadaş push bildirimi alır).
+  /// "Arkadaşına Öner" akışı (bkz. movie_detail/detail_actions.dart).
+  /// Statik delege: browse/swipe/search kartları da buradan çağırır.
   static Future<void> showRecommendSheet({
     required BuildContext context,
     required WidgetRef ref,
     required Movie movie,
-  }) async {
-    final tr = AppLocalizations.of(context);
-    final auth = ref.read(authProvider);
-    if (!auth.isLoggedIn) {
-      showAppToast(
-        context,
-        tr?.get('recommend_need_login') ??
-            'Öneri göndermek için giriş yapmalısın.',
-        success: false,
-      );
-      return;
-    }
+  }) => showRecommendSheetFor(context: context, ref: ref, movie: movie);
 
-    // Arkadaş listesi henüz yüklenmediyse çek.
-    if (ref.read(socialProvider).friends.isEmpty) {
-      await ref.read(socialProvider.notifier).loadFriends();
-    }
-    if (!context.mounted) return;
-
-    final friends = ref.read(socialProvider).friends;
-    if (friends.isEmpty) {
-      showAppToast(
-        context,
-        tr?.get('recommend_no_friends') ??
-            'Önce Sosyal sekmesinden arkadaş eklemelisin.',
-        success: false,
-      );
-      return;
-    }
-
-    final c = context.c;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: c.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => RecommendSheet(
-        movie: movie,
-        friends: friends,
-        ref: ref,
-        parentContext: context,
-      ),
-    );
-  }
-
+  /// Yapımı gizleme onayı (bkz. movie_detail/detail_actions.dart).
   static void confirmBlockMovie({
     required BuildContext context,
     required WidgetRef ref,
     required Movie movie,
     required VoidCallback onBlocked,
-  }) {
-    final c = context.c;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          AppLocalizations.of(context)?.get('hide_title') ?? 'Hide Title',
-          style: TextStyle(
-            color: c.ink,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          AppLocalizations.of(context)?.get('are_you_sure_you_want_to_block') ??
-              'Are you sure you want to block this title and permanently hide it from all lists?',
-          style: TextStyle(color: c.dim, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
-              style: TextStyle(color: c.dim),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx); // Close dialog
-
-              await PrefsService.blockMovie(movie.id, movie.isTV);
-
-              if (context.mounted) {
-                showAppToast(
-                  context,
-                  AppLocalizations.of(
-                        context,
-                      )?.get('title_hidden_and_removed_from_') ??
-                      'Title hidden and removed from lists.',
-                );
-              }
-
-              ref.invalidate(watchlistProvider);
-              ref.invalidate(statsProvider);
-              onBlocked();
-            },
-            child: Text(
-              AppLocalizations.of(context)?.get('hide') ?? 'Hide',
-              style: TextStyle(color: c.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  }) => confirmBlockMovieDialog(
+    context: context,
+    ref: ref,
+    movie: movie,
+    onBlocked: onBlocked,
+  );
 
   @override
   ConsumerState<MovieDetailSheet> createState() => _MovieDetailSheetState();
@@ -195,6 +99,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     super.initState();
     _loadExtras();
   }
+
+  // ─── Veri yükleme fazları ─────────────────────────────────────────────────
 
   Future<void> _loadExtras() async {
     final id = widget.movie.id;
@@ -299,6 +205,21 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     }
   }
 
+  /// cinema+ üyelerinin topluluk skorunu çeker (sessiz: hata rozeti gizler).
+  Future<void> _loadCommunityScore() async {
+    final id = widget.movie.id;
+    final isTV = widget.movie.isTV;
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final score = await apiService.getTitleScore(isTV ? 'tv' : 'movie', id);
+      if (mounted) setState(() => _communityScore = score);
+    } catch (e) {
+      debugPrint('Error loading community score: $e');
+    }
+  }
+
+  // ─── Moderasyon ───────────────────────────────────────────────────────────
+
   void _showToast(String msg, {bool success = true}) {
     if (!mounted) return;
     // SnackBar bu modal sheet'in ARKASINDAKİ Scaffold'a çiziliyordu —
@@ -352,66 +273,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     }
   }
 
-  Future<bool> _confirmRatingDelete() async {
-    final c = context.c;
-    final tr = AppLocalizations.of(context);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: c.card,
-        title: Text(
-          tr?.get('rating_delete_with_comment_title') ?? 'Puan kaldırılsın mı?',
-          style: TextStyle(color: c.ink, fontSize: 16),
-        ),
-        content: Text(
-          tr?.get('rating_delete_with_comment_msg') ??
-              'Puanı kaldırırsan yazdığın yorum da silinir.',
-          style: TextStyle(color: c.dim, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx, false),
-            child: Text(
-              tr?.get('profile_cancel') ?? 'İptal',
-              style: TextStyle(color: c.dim),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx, true),
-            child: Text(
-              tr?.get('remove') ?? 'Kaldır',
-              style: TextStyle(color: c.rBerbat, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-    return result == true;
-  }
-
-  /// Yorum kartı: giriş yapmış kullanıcıya şikayet/engelleme menüsü açılır.
-  Widget _buildReviewItem(dynamic rev) {
-    final canModerate =
-        ref.read(authProvider).isLoggedIn && rev['user_id'] != null;
-    return ReviewItem(
-      rev: rev,
-      onReport: canModerate ? (reason) => _reportReview(rev, reason) : null,
-      onBlock: canModerate ? () => _blockReviewer(rev) : null,
-    );
-  }
-
-  /// cinema+ üyelerinin topluluk skorunu çeker (sessiz: hata rozeti gizler).
-  Future<void> _loadCommunityScore() async {
-    final id = widget.movie.id;
-    final isTV = widget.movie.isTV;
-    try {
-      final apiService = ref.read(apiServiceProvider);
-      final score = await apiService.getTitleScore(isTV ? 'tv' : 'movie', id);
-      if (mounted) setState(() => _communityScore = score);
-    } catch (e) {
-      debugPrint('Error loading community score: $e');
-    }
-  }
+  // ─── Aksiyonlar ───────────────────────────────────────────────────────────
 
   Future<void> _toggleWatchlist() async {
     HapticFeedback.mediumImpact();
@@ -463,7 +325,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 
   void _confirmBlockMovie() {
-    MovieDetailSheet.confirmBlockMovie(
+    confirmBlockMovieDialog(
       context: context,
       ref: ref,
       movie: widget.movie,
@@ -475,10 +337,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     );
   }
 
-  /// "Arkadaşına Öner" akışı: arkadaş seçici alt sayfa açar, seçilince
-  /// öneriyi backend'e gönderir (arkadaş push bildirimi alır).
   Future<void> _openRecommendSheet() async {
-    await MovieDetailSheet.showRecommendSheet(
+    await showRecommendSheetFor(
       context: context,
       ref: ref,
       movie: widget.movie,
@@ -502,6 +362,149 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     if (mounted) setState(() => _watchedSeasons = updated);
   }
 
+  // ─── Puan / yorum iş mantığı ──────────────────────────────────────────────
+
+  /// Puan butonuna dokunuş: aktif puana tekrar basmak puanı (ve yorumu,
+  /// onayla) kaldırır; yeni puan kaydedilir, telemetri ve sync tetiklenir.
+  Future<void> _handleRatingTap(int rating) async {
+    HapticFeedback.lightImpact();
+    final active = _currentRating == rating;
+    if (active) {
+      // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
+      // götürür — kullanıcıdan onay al.
+      if (_commentController.text.trim().isNotEmpty) {
+        final confirmed = await confirmRatingDelete(context);
+        if (!confirmed) return;
+      }
+      final oldRating = _currentRating;
+      await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+
+      final recoSource = widget.movie.recoSource;
+      if (recoSource != null && oldRating != null) {
+        PrefsService.revertRecoOutcome(
+          source: recoSource,
+          liked: oldRating >= 2,
+        ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+      }
+
+      ref
+          .read(recommendationEngineProvider)
+          .invalidateCache(isNegativeChange: true)
+          .catchError((_) => {});
+      setState(() {
+        _currentRating = null;
+        _commentController.clear();
+        _isSpoiler = false;
+        _isPrivate = false;
+      });
+    } else {
+      final commentText = _commentController.text.trim();
+      await PrefsService.saveRating(
+        movie: widget.movie,
+        rating: rating,
+        comment: commentText.isEmpty ? null : commentText,
+        isSpoiler: _isSpoiler ? 1 : 0,
+        isPrivate: _isPrivate ? 1 : 0,
+      );
+      ref
+          .read(recommendationEngineProvider)
+          .invalidateCache(isNegativeChange: rating <= 1)
+          .catchError((_) => {});
+
+      // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
+      // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
+      // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
+      final recoSource = widget.movie.recoSource;
+      if (recoSource != null) {
+        PrefsService.recordRecoOutcome(
+          source: recoSource,
+          liked: rating >= 2,
+        ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
+      }
+
+      setState(() {
+        _currentRating = rating;
+      });
+
+      if (mounted && !ref.read(authProvider).isLoggedIn) {
+        final tr = AppLocalizations.of(context);
+        showAppToast(
+          context,
+          tr?.locale.languageCode == 'tr'
+              ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
+              : 'Rating saved locally. Will sync when logged in.',
+          success: false,
+        );
+      }
+    }
+    ref.invalidate(statsProvider);
+    ref.read(syncServiceProvider).sync();
+  }
+
+  /// Yorumu (mevcut puanla birlikte) kaydeder; başarıda 2 sn "kaydedildi"
+  /// durumu gösterilir, misafir kullanıcı yerel-kayıt notuyla bilgilendirilir.
+  Future<void> _saveComment() async {
+    HapticFeedback.mediumImpact();
+    FocusScope.of(context).unfocus();
+    if (_currentRating == null) return;
+    try {
+      final commentText = _commentController.text.trim();
+      await PrefsService.saveRating(
+        movie: widget.movie,
+        rating: _currentRating!,
+        comment: commentText.isEmpty ? null : commentText,
+        isSpoiler: _isSpoiler ? 1 : 0,
+        isPrivate: _isPrivate ? 1 : 0,
+      );
+      ref
+          .read(recommendationEngineProvider)
+          .invalidateCache(isNegativeChange: _currentRating! <= 1)
+          .catchError((_) => {});
+      ref.invalidate(statsProvider);
+      ref.read(syncServiceProvider).sync().catchError((_) => {});
+      ref
+          .read(socialProvider.notifier)
+          .loadActivityFeed()
+          .catchError((_) => {});
+
+      if (mounted) {
+        setState(() {
+          _justSavedComment = true;
+        });
+        final isGuest = !ref.read(authProvider).isLoggedIn;
+        final baseMsg =
+            AppLocalizations.of(context)?.get('review_saved_successfully') ??
+            'Review saved successfully';
+        final suffix = isGuest
+            ? (AppLocalizations.of(context)?.locale.languageCode == 'tr'
+                  ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
+                  : ' (Saved locally, will sync when logged in.)')
+            : '';
+
+        _showToast('$baseMsg$suffix');
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _justSavedComment = false;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showToast(
+          AppLocalizations.of(
+                context,
+              )?.get('error_occurred_msg').replaceAll('{}', '$e') ??
+              'Error: $e',
+          success: false,
+        );
+      }
+    }
+  }
+
+  // ─── Kompozisyon ──────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final movie = widget.movie;
@@ -510,726 +513,141 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       data: (list) => list.any((m) => m.id == movie.id && m.isTV == movie.isTV),
       orElse: () => false,
     );
+    final tagline = _details?['tagline'] as String? ?? '';
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.80,
-      minChildSize: 0.45,
-      maxChildSize: 0.95,
-      builder: (ctx, ctrl) {
+    return DetailSheetShell(
+      contentBuilder: (ctx, ctrl) {
         final c = ctx.c;
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: c.bg.withValues(alpha: c.isLight ? 0.96 : 0.85),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-                border: Border.all(
-                  color: c.isLight
-                      ? c.border
-                      : Colors.white.withValues(alpha: 0.05),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: c.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: ctrl,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          DetailHeroRow(
-                            movie: movie,
-                            runtime: _details?['runtime'] as int? ?? 0,
-                            communityScore: _communityScore,
-                            onBlock: _confirmBlockMovie,
-                            onRecommend: _openRecommendSheet,
-                          ),
-                          const SizedBox(height: 16),
-                          DetailActionButtons(
-                            movie: movie,
-                            inWatchlist: inWatchlist,
-                            hasTrailer: _trailerKey != null,
-                            onToggleWatchlist: _toggleWatchlist,
-                            onOpenTrailer: _openTrailer,
-                          ),
-                          const SizedBox(height: 16),
-                          _ratingSection(c),
-                          _friendsReviewsSection(c),
-                          if ((_details?['tagline'] as String? ?? '')
-                              .isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              '"${_details!['tagline']}"',
-                              style: TextStyle(
-                                color: c.dim,
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                                height: 1.5,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                          if (_extrasLoaded) ...[
-                            if (_providers.isNotEmpty) ...[
-                              const SizedBox(height: 20),
-                              const DetailSectionLabel('detail_where_to_watch'),
-                              const SizedBox(height: 10),
-                              DetailProvidersRow(providers: _providers),
-                            ],
-                            if (_cast.isNotEmpty) ...[
-                              const SizedBox(height: 20),
-                              const DetailSectionLabel('detail_cast'),
-                              const SizedBox(height: 10),
-                              DetailCastRow(
-                                cast: _cast,
-                                service: widget.service,
-                              ),
-                            ],
-                            if (_keywords.isNotEmpty) ...[
-                              const SizedBox(height: 20),
-                              const DetailSectionLabel('detail_keywords'),
-                              const SizedBox(height: 8),
-                              KeywordsWrap(keywords: _keywords),
-                            ],
-                          ] else ...[
-                            const SizedBox(height: 20),
-                            Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: c.dim,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (movie.overview.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const DetailSectionLabel('detail_storyline'),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: c.card,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                movie.overview,
-                                style: TextStyle(
-                                  color: c.ink,
-                                  fontSize: 14,
-                                  height: 1.6,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (_reviews.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const DetailSectionLabel('detail_reviews'),
-                            const SizedBox(height: 10),
-                            ..._reviews
-                                .take(3)
-                                .map((r) => TmdbReviewCard(review: r)),
-                          ],
-                          if (_collection.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const DetailSectionLabel('detail_collection'),
-                            const SizedBox(height: 10),
-                            CollectionRow(
-                              movies: _collection,
-                              onMovieTap: _openAnotherTitle,
-                            ),
-                          ],
-                          if (widget.movie.isTV && _extrasLoaded) ...[
-                            const SizedBox(height: 20),
-                            const DetailSectionLabel('detail_seasons'),
-                            const SizedBox(height: 10),
-                            SeasonsSection(
-                              details: _details,
-                              watchedSeasons: _watchedSeasons,
-                              onToggle: _toggleSeason,
-                            ),
-                          ],
-                          if (_similar.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const DetailSectionLabel('detail_similar'),
-                            const SizedBox(height: 10),
-                            SimilarTitlesRow(
-                              movies: _similar,
-                              onMovieTap: _openAnotherTitle,
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: MediaQuery.of(context).viewInsets.bottom,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _ratingSection(ThemePalette c) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const DetailSectionLabel('detail_rate_title'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _ratingButton(
-                0,
-                c.rBerbat,
-                AppLocalizations.of(context)?.get('recap_stat_awful') ??
-                    'Awful',
-                c,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _ratingButton(
-                1,
-                c.rEh,
-                AppLocalizations.of(context)?.get('recap_stat_meh') ?? 'Meh',
-                c,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _ratingButton(
-                2,
-                c.rIyi,
-                AppLocalizations.of(context)?.get('recap_stat_good') ?? 'Good',
-                c,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _ratingButton(
-                3,
-                c.rHarika,
-                AppLocalizations.of(context)?.get('recap_stat_amazing') ??
-                    'Amazing',
-                c,
-              ),
-            ),
-          ],
-        ),
-        if (_currentRating != null) ...[_commentSection(c)],
-      ],
-    );
-  }
-
-  Widget _commentSection(ThemePalette c) {
-    final tr = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        const DetailSectionLabel('detail_your_review'),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: c.card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: c.borderSoft),
-          ),
-          padding: const EdgeInsets.all(10),
+        return SingleChildScrollView(
+          controller: ctrl,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: _commentController,
-                maxLength: 280,
-                maxLines: 3,
-                style: TextStyle(color: c.ink, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText:
-                      tr?.get('review_comment_hint') ??
-                      'Share your thoughts...',
-                  hintStyle: TextStyle(color: c.dim, fontSize: 13),
-                  border: InputBorder.none,
-                  counterText: '',
+              DetailHeroRow(
+                movie: movie,
+                runtime: _details?['runtime'] as int? ?? 0,
+                communityScore: _communityScore,
+                onBlock: _confirmBlockMovie,
+                onRecommend: _openRecommendSheet,
+              ),
+              const SizedBox(height: 16),
+              DetailActionButtons(
+                movie: movie,
+                inWatchlist: inWatchlist,
+                hasTrailer: _trailerKey != null,
+                onToggleWatchlist: _toggleWatchlist,
+                onOpenTrailer: _openTrailer,
+              ),
+              const SizedBox(height: 16),
+              RatingSection(
+                currentRating: _currentRating,
+                onTap: _handleRatingTap,
+              ),
+              if (_currentRating != null)
+                CommentEditor(
+                  controller: _commentController,
+                  isSpoiler: _isSpoiler,
+                  isPrivate: _isPrivate,
+                  justSaved: _justSavedComment,
+                  onToggleSpoiler: () =>
+                      setState(() => _isSpoiler = !_isSpoiler),
+                  onTogglePrivate: () =>
+                      setState(() => _isPrivate = !_isPrivate),
+                  onSave: _saveComment,
                 ),
+              FriendsReviewsSection(
+                loading: _loadingFriendsReviews,
+                friendsReviews: _friendsReviews,
+                communityReviews: _communityReviews,
+                hasUserRated: _currentRating != null,
+                canModerate: ref.read(authProvider).isLoggedIn,
+                onReport: _reportReview,
+                onBlock: _blockReviewer,
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Tooltip(
-                    message:
-                        tr?.get('semantics_spoiler_toggle') ??
-                        'Toggle spoiler flag',
-                    child: Semantics(
-                      button: true,
-                      label:
-                          tr?.get('semantics_spoiler_toggle') ??
-                          'Toggle spoiler flag',
-                      child: SpringButton(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _isSpoiler = !_isSpoiler;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isSpoiler
-                                ? c.rBerbat.withValues(alpha: 0.15)
-                                : c.borderSoft.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _isSpoiler ? c.rBerbat : c.borderSoft,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _isSpoiler
-                                    ? Icons.warning_amber_rounded
-                                    : Icons.check_circle_outline_rounded,
-                                size: 14,
-                                color: _isSpoiler ? c.rBerbat : c.dim,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tr?.get('review_spoiler') ??
-                                    'Contains spoilers',
-                                style: TextStyle(
-                                  color: _isSpoiler ? c.rBerbat : c.ink,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message:
-                        tr?.get('semantics_private_toggle') ??
-                        'Toggle private review',
-                    child: Semantics(
-                      button: true,
-                      label:
-                          tr?.get('semantics_private_toggle') ??
-                          'Toggle private review',
-                      child: SpringButton(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _isPrivate = !_isPrivate;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isPrivate
-                                ? c.gold.withValues(alpha: 0.15)
-                                : c.borderSoft.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _isPrivate ? c.gold : c.borderSoft,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _isPrivate
-                                    ? Icons.lock_rounded
-                                    : Icons.lock_open_rounded,
-                                size: 14,
-                                color: _isPrivate ? c.gold : c.dim,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tr?.get('review_private') ?? 'Private',
-                                style: TextStyle(
-                                  color: _isPrivate ? c.gold : c.ink,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+              if (tagline.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                TaglineText(tagline: tagline),
+              ],
+              if (_extrasLoaded) ...[
+                if (_providers.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const DetailSectionLabel('detail_where_to_watch'),
+                  const SizedBox(height: 10),
+                  DetailProvidersRow(providers: _providers),
                 ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Sayaç yalnızca kendini yeniler; her tuş vuruşunda koca
-                  // sheet'i setState ile yeniden çizmek gereksizdi.
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _commentController,
-                    builder: (_, value, _) => Text(
-                      '${value.text.length} / 280',
-                      style: TextStyle(color: c.dim, fontSize: 12),
-                    ),
-                  ),
-                  Semantics(
-                    button: true,
-                    label: tr?.get('semantics_save_review') ?? 'Save review',
-                    child: ElevatedButton(
-                      onPressed: _justSavedComment
-                          ? null
-                          : () async {
-                              HapticFeedback.mediumImpact();
-                              FocusScope.of(context).unfocus();
-                              if (_currentRating != null) {
-                                try {
-                                  final commentText = _commentController.text
-                                      .trim();
-                                  await PrefsService.saveRating(
-                                    movie: widget.movie,
-                                    rating: _currentRating!,
-                                    comment: commentText.isEmpty
-                                        ? null
-                                        : commentText,
-                                    isSpoiler: _isSpoiler ? 1 : 0,
-                                    isPrivate: _isPrivate ? 1 : 0,
-                                  );
-                                  ref
-                                      .read(recommendationEngineProvider)
-                                      .invalidateCache(
-                                        isNegativeChange: _currentRating! <= 1,
-                                      )
-                                      .catchError((_) => {});
-                                  ref.invalidate(statsProvider);
-                                  ref
-                                      .read(syncServiceProvider)
-                                      .sync()
-                                      .catchError((_) => {});
-                                  ref
-                                      .read(socialProvider.notifier)
-                                      .loadActivityFeed()
-                                      .catchError((_) => {});
-
-                                  if (mounted) {
-                                    setState(() {
-                                      _justSavedComment = true;
-                                    });
-                                    final isGuest = !ref
-                                        .read(authProvider)
-                                        .isLoggedIn;
-                                    final baseMsg =
-                                        AppLocalizations.of(
-                                          context,
-                                        )?.get('review_saved_successfully') ??
-                                        'Review saved successfully';
-                                    final suffix = isGuest
-                                        ? (AppLocalizations.of(
-                                                    context,
-                                                  )?.locale.languageCode ==
-                                                  'tr'
-                                              ? ' (Yerel kaydedildi, giriş yapınca eşitlenecektir.)'
-                                              : ' (Saved locally, will sync when logged in.)')
-                                        : '';
-
-                                    _showToast('$baseMsg$suffix');
-                                    Future.delayed(
-                                      const Duration(seconds: 2),
-                                      () {
-                                        if (mounted) {
-                                          setState(() {
-                                            _justSavedComment = false;
-                                          });
-                                        }
-                                      },
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    _showToast(
-                                      AppLocalizations.of(context)
-                                              ?.get('error_occurred_msg')
-                                              .replaceAll('{}', '$e') ??
-                                          'Error: $e',
-                                      success: false,
-                                    );
-                                  }
-                                }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _justSavedComment ? c.green : c.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        _justSavedComment
-                            ? (AppLocalizations.of(context)?.get('saved') ??
-                                  'Saved ✔')
-                            : (tr?.get('review_save') ?? 'Save'),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                if (_cast.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const DetailSectionLabel('detail_cast'),
+                  const SizedBox(height: 10),
+                  DetailCastRow(cast: _cast, service: widget.service),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _friendsReviewsSection(ThemePalette c) {
-    final tr = AppLocalizations.of(context);
-    if (_loadingFriendsReviews) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_friendsReviews.isEmpty && _communityReviews.isEmpty) {
-      final hasUserRated = _currentRating != null;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Text(
-            hasUserRated
-                ? (tr?.get('review_no_friends') ??
-                      'Arkadaşlarından henüz yorum yok')
-                : (tr?.get('review_empty_first') ?? 'İlk yorumu sen bırak'),
-            style: TextStyle(
-              color: c.dim,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-
-    final canModerate = ref.read(authProvider).isLoggedIn;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_friendsReviews.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const DetailSectionLabel('review_friends_title'),
-          const SizedBox(height: 10),
-          ..._friendsReviews.map(_buildReviewItem),
-        ],
-        if (_communityReviews.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const DetailSectionLabel('review_community_title'),
-          const SizedBox(height: 10),
-          ..._communityReviews.map(_buildReviewItem),
-        ],
-        // Uzun basma görünmez bir jest; altın vurgulu bilgi şeridi keşfettirir.
-        if (canModerate) ...[
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: c.gold.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: c.gold.withValues(alpha: 0.28)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.touch_app_rounded, color: c.gold, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    tr?.get('review_longpress_hint') ??
-                        'Şikayet etmek veya engellemek için yoruma basılı tut',
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
+                if (_keywords.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const DetailSectionLabel('detail_keywords'),
+                  const SizedBox(height: 8),
+                  KeywordsWrap(keywords: _keywords),
+                ],
+              ] else ...[
+                const SizedBox(height: 20),
+                Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: c.dim,
                     ),
                   ),
                 ),
               ],
-            ),
+              if (movie.overview.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const DetailSectionLabel('detail_storyline'),
+                const SizedBox(height: 8),
+                StorylineCard(overview: movie.overview),
+              ],
+              if (_reviews.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const DetailSectionLabel('detail_reviews'),
+                const SizedBox(height: 10),
+                ..._reviews.take(3).map((r) => TmdbReviewCard(review: r)),
+              ],
+              if (_collection.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const DetailSectionLabel('detail_collection'),
+                const SizedBox(height: 10),
+                CollectionRow(
+                  movies: _collection,
+                  onMovieTap: _openAnotherTitle,
+                ),
+              ],
+              if (widget.movie.isTV && _extrasLoaded) ...[
+                const SizedBox(height: 20),
+                const DetailSectionLabel('detail_seasons'),
+                const SizedBox(height: 10),
+                SeasonsSection(
+                  details: _details,
+                  watchedSeasons: _watchedSeasons,
+                  onToggle: _toggleSeason,
+                ),
+              ],
+              if (_similar.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const DetailSectionLabel('detail_similar'),
+                const SizedBox(height: 10),
+                SimilarTitlesRow(
+                  movies: _similar,
+                  onMovieTap: _openAnotherTitle,
+                ),
+              ],
+              const SizedBox(height: 8),
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+            ],
           ),
-        ],
-      ],
-    );
-  }
-
-  Widget _ratingButton(int rating, Color color, String label, ThemePalette c) {
-    final active = _currentRating == rating;
-    final tr = AppLocalizations.of(context);
-    final semanticsKey = switch (rating) {
-      0 => 'semantics_rate_awful',
-      1 => 'semantics_rate_meh',
-      2 => 'semantics_rate_good',
-      3 => 'semantics_rate_amazing',
-      _ => 'semantics_rate_good',
-    };
-    final semanticsLabel = active
-        ? (tr?.get('semantics_rate_undo').replaceAll('{}', label) ??
-              'Remove $label rating')
-        : (tr?.get(semanticsKey) ?? label);
-    return Tooltip(
-      message: semanticsLabel,
-      child: Semantics(
-        button: true,
-        label: semanticsLabel,
-        selected: active,
-        child: SpringButton(
-          onTap: () async {
-            HapticFeedback.lightImpact();
-            if (active) {
-              // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
-              // götürür — kullanıcıdan onay al.
-              if (_commentController.text.trim().isNotEmpty) {
-                final confirmed = await _confirmRatingDelete();
-                if (!confirmed) return;
-              }
-              final oldRating = _currentRating;
-              await PrefsService.deleteRating(
-                widget.movie.id,
-                widget.movie.isTV,
-              );
-
-              final recoSource = widget.movie.recoSource;
-              if (recoSource != null && oldRating != null) {
-                PrefsService.revertRecoOutcome(
-                  source: recoSource,
-                  liked: oldRating >= 2,
-                ).catchError(
-                  (e) => debugPrint("Reco telemetry revert failed: $e"),
-                );
-              }
-
-              ref
-                  .read(recommendationEngineProvider)
-                  .invalidateCache(isNegativeChange: true)
-                  .catchError((_) => {});
-              setState(() {
-                _currentRating = null;
-                _commentController.clear();
-                _isSpoiler = false;
-                _isPrivate = false;
-              });
-            } else {
-              final commentText = _commentController.text.trim();
-              await PrefsService.saveRating(
-                movie: widget.movie,
-                rating: rating,
-                comment: commentText.isEmpty ? null : commentText,
-                isSpoiler: _isSpoiler ? 1 : 0,
-                isPrivate: _isPrivate ? 1 : 0,
-              );
-              ref
-                  .read(recommendationEngineProvider)
-                  .invalidateCache(isNegativeChange: rating <= 1)
-                  .catchError((_) => {});
-
-              // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
-              // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
-              // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
-              final recoSource = widget.movie.recoSource;
-              if (recoSource != null) {
-                PrefsService.recordRecoOutcome(
-                  source: recoSource,
-                  liked: rating >= 2,
-                ).catchError(
-                  (e) => debugPrint("Reco telemetry write failed: $e"),
-                );
-              }
-
-              setState(() {
-                _currentRating = rating;
-              });
-
-              if (mounted && !ref.read(authProvider).isLoggedIn) {
-                final tr = AppLocalizations.of(context);
-                showAppToast(
-                  context,
-                  tr?.locale.languageCode == 'tr'
-                      ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
-                      : 'Rating saved locally. Will sync when logged in.',
-                  success: false,
-                );
-              }
-            }
-            ref.invalidate(statsProvider);
-            ref.read(syncServiceProvider).sync();
-          },
-          child: Container(
-            height: 38,
-            decoration: BoxDecoration(
-              color: active ? color : c.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active ? color : c.borderSoft,
-                width: active ? 1.5 : 1,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: active
-                    ? ((color == c.rEh || color == c.rIyi || color == c.rHarika)
-                          ? Colors.black87
-                          : Colors.white)
-                    : c.dim,
-                fontSize: 12,
-                fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

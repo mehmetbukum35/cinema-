@@ -5,6 +5,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- End-to-end auth+sync flow test (`test/auth_sync_flow_test.dart`): real ApiService/SyncService/SQLite against a stateful fake backend — covers push/pull, second-device pull, last-write-wins both ways, silent token refresh with rotation, session expiry keeping local data, and idempotent re-push after re-login
 - Machine-readable `code` field on backend error responses; client maps errors by code first and falls back to legacy Turkish message matching for old servers
 - `GET /social/match/taste-all`: all friends' taste-match scores in a single request (client falls back to per-friend calls on old servers)
 - Complete accessibility semantics for search results, social cards/tabs, and movie detail rating controls
@@ -16,6 +17,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - Watchlist and stats screens now render local data immediately and refresh after background sync (offline-first, no more sync-blocked spinner)
 - All `ApiService` error paths decode responses defensively (HTML error pages no longer surface as `FormatException`)
 - `/me` response now includes `apple_sub`; verification/reset e-mails rebranded from "Ne İzlesem" to "Cinema+"
+- `movie_detail_sheet.dart` split (1,235 → 653 lines): presentational sections extracted to `movie_detail/` (sheet shell, rating section, comment editor, friends reviews, text sections, shared block/recommend/delete-confirm actions); public `MovieDetailSheet` statics kept as thin delegates
 - Search/social/detail touch targets now use `SpringButton` or Material ink where appropriate
 - Minimum UI body font size bumped to 12px on search, social, detail, and profile surfaces
 - `backend/src/Social.php` split into domain traits under `backend/src/Social/`
