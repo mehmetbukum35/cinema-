@@ -122,11 +122,9 @@ class ProfileScreen extends ConsumerWidget {
           return; // Hata durumunda local sıfırlamaya geçme
         }
       }
-      await PrefsService.resetAll();
-      await ref.read(authProvider.notifier).resetAfterDataWipe();
+      await ref.read(authProvider.notifier).wipeAllData();
       ref.invalidate(syncProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
         showAppToast(
           context,
           AppLocalizations.of(context)?.get('all_data_reset') ??
@@ -639,8 +637,7 @@ class ProfileScreen extends ConsumerWidget {
                           top: Radius.circular(24),
                         ),
                       ),
-                      builder: (_) =>
-                          ChangePasswordSheet(ref: ref, parentContext: context),
+                      builder: (_) => ChangePasswordSheet(ref: ref),
                     );
                   },
                 ),
@@ -701,8 +698,7 @@ class ProfileScreen extends ConsumerWidget {
                           top: Radius.circular(24),
                         ),
                       ),
-                      builder: (_) =>
-                          UnlinkGoogleSheet(ref: ref, parentContext: context),
+                      builder: (_) => UnlinkGoogleSheet(ref: ref),
                     );
                   },
                 ),

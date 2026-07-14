@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/movie.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_toast.dart';
 import '../movie_detail_sheet.dart';
 
 /// Akış/öneri kartından yapım detayına geçiş: TMDB'den detayları çekip
@@ -31,9 +32,7 @@ Future<void> openMovieDetailById(
 
     if (details == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yapım detayları yüklenemedi.')),
-        );
+        showAppToast(context, 'Yapım detayları yüklenemedi.', success: false);
       }
       return;
     }
@@ -50,9 +49,7 @@ Future<void> openMovieDetailById(
   } catch (e) {
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+      showAppToast(context, 'Hata: $e', success: false);
     }
   }
 }

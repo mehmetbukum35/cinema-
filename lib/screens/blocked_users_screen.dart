@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/cinematic_background.dart';
 
 /// Engellenen kullanıcıların listesi ve engel kaldırma.
@@ -87,34 +88,21 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
     try {
       await ref.read(apiServiceProvider).unblockUser(userId);
       if (!mounted) return;
-      final c = context.c;
       setState(() {
         _blocked = _blocked
             ?.where((u) => int.tryParse(u['id']?.toString() ?? '') != userId)
             .toList();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('blocked_users_unblocked') ?? 'Engel kaldırıldı',
-            style: const TextStyle(color: Colors.white),
-          ),
-          backgroundColor: c.green,
-          duration: const Duration(seconds: 2),
-        ),
+      showAppToast(
+        context,
+        tr?.get('blocked_users_unblocked') ?? 'Engel kaldırıldı',
       );
     } catch (e) {
       if (!mounted) return;
-      final c = context.c;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
-            style: const TextStyle(color: Colors.white),
-          ),
-          backgroundColor: c.red,
-          duration: const Duration(seconds: 2),
-        ),
+      showAppToast(
+        context,
+        tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
+        success: false,
       );
     } finally {
       if (mounted) setState(() => _busy.remove(userId));

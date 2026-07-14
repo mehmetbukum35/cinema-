@@ -8,6 +8,7 @@ import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/pulsing_placeholder.dart';
 import '../widgets/entrance.dart';
@@ -699,7 +700,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
   Future<void> _confirmRemove(Movie m) async {
     final c = context.c;
-    final messenger = ScaffoldMessenger.of(context);
     HapticFeedback.lightImpact();
     final ok = await showDialog<bool>(
       context: context,
@@ -745,24 +745,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     if (ok == true) {
       await ref.read(watchlistProvider.notifier).remove(m.id, m.isTV);
       if (!mounted) return;
-      messenger.clearSnackBars();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)
-                    ?.get('title_removed_from_watchlist')
-                    .replaceAll('{}', m.title) ??
-                '${m.title} removed from watchlist.',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
-            textColor: context.c.red,
-            onPressed: () async {
-              await ref.read(watchlistProvider.notifier).add(m);
-            },
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        AppLocalizations.of(context)
+                ?.get('title_removed_from_watchlist')
+                .replaceAll('{}', m.title) ??
+            '${m.title} removed from watchlist.',
+        duration: const Duration(seconds: 3),
+        actionLabel: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
+        onAction: () => ref.read(watchlistProvider.notifier).add(m),
       );
     }
   }

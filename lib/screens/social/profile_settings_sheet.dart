@@ -118,12 +118,16 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
                   final username = widget.usernameCtrl.text
                       .trim()
                       .toLowerCase();
+                  // Kullanıcı adı alanı zaten bu sheet'te; üstüne ikinci bir
+                  // sheet açmak yerine yerinde uyar.
                   if (val && username.isEmpty) {
-                    showUsernamePromptIfNeeded(
+                    showAppToast(
                       context,
-                      ref,
-                      forcePublic: true,
-                      allowSkip: true,
+                      AppLocalizations.of(
+                            context,
+                          )?.get('please_enter_a_username') ??
+                          'Please enter a username.',
+                      success: false,
                     );
                     return;
                   }
@@ -136,13 +140,12 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
             ElevatedButton(
               onPressed: () async {
                 final username = widget.usernameCtrl.text.trim().toLowerCase();
-                if (username.isEmpty) {
+                final validationKey = validateUsername(username);
+                if (validationKey != null) {
                   showAppToast(
                     context,
-                    AppLocalizations.of(
-                          context,
-                        )?.get('please_enter_a_username') ??
-                        'Please enter a username.',
+                    AppLocalizations.of(context)?.get(validationKey) ??
+                        validationKey,
                     success: false,
                   );
                   return;

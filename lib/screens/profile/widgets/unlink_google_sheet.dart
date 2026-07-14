@@ -3,16 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/localization_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/app_toast.dart';
 
 class UnlinkGoogleSheet extends StatefulWidget {
   final WidgetRef ref;
-  final BuildContext parentContext;
 
-  const UnlinkGoogleSheet({
-    super.key,
-    required this.ref,
-    required this.parentContext,
-  });
+  const UnlinkGoogleSheet({super.key, required this.ref});
 
   @override
   State<UnlinkGoogleSheet> createState() => _UnlinkGoogleSheetState();
@@ -42,7 +38,6 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(widget.parentContext);
     setState(() {
       _localError = null;
       _isLoading = true;
@@ -56,18 +51,14 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pop(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('google_unlink_success') ??
-                'Google hesabı bağlantısı kaldırıldı.',
-            style: const TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
+      // Toast kök Overlay'de yaşar; sheet kapansa da klavyenin üstünde
+      // görünür kalır.
+      showAppToast(
+        context,
+        tr?.get('google_unlink_success') ??
+            'Google hesabı bağlantısı kaldırıldı.',
       );
+      Navigator.pop(context);
     } else {
       final authState = widget.ref.read(authProvider);
       setState(() {

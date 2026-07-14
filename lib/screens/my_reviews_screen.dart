@@ -10,6 +10,7 @@ import '../services/providers.dart';
 import '../services/sync_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/spring_button.dart';
 import 'movie_detail_sheet.dart';
@@ -117,17 +118,9 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     );
     ref.read(syncServiceProvider).sync().catchError((_) => {});
     if (!mounted) return;
-    final c2 = context.c;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context)?.get('review_deleted') ??
-              'Yorum silindi',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: c2.green,
-        duration: const Duration(seconds: 2),
-      ),
+    showAppToast(
+      context,
+      AppLocalizations.of(context)?.get('review_deleted') ?? 'Yorum silindi',
     );
     _load();
   }

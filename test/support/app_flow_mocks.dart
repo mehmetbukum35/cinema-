@@ -109,7 +109,18 @@ class MockIntegrationApiService implements ApiService {
   Future<Map<String, dynamic>> getTopProfiles() async => {'profiles': []};
 
   @override
+  Future<Map<String, dynamic>> getSentRecommendations() async => {
+        'recommendations': [],
+      };
+
+  @override
   Future<FriendSignals> getFriendSignals() async => const FriendSignals();
+
+  @override
+  Future<List<dynamic>> getAllTasteMatches() async => [];
+
+  @override
+  Future<Map<String, dynamic>?> getActiveCouchSession() async => null;
 
   @override
   Future<void> publishTasteDna(Map<String, dynamic> payload) async {}

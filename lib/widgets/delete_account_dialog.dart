@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import 'app_toast.dart';
 
 /// Hesap silme onayı: geri alınamaz uyarısı + bilinçli onay kutusu.
 /// Google Play politikası gereği hesap oluşturulabilen uygulamalarda
@@ -38,25 +39,23 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
 
-    final messenger = ScaffoldMessenger.of(context);
     final tr = AppLocalizations.of(context);
     final ok = await widget.parentRef
         .read(authProvider.notifier)
         .deleteAccount();
 
     if (!mounted) return;
-    Navigator.pop(context);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? (tr?.get('auth_delete_done') ??
-                    'Hesabınız ve bulut verileriniz kalıcı olarak silindi.')
-              : (tr?.get('auth_err_delete_failed') ??
-                    'Hesap silinemedi. Lütfen tekrar deneyin.'),
-        ),
-      ),
+    // Toast kök Overlay'de yaşar; dialog kapansa da görünür kalır.
+    showAppToast(
+      context,
+      ok
+          ? (tr?.get('auth_delete_done') ??
+                'Hesabınız ve bulut verileriniz kalıcı olarak silindi.')
+          : (tr?.get('auth_err_delete_failed') ??
+                'Hesap silinemedi. Lütfen tekrar deneyin.'),
+      success: ok,
     );
+    Navigator.pop(context);
   }
 
   @override

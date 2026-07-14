@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/social/profile_settings_sheet.dart';
-import '../widgets/username_prompt_sheet.dart';
 
 /// Kullanıcının web/sosyal özellikler için kullanıcı adı belirlemesi gerekip
 /// gerekmediğini kontrol eder.
@@ -22,29 +21,16 @@ String? validateUsername(String raw) {
   return null;
 }
 
-/// Giriş sonrası veya halka açık profil açılırken kullanıcı adı iste.
-/// İlk girişte doğrudan "Profilini Özelleştir" sheet'ini açar.
+/// Giriş sonrası kullanıcı adı gerekiyorsa doğrudan "Profilini Özelleştir"
+/// sheet'ini açar (kullanıcı adı + herkese açık profil anahtarı bir arada).
 Future<void> showUsernamePromptIfNeeded(
   BuildContext context,
   WidgetRef ref, {
-  bool forcePublic = false,
   bool allowSkip = true,
 }) {
   final auth = ref.read(authProvider);
   if (!auth.isAuthenticated || !needsUsername(auth.user)) {
     return Future.value();
-  }
-
-  if (forcePublic) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: allowSkip,
-      enableDrag: allowSkip,
-      builder: (_) =>
-          UsernamePromptSheet(forcePublic: forcePublic, allowSkip: allowSkip),
-    );
   }
 
   return showModalBottomSheet<void>(

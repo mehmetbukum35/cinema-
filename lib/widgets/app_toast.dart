@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -15,6 +16,10 @@ void showAppToast(BuildContext context, String message, {bool success = true}) {
   );
 }
 
+/// Aynı anda tek toast görünür: yenisi geldiğinde öncekini kaldırır ki
+/// aynı üst konumda üst üste binmesinler.
+VoidCallback? _dismissActiveToast;
+
 /// Klavye ve alt navigasyonun üstünde, tutarlı üst konumlu geri bildirim.
 void showAppSnackBar(
   BuildContext context,
@@ -27,7 +32,20 @@ void showAppSnackBar(
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
   if (overlay == null) return;
   final c = context.c;
+
   late final OverlayEntry entry;
+  // Hem süre dolunca (onDone) hem aksiyon butonunda hem de yeni bir toast
+  // geldiğinde çağrılabilir; ikinci remove() çökmesin diye tek seferlik.
+  var removed = false;
+  void removeEntry() {
+    if (removed) return;
+    removed = true;
+    entry.remove();
+    if (identical(_dismissActiveToast, removeEntry)) {
+      _dismissActiveToast = null;
+    }
+  }
+
   entry = OverlayEntry(
     builder: (ctx) => _AppToast(
       message: message,
@@ -37,12 +55,15 @@ void showAppSnackBar(
       onAction: onAction == null
           ? null
           : () {
-              entry.remove();
+              removeEntry();
               onAction();
             },
-      onDone: () => entry.remove(),
+      onDone: removeEntry,
     ),
   );
+
+  _dismissActiveToast?.call();
+  _dismissActiveToast = removeEntry;
   overlay.insert(entry);
 }
 
@@ -80,15 +101,31 @@ class _AppToastState extends State<_AppToast>
     _run();
   }
 
+  Timer? _timer;
+
   Future<void> _run() async {
-    await _ac.forward();
-    await Future.delayed(widget.duration);
-    if (mounted) await _ac.reverse();
-    widget.onDone();
+    try {
+      await _ac.forward();
+      if (!mounted) {
+        widget.onDone();
+        return;
+      }
+      _timer = Timer(widget.duration, () async {
+        try {
+          if (mounted) {
+            await _ac.reverse();
+          }
+        } catch (_) {}
+        widget.onDone();
+      });
+    } catch (_) {
+      widget.onDone();
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _ac.dispose();
     super.dispose();
   }
@@ -111,49 +148,55 @@ class _AppToastState extends State<_AppToast>
             ).animate(CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic)),
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.color,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.message,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+              // Aksiyonlu toast tıklamaları yutar; gövdeye dokunmak erken
+              // kapatır ki altındaki üst bar süre boyunca kilitli kalmasın.
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onAction == null ? null : widget.onDone,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
                       ),
-                    ),
-                    if (widget.actionLabel != null && widget.onAction != null)
-                      TextButton(
-                        onPressed: widget.onAction,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
                         child: Text(
-                          widget.actionLabel!,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                          widget.message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                  ],
+                      if (widget.actionLabel != null && widget.onAction != null)
+                        TextButton(
+                          onPressed: widget.onAction,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            widget.actionLabel!,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

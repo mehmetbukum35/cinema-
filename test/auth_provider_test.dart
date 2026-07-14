@@ -247,15 +247,14 @@ void main() {
     );
 
     test(
-      'resetAfterDataWipe should clear in-memory auth after prefs wipe',
+      'wipeAllData should clear in-memory auth and stored tokens',
       () async {
         final notifier = container.read(authProvider.notifier);
 
         await notifier.login('test@example.com', 'secret123');
         expect(container.read(authProvider).isAuthenticated, isTrue);
 
-        await PrefsService.resetAll();
-        await notifier.resetAfterDataWipe();
+        await notifier.wipeAllData();
 
         expect(container.read(authProvider).isAuthenticated, isFalse);
         expect(await PrefsService.getAccessToken(), isNull);

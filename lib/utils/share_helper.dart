@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/app_toast.dart';
 
 /// iOS (iPad ve iOS 26+) paylaşım sayfası için kaynak dikdörtgen ister;
 /// [anchorContext] paylaş butonunun build context'i olmalı.
@@ -25,12 +26,10 @@ Future<void> shareMessage({
     await Share.share(message, sharePositionOrigin: shareOrigin);
   } catch (_) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          failureMessage ?? 'Paylaşım açılamadı. Lütfen tekrar deneyin.',
-        ),
-      ),
+    showAppToast(
+      context,
+      failureMessage ?? 'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+      success: false,
     );
   }
 }
@@ -54,12 +53,10 @@ Future<void> shareFiles({
     );
   } catch (_) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          failureMessage ?? 'Paylaşım açılamadı. Lütfen tekrar deneyin.',
-        ),
-      ),
+    showAppToast(
+      context,
+      failureMessage ?? 'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+      success: false,
     );
   }
 }

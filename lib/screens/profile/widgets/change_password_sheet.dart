@@ -3,16 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/localization_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/app_toast.dart';
 
 class ChangePasswordSheet extends StatefulWidget {
   final WidgetRef ref;
-  final BuildContext parentContext;
 
-  const ChangePasswordSheet({
-    super.key,
-    required this.ref,
-    required this.parentContext,
-  });
+  const ChangePasswordSheet({super.key, required this.ref});
 
   @override
   State<ChangePasswordSheet> createState() => _ChangePasswordSheetState();
@@ -70,8 +66,6 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(widget.parentContext);
-
     setState(() {
       _localError = null;
       _isLoading = true;
@@ -87,21 +81,14 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       });
 
       if (success) {
-        // Close the sheet
-        Navigator.pop(context);
-
-        // Show success snackbar
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              tr?.get('change_password_success') ??
-                  'Şifreniz başarıyla değiştirildi. Tekrar giriş yapın.',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+        // Toast kök Overlay'de yaşar; sheet kapansa da klavyenin üstünde
+        // görünür kalır.
+        showAppToast(
+          context,
+          tr?.get('change_password_success') ??
+              'Şifreniz başarıyla değiştirildi. Tekrar giriş yapın.',
         );
+        Navigator.pop(context);
       } else {
         final authState = widget.ref.read(authProvider);
         setState(() {

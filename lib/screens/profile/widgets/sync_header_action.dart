@@ -5,6 +5,7 @@ import '../../../services/prefs_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/app_toast.dart';
 
 class SyncHeaderAction extends ConsumerStatefulWidget {
   const SyncHeaderAction({super.key});
@@ -47,26 +48,19 @@ class _SyncHeaderActionState extends ConsumerState<SyncHeaderAction> {
       await ref.read(syncServiceProvider).sync();
       await _loadSyncTime();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('sync_success') ??
-                  'Successfully synced',
-            ),
-            backgroundColor: context.c.gold,
-          ),
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('sync_success') ??
+              'Successfully synced',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)?.get('auth_err_generic') ??
-                  'Bir hata oluştu: $e',
-            ),
-            backgroundColor: context.c.red,
-          ),
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('auth_err_generic') ??
+              'Bir hata oluştu: $e',
+          success: false,
         );
       }
     } finally {

@@ -524,12 +524,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
   Future<void> _endLocalSession({required bool wipeLocalData}) async {
+    state = AuthState();
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
       await DatabaseHelper().hardClearAllData();
       await PrefsService.setLastAuthenticatedUserId(null);
     }
-    state = AuthState();
     await _invalidateGuestProviders();
   }
 
@@ -554,22 +554,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _endLocalSession(wipeLocalData: wipeLocalData);
   }
 
-  /// [PrefsService.resetAll] sonrası: depolama zaten temiz; bellekteki oturumu
-  /// sıfırla. Oturum süresi doldu snackbar'ı göstermez.
-  Future<void> resetAfterDataWipe() async {
-    await NotificationService.instance.unregisterToken();
-    if (_googleInitialized) {
-      try {
-        await GoogleSignIn.instance.signOut();
-      } catch (e) {
-        debugPrint("Google sign-out after data wipe failed (ignored): $e");
+  /// Tehlike bölgesi "tüm verileri sıfırla". Sıralama önemli:
+  /// 1) bellekteki oturum kapanır ki bu sırada 401'e düşen bir istek
+  ///    [clearSession] üzerinden "oturum süresi doldu" uyarısı basamasın,
+  /// 2) push token sunucudan silinir (token'lar depoda hâlâ geçerliyken —
+  ///    depo silindikten sonra bu istek 401 → refresh denied → sahte
+  ///    "Giriş Yap" uyarısı üretiyordu),
+  /// 3) depolama temizlenir.
+  Future<void> wipeAllData() async {
+    final wasLoggedIn = state.isAuthenticated;
+    state = AuthState();
+    if (wasLoggedIn) {
+      await NotificationService.instance.unregisterToken();
+      if (_googleInitialized) {
+        try {
+          await GoogleSignIn.instance.signOut();
+        } catch (e) {
+          debugPrint("Google sign-out after data wipe failed (ignored): $e");
+        }
       }
     }
-    state = AuthState();
+    await PrefsService.resetAll();
     await _invalidateGuestProviders();
   }
 
   Future<void> clearSession() async {
+    // Kullanıcı zaten çıkmışsa (ör. veri sıfırlama/hesap silme sonrası havada
+    // kalan bir isteğin 401'i) uyarı basma; depo ilgili akışta zaten temizlendi.
+    if (!state.isAuthenticated) return;
+
     await _endLocalSession(wipeLocalData: false);
 
     final context = NotificationService.navigatorKey.currentContext;
