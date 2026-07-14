@@ -29,7 +29,7 @@ class SearchInputBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context)?.get('tab_search') ?? 'Ara',
+            AppLocalizations.of(context)?.get('tab_search') ?? 'Search',
             style: TextStyle(
               color: c.ink,
               fontSize: 20,
@@ -49,41 +49,49 @@ class SearchInputBar extends StatelessWidget {
                         ? Border.all(color: c.border, width: 1)
                         : null,
                   ),
-                  child: TextField(
-                    controller: controller,
-                    onChanged: onChanged,
-                    autofocus: false,
-                    style: TextStyle(color: c.ink, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText:
-                          AppLocalizations.of(context)?.get('search_hint') ??
-                          'Film veya dizi adı...',
-                      hintStyle: TextStyle(color: c.dim, fontSize: 15),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: c.dim,
-                        size: 20,
+                  child: Semantics(
+                    textField: true,
+                    label:
+                        AppLocalizations.of(context)?.get('search_hint') ??
+                        'Movie or TV show name...',
+                    child: TextField(
+                      controller: controller,
+                      onChanged: onChanged,
+                      autofocus: false,
+                      style: TextStyle(color: c.ink, fontSize: 15),
+                      decoration: InputDecoration(
+                        hintText:
+                            AppLocalizations.of(context)?.get('search_hint') ??
+                            'Movie or TV show name...',
+                        hintStyle: TextStyle(color: c.dim, fontSize: 15),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: c.dim,
+                          size: 20,
+                        ),
+                        suffixIcon: controller.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: c.dim,
+                                  size: 18,
+                                ),
+                                tooltip:
+                                    AppLocalizations.of(
+                                      context,
+                                    )?.get('semantics_close') ??
+                                    'Close',
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  onClear();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
                       ),
-                      suffixIcon: controller.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.close_rounded,
-                                color: c.dim,
-                                size: 18,
-                              ),
-                              tooltip:
-                                  AppLocalizations.of(
-                                    context,
-                                  )?.get('semantics_close') ??
-                                  'Close',
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                onClear();
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),

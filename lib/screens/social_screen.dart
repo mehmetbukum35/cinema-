@@ -162,33 +162,46 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         actions: [
           if (authUser != null && authUser['username'] != null)
             Builder(
-              builder: (shareBtnContext) => IconButton(
-                icon: Icon(Icons.share_rounded, color: c.gold),
-                onPressed: () {
-                  final username = authUser['username'];
-                  final profileUrl = ApiService.webProfileUrl(
-                    username,
-                    lang: isTr ? 'tr' : 'en',
-                  );
-                  final tr = AppLocalizations.of(context);
-                  shareMessage(
-                    context: context,
-                    anchorContext: shareBtnContext,
-                    message:
-                        tr
-                            ?.get('share_profile_text')
-                            .replaceAll('{}', profileUrl) ??
-                        'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
-                    failureMessage:
-                        tr?.get('profile_share_failed') ??
-                        'Paylaşım açılamadı. Lütfen tekrar deneyin.',
-                  );
-                },
+              builder: (shareBtnContext) => Tooltip(
+                message: tr?.get('semantics_share_profile') ?? 'Share profile',
+                child: Semantics(
+                  button: true,
+                  label: tr?.get('semantics_share_profile') ?? 'Share profile',
+                  child: IconButton(
+                    icon: Icon(Icons.share_rounded, color: c.gold),
+                    onPressed: () {
+                      final username = authUser['username'];
+                      final profileUrl = ApiService.webProfileUrl(
+                        username,
+                        lang: isTr ? 'tr' : 'en',
+                      );
+                      shareMessage(
+                        context: context,
+                        anchorContext: shareBtnContext,
+                        message:
+                            tr
+                                ?.get('share_profile_text')
+                                .replaceAll('{}', profileUrl) ??
+                            'Follow me on What to Watch! Check out my watchlist and favorites here: $profileUrl',
+                        failureMessage:
+                            tr?.get('profile_share_failed') ??
+                            'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          IconButton(
-            icon: Icon(Icons.settings_rounded, color: c.dim),
-            onPressed: () => _openProfileSettingsSheet(context),
+          Tooltip(
+            message: tr?.get('semantics_open_settings') ?? 'Open settings',
+            child: Semantics(
+              button: true,
+              label: tr?.get('semantics_open_settings') ?? 'Open settings',
+              child: IconButton(
+                icon: Icon(Icons.settings_rounded, color: c.dim),
+                onPressed: () => _openProfileSettingsSheet(context),
+              ),
+            ),
           ),
         ],
         bottom: TabBar(
@@ -399,6 +412,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   }
 
   Widget _buildFriendsTab(ThemePalette c, SocialState state, bool isTr) {
+    final tr = AppLocalizations.of(context);
     return Column(
       children: [
         // Search & Add Friend Bar
@@ -433,13 +447,24 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: _sendFriendRequest,
-                style: IconButton.styleFrom(
-                  backgroundColor: c.gold,
-                  foregroundColor: Colors.black,
+              Tooltip(
+                message:
+                    tr?.get('semantics_send_friend_request') ??
+                    'Send friend request',
+                child: Semantics(
+                  button: true,
+                  label:
+                      tr?.get('semantics_send_friend_request') ??
+                      'Send friend request',
+                  child: IconButton.filled(
+                    onPressed: _sendFriendRequest,
+                    style: IconButton.styleFrom(
+                      backgroundColor: c.gold,
+                      foregroundColor: Colors.black,
+                    ),
+                    icon: const Icon(Icons.person_add_rounded),
+                  ),
                 ),
-                icon: const Icon(Icons.person_add_rounded),
               ),
             ],
           ),
@@ -472,6 +497,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
   }
 
   Widget _buildRequestsTab(ThemePalette c, SocialState state, bool isTr) {
+    final tr = AppLocalizations.of(context);
     if (state.pendingReceived.isEmpty && state.pendingSent.isEmpty) {
       return Center(
         child: Text(
@@ -529,10 +555,16 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       Icons.check_circle_rounded,
                       color: Colors.green,
                     ),
+                    tooltip:
+                        tr?.get('semantics_accept_request') ??
+                        'Accept friend request',
                     onPressed: () => _acceptRequest(f.id),
                   ),
                   IconButton(
                     icon: Icon(Icons.cancel_rounded, color: c.red),
+                    tooltip:
+                        tr?.get('semantics_decline_request') ??
+                        'Decline friend request',
                     onPressed: () => _declineRequest(f.id),
                   ),
                 ],
@@ -595,6 +627,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       Icons.delete_outline_rounded,
                       color: c.red.withValues(alpha: 0.6),
                     ),
+                    tooltip:
+                        tr?.get('semantics_withdraw_request') ??
+                        'Withdraw friend request',
                     onPressed: () => _withdrawRequest(f.id),
                   ),
                 ],

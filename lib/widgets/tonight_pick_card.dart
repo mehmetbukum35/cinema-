@@ -15,7 +15,7 @@ String? recoReasonLabel(BuildContext context, Movie movie) {
   final key = isFriend ? 'reco_reason_friend' : 'reco_reason_seed';
   final tpl =
       AppLocalizations.of(context)?.get(key) ??
-      (isFriend ? '{x} buna bayıldı' : '{x} beğendiğin için');
+      (isFriend ? '{x} loved this' : 'Because you liked {x}');
   return tpl.replaceFirst('{x}', reason);
 }
 
@@ -82,7 +82,7 @@ class TonightPickCard extends StatelessWidget {
     return Semantics(
       button: true,
       label:
-          '${tr?.get('tonight_title') ?? 'Bu Gece Ne İzlesem?'}: '
+          '${tr?.get('tonight_title') ?? 'What to Watch Tonight?'}: '
           '${movie.title}${reason != null ? '. $reason' : ''}',
       child: GestureDetector(
         onTap: onTap,
@@ -145,14 +145,15 @@ class TonightPickCard extends StatelessWidget {
                               icon: Icons.thumb_down_alt_outlined,
                               label:
                                   tr?.get('tonight_not_interested') ??
-                                  'İlgimi çekmedi',
+                                  'Not interested',
                               onPressed: onDismiss!,
                             ),
                           if (onShuffle != null) ...[
                             const SizedBox(width: 8),
                             _actionChip(
                               icon: Icons.shuffle_rounded,
-                              label: tr?.get('tonight_shuffle') ?? 'Başka öner',
+                              label:
+                                  tr?.get('tonight_shuffle') ?? 'Show another',
                               onPressed: onShuffle!,
                             ),
                           ],
@@ -175,7 +176,7 @@ class TonightPickCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               (tr?.get('tonight_title') ??
-                                      'Bu Gece Ne İzlesem?')
+                                      'What to Watch Tonight?')
                                   .toUpperCase(),
                               style: TextStyle(
                                 color: c.gold,
@@ -215,7 +216,7 @@ class TonightPickCard extends StatelessWidget {
                               ),
                               child: Text(
                                 '%${movie.matchScore} '
-                                '${tr?.get('tonight_match') ?? 'uyum'}',
+                                '${tr?.get('tonight_match') ?? 'match'}',
                                 style: TextStyle(
                                   color: c.green,
                                   fontSize: 12,

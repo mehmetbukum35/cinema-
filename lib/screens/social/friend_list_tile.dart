@@ -128,6 +128,9 @@ class FriendListTile extends StatelessWidget {
                 Icons.person_remove_rounded,
                 color: c.red.withValues(alpha: 0.7),
               ),
+              tooltip:
+                  AppLocalizations.of(context)?.get('remove_friend') ??
+                  'Remove Friend',
               onPressed: () {
                 showDialog(
                   context: context,

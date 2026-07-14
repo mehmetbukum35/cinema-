@@ -40,63 +40,67 @@ class SearchQuickAccess extends StatelessWidget {
                 ),
               );
             },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: c.gold.withValues(alpha: 0.35),
-                  width: 1.5,
+            child: Semantics(
+              button: true,
+              label: tr?.get('together_similar_title') ?? 'Find Similar',
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: c.gold.withValues(alpha: 0.35),
+                    width: 1.5,
+                  ),
+                  boxShadow: CinemaShadows.card,
                 ),
-                boxShadow: CinemaShadows.card,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.gold.withValues(alpha: 0.14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: c.gold.withValues(alpha: 0.14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.compare_arrows_rounded,
+                        color: c.gold,
+                        size: 22,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.compare_arrows_rounded,
-                      color: c.gold,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tr?.get('together_similar_title') ?? 'Find Similar',
-                          style: TextStyle(
-                            color: c.ink,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tr?.get('together_similar_title') ?? 'Find Similar',
+                            style: TextStyle(
+                              color: c.ink,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          tr?.get('together_similar_desc') ??
-                              'Discover titles similar to one you love',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: c.dim,
-                            fontSize: 12,
-                            height: 1.35,
+                          const SizedBox(height: 3),
+                          Text(
+                            tr?.get('together_similar_desc') ??
+                                'Discover titles similar to one you love',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: c.dim,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: c.dim, size: 24),
-                ],
+                    Icon(Icons.chevron_right_rounded, color: c.dim, size: 24),
+                  ],
+                ),
               ),
             ),
           ),
@@ -116,13 +120,19 @@ class SearchQuickAccess extends StatelessWidget {
                 const Spacer(),
                 GestureDetector(
                   onTap: onClearHistory,
-                  child: Text(
-                    AppLocalizations.of(context)?.get('search_clear') ??
-                        'Temizle',
-                    style: TextStyle(
-                      color: c.dim,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  child: Semantics(
+                    button: true,
+                    label:
+                        AppLocalizations.of(context)?.get('search_clear') ??
+                        'Clear',
+                    child: Text(
+                      AppLocalizations.of(context)?.get('search_clear') ??
+                          'Clear',
+                      style: TextStyle(
+                        color: c.dim,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),

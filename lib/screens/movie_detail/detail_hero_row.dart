@@ -57,24 +57,32 @@ class DetailHeroRow extends StatelessWidget {
                 message:
                     AppLocalizations.of(context)?.get('block_and_hide_title') ??
                     'Block and Hide Title',
-                child: SpringButton(
-                  onTap: onBlock,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
+                child: Semantics(
+                  button: true,
+                  label:
+                      AppLocalizations.of(
+                        context,
+                      )?.get('block_and_hide_title') ??
+                      'Block and Hide Title',
+                  child: SpringButton(
+                    onTap: onBlock,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.visibility_off_rounded,
-                      color: Colors.white,
-                      size: 13,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.visibility_off_rounded,
+                        color: Colors.white,
+                        size: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -87,24 +95,32 @@ class DetailHeroRow extends StatelessWidget {
                 message:
                     AppLocalizations.of(context)?.get('recommend_to_friend') ??
                     'Recommend to Friend',
-                child: SpringButton(
-                  onTap: onRecommend,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
+                child: Semantics(
+                  button: true,
+                  label:
+                      AppLocalizations.of(
+                        context,
+                      )?.get('recommend_to_friend') ??
+                      'Recommend to Friend',
+                  child: SpringButton(
+                    onTap: onRecommend,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 13,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 13,
+                      ),
                     ),
                   ),
                 ),
