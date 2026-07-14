@@ -95,9 +95,7 @@ class ApiService {
             _client.delete(url, headers: newHeaders, body: bodyStr),
           );
         } else {
-          response = await _withTimeout(
-            _client.get(url, headers: newHeaders),
-          );
+          response = await _withTimeout(_client.get(url, headers: newHeaders));
         }
       } else if (outcome == RefreshOutcome.denied) {
         debugPrint("Refresh token rejected by server. Ending local session.");
