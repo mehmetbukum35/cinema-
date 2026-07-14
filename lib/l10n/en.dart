@@ -41,6 +41,8 @@ const Map<String, String> kEnStrings = {
   'couch_close': 'Close',
   'couch_leave': 'Leave session',
   'couch_session_closed': 'Session closed.',
+  'couch_server_outdated':
+      'The server doesn\'t know this feature yet. The app server needs an update.',
   'together_friends': 'Friends',
   'together_desc': 'Discover, match and share with friends.',
   'together_social_title': 'Social & Friends',

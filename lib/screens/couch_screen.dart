@@ -10,6 +10,7 @@ import '../providers/social_provider.dart';
 import '../services/localization_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/pulsing_placeholder.dart';
 import '../widgets/spring_button.dart';
 import 'login_screen.dart';
@@ -88,6 +89,20 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
     final c = context.c;
     final tr = AppLocalizations.of(context);
     final auth = ref.watch(authProvider);
+
+    // Hatalar (oturum kurulamadı, sunucu güncel değil…) sessizce yutulmasın:
+    // kullanıcı "hiçbir şey olmadı" sanıyordu. l10n anahtarıysa çevir.
+    ref.listen<CouchState>(couchProvider, (prev, next) {
+      final err = next.error;
+      if (err != null && err != prev?.error) {
+        final msg = err == 'couch_server_outdated'
+            ? (tr?.get('couch_server_outdated') ??
+                  'Sunucu bu özelliği henüz tanımıyor. Backend güncellemesi gerekli.')
+            : err;
+        showAppToast(context, msg, success: false);
+      }
+    });
+
     final couch = ref.watch(couchProvider);
     final session = couch.session;
 

@@ -215,7 +215,13 @@ class CouchNotifier extends StateNotifier<CouchState> {
       return true;
     } on ApiException catch (e) {
       if (mounted) {
-        state = state.copyWith(loading: false, error: () => e.message);
+        // 404 = sunucu bu ucu tanımıyor (backend deploy + migration 014
+        // yapılmamış). Ham "Bilinmeyen uç" yerine yol gösteren mesaj.
+        state = state.copyWith(
+          loading: false,
+          error: () =>
+              e.statusCode == 404 ? 'couch_server_outdated' : e.message,
+        );
       }
       return false;
     } catch (e) {

@@ -41,6 +41,8 @@ const Map<String, String> kTrStrings = {
   'couch_close': 'Kapat',
   'couch_leave': 'Oturumdan çık',
   'couch_session_closed': 'Oturum kapandı.',
+  'couch_server_outdated':
+      'Sunucu bu özelliği henüz tanımıyor. Uygulama sunucusunun güncellenmesi gerekiyor.',
   'together_friends': 'Arkadaşlar',
   'together_desc': 'Arkadaşlarınla keşfet, eşleş ve paylaş.',
   'together_social_title': 'Sosyal & Arkadaşlar',
