@@ -382,6 +382,17 @@ void main() {
       expect(state.sentRecommendations[0].toUsername, 'testfriend');
     });
 
+    test('loadReceivedRecommendations should map received items', () async {
+      final notifier = container.read(socialProvider.notifier);
+
+      await notifier.loadReceivedRecommendations();
+
+      final state = container.read(socialProvider);
+      expect(state.receivedRecommendations, hasLength(1));
+      expect(state.receivedRecommendations[0].title, 'The Matrix');
+      expect(state.receivedRecommendations[0].fromUsername, 'testfriend');
+    });
+
     test(
       'loadWatchlistIntersection should fetch and map movies to intersection list',
       () async {

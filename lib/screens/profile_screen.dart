@@ -27,6 +27,7 @@ import 'profile/widgets/settings_nav_card.dart';
 import 'profile/widgets/my_reviews_card.dart';
 import 'profile/widgets/cinema_identity_cards.dart';
 import 'profile/widgets/stats_cards.dart';
+import 'profile/widgets/received_recommendations_card.dart';
 import 'profile/widgets/sent_recommendations_card.dart';
 import 'profile/widgets/danger_zone_card.dart';
 import 'profile/widgets/sync_error_banner.dart';
@@ -552,6 +553,12 @@ class ProfileScreen extends ConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: SentRecommendationsCard(),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: ReceivedRecommendationsCard(),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 4)),

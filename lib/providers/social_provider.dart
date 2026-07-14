@@ -25,6 +25,9 @@ class SocialState {
   /// Kullanıcının arkadaşlarına gönderdiği öneriler (en yeni önce).
   final List<SentRecommendationItem> sentRecommendations;
 
+  /// Arkadaşlardan gelen öneriler (en yeni önce).
+  final List<ReceivedRecommendationItem> receivedRecommendations;
+
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
   final Map<int, List<ActivityItem>> friendActivities;
 
@@ -46,6 +49,7 @@ class SocialState {
     this.recommendations = const [],
     this.unseenRecommendations = 0,
     this.sentRecommendations = const [],
+    this.receivedRecommendations = const [],
     this.friendActivities = const {},
     this.topProfiles = const [],
     this.topProfilesLoading = false,
@@ -64,6 +68,7 @@ class SocialState {
     List<RecommendationInboxItem>? recommendations,
     int? unseenRecommendations,
     List<SentRecommendationItem>? sentRecommendations,
+    List<ReceivedRecommendationItem>? receivedRecommendations,
     Map<int, List<ActivityItem>>? friendActivities,
     List<TopProfile>? topProfiles,
     bool? topProfilesLoading,
@@ -82,6 +87,8 @@ class SocialState {
       unseenRecommendations:
           unseenRecommendations ?? this.unseenRecommendations,
       sentRecommendations: sentRecommendations ?? this.sentRecommendations,
+      receivedRecommendations:
+          receivedRecommendations ?? this.receivedRecommendations,
       friendActivities: friendActivities ?? this.friendActivities,
       topProfiles: topProfiles ?? this.topProfiles,
       topProfilesLoading: topProfilesLoading ?? this.topProfilesLoading,
@@ -194,6 +201,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       unawaited(loadActivityFeed());
       unawaited(loadRecommendations());
       unawaited(loadSentRecommendations());
+      unawaited(loadReceivedRecommendations());
       unawaited(loadTopProfiles());
       return true;
     } on ApiException catch (e) {
@@ -327,6 +335,25 @@ class SocialNotifier extends StateNotifier<SocialState> {
     } catch (e, st) {
       // Sunucuya yazılamadıysa bir sonraki yüklemede tekrar görünür.
       debugPrint("Failed to mark recommendations seen: $e\n$st");
+    }
+  }
+
+  /// Arkadaşlardan gelen önerileri yükler.
+  Future<void> loadReceivedRecommendations() async {
+    try {
+      final res = await _apiService.getRecommendations();
+      final list =
+          (res['recommendations'] as List<dynamic>?)
+              ?.map(
+                (x) => ReceivedRecommendationItem.fromJson(
+                  x as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          const [];
+      state = state.copyWith(receivedRecommendations: list);
+    } catch (e, st) {
+      debugPrint("Failed to load received recommendations: $e\n$st");
     }
   }
 

@@ -742,6 +742,11 @@ const Map<String, String> kEnStrings = {
   'sent_recommendations_empty':
       'You haven\'t recommended anything to friends yet.',
   'sent_recommendation_to': 'To {} · {}',
+  'received_recommendations_title': 'Recommended by Friends',
+  'received_recommendations_subtitle':
+      'Films and shows friends shared with you',
+  'received_recommendations_empty': 'No recommendations from friends yet.',
+  'received_recommendation_from': 'From {} · {}',
   'username_prompt_title': 'Choose a Username',
   'username_prompt_desc':
       'Pick a unique username for your web profile and social features.',
