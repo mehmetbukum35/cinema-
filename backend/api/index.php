@@ -92,6 +92,31 @@ if ($method === 'GET' && str_starts_with($path, '/tmdb/')) {
     exit;
 }
 
+// "Birlikte Seç" oturumları: GET /social/couch/{id} (poll) ve
+// POST /social/couch/{id}/vote|cancel. Sabit uçlar (create/active) switch'te.
+if (str_starts_with($path, '/social/couch/')) {
+    $parts = explode('/', trim($path, '/'));
+    $couchId = count($parts) >= 3 ? (int) $parts[2] : 0;
+    if ($couchId > 0) {
+        $uid = $auth->requireUser();
+        // Poll dahil tüm oturum trafiği tek kullanıcı kovasında sınırlanır
+        // (2-3 sn'lik poll ~24 istek/dk üretir; 120 rahat bir tavan).
+        rate_limit('couch_u' . $uid, (int) ($cfg['couch_rate_limit_per_min'] ?? 120), true);
+        if ($method === 'GET' && count($parts) === 3) {
+            $social->getCouchSession($uid, $couchId);
+            exit;
+        }
+        if ($method === 'POST' && count($parts) === 4 && $parts[3] === 'vote') {
+            $social->voteCouchSession($uid, $couchId, read_json());
+            exit;
+        }
+        if ($method === 'POST' && count($parts) === 4 && $parts[3] === 'cancel') {
+            $social->cancelCouchSession($uid, $couchId);
+            exit;
+        }
+    }
+}
+
 if ($method === 'GET' && str_starts_with($path, '/social/match/watchlist-intersection/')) {
     $parts = explode('/', trim($path, '/'));
     if (count($parts) === 4) {
@@ -293,6 +318,19 @@ switch (true) {
     // Tekil /social/match/taste/{id} ucu eski istemciler için korunuyor.
     case $route === 'GET /social/match/taste-all':
         $social->getAllTasteMatches($auth->requireUser());
+        break;
+
+    // ── Birlikte Seç (canlı kanepe modu) ────────────────────────────────────
+    case $route === 'POST /social/couch/create':
+        $uid = $auth->requireUser();
+        rate_limit('couch_create_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->createCouchSession($uid, read_json());
+        break;
+
+    case $route === 'GET /social/couch/active':
+        $uid = $auth->requireUser();
+        rate_limit('couch_u' . $uid, (int) ($cfg['couch_rate_limit_per_min'] ?? 120), true);
+        $social->getActiveCouchSession($uid);
         break;
 
     // ── Popüler Listeler (profil beğenileri) ───────────────────────────────

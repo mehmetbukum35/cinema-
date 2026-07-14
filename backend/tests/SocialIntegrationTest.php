@@ -891,6 +891,20 @@ class SocialIntegrationTest extends TestCase
             )'
         );
         $this->db->exec(
+            'CREATE TABLE couch_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host_id INTEGER NOT NULL,
+                guest_id INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT \'pending\',
+                deck TEXT NOT NULL,
+                host_votes TEXT NOT NULL,
+                guest_votes TEXT NOT NULL,
+                matched_key TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )'
+        );
+        $this->db->exec(
             'CREATE TABLE recommendations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 from_user_id INTEGER NOT NULL,
@@ -969,6 +983,154 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame(100, $entry['score']); // tekil uçla aynı matematik
         $this->assertTrue($entry['has_data']);
         $this->assertSame(3, $entry['common_count']);
+    }
+
+    // ─── Birlikte Seç (couch) ────────────────────────────────────────────────
+
+    private function couchDeck(int $count = 5): array
+    {
+        $deck = [];
+        for ($i = 1; $i <= $count; $i++) {
+            $deck[] = [
+                'movie_id' => 100 + $i,
+                'is_tv' => 0,
+                'title' => "Deck Movie $i",
+                'poster_path' => "/d$i.jpg",
+                'vote_average' => 7.0,
+            ];
+        }
+        return $deck;
+    }
+
+    private function createCouch(int $hostId = 1, int $guestId = 2): int
+    {
+        $this->acceptFriendship($hostId, $guestId);
+        $this->social->createCouchSession($hostId, [
+            'friend_id' => $guestId,
+            'deck' => $this->couchDeck(),
+        ]);
+        return (int) TestHelperRegistry::$lastBody['session']['id'];
+    }
+
+    public function testCouchCreateRequiresFriendshipAndValidDeck(): void
+    {
+        // Arkadaş olmayan hedef → 403.
+        try {
+            $this->social->createCouchSession(1, [
+                'friend_id' => 3,
+                'deck' => $this->couchDeck(),
+            ]);
+            $this->fail('Arkadaş olmayanla oturum açılabildi');
+        } catch (TestExitException $e) {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+        }
+
+        // Çok küçük deste → 422.
+        $this->acceptFriendship(1, 2);
+        try {
+            $this->social->createCouchSession(1, [
+                'friend_id' => 2,
+                'deck' => $this->couchDeck(2),
+            ]);
+            $this->fail('2 kartlık deste kabul edildi');
+        } catch (TestExitException $e) {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testCouchLifecyclePendingActiveAndProgressPrivacy(): void
+    {
+        $id = $this->createCouch();
+        $s = TestHelperRegistry::$lastBody['session'];
+        $this->assertSame('pending', $s['status']);
+        $this->assertTrue($s['is_host']);
+        $this->assertCount(5, $s['deck']);
+
+        // Misafir aktif oturumunu görür; ilk teması pending → active taşır.
+        $this->social->getActiveCouchSession(2);
+        $g = TestHelperRegistry::$lastBody['session'];
+        $this->assertSame($id, $g['id']);
+        $this->assertFalse($g['is_host']);
+
+        $this->social->getCouchSession(2, $id);
+        $this->assertSame('active', TestHelperRegistry::$lastBody['session']['status']);
+
+        // Host oy verir; misafir yalnızca İLERLEME sayısını görür, oyları değil.
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->social->getCouchSession(2, $id);
+        $g = TestHelperRegistry::$lastBody['session'];
+        $this->assertSame(1, $g['their_progress']);
+        $this->assertSame([], $g['my_votes']); // karşı tarafın oyları sızmaz
+    }
+
+    public function testCouchMutualLikeMatches(): void
+    {
+        $id = $this->createCouch();
+
+        // Host 101'i beğenir → eşleşme yok; misafir gelmediği için hâlâ pending.
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->assertSame('pending', TestHelperRegistry::$lastBody['session']['status']);
+
+        // Misafir 101'i beğenir → eşleşme; eşleşen yapım payload'da döner.
+        $this->social->voteCouchSession(2, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $s = TestHelperRegistry::$lastBody['session'];
+        $this->assertSame('matched', $s['status']);
+        $this->assertSame('Deck Movie 1', $s['matched']['title']);
+
+        // Eşleşmiş oturumda 'cancel' finish anlamına gelir → ended.
+        $this->social->cancelCouchSession(1, $id);
+        $this->assertSame('ended', TestHelperRegistry::$lastBody['status']);
+    }
+
+    public function testCouchDislikesDoNotMatchAndDeckExhaustionEnds(): void
+    {
+        $id = $this->createCouch();
+
+        // Host hepsini beğenir, misafir hepsini geçer → eşleşme YOK, ended.
+        for ($i = 1; $i <= 5; $i++) {
+            $this->social->voteCouchSession(1, $id, ['movie_id' => 100 + $i, 'is_tv' => 0, 'liked' => true]);
+            $this->social->voteCouchSession(2, $id, ['movie_id' => 100 + $i, 'is_tv' => 0, 'liked' => false]);
+        }
+        $s = TestHelperRegistry::$lastBody['session'];
+        $this->assertSame('ended', $s['status']);
+        $this->assertNull($s['matched']);
+    }
+
+    public function testCouchRejectsOutsidersAndForeignDeckItems(): void
+    {
+        $id = $this->createCouch();
+
+        // Katılımcı olmayan kullanıcı → 403.
+        try {
+            $this->social->getCouchSession(3, $id);
+            $this->fail('Katılımcı olmayan oturumu okuyabildi');
+        } catch (TestExitException $e) {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+        }
+
+        // Destede olmayan yapıma oy → 422.
+        try {
+            $this->social->voteCouchSession(1, $id, ['movie_id' => 999, 'is_tv' => 0, 'liked' => true]);
+            $this->fail('Deste dışı yapıma oy verilebildi');
+        } catch (TestExitException $e) {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testCouchNewSessionCancelsPreviousOpenOnes(): void
+    {
+        $first = $this->createCouch();
+        // Aynı çift yeni oturum açar → eski pending oturum iptal edilir.
+        $this->social->createCouchSession(1, [
+            'friend_id' => 2,
+            'deck' => $this->couchDeck(),
+        ]);
+        $second = (int) TestHelperRegistry::$lastBody['session']['id'];
+        $this->assertNotSame($first, $second);
+
+        $st = $this->db->prepare('SELECT status FROM couch_sessions WHERE id = ?');
+        $st->execute([$first]);
+        $this->assertSame('cancelled', $st->fetchColumn());
     }
 
     private function acceptFriendship(int $userId, int $friendId): void

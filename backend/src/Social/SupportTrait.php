@@ -32,6 +32,17 @@ trait SocialSupportTrait
                 $kind  = 'friend_recommend';
                 $data['movie_id'] = (string) ($extra['movie_id'] ?? '');
                 $data['is_tv']    = (string) ($extra['is_tv'] ?? '0');
+            } elseif ($type === 'couch_invite') {
+                $title = 'Birlikte Seç daveti 🍿';
+                $body  = "$name seninle film seçmek istiyor. Desten hazır!";
+                $kind  = 'couch_invite';
+                $data['session_id'] = (string) ($extra['session_id'] ?? '');
+            } elseif ($type === 'couch_match') {
+                $movieTitle = (string) ($extra['title'] ?? '');
+                $title = 'Eşleşme! 🎬';
+                $body  = "$name ile anlaştınız: \"$movieTitle\". İyi seyirler!";
+                $kind  = 'couch_match';
+                $data['session_id'] = (string) ($extra['session_id'] ?? '');
             } else {
                 $title = 'Arkadaşlık isteği kabul edildi';
                 $body  = "$name isteğini kabul etti.";

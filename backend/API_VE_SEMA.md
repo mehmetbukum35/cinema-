@@ -512,6 +512,30 @@ isteği de gönderemez — istek, engel bilgisini sızdırmamak için "Kullanıc
 ### GET `/social/users/blocked` *(Bearer)*
 Engellenen kullanıcıların listesi.
 
+### Birlikte Seç (canlı kanepe modu) — `/social/couch/*` *(Bearer)*
+İki arkadaş kendi telefonlarından AYNI desteyi oylar; ilk karşılıklı beğenide
+oturum `matched` olur. Canlılık websocket'le değil istemcinin ~2.5 sn'lik
+poll'uyla sağlanır (paylaşımlı hosting). Karşı tarafın oy içeriği hiçbir uçta
+dönmez — yalnızca ilerleme sayısı (`their_progress`) görünür.
+
+- `POST /social/couch/create` — Gövde: `{ "friend_id": 2, "deck": [{"movie_id","is_tv","title","poster_path","vote_average"}] }`.
+  Deste host istemcide kurulur (ortak izleme listesi + öneri motoru), 5-30 yapım.
+  Her iki katılımcının açık oturumları iptal edilir (tek aktif oturum kuralı).
+  Misafire `couch_invite` push'u gider. Dönen: `{ session }`.
+- `GET /social/couch/active` — Katılımcısı olduğum en güncel canlı oturum
+  (`pending|active|matched`); yoksa `{ "session": null }`.
+- `GET /social/couch/{id}` — Poll ucu. Misafirin ilk teması `pending → active`.
+- `POST /social/couch/{id}/vote` — Gövde: `{ "movie_id", "is_tv", "liked" }`.
+  Oy kullanıcının kendi kolonuna yazılır (eşzamanlı oylar çakışmaz); yanıt
+  güncel oturumu döner. Karşılıklı beğenide `status: "matched"` + `matched`
+  yapımı; iki taraf desteyi bitirip eşleşme yoksa `status: "ended"`.
+  Eşleşmede iki tarafa da `couch_match` push'u gider.
+- `POST /social/couch/{id}/cancel` — Açık oturumda iptal; eşleşmiş oturumda
+  kapanış (`ended`).
+
+Oturum durumları: `pending → active → matched | ended` (+ `cancelled`).
+Şema: `couch_sessions` (bkz. migration 014).
+
 ### GET `/admin/moderation?key=<admin_key>`
 Moderasyon paneli (HTML): açık şikayetler, gizlenen yorumlar ve susturulan
 kullanıcılar. Aksiyonlar (`POST /admin/moderation/action`): yorum bazlı gizle /
