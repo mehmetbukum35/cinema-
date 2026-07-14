@@ -15,6 +15,8 @@ import '../models/social.dart';
 enum RefreshOutcome { success, denied, transient }
 
 class ApiService {
+  static const _kRequestTimeout = Duration(seconds: 20);
+
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
 
@@ -43,6 +45,9 @@ class ApiService {
     return headers;
   }
 
+  Future<http.Response> _withTimeout(Future<http.Response> request) =>
+      request.timeout(_kRequestTimeout);
+
   // Base HTTP request wrapper with automatic 401 handling (token refresh)
   Future<http.Response> _request(
     String method,
@@ -57,12 +62,19 @@ class ApiService {
     http.Response response;
     try {
       if (method == 'POST') {
-        response = await _client.post(url, headers: headers, body: bodyStr);
+        response = await _withTimeout(
+          _client.post(url, headers: headers, body: bodyStr),
+        );
       } else if (method == 'DELETE') {
-        response = await _client.delete(url, headers: headers, body: bodyStr);
+        response = await _withTimeout(
+          _client.delete(url, headers: headers, body: bodyStr),
+        );
       } else {
-        response = await _client.get(url, headers: headers);
+        response = await _withTimeout(_client.get(url, headers: headers));
       }
+    } on TimeoutException catch (e) {
+      debugPrint("Network request timed out after $_kRequestTimeout: $e");
+      rethrow;
     } catch (e) {
       debugPrint("Network request error: $e");
       rethrow;
@@ -75,19 +87,17 @@ class ApiService {
         // Retry the request with the new access token
         final newHeaders = await _getHeaders(requireAuth: true);
         if (method == 'POST') {
-          response = await _client.post(
-            url,
-            headers: newHeaders,
-            body: bodyStr,
+          response = await _withTimeout(
+            _client.post(url, headers: newHeaders, body: bodyStr),
           );
         } else if (method == 'DELETE') {
-          response = await _client.delete(
-            url,
-            headers: newHeaders,
-            body: bodyStr,
+          response = await _withTimeout(
+            _client.delete(url, headers: newHeaders, body: bodyStr),
           );
         } else {
-          response = await _client.get(url, headers: newHeaders);
+          response = await _withTimeout(
+            _client.get(url, headers: newHeaders),
+          );
         }
       } else if (outcome == RefreshOutcome.denied) {
         debugPrint("Refresh token rejected by server. Ending local session.");
@@ -161,10 +171,12 @@ class ApiService {
         }
       } else {
         final url = Uri.parse('$baseUrl/auth/refresh');
-        final response = await _client.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'refresh_token': refreshToken}),
+        final response = await _withTimeout(
+          _client.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refresh_token': refreshToken}),
+          ),
         );
 
         if (response.statusCode == 200) {

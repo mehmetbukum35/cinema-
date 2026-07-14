@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/notification_service.dart';
@@ -61,7 +62,9 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       // Background push sync
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
-        ref.read(syncServiceProvider).sync().catchError((_) {});
+        ref.read(syncProvider.notifier).performSync().catchError((e) {
+          debugPrint('Background sync failed on watchlist add: $e');
+        });
       }
     } catch (e) {
       // Keep state intact
@@ -87,7 +90,9 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       // Background push sync
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
-        ref.read(syncServiceProvider).sync().catchError((_) {});
+        ref.read(syncProvider.notifier).performSync().catchError((e) {
+          debugPrint('Background sync failed on watchlist remove: $e');
+        });
       }
     } catch (e) {
       // Keep state intact
