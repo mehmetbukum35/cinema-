@@ -8,14 +8,28 @@ import 'pulsing_placeholder.dart';
 
 /// Filmin öneri gerekçesini kullanıcı diline çevirir:
 /// seed → "X'i beğendiğin için", friend → "X buna bayıldı". Gerekçe yoksa null.
-String? recoReasonLabel(BuildContext context, Movie movie) {
+///
+/// [compact]: dar ray kartları için kısa şablon ("More like {x}"). Uzun
+/// şablonda film adı SONDA kaldığından tek satırlık ellipsis dar kartta tam
+/// olarak film adını yiyordu ("Because you liked …"); kompakt şablon adın
+/// görünmesini garanti eder. (TR uzun şablon zaten ad-önce olduğundan iki
+/// dilde de sorun kompakt anahtarla kapanır.)
+String? recoReasonLabel(
+  BuildContext context,
+  Movie movie, {
+  bool compact = false,
+}) {
   final reason = movie.recoReason;
   if (reason == null || reason.isEmpty) return null;
   final isFriend = movie.recoReasonType == 'friend';
-  final key = isFriend ? 'reco_reason_friend' : 'reco_reason_seed';
+  final key = isFriend
+      ? 'reco_reason_friend'
+      : (compact ? 'reco_reason_seed_short' : 'reco_reason_seed');
   final tpl =
       AppLocalizations.of(context)?.get(key) ??
-      (isFriend ? '{x} loved this' : 'Because you liked {x}');
+      (isFriend
+          ? '{x} loved this'
+          : (compact ? 'More like {x}' : 'Because you liked {x}'));
   return tpl.replaceFirst('{x}', reason);
 }
 

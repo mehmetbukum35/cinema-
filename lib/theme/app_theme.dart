@@ -216,7 +216,9 @@ class AppColorsLight {
   static const ember = Color(0xFFFF6B81);
 
   static const gold = Color(0xFFB8893E); // beyazda okunur derin şampanya
-  static const goldSoft = Color(0xFFCBA45E);
+  // Koyu temanın #CBA45E'si krem zeminde ~2:1 kontrasta düşüyordu (öneri
+  // gerekçesi gibi 11-12px metinler okunmuyordu); açık temada koyulaştırıldı.
+  static const goldSoft = Color(0xFF8A6520);
   static const goldDeep = Color(0xFF9C7430);
 
   static const green = Color(0xFF2E7D32);

@@ -190,7 +190,7 @@ class BrowseCard extends ConsumerWidget {
             Builder(
               builder: (context) {
                 final reason = showScore
-                    ? recoReasonLabel(context, movie)
+                    ? recoReasonLabel(context, movie, compact: true)
                     : null;
                 if (reason == null) {
                   return Text(

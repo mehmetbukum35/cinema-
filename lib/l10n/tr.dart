@@ -389,6 +389,7 @@ const Map<String, String> kTrStrings = {
   'dna_share_cta_none': 'Sen de Sinema DNA\'nı keşfet!',
   'tonight_match': 'uyum',
   'reco_reason_seed': '{x} beğendiğin için',
+  'reco_reason_seed_short': '{x} benzeri',
   'reco_reason_friend': '{x} buna bayıldı',
   'match_find_suggestions': 'Ortak Önerileri Bul',
   'detail_seasons': 'Sezonlar',

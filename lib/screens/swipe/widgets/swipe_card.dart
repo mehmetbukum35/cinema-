@@ -50,166 +50,102 @@ class SwipeCard extends ConsumerWidget {
     return Column(
       children: [
         Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                movie.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: movie.posterUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 500,
-                        placeholder: (context, url) =>
-                            const PulsingPlaceholder(),
-                        errorWidget: (context, url, error) =>
-                            const PulsingPlaceholder(),
-                      )
-                    : const PulsingPlaceholder(),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: SpringButton(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      MovieDetailSheet.showRecommendSheet(
-                        context: context,
-                        ref: ref,
-                        movie: movie,
-                      );
-                    },
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 1,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                if (friendNames != null && friendNames.isNotEmpty)
-                  Positioned(
-                    bottom: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: c.gold.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.people_alt_rounded,
-                            color: c.gold,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            friendNames.length == 1
-                                ? (AppLocalizations.of(
-                                            context,
-                                          )?.locale.languageCode ==
-                                          'tr'
-                                      ? '${friendNames.first} beğendi'
-                                      : 'Liked by ${friendNames.first}')
-                                : (AppLocalizations.of(
-                                            context,
-                                          )?.locale.languageCode ==
-                                          'tr'
-                                      ? '${friendNames.first} ve ${friendNames.length - 1} arkadaşın beğendi'
-                                      : 'Liked by ${friendNames.first} and ${friendNames.length - 1} others'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+          // Poster her cihazda TAM görünür: alana sığan en büyük 2:3 kutu
+          // (TMDB poster oranı). Önceden BoxFit.cover alanı dolduruyordu;
+          // telefonda alan zaten ~2:3 olduğundan fark edilmiyordu ama geniş
+          // ekranlarda (iPad) posterin üst/altı kırpılıyordu.
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: 2 / 3,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    movie.posterUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: movie.posterUrl,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 500,
+                            placeholder: (context, url) =>
+                                const PulsingPlaceholder(),
+                            errorWidget: (context, url, error) =>
+                                const PulsingPlaceholder(),
+                          )
+                        : const PulsingPlaceholder(),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: SpringButton(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          MovieDetailSheet.showRecommendSheet(
+                            context: context,
+                            ref: ref,
+                            movie: movie,
+                          );
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 1,
                             ),
                           ),
-                        ],
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          movie.isTV
-                              ? (AppLocalizations.of(
-                                      context,
-                                    )?.get('onboarding_tv') ??
-                                    'Dizi')
-                              : (AppLocalizations.of(
-                                      context,
-                                    )?.get('onboarding_movie') ??
-                                    'Film'),
-                          style: TextStyle(
-                            color: movie.isTV ? c.blue : c.red,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      if (isRecommended) ...[
-                        const SizedBox(width: 8),
-                        Container(
+                    if (friendNames != null && friendNames.isNotEmpty)
+                      Positioned(
+                        bottom: 12,
+                        left: 12,
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 5,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: c.gold.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: CinemaShadows.glow(
-                              c.gold,
-                              strength: 0.35,
+                            color: Colors.black.withValues(alpha: 0.75),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: c.gold.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.auto_awesome_rounded,
-                                color: Colors.black,
-                                size: 12,
+                              Icon(
+                                Icons.people_alt_rounded,
+                                color: c.gold,
+                                size: 14,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Text(
-                                AppLocalizations.of(
-                                      context,
-                                    )?.get('swipe_recommended') ??
-                                    'For You',
+                                friendNames.length == 1
+                                    ? (AppLocalizations.of(
+                                                context,
+                                              )?.locale.languageCode ==
+                                              'tr'
+                                          ? '${friendNames.first} beğendi'
+                                          : 'Liked by ${friendNames.first}')
+                                    : (AppLocalizations.of(
+                                                context,
+                                              )?.locale.languageCode ==
+                                              'tr'
+                                          ? '${friendNames.first} ve ${friendNames.length - 1} arkadaşın beğendi'
+                                          : 'Liked by ${friendNames.first} and ${friendNames.length - 1} others'),
                                 style: const TextStyle(
-                                  color: Colors.black,
+                                  color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -217,68 +153,144 @@ class SwipeCard extends ConsumerWidget {
                             ],
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (dragX.abs() > 10)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: dragX > 0
-                              ? c.rIyi.withValues(
-                                  alpha: (dragX / 150).clamp(0.0, 0.5),
-                                )
-                              : c.rBerbat.withValues(
-                                  alpha: (dragX.abs() / 150).clamp(0.0, 0.5),
+                      ),
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              movie.isTV
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_tv') ??
+                                        'Dizi')
+                                  : (AppLocalizations.of(
+                                          context,
+                                        )?.get('onboarding_movie') ??
+                                        'Film'),
+                              style: TextStyle(
+                                color: movie.isTV ? c.blue : c.red,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (isRecommended) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: c.gold.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: CinemaShadows.glow(
+                                  c.gold,
+                                  strength: 0.35,
                                 ),
-                          width: 4,
-                        ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: Colors.black,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    AppLocalizations.of(
+                                          context,
+                                        )?.get('swipe_recommended') ??
+                                        'For You',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
-                if (dragX.abs() > 20)
-                  Positioned(
-                    top: 24,
-                    left: dragX > 0 ? 20 : null,
-                    right: dragX < 0 ? 20 : null,
-                    child: Transform.rotate(
-                      angle: dragX > 0 ? -0.2 : 0.2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: dragX > 0 ? c.rIyi : c.rBerbat,
-                            width: 3,
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          color: Colors.black38,
-                        ),
-                        child: Text(
-                          dragX > 0
-                              ? (AppLocalizations.of(
-                                      context,
-                                    )?.get('swipe_liked').toUpperCase() ??
-                                    'LIKED')
-                              : (AppLocalizations.of(
-                                      context,
-                                    )?.get('swipe_disliked').toUpperCase() ??
-                                    'DISLIKED'),
-                          style: TextStyle(
-                            color: dragX > 0 ? c.rIyi : c.rBerbat,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
+                    if (dragX.abs() > 10)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: dragX > 0
+                                  ? c.rIyi.withValues(
+                                      alpha: (dragX / 150).clamp(0.0, 0.5),
+                                    )
+                                  : c.rBerbat.withValues(
+                                      alpha: (dragX.abs() / 150).clamp(
+                                        0.0,
+                                        0.5,
+                                      ),
+                                    ),
+                              width: 4,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                    if (dragX.abs() > 20)
+                      Positioned(
+                        top: 24,
+                        left: dragX > 0 ? 20 : null,
+                        right: dragX < 0 ? 20 : null,
+                        child: Transform.rotate(
+                          angle: dragX > 0 ? -0.2 : 0.2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: dragX > 0 ? c.rIyi : c.rBerbat,
+                                width: 3,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              color: Colors.black38,
+                            ),
+                            child: Text(
+                              dragX > 0
+                                  ? (AppLocalizations.of(
+                                          context,
+                                        )?.get('swipe_liked').toUpperCase() ??
+                                        'LIKED')
+                                  : (AppLocalizations.of(context)
+                                            ?.get('swipe_disliked')
+                                            .toUpperCase() ??
+                                        'DISLIKED'),
+                              style: TextStyle(
+                                color: dragX > 0 ? c.rIyi : c.rBerbat,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
