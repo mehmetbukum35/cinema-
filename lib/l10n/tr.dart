@@ -308,6 +308,15 @@ const Map<String, String> kTrStrings = {
   'tonight_not_interested': 'İlgimi çekmedi',
   'dna_title': 'Sinema DNA\'n',
   'dna_banner_desc': 'Zevkinin kimliğini keşfet.',
+  'dna_milestone_unlocked_title': 'Sinema DNA\'n hazır!',
+  'dna_milestone_refined_title': 'DNA\'n keskinleşti',
+  'dna_milestone_unlocked_desc':
+      '{} yapım oyladın — zevk kimliğin ortaya çıktı: arketipin, temaların, kör noktan…',
+  'dna_milestone_refined_desc':
+      '{} oylamaya ulaştın. Zevk profilin artık çok daha isabetli.',
+  'dna_milestone_accuracy': 'Önerilerimizin isabeti: %{}',
+  'dna_milestone_cta': 'DNA\'nı Gör',
+  'dna_milestone_later': 'Daha sonra',
   'dna_analyzing': 'Zevkin analiz ediliyor…',
   'dna_error': 'DNA oluşturulamadı',
   'dna_not_ready': 'DNA\'n henüz oluşuyor',
@@ -663,6 +672,7 @@ const Map<String, String> kTrStrings = {
   'your_common_watchlist_intersec': 'Ortak İzleme Listeniz ({} Film/Dizi)',
   'title_removed_from_watchlist': '{} izleme listesinden çıkarıldı.',
   'title_added_to_watchlist': '{} izleme listesine eklendi.',
+  'watchlist_release_reminder_note': 'Çıktığı gün sana haber vereceğiz 🔔',
   'all_data_reset': 'Tüm veriler sıfırlandı.',
   'profile_like_failed': 'Beğeni kaydedilemedi. Lütfen tekrar deneyin.',
   'synergy_score_match': '%{} Uyumlu',

@@ -375,6 +375,15 @@ const Map<String, String> kEnStrings = {
   'tonight_not_interested': 'Not interested',
   'dna_title': 'Your Cinema DNA',
   'dna_banner_desc': 'Discover the identity of your taste.',
+  'dna_milestone_unlocked_title': 'Your Cinema DNA is ready!',
+  'dna_milestone_refined_title': 'Your DNA just got sharper',
+  'dna_milestone_unlocked_desc':
+      'You\'ve rated {} titles — your taste identity has emerged: your archetype, themes, blind spot…',
+  'dna_milestone_refined_desc':
+      'You\'ve reached {} ratings. Your taste profile is now far more accurate.',
+  'dna_milestone_accuracy': 'Our picks hit rate: {}%',
+  'dna_milestone_cta': 'See Your DNA',
+  'dna_milestone_later': 'Later',
   'dna_analyzing': 'Analyzing your taste…',
   'dna_error': "Couldn't build your DNA",
   'dna_not_ready': 'Your DNA is still forming',
@@ -668,6 +677,7 @@ const Map<String, String> kEnStrings = {
   'your_common_watchlist_intersec': 'Your Common Watchlist ({} Titles)',
   'title_removed_from_watchlist': '{} removed from watchlist.',
   'title_added_to_watchlist': '{} added to watchlist.',
+  'watchlist_release_reminder_note': 'We\'ll remind you on release day 🔔',
   'all_data_reset': 'All data has been reset.',
   'profile_like_failed': 'Could not save your like. Please try again.',
   'synergy_score_match': '{}% Match',

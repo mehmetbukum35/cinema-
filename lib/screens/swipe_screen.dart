@@ -12,6 +12,7 @@ import '../providers/social_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
+import 'swipe/widgets/dna_milestone_sheet.dart';
 import 'swipe/widgets/filter_labels.dart';
 import 'swipe/widgets/filter_sheet.dart';
 import 'swipe/widgets/gesture_guide_overlay.dart';
@@ -70,9 +71,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final notifier = ref.read(swipeProvider.notifier);
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    var rated = false;
     if (disableAnims) {
       try {
         await notifier.rate(rating);
+        rated = true;
       } catch (e) {
         debugPrint("Error rating movie: $e");
         if (mounted) {
@@ -86,11 +89,15 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           );
         }
       }
+      if (rated && mounted) {
+        await maybeShowDnaMilestone(context);
+      }
       return;
     }
     try {
       await _fadeCtrl.reverse();
       await notifier.rate(rating);
+      rated = true;
     } catch (e) {
       debugPrint("Error rating movie: $e");
       if (mounted) {
@@ -107,6 +114,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
       if (mounted) {
         _fadeCtrl.forward();
       }
+    }
+    // Eşik anı: 5/25/50. puanlamada DNA'yı çekirdek döngünün içinde
+    // keşfettir (bir kez; bkz. PrefsService.pendingDnaMilestone).
+    if (rated && mounted) {
+      await maybeShowDnaMilestone(context);
     }
   }
 

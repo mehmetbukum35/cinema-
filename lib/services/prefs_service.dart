@@ -875,6 +875,39 @@ class PrefsService {
     await prefs.remove(_keyLastPublishedDnaHash);
   }
 
+  // ─── DNA eşik anları (swipe akışındaki keşif kartı) ─────────────────────
+  // DNA'nın tek girişi Profil sekmesindeki banner'dı; çekirdek döngüde (swipe)
+  // yaşayan kullanıcı özelliğin varlığını hiç öğrenmiyordu. Bu eşikler,
+  // puanlama sayısı büyürken DNA'yı bir kez davetle keşfettirir.
+
+  /// İlk eşik, DNA'nın kilidinin açıldığı 5 puanla (bkz. DnaLockedCard) aynı.
+  static const dnaMilestones = [5, 25, 50];
+  static const _keyDnaMilestonesShown = 'dna_milestones_shown_v1';
+
+  /// [ratingCount] için gösterilmemiş en YÜKSEK eşik; hepsi gösterildiyse
+  /// veya sayı ilk eşiğin altındaysa null.
+  static Future<int?> pendingDnaMilestone(int ratingCount) async {
+    final prefs = await SharedPreferences.getInstance();
+    final shown = prefs.getStringList(_keyDnaMilestonesShown) ?? const [];
+    for (final t in dnaMilestones.reversed) {
+      if (ratingCount >= t && !shown.contains('$t')) return t;
+    }
+    return null;
+  }
+
+  /// [threshold] ve altındaki TÜM eşikleri gösterildi sayar: 50'nin kartını
+  /// gören kullanıcıya sonradan 5'inki gösterilmez.
+  static Future<void> markDnaMilestoneShown(int threshold) async {
+    final prefs = await SharedPreferences.getInstance();
+    final shown = prefs.getStringList(_keyDnaMilestonesShown) ?? const [];
+    final updated = <String>{
+      ...shown,
+      for (final t in dnaMilestones)
+        if (t <= threshold) '$t',
+    };
+    await prefs.setStringList(_keyDnaMilestonesShown, updated.toList());
+  }
+
   static Future<bool> isSwipeGuideShown() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('swipe_guide_shown') ?? false;
