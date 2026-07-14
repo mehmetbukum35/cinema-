@@ -16,10 +16,13 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
+      # --build-number: iOS (ios.yml) ile aynı desen. Verilmezse pubspec'teki
+      # +1 kullanılıyordu → versionCode hep 1 kalıyordu; Play Store aynı
+      # versionCode ile ikinci paketi reddeder ve "Hakkında"da Build 1 görünür.
       - name: Build release APK
-        run: flutter build apk --release --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+        run: flutter build apk --release --build-number=$GITHUB_RUN_NUMBER --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
       - name: Build release App Bundle
-        run: flutter build appbundle --release --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+        run: flutter build appbundle --release --build-number=$GITHUB_RUN_NUMBER --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
       - uses: actions/upload-artifact@v4
         with:
           name: android-release
