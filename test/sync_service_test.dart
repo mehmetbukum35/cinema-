@@ -58,7 +58,7 @@ void main() {
     // 2. Open Fresh In-Memory Test SQLite Database
     testDb = await openDatabase(
       inMemoryDatabasePath,
-      version: 4,
+      version: 8,
       onCreate: DatabaseHelper().onCreate,
       onUpgrade: DatabaseHelper().onUpgrade,
     );
