@@ -42,18 +42,18 @@ class RecommendationEngine {
   (Set<String> berbatKeys, Set<String> ehKeys)? _cachedNegativeKeys;
 
   /// Zevk profili değişti veya senkronizasyon yapıldı — önbelleği temizle.
+  ///
+  /// DNA cache'i BİLEREK silinmez: TasteDnaService.generate kendi girdi
+  /// hash'iyle (puan sayısı + son updated_at + telemetri) tazeliği zaten
+  /// doğruluyor. Burada silmek, her sync'te DNA'nın yeniden üretilmesine ve
+  /// yayın imleci (last_published_dna_hash) kaybolduğu için veri değişmemiş
+  /// olsa bile sunucuya yeniden POST /social/dna atılmasına yol açıyordu.
   Future<void> invalidateCache({bool isNegativeChange = true}) async {
     _userKeywordVector = null;
     _cachedRatings = null;
     if (isNegativeChange) {
       _cachedNegativeKeys = null;
     }
-    await PrefsService.clearDnaCache();
-  }
-
-  /// Eski çağrılar için geriye dönük uyumluluk metodu.
-  Future<void> invalidateTasteVector() async {
-    await invalidateCache();
   }
 
   /// Oylamaları bellekten veya veritabanından çeken yardımcı metot.
