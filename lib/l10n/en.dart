@@ -166,6 +166,11 @@ const Map<String, String> kEnStrings = {
   'google_unlink_button': 'Unlink Google',
   'google_unlink_success': 'Google account unlinked.',
   'auth_err_google_unlink_failed': 'Could not unlink Google account.',
+  'apple_unlink_title': 'Unlink Apple Account',
+  'apple_unlink_desc': 'Enter your account password to continue.',
+  'apple_unlink_button': 'Unlink Apple',
+  'apple_unlink_success': 'Apple account unlinked.',
+  'auth_err_apple_unlink_failed': 'Could not unlink Apple account.',
   'auth_forgot_email_desc':
       'Enter your registered email address to receive a password reset code.',
   'auth_forgot_code_title': 'Verify Code',

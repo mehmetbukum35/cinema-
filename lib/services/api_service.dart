@@ -765,7 +765,6 @@ class ApiService {
     }
   }
 
-  // DELETE /auth/google/link — Google hesabı bağlantısını kaldırır.
   Future<void> unlinkGoogle({required String password}) async {
     final response = await _request(
       'DELETE',
@@ -778,6 +777,24 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'auth_err_google_unlink_failed',
+        code: data['code'] as String?,
+      );
+    }
+  }
+
+  // DELETE /auth/apple/link — Apple hesabı bağlantısını kaldırır.
+  Future<void> unlinkApple({required String password}) async {
+    final response = await _request(
+      'DELETE',
+      '/auth/apple/link',
+      body: {'password': password},
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = _decodeJsonMap(response.body);
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'auth_err_apple_unlink_failed',
         code: data['code'] as String?,
       );
     }

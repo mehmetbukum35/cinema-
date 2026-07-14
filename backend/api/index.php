@@ -250,6 +250,12 @@ switch (true) {
         $auth->unlinkGoogle($uid, read_json());
         break;
 
+    case $route === 'DELETE /auth/apple/link':
+        $uid = $auth->requireUser();
+        rate_limit('unlink_apple_u' . $uid, (int) ($cfg['rate_limit_per_min'] ?? 20), true);
+        $auth->unlinkApple($uid, read_json());
+        break;
+
     // ── Senkronizasyon (ana akış) ──────────────────────────────────────────
     // Kullanıcı bazlı sınır (IP değil): CGNAT arkasındaki farklı kullanıcılar
     // birbirini etkilemez; tek bir hesabın sync'i floodlaması engellenir.

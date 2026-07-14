@@ -675,6 +675,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // DELETE /auth/apple/link
+  Future<bool> unlinkApple(String password) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      await _apiService.unlinkApple(password: password);
+      final user = Map<String, dynamic>.from(state.user ?? {});
+      user.remove('apple_sub');
+      await PrefsService.saveUserData(user);
+      state = state.copyWith(loading: false, user: user);
+      return true;
+    } on ApiException catch (e) {
+      final mapped = _mapApiError(e);
+      state = state.copyWith(loading: false, error: mapped);
+      return false;
+    } catch (e, st) {
+      debugPrint("Apple unlink failed: $e\n$st");
+      state = state.copyWith(
+        loading: false,
+        error: 'auth_err_apple_unlink_failed',
+      );
+      return false;
+    }
+  }
+
   // POST /auth/forgot-password
   Future<bool> forgotPassword(String email) async {
     state = state.copyWith(loading: true, error: null);

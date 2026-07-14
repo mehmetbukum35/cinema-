@@ -168,6 +168,11 @@ const Map<String, String> kTrStrings = {
   'google_unlink_button': 'Bağlantıyı Kaldır',
   'google_unlink_success': 'Google hesabı bağlantısı kaldırıldı.',
   'auth_err_google_unlink_failed': 'Google bağlantısı kaldırılamadı.',
+  'apple_unlink_title': 'Apple Bağlantısını Kaldır',
+  'apple_unlink_desc': 'Devam etmek için hesap parolanızı girin.',
+  'apple_unlink_button': 'Bağlantıyı Kaldır',
+  'apple_unlink_success': 'Apple hesabı bağlantısı kaldırıldı.',
+  'auth_err_apple_unlink_failed': 'Apple bağlantısı kaldırılamadı.',
   'auth_forgot_email_desc':
       'Şifre sıfırlama kodunu almak için kayıtlı e-posta adresinizi girin.',
   'auth_forgot_code_title': 'Kodu Doğrula',

@@ -10,7 +10,6 @@ import '../../../providers/watchlist_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/spring_button.dart';
-import '../../../utils/username_helper.dart';
 import '../../../widgets/logout_confirm_dialog.dart';
 import '../../../widgets/auth_conflict_dialog.dart';
 import '../../../widgets/app_toast.dart';
@@ -39,9 +38,6 @@ class UserHeaderCard extends ConsumerWidget {
       if (result.status == AuthStatus.success) {
         ref.invalidate(watchlistProvider);
         ref.invalidate(statsProvider);
-        if (context.mounted) {
-          await showUsernamePromptIfNeeded(context, ref);
-        }
       } else if (result.status == AuthStatus.conflict) {
         final resolution = await showAuthConflictDialog(context);
         if (resolution != null && context.mounted) {
@@ -54,9 +50,6 @@ class UserHeaderCard extends ConsumerWidget {
               );
           ref.invalidate(watchlistProvider);
           ref.invalidate(statsProvider);
-          if (context.mounted) {
-            await showUsernamePromptIfNeeded(context, ref);
-          }
         } else {
           // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
           // sunucuda iptal et ki yetim refresh token kalmasın.

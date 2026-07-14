@@ -19,6 +19,7 @@ import '../widgets/delete_account_dialog.dart';
 import '../widgets/auth_loading_overlay.dart';
 import 'profile/widgets/change_password_sheet.dart';
 import 'profile/widgets/unlink_google_sheet.dart';
+import 'profile/widgets/unlink_apple_sheet.dart';
 import 'profile/widgets/user_header_card.dart';
 import 'profile/widgets/profile_rail_cards.dart';
 import 'profile/widgets/family_mode_card.dart';
@@ -615,7 +616,9 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
-          if (isLoggedIn && auth.user?['google_sub'] == null)
+          if (isLoggedIn &&
+              auth.user?['google_sub'] == null &&
+              auth.user?['apple_sub'] == null)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -699,6 +702,39 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       builder: (_) => UnlinkGoogleSheet(ref: ref),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+          if (isLoggedIn &&
+              auth.user?['apple_sub'] != null &&
+              (auth.user!['apple_sub'] as String?)?.isNotEmpty == true)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: SettingsNavCard(
+                  icon: Icons.link_off_rounded,
+                  iconColor: c.red,
+                  iconBackground: c.red.withValues(alpha: 0.12),
+                  title:
+                      tr?.get('apple_unlink_title') ??
+                      'Apple Bağlantısını Kaldır',
+                  subtitle:
+                      tr?.get('apple_unlink_desc') ??
+                      'Devam etmek için hesap parolanızı girin.',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: c.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (_) => UnlinkAppleSheet(ref: ref),
                     );
                   },
                 ),

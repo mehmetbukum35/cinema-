@@ -42,6 +42,7 @@ class AuthIntegrationTest extends TestCase
                 display_name TEXT,
                 username TEXT UNIQUE,
                 google_sub TEXT UNIQUE,
+                apple_sub TEXT UNIQUE,
                 taste_dna TEXT,
                 taste_dna_at INTEGER DEFAULT 0,
                 email_verified INTEGER NOT NULL DEFAULT 0,
@@ -362,5 +363,43 @@ class AuthIntegrationTest extends TestCase
         // Verify reset code is deleted
         $codeCount = $this->db->query('SELECT COUNT(*) FROM password_resets')->fetchColumn();
         $this->assertSame(0, (int) $codeCount);
+    }
+
+    public function testUnlinkAppleSuccess(): void
+    {
+        $pass = 'Password123!';
+        $hash = password_hash($pass, PASSWORD_BCRYPT);
+        $t = (int) round(microtime(true) * 1000);
+        $st = $this->db->prepare(
+            'INSERT INTO users (email, password_hash, apple_sub, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        );
+        $st->execute(['apple-linked@example.com', $hash, 'apple-sub-linked', $t, $t]);
+        $uid = (int) $this->db->lastInsertId();
+
+        TestHelperRegistry::reset();
+        $this->auth->unlinkApple($uid, ['password' => $pass]);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertTrue(TestHelperRegistry::$lastBody['ok']);
+        $row = $this->db->query("SELECT apple_sub FROM users WHERE id = $uid")->fetch();
+        $this->assertNull($row['apple_sub']);
+    }
+
+    public function testUnlinkAppleRequiresPassword(): void
+    {
+        $hash = password_hash('pass', PASSWORD_BCRYPT);
+        $t = (int) round(microtime(true) * 1000);
+        $st = $this->db->prepare(
+            'INSERT INTO users (email, password_hash, apple_sub, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        );
+        $st->execute(['apple-linked2@example.com', $hash, 'apple-sub-linked', $t, $t]);
+        $uid = (int) $this->db->lastInsertId();
+
+        $this->expectException(TestExitException::class);
+        try {
+            $this->auth->unlinkApple($uid, ['password' => '']);
+        } finally {
+            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+        }
     }
 }

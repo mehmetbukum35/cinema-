@@ -633,7 +633,31 @@ class Auth
         json_out(200, ['ok' => true]);
     }
 
-    // ─── POST /auth/change-password (nadir/tekil işlem) ─────────────────────
+    // ─── DELETE /auth/apple/link *(Bearer)* ──────────────────────────────────
+    // Apple hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
+    // mevcut parola zorunludur.
+    public function unlinkApple(int $uid, array $in): void
+    {
+        $st = $this->db->prepare('SELECT apple_sub, password_hash FROM users WHERE id = ?');
+        $st->execute([$uid]);
+        $u = $st->fetch();
+        if (!$u || empty($u['apple_sub'])) {
+            fail(422, 'Bağlı Apple hesabı yok.', 'apple_unlink_failed');
+        }
+
+        $pass = (string) ($in['password'] ?? '');
+        if ($pass === '') {
+            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.', 'apple_unlink_failed');
+        }
+        if (!password_verify($pass, $u['password_hash'])) {
+            fail(401, 'Mevcut parola hatalı.', 'wrong_password');
+        }
+
+        $up = $this->db->prepare('UPDATE users SET apple_sub = NULL, updated_at = ? WHERE id = ?');
+        $up->execute([now_ms(), $uid]);
+        json_out(200, ['ok' => true]);
+    }
+     // ─── POST /auth/change-password (nadir/tekil işlem) ─────────────────────
     public function changePassword(int $uid, array $in): void
     {
         $old = (string) ($in['old_password'] ?? '');
