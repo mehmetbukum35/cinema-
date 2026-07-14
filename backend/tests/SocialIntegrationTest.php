@@ -900,6 +900,57 @@ class SocialIntegrationTest extends TestCase
         }
     }
 
+    public function testGetFriendsDoesNotExposeEmail(): void
+    {
+        // E-posta, kullanıcı adı bilinen herkes tarafından toplanabiliyordu
+        // (istek gönder → pending_sent içinden oku). Hiçbir listede dönmemeli.
+        $this->acceptFriendship(1, 2);
+        $st = $this->db->prepare(
+            'INSERT INTO friends (user_id, friend_id, status, created_at, updated_at)
+             VALUES (?, ?, "pending", 1000, 1000)'
+        );
+        $st->execute([1, 3]); // gönderilen istek
+        $st->execute([4, 1]); // gelen istek
+
+        $this->db->exec('INSERT INTO users (id, email, display_name, username) VALUES (4, \'dave2@example.com\', \'Dave2\', \'dave2\')');
+
+        $this->social->getFriends(1);
+        $body = TestHelperRegistry::$lastBody;
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        foreach (['friends', 'pending_received', 'pending_sent'] as $listKey) {
+            foreach ($body[$listKey] as $entry) {
+                $this->assertArrayNotHasKey('email', $entry, "$listKey e-posta sızdırıyor");
+                $this->assertArrayHasKey('username', $entry);
+            }
+        }
+        $this->assertNotEmpty($body['friends']);
+        $this->assertNotEmpty($body['pending_sent']);
+        $this->assertNotEmpty($body['pending_received']);
+    }
+
+    public function testAllTasteMatchesReturnsScoresForAcceptedFriends(): void
+    {
+        // 1↔2 arkadaş ve ortak zevk var; 3 arkadaş değil → listede olmamalı.
+        $this->acceptFriendship(1, 2);
+        foreach ([201, 202, 203] as $i => $movieId) {
+            $this->insertRating(1, $movieId, 0, 3, "Movie $movieId", 1000 + $i, '[28,878]');
+            $this->insertRating(2, $movieId, 0, 3, "Movie $movieId", 2000 + $i, '[28,878]');
+        }
+        $this->insertRating(3, 301, 0, 3, 'Movie X', 1000, '[28]');
+
+        $this->social->getAllTasteMatches(1);
+        $body = TestHelperRegistry::$lastBody;
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertCount(1, $body['scores']);
+        $entry = $body['scores'][0];
+        $this->assertSame(2, $entry['friend_id']);
+        $this->assertSame(100, $entry['score']); // tekil uçla aynı matematik
+        $this->assertTrue($entry['has_data']);
+        $this->assertSame(3, $entry['common_count']);
+    }
+
     private function acceptFriendship(int $userId, int $friendId): void
     {
         $stmt = $this->db->prepare(

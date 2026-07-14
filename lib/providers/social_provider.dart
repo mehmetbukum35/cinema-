@@ -247,9 +247,32 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   /// Tüm arkadaşlar için zevk uyumu skorlarını çeker.
-  /// Sessizce çalışır: hata tek bir arkadaşın rozetini eksik bırakır, UI bozulmaz.
+  /// Önce toplu uç denenir (tek HTTP isteği); uç yoksa (eski sunucu, 404)
+  /// arkadaş başına tekil isteğe geri düşülür. Sessizce çalışır: hata tek
+  /// bir arkadaşın rozetini eksik bırakır, UI bozulmaz.
   Future<void> loadTasteScores() async {
     final scores = Map<int, int>.from(state.tasteScores);
+    try {
+      final list = await _apiService.getAllTasteMatches();
+      for (final item in list) {
+        if (item is! Map<String, dynamic>) continue;
+        final id = (item['friend_id'] as num?)?.toInt() ?? 0;
+        if (id == 0 || item['has_data'] != true) continue;
+        scores[id] = ((item['score'] as num?) ?? 0).toInt();
+      }
+      if (mounted) state = state.copyWith(tasteScores: scores);
+      return;
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) {
+        debugPrint("Failed to load taste matches in batch: $e");
+        return;
+      }
+      // 404 → sunucu henüz taste-all ucunu bilmiyor; tekil uca düş.
+    } catch (e, st) {
+      debugPrint("Failed to load taste matches in batch: $e\n$st");
+      return;
+    }
+
     for (final f in state.friends) {
       final id = f.id;
       if (id == 0) continue;

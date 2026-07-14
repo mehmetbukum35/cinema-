@@ -289,6 +289,12 @@ switch (true) {
         $social->getFriendSignals($auth->requireUser());
         break;
 
+    // Tüm arkadaşların zevk uyumu skorları tek istekte (N+1 HTTP yerine).
+    // Tekil /social/match/taste/{id} ucu eski istemciler için korunuyor.
+    case $route === 'GET /social/match/taste-all':
+        $social->getAllTasteMatches($auth->requireUser());
+        break;
+
     // ── Popüler Listeler (profil beğenileri) ───────────────────────────────
     case $route === 'GET /social/profiles/top':
         $social->getTopProfiles($auth->requireUser());

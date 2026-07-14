@@ -43,8 +43,37 @@ trait SocialMatchTrait
     public function getTasteMatch(int $uid, int $friendId): void
     {
         $this->assertFriendship($uid, $friendId, 'Bu kullanıcıyla uyum skorunu görme yetkiniz yok.');
+        json_out(200, $this->computeTasteMatch($uid, $friendId));
+    }
 
-        $mine   = $this->fetchRatingsMap($uid);
+    // ─── GET /social/match/taste-all ────────────────────────────────────────
+    // Tüm onaylı arkadaşların uyum skorlarını TEK istekte döner. İstemci
+    // eskiden arkadaş başına ayrı istek atıyordu (N+1 HTTP); kendi puan
+    // haritamız da burada bir kez çekilip tüm karşılaştırmalarda kullanılır.
+    public function getAllTasteMatches(int $uid): void
+    {
+        $st = $this->db->prepare(
+            'SELECT friend_id FROM friends WHERE user_id = ? AND status = \'accepted\''
+        );
+        $st->execute([$uid]);
+
+        $mine = $this->fetchRatingsMap($uid);
+        $scores = [];
+        foreach ($st->fetchAll() as $row) {
+            $friendId = (int) $row['friend_id'];
+            $scores[] = ['friend_id' => $friendId]
+                + $this->computeTasteMatch($uid, $friendId, $mine);
+        }
+        json_out(200, ['scores' => $scores]);
+    }
+
+    /**
+     * İki kullanıcının uyum skorunu hesaplar; json_out YAPMAZ (tekil uç ve
+     * toplu uç ortak kullanır). $mine önceden çekilmişse yeniden sorgulanmaz.
+     */
+    private function computeTasteMatch(int $uid, int $friendId, ?array $mine = null): array
+    {
+        $mine ??= $this->fetchRatingsMap($uid);
         $theirs = $this->fetchRatingsMap($friendId);
 
         // 1) Ortak yapımlarda anlaşma: 1 - |fark|/3 ortalaması (0..1)
@@ -73,7 +102,7 @@ trait SocialMatchTrait
             $score = (int) round(100 * $genreSim);
         }
 
-        json_out(200, [
+        return [
             'score'            => max(0, min(100, $score)),
             'common_count'     => $common,
             'both_loved'       => $bothLoved,
@@ -81,6 +110,6 @@ trait SocialMatchTrait
             'genre_similarity' => round($genreSim, 4),
             // Skor güvenilir mi? İki tarafta da veri yoksa UI rozeti gizleyebilir.
             'has_data'         => $common > 0 || (!empty($mine) && !empty($theirs)),
-        ]);
+        ];
     }
 }

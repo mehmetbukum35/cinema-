@@ -142,9 +142,13 @@ trait SocialFriendsTrait
     // ─── GET /social/friends ────────────────────────────────────────────────
     public function getFriends(int $uid): void
     {
+        // Not: u.email BİLEREK seçilmiyor. Yanıta eklemek, kullanıcı adı bilinen
+        // herkesin e-postasını toplamaya izin veriyordu (istek at → pending_sent
+        // içinden e-postayı oku). İstemci bu alanı hiçbir yerde göstermiyor.
+
         // 1. Onaylanmış arkadaşlar (accepted)
         $st1 = $this->db->prepare(
-            'SELECT u.id, u.display_name, u.username, u.email
+            'SELECT u.id, u.display_name, u.username
              FROM friends f
              JOIN users u ON f.friend_id = u.id
              WHERE f.user_id = ? AND f.status = \'accepted\''
@@ -154,7 +158,7 @@ trait SocialFriendsTrait
 
         // 2. Gelen istekler (friend_id = biz, status = pending)
         $st2 = $this->db->prepare(
-            'SELECT u.id, u.display_name, u.username, u.email
+            'SELECT u.id, u.display_name, u.username
              FROM friends f
              JOIN users u ON f.user_id = u.id
              WHERE f.friend_id = ? AND f.status = \'pending\''
@@ -164,7 +168,7 @@ trait SocialFriendsTrait
 
         // 3. Gönderilen istekler (user_id = biz, status = pending)
         $st3 = $this->db->prepare(
-            'SELECT u.id, u.display_name, u.username, u.email
+            'SELECT u.id, u.display_name, u.username
              FROM friends f
              JOIN users u ON f.friend_id = u.id
              WHERE f.user_id = ? AND f.status = \'pending\''

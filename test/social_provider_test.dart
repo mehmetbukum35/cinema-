@@ -128,6 +128,22 @@ class MockApiService implements ApiService {
     return res;
   }
 
+  /// true → eski sunucu simülasyonu: taste-all 404 döner, tekil uca düşülür.
+  bool allTasteMatchesUnsupported = false;
+  bool allTasteMatchesCalled = false;
+
+  @override
+  Future<List<dynamic>> getAllTasteMatches() async {
+    allTasteMatchesCalled = true;
+    if (allTasteMatchesUnsupported) {
+      throw ApiException(statusCode: 404, message: 'Bilinmeyen uç');
+    }
+    return [
+      for (final e in tasteMatchResponses.entries)
+        {'friend_id': e.key, ...e.value},
+    ];
+  }
+
   @override
   Future<Map<String, dynamic>> getRecommendations() async =>
       recommendationsResponse;
@@ -265,6 +281,21 @@ void main() {
       expect(state.tasteScores[10], 78);
       expect(state.tasteScores.containsKey(99), isFalse);
     });
+
+    test(
+      'loadTasteScores should fall back to per-friend calls on old server (404)',
+      () async {
+        mockApi.allTasteMatchesUnsupported = true;
+        final notifier = container.read(socialProvider.notifier);
+
+        await notifier.loadFriends();
+        await notifier.loadTasteScores();
+
+        final state = container.read(socialProvider);
+        expect(mockApi.allTasteMatchesCalled, isTrue);
+        expect(state.tasteScores[10], 78); // tekil uçtan geldi
+      },
+    );
 
     test('loadRecommendations should update inbox and unseen count', () async {
       final notifier = container.read(socialProvider.notifier);

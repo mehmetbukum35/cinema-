@@ -24,21 +24,14 @@ class Friend {
   final int id;
   final String username;
   final String? displayName;
-  final String email;
 
-  Friend({
-    required this.id,
-    required this.username,
-    this.displayName,
-    required this.email,
-  });
+  Friend({required this.id, required this.username, this.displayName});
 
   factory Friend.fromJson(Map<String, dynamic> json) {
     return Friend(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       username: json['username'] as String? ?? '',
       displayName: json['display_name'] as String?,
-      email: json['email'] as String? ?? '',
     );
   }
 
@@ -46,7 +39,6 @@ class Friend {
     'id': id,
     'username': username,
     'display_name': displayName,
-    'email': email,
   };
 }
 
