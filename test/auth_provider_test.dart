@@ -246,20 +246,17 @@ void main() {
       },
     );
 
-    test(
-      'wipeAllData should clear in-memory auth and stored tokens',
-      () async {
-        final notifier = container.read(authProvider.notifier);
+    test('wipeAllData should clear in-memory auth and stored tokens', () async {
+      final notifier = container.read(authProvider.notifier);
 
-        await notifier.login('test@example.com', 'secret123');
-        expect(container.read(authProvider).isAuthenticated, isTrue);
+      await notifier.login('test@example.com', 'secret123');
+      expect(container.read(authProvider).isAuthenticated, isTrue);
 
-        await notifier.wipeAllData();
+      await notifier.wipeAllData();
 
-        expect(container.read(authProvider).isAuthenticated, isFalse);
-        expect(await PrefsService.getAccessToken(), isNull);
-      },
-    );
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+      expect(await PrefsService.getAccessToken(), isNull);
+    });
 
     test('changePassword should end session locally', () async {
       final notifier = container.read(authProvider.notifier);

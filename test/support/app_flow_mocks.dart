@@ -110,8 +110,8 @@ class MockIntegrationApiService implements ApiService {
 
   @override
   Future<Map<String, dynamic>> getSentRecommendations() async => {
-        'recommendations': [],
-      };
+    'recommendations': [],
+  };
 
   @override
   Future<FriendSignals> getFriendSignals() async => const FriendSignals();

@@ -747,9 +747,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       if (!mounted) return;
       showAppSnackBar(
         context,
-        AppLocalizations.of(context)
-                ?.get('title_removed_from_watchlist')
-                .replaceAll('{}', m.title) ??
+        AppLocalizations.of(
+              context,
+            )?.get('title_removed_from_watchlist').replaceAll('{}', m.title) ??
             '${m.title} removed from watchlist.',
         duration: const Duration(seconds: 3),
         actionLabel: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
