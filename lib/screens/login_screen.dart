@@ -10,6 +10,7 @@ import '../widgets/auth_conflict_dialog.dart';
 import '../widgets/auth_loading_overlay.dart';
 import '../widgets/forgot_password_sheet.dart';
 import '../widgets/verify_email_sheet.dart';
+import '../utils/username_helper.dart';
 
 /// Giriş + Kayıt ekranı (tek ekranda mod değiştirir).
 /// Mevcut akışı bozmaz; istediğin yerden (ör. Profil) buraya yönlendir:
@@ -90,7 +91,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await _handleAuthResult(verifyResult);
       }
     } else if (result.status == AuthStatus.success) {
-      Navigator.of(context).pop();
+      if (mounted) {
+        await showUsernamePromptIfNeeded(context, ref);
+      }
+      if (mounted) Navigator.of(context).pop();
     } else if (result.status == AuthStatus.conflict) {
       final resolution = await showAuthConflictDialog(context);
       if (resolution != null && mounted) {
@@ -101,6 +105,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               tokens: result.tokens!,
               resolution: resolution,
             );
+        if (mounted) {
+          await showUsernamePromptIfNeeded(context, ref);
+        }
         if (mounted) Navigator.of(context).pop();
       } else {
         // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →

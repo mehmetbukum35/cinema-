@@ -86,4 +86,21 @@ trait SocialRecommendationsTrait
         $st->execute([$uid]);
         json_out(200, ['ok' => true, 'marked' => $st->rowCount()]);
     }
+
+    // ─── GET /social/recommendations/sent ───────────────────────────────────
+    // Kullanıcının arkadaşlarına gönderdiği önerileri (alıcı bilgisiyle) döner.
+    public function getSentRecommendations(int $uid): void
+    {
+        $st = $this->db->prepare(
+            'SELECT r.id, r.movie_id, r.is_tv, r.title, r.poster_path, r.note, r.created_at,
+                    u.id as to_id, u.display_name as to_name, u.username as to_username
+             FROM recommendations r
+             JOIN users u ON u.id = r.to_user_id
+             WHERE r.from_user_id = ?
+             ORDER BY r.created_at DESC
+             LIMIT 50'
+        );
+        $st->execute([$uid]);
+        json_out(200, ['sent' => $st->fetchAll()]);
+    }
 }

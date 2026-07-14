@@ -324,6 +324,10 @@ switch (true) {
         $social->getRecommendations($auth->requireUser());
         break;
 
+    case $route === 'GET /social/recommendations/sent':
+        $social->getSentRecommendations($auth->requireUser());
+        break;
+
     case $route === 'POST /social/recommendations/seen':
         $social->markRecommendationsSeen($auth->requireUser());
         break;

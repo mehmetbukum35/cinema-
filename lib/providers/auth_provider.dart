@@ -167,6 +167,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             _ref.read(socialProvider.notifier).loadFriends(),
             _ref.read(socialProvider.notifier).loadActivityFeed(),
             _ref.read(socialProvider.notifier).loadRecommendations(),
+            _ref.read(socialProvider.notifier).loadSentRecommendations(),
             _ref.read(socialProvider.notifier).loadTopProfiles(),
           ]);
         });
@@ -503,6 +504,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _ref.read(socialProvider.notifier).loadFriends(),
       _ref.read(socialProvider.notifier).loadActivityFeed(),
       _ref.read(socialProvider.notifier).loadRecommendations(),
+      _ref.read(socialProvider.notifier).loadSentRecommendations(),
       _ref.read(socialProvider.notifier).loadTopProfiles(),
     ]);
     await _ref.read(recommendationEngineProvider).invalidateCache();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/social_provider.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/username_helper.dart';
 
 /// Profil özelleştirme alt sayfası: kullanıcı adı + herkese açık anahtarı.
 /// Controller ve isPublic durumu üst ekranda yaşar (sheet kapansa da
@@ -111,8 +112,20 @@ class _ProfileSettingsSheetState extends ConsumerState<ProfileSettingsSheet> {
                 activeThumbColor: c.gold,
                 contentPadding: EdgeInsets.zero,
                 onChanged: (val) {
+                  final username = widget.usernameCtrl.text
+                      .trim()
+                      .toLowerCase();
+                  if (val && username.isEmpty) {
+                    showUsernamePromptIfNeeded(
+                      context,
+                      ref,
+                      forcePublic: true,
+                      allowSkip: true,
+                    );
+                    return;
+                  }
                   setState(() => _isPublic = val);
-                  widget.onPublicChanged(val); // sync with parent
+                  widget.onPublicChanged(val);
                 },
               ),
             ),

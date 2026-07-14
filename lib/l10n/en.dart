@@ -737,4 +737,13 @@ const Map<String, String> kEnStrings = {
   'semantics_spoiler_toggle': 'Toggle spoiler flag',
   'semantics_private_toggle': 'Toggle private review',
   'semantics_save_review': 'Save review',
+  'sent_recommendations_title': 'Recommended to Friends',
+  'sent_recommendations_subtitle': 'Films and shows you shared with friends',
+  'sent_recommendation_to': 'To {} · {}',
+  'username_prompt_title': 'Choose a Username',
+  'username_prompt_desc':
+      'Pick a unique username for your web profile and social features.',
+  'username_prompt_later': 'Later',
+  'username_invalid_format':
+      'Username must be 3-30 characters and contain only letters, numbers, or underscores.',
 };

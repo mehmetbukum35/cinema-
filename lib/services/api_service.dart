@@ -904,6 +904,25 @@ class ApiService {
     }
   }
 
+  // GET /social/recommendations/sent
+  Future<Map<String, dynamic>> getSentRecommendations() async {
+    final response = await _request(
+      'GET',
+      '/social/recommendations/sent',
+      requireAuth: true,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) {
+      return data;
+    } else {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Gönderilen öneriler alınamadı.',
+        code: data['code'] as String?,
+      );
+    }
+  }
+
   // GET /social/profiles/top — en çok beğeni alan 20 herkese açık üye.
   Future<Map<String, dynamic>> getTopProfiles() async {
     final response = await _request(

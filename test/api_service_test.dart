@@ -267,6 +267,37 @@ void main() {
       expect(res['has_data'], isTrue);
     });
 
+    test('getSentRecommendations should parse sent payload', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/social/recommendations/sent');
+        return http.Response(
+          jsonEncode({
+            'sent': [
+              {
+                'id': 1,
+                'movie_id': 603,
+                'is_tv': 0,
+                'title': 'The Matrix',
+                'created_at': 1000,
+                'to_id': 2,
+                'to_name': 'Bob',
+                'to_username': 'bob',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final apiService = ApiService(client: mockClient);
+      final res = await apiService.getSentRecommendations();
+
+      expect(res['sent'], hasLength(1));
+      expect(res['sent'][0]['title'], 'The Matrix');
+      expect(res['sent'][0]['to_username'], 'bob');
+    });
+
     test('recommendToFriend should POST correct payload', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');

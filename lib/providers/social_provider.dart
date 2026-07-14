@@ -22,6 +22,9 @@ class SocialState {
   final List<RecommendationInboxItem> recommendations;
   final int unseenRecommendations;
 
+  /// Kullanıcının arkadaşlarına gönderdiği öneriler (en yeni önce).
+  final List<SentRecommendationItem> sentRecommendations;
+
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
   final Map<int, List<ActivityItem>> friendActivities;
 
@@ -42,6 +45,7 @@ class SocialState {
     this.tasteScores = const {},
     this.recommendations = const [],
     this.unseenRecommendations = 0,
+    this.sentRecommendations = const [],
     this.friendActivities = const {},
     this.topProfiles = const [],
     this.topProfilesLoading = false,
@@ -59,6 +63,7 @@ class SocialState {
     Map<int, int>? tasteScores,
     List<RecommendationInboxItem>? recommendations,
     int? unseenRecommendations,
+    List<SentRecommendationItem>? sentRecommendations,
     Map<int, List<ActivityItem>>? friendActivities,
     List<TopProfile>? topProfiles,
     bool? topProfilesLoading,
@@ -76,6 +81,7 @@ class SocialState {
       recommendations: recommendations ?? this.recommendations,
       unseenRecommendations:
           unseenRecommendations ?? this.unseenRecommendations,
+      sentRecommendations: sentRecommendations ?? this.sentRecommendations,
       friendActivities: friendActivities ?? this.friendActivities,
       topProfiles: topProfiles ?? this.topProfiles,
       topProfilesLoading: topProfilesLoading ?? this.topProfilesLoading,
@@ -187,6 +193,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       unawaited(loadFriends());
       unawaited(loadActivityFeed());
       unawaited(loadRecommendations());
+      unawaited(loadSentRecommendations());
       unawaited(loadTopProfiles());
       return true;
     } on ApiException catch (e) {
@@ -323,6 +330,24 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
   }
 
+  /// Kullanıcının arkadaşlarına gönderdiği önerileri yükler.
+  Future<void> loadSentRecommendations() async {
+    try {
+      final res = await _apiService.getSentRecommendations();
+      final list =
+          (res['sent'] as List<dynamic>?)
+              ?.map(
+                (x) =>
+                    SentRecommendationItem.fromJson(x as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [];
+      state = state.copyWith(sentRecommendations: list);
+    } catch (e, st) {
+      debugPrint("Failed to load sent recommendations: $e\n$st");
+    }
+  }
+
   /// Arkadaşa film/dizi önerir.
   Future<bool> recommendToFriend({
     required int friendId,
@@ -339,6 +364,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
         posterPath: movie.posterPath,
         note: note,
       );
+      unawaited(loadSentRecommendations());
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(error: () => e.message);

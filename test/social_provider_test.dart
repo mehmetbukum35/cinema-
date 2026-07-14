@@ -78,6 +78,22 @@ class MockApiService implements ApiService {
     'unseen': 1,
   };
 
+  Map<String, dynamic> sentRecommendationsResponse = {
+    'sent': [
+      {
+        'id': 2,
+        'movie_id': 550,
+        'is_tv': 0,
+        'title': 'Fight Club',
+        'poster_path': '/fc.jpg',
+        'created_at': 2000,
+        'to_id': 10,
+        'to_name': 'Friend Name',
+        'to_username': 'testfriend',
+      },
+    ],
+  };
+
   bool sendFriendRequestCalled = false;
   bool acceptFriendRequestCalled = false;
   bool rejectFriendRequestCalled = false;
@@ -147,6 +163,10 @@ class MockApiService implements ApiService {
   @override
   Future<Map<String, dynamic>> getRecommendations() async =>
       recommendationsResponse;
+
+  @override
+  Future<Map<String, dynamic>> getSentRecommendations() async =>
+      sentRecommendationsResponse;
 
   @override
   Future<void> markRecommendationsSeen() async {
@@ -349,6 +369,17 @@ void main() {
       expect(mockApi.recommendCalled, isTrue);
       expect(mockApi.recommendedFriendId, 10);
       expect(mockApi.recommendedNote, 'Mutlaka izle!');
+    });
+
+    test('loadSentRecommendations should map sent items', () async {
+      final notifier = container.read(socialProvider.notifier);
+
+      await notifier.loadSentRecommendations();
+
+      final state = container.read(socialProvider);
+      expect(state.sentRecommendations, hasLength(1));
+      expect(state.sentRecommendations[0].title, 'Fight Club');
+      expect(state.sentRecommendations[0].toUsername, 'testfriend');
     });
 
     test(

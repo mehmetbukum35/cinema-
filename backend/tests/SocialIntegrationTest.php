@@ -351,6 +351,26 @@ class SocialIntegrationTest extends TestCase
         $this->social->recommend(1, ['friend_id' => 2, 'movie_id' => 0, 'title' => '']);
     }
 
+    public function testGetSentRecommendations(): void
+    {
+        $this->acceptFriendship(1, 2);
+
+        $this->social->recommend(1, [
+            'friend_id' => 2, 'movie_id' => 603, 'is_tv' => 0,
+            'title' => 'The Matrix', 'poster_path' => '/matrix.jpg', 'note' => 'Mutlaka izle!',
+        ]);
+
+        TestHelperRegistry::reset();
+        $this->social->getSentRecommendations(1);
+        $body = TestHelperRegistry::$lastBody;
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertCount(1, $body['sent']);
+        $sent = $body['sent'][0];
+        $this->assertSame('The Matrix', $sent['title']);
+        $this->assertSame('bob', $sent['to_username']);
+        $this->assertSame('Mutlaka izle!', $sent['note']);
+    }
+
     public function testTitleReviewsAndActivityFeedWithNegativeComments(): void
     {
         // 1. Setup friendship between 1 and 2

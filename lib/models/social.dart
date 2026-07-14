@@ -170,6 +170,66 @@ class RecommendationInboxItem {
   };
 }
 
+class SentRecommendationItem {
+  final int id;
+  final int movieId;
+  final bool isTv;
+  final String title;
+  final String? posterPath;
+  final String? note;
+  final int createdAt;
+  final int toId;
+  final String? toName;
+  final String toUsername;
+
+  SentRecommendationItem({
+    required this.id,
+    required this.movieId,
+    required this.isTv,
+    required this.title,
+    this.posterPath,
+    this.note,
+    required this.createdAt,
+    required this.toId,
+    this.toName,
+    required this.toUsername,
+  });
+
+  String get friendLabel =>
+      (toName != null && toName!.trim().isNotEmpty) ? toName! : toUsername;
+
+  factory SentRecommendationItem.fromJson(Map<String, dynamic> json) {
+    return SentRecommendationItem(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
+      isTv:
+          json['is_tv'] == true ||
+          json['is_tv'] == 1 ||
+          json['is_tv']?.toString() == '1',
+      title: json['title'] as String? ?? '',
+      posterPath: json['poster_path'] as String?,
+      note: json['note'] as String?,
+      createdAt: int.tryParse(json['created_at']?.toString() ?? '') ?? 0,
+      toId: int.tryParse(json['to_id']?.toString() ?? '') ?? 0,
+      toName: json['to_name'] as String?,
+      toUsername: json['to_username'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'movie_id': movieId,
+    'is_tv': isTv ? 1 : 0,
+    'title': title,
+    'poster_path': posterPath,
+    'note': note,
+    'created_at': createdAt,
+    'to_id': toId,
+    'to_name': toName,
+    'to_username': toUsername,
+  };
+}
+
 /// "Popüler Listeler" sıralamasında bir üyenin afiş önizlemesi.
 class TopProfilePreview {
   final String? title;

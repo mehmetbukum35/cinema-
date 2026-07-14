@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
+import '../utils/username_helper.dart';
 import '../widgets/app_top_bar.dart';
 import 'browse_screen.dart';
 import 'swipe_screen.dart';
@@ -21,6 +23,7 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   int _tab = 0;
+  bool _usernamePromptShown = false;
 
   static const _items = [
     (Icons.home_rounded, 'tab_browse'),
@@ -41,10 +44,40 @@ class _MainShellState extends ConsumerState<MainShell> {
     setState(() => _tab = index);
   }
 
+  void _maybePromptUsername() {
+    if (!mounted || _usernamePromptShown) return;
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated || !needsUsername(auth.user)) return;
+    _usernamePromptShown = true;
+    showUsernamePromptIfNeeded(context, ref);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybePromptUsername());
+  }
+
   @override
   Widget build(BuildContext context) {
     final pal = context.c;
     final isOffline = ref.watch(offlineProvider);
+
+    ref.listen(authProvider, (prev, next) {
+      if (!next.isAuthenticated) {
+        _usernamePromptShown = false;
+        return;
+      }
+      final becameAuthenticated = prev == null || !prev.isAuthenticated;
+      final userChanged = prev?.user?['id'] != next.user?['id'];
+      if ((becameAuthenticated || userChanged) && needsUsername(next.user)) {
+        _usernamePromptShown = false;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _maybePromptUsername(),
+        );
+      }
+    });
+
     // "Birlikte" sekmesi rozeti: bekleyen istek + okunmamış öneri.
     final social = ref.watch(socialProvider);
     final togetherBadge =

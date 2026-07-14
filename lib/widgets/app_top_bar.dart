@@ -14,7 +14,8 @@ import '../theme/app_theme.dart';
 import '../screens/movie_detail_sheet.dart';
 import '../screens/my_reviews_screen.dart';
 import '../screens/social_screen.dart';
-import 'about_sheet.dart';
+import '../utils/username_helper.dart';
+import '../widgets/about_sheet.dart';
 
 /// Her sekmenin üstünde duran global bar: marka + sürpriz zarı + rozetli
 /// avatar. Avatar, Sosyal / Tercihler / Hesap gruplu açılır menüyü açar.
@@ -130,15 +131,7 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
     final username = (auth.user?['username'] as String?)?.trim();
     if (username == null || username.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr?.get('profile_share_no_username') ??
-                'Profilinizi paylaşmak için kullanıcı adı belirleyin.',
-          ),
-        ),
-      );
-      widget.onOpenProfile?.call();
+      await showUsernamePromptIfNeeded(context, ref);
       return;
     }
 

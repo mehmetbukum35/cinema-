@@ -8,6 +8,7 @@ import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/pulsing_placeholder.dart';
 import '../../../widgets/spring_button.dart';
+import '../../../widgets/tonight_pick_card.dart' show recoReasonLabel;
 import '../../movie_detail_sheet.dart';
 
 /// Swipe kuyruğundaki film/dizi kartı ve sürükleme göstergeleri.
@@ -29,6 +30,7 @@ class SwipeCard extends ConsumerWidget {
     final signals = ref.watch(socialProvider).signals;
     final friendNames = signals.friendsFor(movieId: movie.id, isTv: movie.isTV);
 
+    final reason = recoReasonLabel(context, movie);
     final isRecommended =
         likedGenreIds.isNotEmpty &&
         movie.genreIds.any((id) {
@@ -292,7 +294,35 @@ class SwipeCard extends ConsumerWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        if (movie.year.isNotEmpty) ...[
+        if (reason != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                movie.recoReasonType == 'friend'
+                    ? Icons.favorite_rounded
+                    : Icons.auto_awesome_rounded,
+                size: 12,
+                color: c.goldSoft,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  reason,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: c.goldSoft,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else if (movie.year.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text('(${movie.year})', style: TextStyle(color: c.dim, fontSize: 16)),
         ],

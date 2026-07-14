@@ -732,4 +732,13 @@ const Map<String, String> kTrStrings = {
   'semantics_spoiler_toggle': 'Spoiler işaretini aç/kapat',
   'semantics_private_toggle': 'Gizli yorumu aç/kapat',
   'semantics_save_review': 'Yorumu kaydet',
+  'sent_recommendations_title': 'Arkadaşlarına Önerdiklerin',
+  'sent_recommendations_subtitle': 'Arkadaşlarına gönderdiğin film ve diziler',
+  'sent_recommendation_to': '{} · {}',
+  'username_prompt_title': 'Kullanıcı Adı Belirle',
+  'username_prompt_desc':
+      'Web profilin ve sosyal özellikler için benzersiz bir kullanıcı adı seç.',
+  'username_prompt_later': 'Daha Sonra',
+  'username_invalid_format':
+      'Kullanıcı adı 3-30 karakter olmalı; yalnızca harf, rakam ve alt çizgi kullanılabilir.',
 };

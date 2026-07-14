@@ -27,6 +27,7 @@ import 'profile/widgets/settings_nav_card.dart';
 import 'profile/widgets/my_reviews_card.dart';
 import 'profile/widgets/cinema_identity_cards.dart';
 import 'profile/widgets/stats_cards.dart';
+import 'profile/widgets/sent_recommendations_card.dart';
 import 'profile/widgets/danger_zone_card.dart';
 import 'profile/widgets/sync_error_banner.dart';
 
@@ -384,6 +385,14 @@ class ProfileScreen extends ConsumerWidget {
 
           // 1. User Header Card
           const SliverToBoxAdapter(child: UserHeaderCard()),
+
+          if (isLoggedIn)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: SentRecommendationsCard(),
+              ),
+            ),
 
           // Google bağlantısını kaldır — kimlik kartının hemen altında:
           // oturumla ilgili işlemler (giriş/çıkış/bağlantı) tek blokta.
