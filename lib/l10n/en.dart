@@ -43,7 +43,11 @@ const Map<String, String> kEnStrings = {
 
   // Library (showroom)
   'library_title': 'Your Library',
+  'profile_interactions': 'My Interactions',
   'profile_cinema_identity': 'Your Cinema Identity',
+  'profile_restart_taste_title': 'Restart Taste Analysis',
+  'profile_restart_taste_subtitle':
+      'Tune movie & show recommendations to your taste',
   'danger_zone': 'Danger Zone',
   'sort_added': 'Added',
   'sort_rating': 'Rating',

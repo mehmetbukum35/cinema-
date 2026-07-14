@@ -384,44 +384,8 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
-          // 1. User Header Card
+          // 1. User Header Card — profil, çıkış ve senkron (Google bağlantısı Ayarlar'da)
           const SliverToBoxAdapter(child: UserHeaderCard()),
-
-          // Google bağlantısını kaldır — kimlik kartının hemen altında:
-          // oturumla ilgili işlemler (giriş/çıkış/bağlantı) tek blokta.
-          if (isLoggedIn &&
-              auth.user?['google_sub'] != null &&
-              (auth.user!['google_sub'] as String?)?.isNotEmpty == true)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: SettingsNavCard(
-                  icon: Icons.link_off_rounded,
-                  iconColor: c.red,
-                  iconBackground: c.red.withValues(alpha: 0.12),
-                  title:
-                      tr?.get('google_unlink_title') ??
-                      'Google Bağlantısını Kaldır',
-                  subtitle:
-                      tr?.get('google_unlink_desc') ??
-                      'Devam etmek için hesap parolanızı girin.',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: c.surface,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
-                      ),
-                      builder: (_) =>
-                          UnlinkGoogleSheet(ref: ref, parentContext: context),
-                    );
-                  },
-                ),
-              ),
-            ),
 
           // 2. Kütüphane vitrini — son 10 öğe + "Tümünü Gör" uç kartı.
           // Arşivin tamamı LibraryScreen'de (showroom); ray artık listenin
@@ -542,26 +506,32 @@ class ProfileScreen extends ConsumerWidget {
           ],
 
           if (isLoggedIn) ...[
+            SliverToBoxAdapter(
+              child: _sectionHeader(
+                context,
+                c,
+                tr?.get('profile_interactions') ?? 'Etkileşimlerim',
+              ),
+            ),
             if (ratedMovies.isNotEmpty)
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
                   child: MyReviewsCard(),
                 ),
               ),
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: SentRecommendationsCard(),
               ),
             ),
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: ReceivedRecommendationsCard(),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 4)),
           ],
 
           // 3. Sinema Kimliğin — Zevk DNA'sı + istatistikler tek başlık
@@ -587,7 +557,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: DnaBanner(),
               ),
             ),
-          if (total >= 3)
+          if (total >= 5)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -611,6 +581,24 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ],
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: SettingsNavCard(
+                icon: Icons.insights_rounded,
+                iconColor: c.gold,
+                iconBackground: c.gold.withValues(alpha: 0.15),
+                title:
+                    tr?.get('profile_restart_taste_title') ??
+                    'Zevk Analizini Yeniden Başlat',
+                subtitle:
+                    tr?.get('profile_restart_taste_subtitle') ??
+                    'Film & dizi önerilerini zevkine göre ayarla',
+                onTap: () => _restartOnboarding(context),
+              ),
+            ),
+          ),
 
           // Sosyal bölümü kaldırıldı: artık hem global menüde hem Birlikte
           // sekmesinde yaşıyor — üçüncü kopyaya gerek yok.
@@ -688,23 +676,39 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: SettingsNavCard(
-                icon: Icons.insights_rounded,
-                iconColor: c.gold,
-                iconBackground: c.gold.withValues(alpha: 0.15),
-                title: tr?.locale.languageCode == 'tr'
-                    ? 'Zevk Analizini Yeniden Başlat'
-                    : 'Restart Taste Analysis',
-                subtitle: tr?.locale.languageCode == 'tr'
-                    ? 'Film & dizi önerilerini zevkine göre ayarla'
-                    : 'Tune movie & show recommendations to your taste',
-                onTap: () => _restartOnboarding(context),
+          if (isLoggedIn &&
+              auth.user?['google_sub'] != null &&
+              (auth.user!['google_sub'] as String?)?.isNotEmpty == true)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: SettingsNavCard(
+                  icon: Icons.link_off_rounded,
+                  iconColor: c.red,
+                  iconBackground: c.red.withValues(alpha: 0.12),
+                  title:
+                      tr?.get('google_unlink_title') ??
+                      'Google Bağlantısını Kaldır',
+                  subtitle:
+                      tr?.get('google_unlink_desc') ??
+                      'Devam etmek için hesap parolanızı girin.',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: c.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (_) =>
+                          UnlinkGoogleSheet(ref: ref, parentContext: context),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
 
           // 6. Tehlike Bölgesi
           SliverToBoxAdapter(

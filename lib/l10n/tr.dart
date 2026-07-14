@@ -43,7 +43,11 @@ const Map<String, String> kTrStrings = {
 
   // Kütüphane (showroom)
   'library_title': 'Kütüphanen',
+  'profile_interactions': 'Etkileşimlerim',
   'profile_cinema_identity': 'Sinema Kimliğin',
+  'profile_restart_taste_title': 'Zevk Analizini Yeniden Başlat',
+  'profile_restart_taste_subtitle':
+      'Film & dizi önerilerini zevkine göre ayarla',
   'danger_zone': 'Tehlike Bölgesi',
   'sort_added': 'Eklenme',
   'sort_rating': 'Puan',
