@@ -66,8 +66,7 @@ class _SentRecommendationsScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                tr?.get('sent_recommendations_title') ??
-                    'Önerdiklerim',
+                tr?.get('sent_recommendations_title') ?? 'Önerdiklerim',
                 style: TextStyle(
                   color: c.ink,
                   fontSize: 18,

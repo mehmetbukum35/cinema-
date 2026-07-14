@@ -74,8 +74,7 @@ class _ReceivedRecommendationsCardState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    tr?.get('received_recommendations_title') ??
-                        'Önerilenler',
+                    tr?.get('received_recommendations_title') ?? 'Önerilenler',
                     style: TextStyle(
                       color: c.ink,
                       fontSize: 16,
