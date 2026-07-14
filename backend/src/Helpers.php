@@ -17,9 +17,20 @@ if (!function_exists('json_out')) {
 }
 
 if (!function_exists('fail')) {
-    function fail(int $status, string $msg): void
+    /**
+     * Hata yanıtı. $code, istemcinin YEREL metinlere çevirmek için kullandığı
+     * makine-okur anahtardır (ör. 'email_unverified'). İnsan-okur $msg
+     * serbestçe düzenlenebilir; istemci davranışı yalnızca $code'a bağlıdır —
+     * eskiden istemci Türkçe cümleleri birebir eşliyordu ve bir yazım
+     * düzeltmesi akışları sessizce bozabiliyordu.
+     */
+    function fail(int $status, string $msg, ?string $code = null): void
     {
-        json_out($status, ['error' => $msg]);
+        $body = ['error' => $msg];
+        if ($code !== null) {
+            $body['code'] = $code;
+        }
+        json_out($status, $body);
     }
 }
 
@@ -93,7 +104,7 @@ function rate_limit(string $bucket, int $perMin, bool $failClosed = false): void
         
         $count = $row ? (int) $row['request_count'] : 1;
         if ($count > $perMin) {
-            fail(429, 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.');
+            fail(429, 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.', 'rate_limited');
         }
     } catch (Throwable $e) {
         // Testlerde fail() çağrısının fırlattığı istisna yakalanmamalı (yoksa 429 testi geçemez).
@@ -102,7 +113,7 @@ function rate_limit(string $bucket, int $perMin, bool $failClosed = false): void
         }
         cinema_error("Rate limit DB error: " . $e->getMessage());
         if ($failClosed) {
-            fail(503, 'Geçici hizmet kısıtı.');
+            fail(503, 'Geçici hizmet kısıtı.', 'rate_limited');
         }
     }
 }

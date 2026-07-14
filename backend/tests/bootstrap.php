@@ -36,8 +36,12 @@ if (!function_exists('json_out')) {
 }
 
 if (!function_exists('fail')) {
-    function fail(int $status, string $msg): void {
-        json_out($status, ['error' => $msg]);
+    function fail(int $status, string $msg, ?string $code = null): void {
+        $body = ['error' => $msg];
+        if ($code !== null) {
+            $body['code'] = $code;
+        }
+        json_out($status, $body);
         throw new TestExitException($msg, $status);
     }
 }

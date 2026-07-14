@@ -30,8 +30,8 @@ class Auth
         $pass  = (string) ($in['password'] ?? '');
         $name  = isset($in['display_name']) ? trim($in['display_name']) : null;
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Geçersiz e-posta.');
-        if (strlen($pass) < 8) fail(422, 'Parola en az 8 karakter olmalı.');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Geçersiz e-posta.', 'email_invalid');
+        if (strlen($pass) < 8) fail(422, 'Parola en az 8 karakter olmalı.', 'password_too_short');
 
         $exists = $this->db->prepare('SELECT id, email_verified FROM users WHERE email = ?');
         $exists->execute([$email]);
@@ -41,7 +41,7 @@ class Auth
         $hash = password_hash($pass, PASSWORD_BCRYPT);
 
         if ($u && (int) $u['email_verified'] === 1) {
-            fail(409, 'Bu e-posta zaten kayıtlı.');
+            fail(409, 'Bu e-posta zaten kayıtlı.', 'email_exists');
         }
 
         if ($u) {
@@ -88,7 +88,7 @@ class Auth
         );
         $st->execute([$email]);
         $u = $st->fetch();
-        if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+        if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
 
         $up = $this->db->prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?');
         $up->execute([now_ms(), (int) $u['id']]);
@@ -114,7 +114,7 @@ class Auth
     {
         $email = strtolower(trim((string) ($in['email'] ?? '')));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            fail(422, 'Geçersiz e-posta formatı.');
+            fail(422, 'Geçersiz e-posta formatı.', 'email_invalid');
         }
 
         $st = $this->db->prepare('SELECT 1 FROM users WHERE email = ? AND email_verified = 0');
@@ -173,7 +173,7 @@ class Auth
             );
 
             $subject = "E-posta Doğrulama Kodu";
-            $body = "<h2>Ne İzlesem Üyelik Doğrulama</h2>"
+            $body = "<h2>Cinema+ Üyelik Doğrulama</h2>"
                   . "<p>Hesabınızı doğrulamak için geçici kodunuz:</p>"
                   . "<h1 style='color: #FB8C00; font-size: 32px; letter-spacing: 4px; font-family: monospace;'>$code</h1>"
                   . "<p>Bu kod 15 dakika geçerlidir. Eğer bu kaydı siz yapmadıysanız lütfen bu e-postayı dikkate almayın.</p>";
@@ -215,13 +215,13 @@ class Auth
         $row = $st->fetch();
 
         if (!$row || now_ms() > (int) $row['expires_at']) {
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
 
         $attempts = (int) $row['attempts'];
         if ($attempts >= 3) {
             $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
 
         $this->db->prepare("UPDATE $table SET attempts = attempts + 1 WHERE email = ?")->execute([$email]);
@@ -230,7 +230,7 @@ class Auth
             if ($attempts + 1 >= 3) {
                 $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
             }
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.');
+            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
     }
 
@@ -248,15 +248,15 @@ class Auth
             // Zamanlama farkıyla e-posta varlığı sızmasın diye kullanıcı yokken
             // de bcrypt maliyeti ödenir (sahte hash ile doğrulama).
             password_verify($pass, '$2y$10$abcdefghijklmnopqrstuv0123456789012345678901234567890');
-            fail(401, 'E-posta veya parola hatalı.');
+            fail(401, 'E-posta veya parola hatalı.', 'invalid_credentials');
         }
         if (!password_verify($pass, $u['password_hash'])) {
-            fail(401, 'E-posta veya parola hatalı.');
+            fail(401, 'E-posta veya parola hatalı.', 'invalid_credentials');
         }
         if ((int) $u['email_verified'] !== 1) {
             // Kayıt tamamlanmamış: kod doğrulanmadan oturum açılmaz. İstemci bu
             // yanıtla doğrulama ekranını açar (kodu yeniden göndererek).
-            fail(403, 'E-posta adresi doğrulanmamış.');
+            fail(403, 'E-posta adresi doğrulanmamış.', 'email_unverified');
         }
         $uid = (int) $u['id'];
         json_out(200, [
@@ -292,7 +292,7 @@ class Auth
         $verifier ??= fn (string $t) => GoogleAuth::verifyIdToken($t, $clientIds);
         $claims = $verifier($idToken);
         if ($claims === null) {
-            fail(401, 'Google kimliği doğrulanamadı.');
+            fail(401, 'Google kimliği doğrulanamadı.', 'google_failed');
         }
 
         $sub = (string) $claims['sub'];
@@ -437,7 +437,7 @@ class Auth
         $verifier ??= fn (string $t) => AppleAuth::verifyIdentityToken($t, $bundleIds);
         $claims = $verifier($idToken);
         if ($claims === null) {
-            fail(401, 'Apple kimliği doğrulanamadı.');
+            fail(401, 'Apple kimliği doğrulanamadı.', 'apple_failed');
         }
 
         $sub = (string) $claims['sub'];
@@ -598,11 +598,11 @@ class Auth
     public function me(int $uid): void
     {
         $st = $this->db->prepare(
-            'SELECT id, email, display_name, username, is_public, google_sub FROM users WHERE id = ?'
+            'SELECT id, email, display_name, username, is_public, google_sub, apple_sub FROM users WHERE id = ?'
         );
         $st->execute([$uid]);
         $u = $st->fetch();
-        if (!$u) fail(404, 'Kullanıcı bulunamadı.');
+        if (!$u) fail(404, 'Kullanıcı bulunamadı.', 'user_not_found');
         $u['id'] = (int) $u['id'];
         $u['is_public'] = (int) $u['is_public'];
         json_out(200, $u);
@@ -617,15 +617,15 @@ class Auth
         $st->execute([$uid]);
         $u = $st->fetch();
         if (!$u || empty($u['google_sub'])) {
-            fail(422, 'Bağlı Google hesabı yok.');
+            fail(422, 'Bağlı Google hesabı yok.', 'google_unlink_failed');
         }
 
         $pass = (string) ($in['password'] ?? '');
         if ($pass === '') {
-            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.');
+            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.', 'google_unlink_failed');
         }
         if (!password_verify($pass, $u['password_hash'])) {
-            fail(401, 'Mevcut parola hatalı.');
+            fail(401, 'Mevcut parola hatalı.', 'wrong_password');
         }
 
         $up = $this->db->prepare('UPDATE users SET google_sub = NULL, updated_at = ? WHERE id = ?');
@@ -638,13 +638,13 @@ class Auth
     {
         $old = (string) ($in['old_password'] ?? '');
         $new = (string) ($in['new_password'] ?? '');
-        if (strlen($new) < 8) fail(422, 'Yeni parola en az 8 karakter olmalı.');
+        if (strlen($new) < 8) fail(422, 'Yeni parola en az 8 karakter olmalı.', 'password_too_short');
 
         $st = $this->db->prepare('SELECT password_hash FROM users WHERE id = ?');
         $st->execute([$uid]);
         $u = $st->fetch();
         if (!$u || !password_verify($old, $u['password_hash'])) {
-            fail(401, 'Mevcut parola hatalı.');
+            fail(401, 'Mevcut parola hatalı.', 'wrong_password');
         }
         $up = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?');
         $up->execute([password_hash($new, PASSWORD_BCRYPT), now_ms(), $uid]);
@@ -666,11 +666,11 @@ class Auth
     public function forgotPassword(array $in): void
     {
         $email = strtolower(trim((string) ($in['email'] ?? '')));
-        if ($email === '') fail(422, 'E-posta adresi gerekli.');
+        if ($email === '') fail(422, 'E-posta adresi gerekli.', 'email_invalid');
 
         // Validate email format to prevent header injection/bad input
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            fail(422, 'Geçersiz e-posta formatı.');
+            fail(422, 'Geçersiz e-posta formatı.', 'email_invalid');
         }
 
         $st = $this->db->prepare('SELECT id FROM users WHERE email = ?');
@@ -738,7 +738,7 @@ class Auth
             );
 
             $subject = "Şifre Sıfırlama Kodu";
-            $body = "<h2>Ne İzlesem Şifre Sıfırlama</h2>"
+            $body = "<h2>Cinema+ Şifre Sıfırlama</h2>"
                   . "<p>Hesabınızın şifresini sıfırlamak için geçici kodunuz:</p>"
                   . "<h1 style='color: #FB8C00; font-size: 32px; letter-spacing: 4px; font-family: monospace;'>$code</h1>"
                   . "<p>Bu kod 15 dakika geçerlidir. Eğer bu talebi siz yapmadıysanız lütfen bu e-postayı dikkate almayın.</p>";
@@ -778,7 +778,7 @@ class Auth
             fail(422, 'Tüm alanlar gereklidir.');
         }
         if (strlen($newPass) < 8) {
-            fail(422, 'Yeni parola en az 8 karakter olmalıdır.');
+            fail(422, 'Yeni parola en az 8 karakter olmalıdır.', 'password_too_short');
         }
 
         $this->consumeCodeOrFail('password_resets', $email, $code);

@@ -71,6 +71,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _initSession();
   }
 
+  /// Sunucu hatasını yerel metin anahtarına çevirir. Önce makine-okur `code`
+  /// alanına bakılır (yeni sözleşme); kod yoksa eski sunucularla uyum için
+  /// Türkçe mesaj eşlemesine düşülür ([_mapBackendError]).
+  String _mapApiError(ApiException e) {
+    const codeMap = {
+      'email_exists': 'auth_err_email_exists',
+      'invalid_credentials': 'auth_err_invalid_credentials',
+      'email_invalid': 'auth_forgot_err_email_invalid',
+      'password_too_short': 'auth_forgot_err_pass_length',
+      'wrong_password': 'auth_err_wrong_password',
+      'user_not_found': 'auth_err_user_not_found',
+      'google_failed': 'auth_err_google_failed',
+      'google_unlink_failed': 'auth_err_google_unlink_failed',
+      'apple_failed': 'auth_err_apple_failed',
+      'verify_code_failed': 'auth_err_verify_code_failed',
+      'email_unverified': 'auth_err_email_unverified',
+      'rate_limited': 'auth_err_rate_limited',
+    };
+    final mapped = codeMap[e.code];
+    if (mapped != null) return mapped;
+    return _mapBackendError(e.message);
+  }
+
+  /// ESKİ sözleşme: sunucunun Türkçe mesajlarını birebir eşler. Yalnızca
+  /// `code` alanı dönmeyen (güncellenmemiş) sunucular için yedektir; yeni
+  /// eşlemeler buraya değil _mapApiError'daki codeMap'e eklenmelidir.
   String _mapBackendError(String message) {
     final clean = message.trim();
     switch (clean) {
@@ -189,7 +215,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await _apiService.login(email: email, password: password);
       return await _finalizeAuth(data);
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       if (mapped == 'auth_err_email_unverified') {
         // Parola doğru ama kayıt kodla doğrulanmamış → istemci doğrulama
         // ekranını açar; hata bandı gösterilmez.
@@ -226,7 +252,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Eski sunucu davranışı (doğrudan token) — geriye dönük uyumluluk.
       return await _finalizeAuth(data);
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
@@ -243,7 +269,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await _apiService.verifyEmail(email, code);
       return await _finalizeAuth(data);
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
@@ -340,7 +366,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
         }
       }
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
@@ -398,7 +424,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           'Apple backend login failed: HTTP ${e.statusCode} — ${e.message}',
         );
       }
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return AuthResult(status: AuthStatus.error, errorMessage: mapped);
     } catch (e) {
@@ -563,7 +589,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _endLocalSession(wipeLocalData: true);
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
@@ -586,7 +612,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _endLocalSession(wipeLocalData: false);
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
@@ -610,7 +636,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false, user: user);
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
@@ -631,7 +657,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false);
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
@@ -652,7 +678,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(loading: false);
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {
@@ -677,7 +703,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(); // reset to default logged-out state
       return true;
     } on ApiException catch (e) {
-      final mapped = _mapBackendError(e.message);
+      final mapped = _mapApiError(e);
       state = state.copyWith(loading: false, error: mapped);
       return false;
     } catch (e, st) {

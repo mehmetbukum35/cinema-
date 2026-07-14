@@ -125,22 +125,24 @@ class ApiService {
 
   Never _throwRateLimited(http.Response response) {
     String message = 'auth_err_rate_limited';
+    String? code;
     try {
-      final data = jsonDecode(response.body);
-      if (data is Map<String, dynamic>) {
-        final serverMsg = data['error'] as String?;
-        if (serverMsg ==
-                'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' ||
-            serverMsg == 'Geçici hizmet kısıtı.') {
-          message = 'auth_err_rate_limited';
-        } else if (serverMsg != null && serverMsg.isNotEmpty) {
-          message = serverMsg;
-        }
+      final data = _decodeJsonMap(response.body);
+      code = data['code'] as String?;
+      final serverMsg = data['error'] as String?;
+      // Yeni sunucu 'rate_limited' kodu döner; kod yoksa (eski sunucu)
+      // bilinen Türkçe mesajlar yerel anahtara eşlenir, gerisi aynen geçer.
+      if (code == null &&
+          serverMsg != null &&
+          serverMsg.isNotEmpty &&
+          serverMsg != 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' &&
+          serverMsg != 'Geçici hizmet kısıtı.') {
+        message = serverMsg;
       }
     } catch (_) {
       // Varsayılan anahtar kullanılır.
     }
-    throw ApiException(statusCode: 429, message: message);
+    throw ApiException(statusCode: 429, message: message, code: code);
   }
 
   // Attempts to refresh access token using the stored refresh token
@@ -178,7 +180,7 @@ class ApiService {
         );
 
         if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final data = _decodeJsonMap(response.body);
           final tokens = data['tokens'] as Map<String, dynamic>;
           await PrefsService.saveTokens(
             accessToken: tokens['access_token'] as String,
@@ -234,6 +236,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Kayıt başarısız.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -254,6 +257,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Doğrulama kodu geçersiz.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -267,10 +271,11 @@ class ApiService {
       requireAuth: false,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Doğrulama kodu gönderilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -295,6 +300,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Giriş başarısız.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -308,7 +314,7 @@ class ApiService {
       body: {'id_token': idToken},
       requireAuth: false,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;
@@ -316,6 +322,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'auth_err_google_failed',
+        code: data['code'] as String?,
       );
     }
   }
@@ -336,7 +343,7 @@ class ApiService {
       },
       requireAuth: false,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;
@@ -344,6 +351,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'auth_err_apple_failed',
+        code: data['code'] as String?,
       );
     }
   }
@@ -387,10 +395,11 @@ class ApiService {
   Future<void> deleteAccount() async {
     final response = await _request('DELETE', '/me', requireAuth: true);
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Hesap silinemedi.',
+        code: data['code'] as String?,
       );
     }
     await PrefsService.clearAuthData();
@@ -409,10 +418,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Parola değiştirilemedi.',
+        code: data['code'] as String?,
       );
     }
     await PrefsService.clearAuthData();
@@ -427,7 +437,7 @@ class ApiService {
       '/sync?since=$since',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;
@@ -437,6 +447,7 @@ class ApiService {
         message:
             data['error'] as String? ??
             'Veri senkronizasyonu (pull) başarısız.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -449,7 +460,7 @@ class ApiService {
       body: payload,
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
 
     if (response.statusCode == 200) {
       return data;
@@ -459,6 +470,7 @@ class ApiService {
         message:
             data['error'] as String? ??
             'Veri senkronizasyonu (push) başarısız.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -471,11 +483,12 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message:
             data['error'] as String? ?? 'Arama geçmişi sunucudan silinemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -484,10 +497,11 @@ class ApiService {
   Future<void> clearRemoteSyncData() async {
     final response = await _request('DELETE', '/sync', requireAuth: true);
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Bulut verileri sıfırlanamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -501,10 +515,11 @@ class ApiService {
       requireAuth: false,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Sıfırlama kodu gönderilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -518,10 +533,11 @@ class ApiService {
       requireAuth: false,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Doğrulama kodu geçersiz.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -539,10 +555,11 @@ class ApiService {
       requireAuth: false,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Şifre sıfırlanamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -564,13 +581,14 @@ class ApiService {
       body: {'username': username, 'is_public': isPublic ? 1 : 0},
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Profil ayarları güncellenemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -584,10 +602,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Cihaz kaydedilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -601,10 +620,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Cihaz kaydı silinemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -616,13 +636,14 @@ class ApiService {
       '/social/friends',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Arkadaş listesi alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -635,13 +656,14 @@ class ApiService {
       body: {'search_query': searchQuery},
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Arkadaşlık isteği gönderilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -655,10 +677,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'İstek kabul edilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -672,10 +695,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Arkadaşlık silinemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -686,13 +710,14 @@ class ApiService {
         ? '/social/friends/activity?friend_id=$friendId'
         : '/social/friends/activity';
     final response = await _request('GET', path, requireAuth: true);
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data['activity'] as List<dynamic>;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Aktivite akışı alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -704,13 +729,14 @@ class ApiService {
       '/social/match/watchlist-intersection/$friendId',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data['watchlist'] as List<dynamic>;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Ortak izleme listesi alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -722,7 +748,7 @@ class ApiService {
       '/social/friends/signals',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return FriendSignals.fromJson(
         data['signals'] as Map<String, dynamic>? ?? const {},
@@ -731,6 +757,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Arkadaş sinyalleri alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -744,10 +771,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'auth_err_google_unlink_failed',
+        code: data['code'] as String?,
       );
     }
   }
@@ -761,12 +789,32 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'DNA yayınlanamadı.',
+        code: data['code'] as String?,
       );
     }
+  }
+
+  // GET /social/match/taste-all — tüm arkadaşların uyum skorları tek istekte.
+  // Eski sunucularda uç yoktur (404); çağıran tekil uca geri düşer.
+  Future<List<dynamic>> getAllTasteMatches() async {
+    final response = await _request(
+      'GET',
+      '/social/match/taste-all',
+      requireAuth: true,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) {
+      return data['scores'] as List<dynamic>? ?? const [];
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Uyum skorları alınamadı.',
+      code: data['code'] as String?,
+    );
   }
 
   // GET /social/match/taste/{friend_id}
@@ -776,13 +824,14 @@ class ApiService {
       '/social/match/taste/$friendId',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     } else {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Uyum skoru alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -810,10 +859,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Öneri gönderilemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -832,6 +882,7 @@ class ApiService {
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Öneriler alınamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -844,10 +895,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'İşaretlenemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -859,13 +911,14 @@ class ApiService {
       '/social/profiles/top',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Popüler listeler alınamadı.',
+      code: data['code'] as String?,
     );
   }
 
@@ -878,13 +931,14 @@ class ApiService {
       body: {'owner_id': ownerId, 'liked': liked},
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return int.tryParse(data['like_count']?.toString() ?? '') ?? 0;
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Beğeni gönderilemedi.',
+      code: data['code'] as String?,
     );
   }
 
@@ -895,13 +949,14 @@ class ApiService {
       '/social/title-reviews/$type/$id',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Yorumlar yüklenemedi.',
+      code: data['code'] as String?,
     );
   }
 
@@ -924,13 +979,14 @@ class ApiService {
       },
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data['auto_hidden'] == true;
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Şikayet gönderilemedi.',
+      code: data['code'] as String?,
     );
   }
 
@@ -943,10 +999,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Kullanıcı engellenemedi.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -960,10 +1017,11 @@ class ApiService {
       requireAuth: true,
     );
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJsonMap(response.body);
       throw ApiException(
         statusCode: response.statusCode,
         message: data['error'] as String? ?? 'Engel kaldırılamadı.',
+        code: data['code'] as String?,
       );
     }
   }
@@ -975,13 +1033,14 @@ class ApiService {
       '/social/users/blocked',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data['blocked'] as List<dynamic>? ?? [];
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Engellenenler yüklenemedi.',
+      code: data['code'] as String?,
     );
   }
 
@@ -992,13 +1051,14 @@ class ApiService {
       '/titles/$type/$id/score',
       requireAuth: true,
     );
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     }
     throw ApiException(
       statusCode: response.statusCode,
       message: data['error'] as String? ?? 'Skor yüklenemedi.',
+      code: data['code'] as String?,
     );
   }
 }
@@ -1007,7 +1067,12 @@ class ApiException implements Exception {
   final int statusCode;
   final String message;
 
-  ApiException({required this.statusCode, required this.message});
+  /// Sunucunun makine-okur hata anahtarı (ör. 'email_unverified'). İstemci
+  /// davranışı ve yerelleştirme bu alana bağlanır; [message] yalnızca eski
+  /// sunucular ve bilinmeyen hatalar için insan-okur yedektir.
+  final String? code;
+
+  ApiException({required this.statusCode, required this.message, this.code});
 
   @override
   String toString() => 'ApiException: [$statusCode] $message';
