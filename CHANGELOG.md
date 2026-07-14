@@ -5,6 +5,8 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- DNA milestone moments in the swipe loop: a one-time invite sheet at the 5th/25th/50th rating surfaces Cinema DNA inside the core loop (its only entry point was a Profile-tab banner) and shows the measured recommendation hit rate for the first time
+- Release-reminder disclosure: adding an unreleased title to the watchlist now tells the user "we'll remind you on release day" (the reminder was already scheduled silently)
 - End-to-end auth+sync flow test (`test/auth_sync_flow_test.dart`): real ApiService/SyncService/SQLite against a stateful fake backend — covers push/pull, second-device pull, last-write-wins both ways, silent token refresh with rotation, session expiry keeping local data, and idempotent re-push after re-login
 - Machine-readable `code` field on backend error responses; client maps errors by code first and falls back to legacy Turkish message matching for old servers
 - `GET /social/match/taste-all`: all friends' taste-match scores in a single request (client falls back to per-friend calls on old servers)

@@ -299,13 +299,28 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     } else {
       await ref.read(watchlistProvider.notifier).add(movie);
       if (!mounted) return;
-      showAppToast(
-        context,
-        AppLocalizations.of(
-              context,
-            )?.get('title_added_to_watchlist').replaceAll('{}', movie.title) ??
-            '${movie.title} added to watchlist.',
-      );
+      final added =
+          AppLocalizations.of(
+            context,
+          )?.get('title_added_to_watchlist').replaceAll('{}', movie.title) ??
+          '${movie.title} added to watchlist.';
+      // Henüz çıkmamış yapım için çıkış günü hatırlatıcısı sessizce
+      // planlanıyordu (WatchlistNotifier.add → scheduleReleaseReminder) ama
+      // kullanıcıya hiç söylenmiyordu. Koşul, NotificationService'in
+      // planlama kuralıyla aynı: çıkış günü 10:00 hâlâ gelecekteyse.
+      final release = DateTime.tryParse(movie.releaseDate ?? '');
+      final upcoming =
+          release != null &&
+          DateTime(
+            release.year,
+            release.month,
+            release.day,
+            10,
+          ).isAfter(DateTime.now());
+      final reminderNote = upcoming
+          ? ' ${AppLocalizations.of(context)?.get('watchlist_release_reminder_note') ?? 'Çıktığı gün sana haber vereceğiz 🔔'}'
+          : '';
+      showAppToast(context, '$added$reminderNote');
     }
   }
 
