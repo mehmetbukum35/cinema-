@@ -750,8 +750,11 @@ class ApiService {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
+      // Eski sunucu boş sinyal kümesini `[]` (liste) dönebilir (PHP boş assoc
+      // dizi tuzağı); Map değilse boş sayılır.
+      final raw = data['signals'];
       return FriendSignals.fromJson(
-        data['signals'] as Map<String, dynamic>? ?? const {},
+        raw is Map ? Map<String, dynamic>.from(raw) : const {},
       );
     } else {
       throw ApiException(

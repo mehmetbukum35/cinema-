@@ -45,13 +45,19 @@ class CouchSession {
       isTV: d['is_tv'] == 1 || d['is_tv'] == true || d['is_tv'] == '1',
     );
 
-    final friend = json['friend'] as Map<String, dynamic>? ?? const {};
+    // Savunmacı parse: PHP boş assoc dizileri JSON'a `[]` (liste) yazabilir —
+    // Map bekleyip cast'lemek oturumun ilk halinde tip hatası üretiyordu.
+    // Sunucu düzeltildi ama güncellenmemiş sunucuya karşı da kırılmayalım.
+    Map<String, dynamic> asMap(Object? v) =>
+        v is Map ? Map<String, dynamic>.from(v) : const {};
+
+    final friend = asMap(json['friend']);
     final friendName =
         (friend['display_name'] as String?)?.trim().isNotEmpty == true
         ? friend['display_name'] as String
         : '@${friend['username'] ?? '?'}';
 
-    final rawMatched = json['matched'] as Map<String, dynamic>?;
+    final rawMatched = json['matched'];
     return CouchSession(
       id: (json['id'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'cancelled',
@@ -60,15 +66,15 @@ class CouchSession {
       friendName: friendName,
       deck: [
         for (final d in (json['deck'] as List<dynamic>? ?? const []))
-          deckMovie(d as Map<String, dynamic>),
+          if (d is Map) deckMovie(Map<String, dynamic>.from(d)),
       ],
       myVotes: {
-        for (final e
-            in (json['my_votes'] as Map<String, dynamic>? ?? const {}).entries)
-          e.key: e.value == true,
+        for (final e in asMap(json['my_votes']).entries) e.key: e.value == true,
       },
       theirProgress: (json['their_progress'] as num?)?.toInt() ?? 0,
-      matched: rawMatched != null ? deckMovie(rawMatched) : null,
+      matched: rawMatched is Map
+          ? deckMovie(Map<String, dynamic>.from(rawMatched))
+          : null,
     );
   }
 

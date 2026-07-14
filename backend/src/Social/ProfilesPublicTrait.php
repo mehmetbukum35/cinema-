@@ -134,7 +134,9 @@ trait SocialProfilesPublicTrait
             $signals[$key][] = $row['friend_name'];
         }
 
-        json_out(200, ['signals' => $signals]);
+        // (object): boş sinyal kümesi JSON'a `[]` yerine `{}` yazılsın —
+        // istemci Map bekler (couch my_votes ile aynı PHP/JSON tuzağı).
+        json_out(200, ['signals' => (object) $signals]);
     }
 
     // ─── GET /download (Halka Açık İndirme Sayfası) ──────────────────────────

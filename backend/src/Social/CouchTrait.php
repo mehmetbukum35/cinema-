@@ -298,7 +298,9 @@ trait SocialCouchTrait
                 'username'     => $other['username'] ?? null,
             ],
             'deck'           => $deck,
-            'my_votes'       => $myVotes,
+            // (object): PHP boş assoc diziyi JSON'a `[]` (liste!) yazar; istemci
+            // Map beklediği için oturumun İLK halinde tip hatası patlıyordu.
+            'my_votes'       => (object) $myVotes,
             // Karşı tarafın oy İÇERİĞİ bilinçli olarak dönülmez (hile önlenir);
             // yalnızca ilerleme sayısı döner.
             'their_progress' => count($theirVotes),

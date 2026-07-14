@@ -56,8 +56,10 @@ class SocialIntegrationTest extends TestCase
 
         TestHelperRegistry::reset();
         $this->social->getFriendSignals(1);
-        $this->assertSame(['Bob'], TestHelperRegistry::$lastBody['signals']['movie_101']);
-        $this->assertArrayNotHasKey('tv_202', TestHelperRegistry::$lastBody['signals']);
+        // signals (object) cast'lidir (boş küme JSON'da {} kalsın diye).
+        $signals = (array) TestHelperRegistry::$lastBody['signals'];
+        $this->assertSame(['Bob'], $signals['movie_101']);
+        $this->assertArrayNotHasKey('tv_202', $signals);
 
         TestHelperRegistry::reset();
         $this->social->getWatchlistIntersection(1, 2);
@@ -86,8 +88,9 @@ class SocialIntegrationTest extends TestCase
         TestHelperRegistry::reset();
         $this->social->getFriendSignals(1);
         $this->assertSame(200, TestHelperRegistry::$lastStatus);
-        $this->assertArrayHasKey('movie_301', TestHelperRegistry::$lastBody['signals']);
-        $this->assertArrayNotHasKey('movie_302', TestHelperRegistry::$lastBody['signals']);
+        $signals = (array) TestHelperRegistry::$lastBody['signals'];
+        $this->assertArrayHasKey('movie_301', $signals);
+        $this->assertArrayNotHasKey('movie_302', $signals);
 
         // 3. Verify getTopProfiles
         TestHelperRegistry::reset();
@@ -1060,7 +1063,9 @@ class SocialIntegrationTest extends TestCase
         $this->social->getCouchSession(2, $id);
         $g = TestHelperRegistry::$lastBody['session'];
         $this->assertSame(1, $g['their_progress']);
-        $this->assertSame([], $g['my_votes']); // karşı tarafın oyları sızmaz
+        // Karşı tarafın oyları sızmaz. (object) cast'i nedeniyle boş oy kümesi
+        // stdClass'tır — JSON'da `{}` üretmesi tam da istenen davranış.
+        $this->assertSame([], (array) $g['my_votes']);
     }
 
     public function testCouchMutualLikeMatches(): void

@@ -124,6 +124,21 @@ void main() {
       expect(done.nextCard, isNull);
     });
 
+    test(
+      'fromJson tolerates PHP-style empty lists where maps are expected',
+      () {
+        // PHP boş assoc dizileri `[]` olarak encode eder; güncellenmemiş sunucu
+        // my_votes/matched/friend alanlarını liste dönebilir — kırılmamalı.
+        final raw = sessionJson();
+        raw['my_votes'] = <dynamic>[];
+        raw['matched'] = <dynamic>[];
+        final s = CouchSession.fromJson(raw);
+        expect(s.myVotes, isEmpty);
+        expect(s.matched, isNull);
+        expect(s.nextCard!.id, 101);
+      },
+    );
+
     test('hasPendingInvite only for guest of a pending session', () {
       CouchState stateFor({required String status, required bool isHost}) =>
           CouchState(
