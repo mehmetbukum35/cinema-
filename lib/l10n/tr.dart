@@ -734,6 +734,7 @@ const Map<String, String> kTrStrings = {
   'semantics_save_review': 'Yorumu kaydet',
   'sent_recommendations_title': 'Arkadaşlarına Önerdiklerin',
   'sent_recommendations_subtitle': 'Arkadaşlarına gönderdiğin film ve diziler',
+  'sent_recommendations_empty': 'Henüz arkadaşlarına öneri göndermedin.',
   'sent_recommendation_to': '{} · {}',
   'username_prompt_title': 'Kullanıcı Adı Belirle',
   'username_prompt_desc':

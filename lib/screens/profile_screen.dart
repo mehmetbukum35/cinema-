@@ -386,14 +386,6 @@ class ProfileScreen extends ConsumerWidget {
           // 1. User Header Card
           const SliverToBoxAdapter(child: UserHeaderCard()),
 
-          if (isLoggedIn)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: SentRecommendationsCard(),
-              ),
-            ),
-
           // Google bağlantısını kaldır — kimlik kartının hemen altında:
           // oturumla ilgili işlemler (giriş/çıkış/bağlantı) tek blokta.
           if (isLoggedIn &&
@@ -544,14 +536,25 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SliverToBoxAdapter(child: SizedBox(height: 4)),
+            ],
+          ],
+
+          if (isLoggedIn) ...[
+            if (ratedMovies.isNotEmpty)
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: MyReviewsCard(),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 4)),
-            ],
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SentRecommendationsCard(),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 4)),
           ],
 
           // 3. Sinema Kimliğin — Zevk DNA'sı + istatistikler tek başlık

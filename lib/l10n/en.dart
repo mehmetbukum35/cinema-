@@ -739,6 +739,8 @@ const Map<String, String> kEnStrings = {
   'semantics_save_review': 'Save review',
   'sent_recommendations_title': 'Recommended to Friends',
   'sent_recommendations_subtitle': 'Films and shows you shared with friends',
+  'sent_recommendations_empty':
+      'You haven\'t recommended anything to friends yet.',
   'sent_recommendation_to': 'To {} · {}',
   'username_prompt_title': 'Choose a Username',
   'username_prompt_desc':
