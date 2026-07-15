@@ -159,6 +159,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Transform.scale(
+                      scale: _markScale.value * (1 + 0.03 * _exit.value),
+                      child: Opacity(
+                        opacity: _markFade.value,
+                        child: Image.asset(
+                          'assets/logo_mark.png',
+                          width: 112,
+                          height: 112,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          semanticLabel: 'Cinema+',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     // Wordmark
                     Transform.scale(
                       scale: _markScale.value * (1 + 0.03 * _exit.value),

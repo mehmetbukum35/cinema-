@@ -45,18 +45,13 @@ void showAboutSheet(BuildContext context) {
             ),
             const SizedBox(height: 24),
             Center(
-              child: Container(
+              child: Image.asset(
+                'assets/logo_mark.png',
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: CinemaShadows.redGlow,
-                  border: Border.all(color: c.goldSoft, width: 2),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/logo.jpg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'Cinema+',
               ),
             ),
             const SizedBox(height: 16),
