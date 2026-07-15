@@ -28,15 +28,31 @@ class CouchScreen extends ConsumerStatefulWidget {
   ConsumerState<CouchScreen> createState() => _CouchScreenState();
 }
 
-class _CouchScreenState extends ConsumerState<CouchScreen> {
+class _CouchScreenState extends ConsumerState<CouchScreen> with SingleTickerProviderStateMixin {
   // dispose() içinde ref KULLANILAMAZ ("Cannot use ref after the widget was
   // disposed"); notifier referansı initState'te alınır, dispose ref'siz çalışır.
   late final CouchNotifier _couch;
+  AnimationController? _theirProgressAnimController;
+  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _couch = ref.read(couchProvider.notifier);
+
+    _theirProgressAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(
+      parent: _theirProgressAnimController!,
+      curve: Curves.easeInOut,
+    ));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _couch.checkActive();
@@ -49,6 +65,7 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
 
   @override
   void dispose() {
+    _theirProgressAnimController?.dispose();
     // Poll yalnızca bu ekran açıkken çalışır (pil/istek tasarrufu).
     _couch.stopPolling();
     super.dispose();
@@ -110,6 +127,15 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
         };
         showAppToast(context, msg, success: false);
       }
+
+      // Arkadaşın oylama ilerlemesi arttıysa animasyon tetikle, ses çal ve hafif haptic ver.
+      final prevProgress = prev?.session?.theirProgress ?? 0;
+      final nextProgress = next.session?.theirProgress ?? 0;
+      if (nextProgress > prevProgress && next.session?.status == 'active') {
+        SystemSound.play(SystemSoundType.click);
+        HapticFeedback.lightImpact();
+        _theirProgressAnimController?.forward(from: 0.0);
+      }
     });
 
     final couch = ref.watch(couchProvider);
@@ -148,7 +174,10 @@ class _CouchScreenState extends ConsumerState<CouchScreen> {
     } else if (session.status == 'ended') {
       body = _EndedView(session: session);
     } else {
-      body = _VotingView(session: session);
+      body = _VotingView(
+        session: session,
+        scaleAnimation: _scaleAnimation,
+      );
     }
 
     return Scaffold(
@@ -282,8 +311,12 @@ class _FriendPicker extends ConsumerWidget {
 
 class _VotingView extends ConsumerWidget {
   final CouchSession session;
+  final Animation<double> scaleAnimation;
 
-  const _VotingView({required this.session});
+  const _VotingView({
+    required this.session,
+    required this.scaleAnimation,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -309,12 +342,15 @@ class _VotingView extends ConsumerWidget {
                     accent: c.crimson,
                   ),
                   const SizedBox(width: 10),
-                  _progressChip(
-                    c,
-                    label: session.friendName,
-                    progress: session.theirProgress,
-                    total: session.deck.length,
-                    accent: c.gold,
+                  ScaleTransition(
+                    scale: scaleAnimation,
+                    child: _progressChip(
+                      c,
+                      label: session.friendName,
+                      progress: session.theirProgress,
+                      total: session.deck.length,
+                      accent: c.gold,
+                    ),
                   ),
                 ],
               ),

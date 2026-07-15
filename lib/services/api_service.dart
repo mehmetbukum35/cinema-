@@ -1184,6 +1184,25 @@ class ApiService {
     }
   }
 
+  // GET /social/couch/used-movies — son oturumlardaki oylanmış yapım anahtarlarını döner.
+  Future<List<String>> getUsedCouchMovies(int friendId) async {
+    final response = await _request(
+      'GET',
+      '/social/couch/used-movies?friend_id=$friendId',
+      requireAuth: true,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) {
+      final list = data['used_keys'] as List<dynamic>? ?? const [];
+      return list.map((e) => e.toString()).toList();
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Kullanılmış yapımlar yüklenemedi.',
+      code: data['code'] as String?,
+    );
+  }
+
   // GET /titles/{type}/{id}/score — cinema+ üyelerinin topluluk skoru
   Future<Map<String, dynamic>> getTitleScore(String type, int id) async {
     final response = await _request(

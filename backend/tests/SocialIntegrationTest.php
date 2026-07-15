@@ -1139,6 +1139,32 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('cancelled', $st->fetchColumn());
     }
 
+    public function testUsedCouchMoviesExcludesPreviouslyPlayedDecks(): void
+    {
+        $id = $this->createCouch();
+
+        // At this point, the session status is 'pending' (open). It shouldn't be returned by getUsedCouchMovies yet
+        $this->social->getUsedCouchMovies(1, 2);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame([], TestHelperRegistry::$lastBody['used_keys']);
+
+        // End the session to make it 'ended' (completed)
+        $up = $this->db->prepare("UPDATE couch_sessions SET status = 'ended' WHERE id = ?");
+        $up->execute([$id]);
+
+        // Now it should return the deck movie keys (since it is completed)
+        $this->social->getUsedCouchMovies(1, 2);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $expectedKeys = [
+            'movie_101',
+            'movie_102',
+            'movie_103',
+            'movie_104',
+            'movie_105',
+        ];
+        $this->assertEquals($expectedKeys, TestHelperRegistry::$lastBody['used_keys']);
+    }
+
     private function acceptFriendship(int $userId, int $friendId): void
     {
         $stmt = $this->db->prepare(

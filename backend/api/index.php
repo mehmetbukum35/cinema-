@@ -96,6 +96,14 @@ if ($method === 'GET' && str_starts_with($path, '/tmdb/')) {
 // POST /social/couch/{id}/vote|cancel. Sabit uçlar (create/active) switch'te.
 if (str_starts_with($path, '/social/couch/')) {
     $parts = explode('/', trim($path, '/'));
+    if (count($parts) >= 3 && $parts[2] === 'used-movies') {
+        $uid = $auth->requireUser();
+        $friendId = isset($_GET['friend_id']) ? (int) $_GET['friend_id'] : 0;
+        if ($friendId <= 0) fail(422, 'friend_id gerekli.');
+        rate_limit('couch_u' . $uid, (int) ($cfg['couch_rate_limit_per_min'] ?? 120), true);
+        $social->getUsedCouchMovies($uid, $friendId);
+        exit;
+    }
     $couchId = count($parts) >= 3 ? (int) $parts[2] : 0;
     if ($couchId > 0) {
         $uid = $auth->requireUser();

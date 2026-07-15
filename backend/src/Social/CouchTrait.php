@@ -263,6 +263,33 @@ trait SocialCouchTrait
         return $row;
     }
 
+    public function getUsedCouchMovies(int $uid, int $friendId): void
+    {
+        $this->assertFriendship($uid, $friendId, 'Yalnızca arkadaşlarınla oynayabilirsin.');
+
+        $st = $this->db->prepare(
+            "SELECT deck FROM couch_sessions
+              WHERE ((host_id = ? AND guest_id = ?) OR (host_id = ? AND guest_id = ?))
+                AND status IN ('cancelled', 'ended', 'matched')
+              ORDER BY id DESC
+              LIMIT 5"
+        );
+        $st->execute([$uid, $friendId, $friendId, $uid]);
+
+        $used = [];
+        foreach ($st->fetchAll() as $row) {
+            $deck = json_decode((string) $row['deck'], true) ?: [];
+            foreach ($deck as $item) {
+                $isTv = !empty($item['is_tv']) ? 1 : 0;
+                $key = ($isTv ? 'tv_' : 'movie_') . $item['movie_id'];
+                $used[] = $key;
+            }
+        }
+
+        $used = array_values(array_unique($used));
+        json_out(200, ['used_keys' => $used]);
+    }
+
     /** İstemciye dönen oturum görünümü ([uid] perspektifinden). */
     private function couchPayload(array $row, int $uid): array
     {

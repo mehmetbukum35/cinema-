@@ -203,6 +203,12 @@ class CouchNotifier extends StateNotifier<CouchState> {
           ...await PrefsService.getRatedIds(),
           ...await PrefsService.getBlockedKeys(),
         };
+        try {
+          final usedKeys = await _api.getUsedCouchMovies(friend.id);
+          excluded.addAll(usedKeys);
+        } catch (e) {
+          debugPrint('Failed to load used couch movies (ignored): $e');
+        }
         final ranked = await engine.rankForYou(
           candidates,
           excludedKeys: excluded,

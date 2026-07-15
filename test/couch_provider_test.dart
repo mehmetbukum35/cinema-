@@ -41,6 +41,7 @@ class MockCouchApi implements ApiService {
   bool cancelCalled = false;
   ApiException? voteThrows;
   Map<String, dynamic>? getResponse;
+  List<String> usedCouchMoviesResponse = [];
 
   @override
   Future<Map<String, dynamic>?> getActiveCouchSession() async => activeResponse;
@@ -67,6 +68,10 @@ class MockCouchApi implements ApiService {
   Future<void> cancelCouchSession(int sessionId) async {
     cancelCalled = true;
   }
+
+  @override
+  Future<List<String>> getUsedCouchMovies(int friendId) async =>
+      usedCouchMoviesResponse;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
