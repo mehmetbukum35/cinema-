@@ -31,46 +31,59 @@ class SynergyBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final hasPersonalScore = movie.personalizedMatchScore != null;
     final synergyScore = _calculateSynergyScore();
+    final badgeColor = hasPersonalScore ? c.green : c.gold;
 
-    return Tooltip(
-      message:
-          AppLocalizations.of(
-            context,
-          )?.get('semantics_synergy_score').replaceAll('{}', '$synergyScore') ??
-          '$synergyScore percent match. Tap for details',
-      child: Semantics(
-        button: true,
-        label:
-            AppLocalizations.of(context)
+    final semanticsText = hasPersonalScore
+        ? (AppLocalizations.of(context)
                 ?.get('semantics_synergy_score')
                 .replaceAll('{}', '$synergyScore') ??
-            '$synergyScore percent match. Tap for details',
+            '$synergyScore percent match. Tap for details')
+        : (AppLocalizations.of(context)
+                ?.get('semantics_general_rating')
+                .replaceAll('{}', movie.voteAverage.toStringAsFixed(1)) ??
+            'General rating: ${movie.voteAverage.toStringAsFixed(1)}. Tap for details');
+
+    return Tooltip(
+      message: semanticsText,
+      child: Semantics(
+        button: true,
+        label: semanticsText,
         child: SpringButton(
           onTap: () => _showScoreBreakdown(context, c, synergyScore),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: c.green.withValues(alpha: 0.12),
+              color: badgeColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: c.green.withValues(alpha: 0.3),
+                color: badgeColor.withValues(alpha: 0.3),
                 width: 1,
               ),
-              boxShadow: CinemaShadows.glow(c.green, strength: 0.08),
+              boxShadow: CinemaShadows.glow(badgeColor, strength: 0.08),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.bolt_rounded, color: c.green, size: 14),
+                Icon(
+                  hasPersonalScore ? Icons.bolt_rounded : Icons.star_rounded,
+                  color: badgeColor,
+                  size: 14,
+                ),
                 const SizedBox(width: 4),
                 Text(
-                  AppLocalizations.of(context)
-                          ?.get('synergy_score_match')
-                          .replaceAll('{}', '$synergyScore') ??
-                      '$synergyScore% Match',
+                  hasPersonalScore
+                      ? (AppLocalizations.of(context)
+                              ?.get('synergy_score_match')
+                              .replaceAll('{}', '$synergyScore') ??
+                          '$synergyScore% Match')
+                      : (AppLocalizations.of(context)
+                              ?.get('general_rating')
+                              .replaceAll('{}', movie.voteAverage.toStringAsFixed(1)) ??
+                          'Rating: ${movie.voteAverage.toStringAsFixed(1)}'),
                   style: TextStyle(
-                    color: c.green,
+                    color: badgeColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -78,7 +91,7 @@ class SynergyBadge extends StatelessWidget {
                 const SizedBox(width: 4),
                 Icon(
                   Icons.info_outline_rounded,
-                  color: c.green.withValues(alpha: 0.7),
+                  color: badgeColor.withValues(alpha: 0.7),
                   size: 12,
                 ),
               ],
@@ -95,6 +108,8 @@ class SynergyBadge extends StatelessWidget {
     int synergyScore,
   ) {
     final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
+    final hasPersonalScore = movie.personalizedMatchScore != null;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -103,8 +118,9 @@ class SynergyBadge extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Center(
           child: Text(
-            AppLocalizations.of(context)?.get('match_details') ??
-                'Match Details',
+            hasPersonalScore
+                ? (AppLocalizations.of(context)?.get('match_details') ?? 'Match Details')
+                : (AppLocalizations.of(context)?.get('rating_details') ?? 'Rating Details'),
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -116,15 +132,15 @@ class SynergyBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Featured Aggregate Synergy Score
+            // Featured score circle
             Container(
               width: 90,
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: c.green.withValues(alpha: 0.1),
+                color: (hasPersonalScore ? c.green : c.gold).withValues(alpha: 0.1),
                 border: Border.all(
-                  color: c.green.withValues(alpha: 0.3),
+                  color: (hasPersonalScore ? c.green : c.gold).withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -133,18 +149,19 @@ class SynergyBadge extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '%$synergyScore',
+                    hasPersonalScore ? '%$synergyScore' : movie.voteAverage.toStringAsFixed(1),
                     style: TextStyle(
-                      color: c.green,
+                      color: hasPersonalScore ? c.green : c.gold,
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   Text(
-                    AppLocalizations.of(context)?.get('match_button') ??
-                        'Match',
+                    hasPersonalScore
+                        ? (AppLocalizations.of(context)?.get('match_button') ?? 'Match')
+                        : (AppLocalizations.of(context)?.get('rating_button') ?? 'Rating'),
                     style: TextStyle(
-                      color: c.green,
+                      color: hasPersonalScore ? c.green : c.gold,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -153,14 +170,26 @@ class SynergyBadge extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _buildDialogRow(
-              context,
-              AppLocalizations.of(context)?.get('personal_taste_match') ??
-                  'Personal Taste Match',
-              '%${movie.matchScore}',
-              movie.matchScore / 100.0,
-              c.green,
-            ),
+            if (hasPersonalScore) ...[
+              _buildDialogRow(
+                context,
+                AppLocalizations.of(context)?.get('personal_taste_match') ??
+                    'Personal Taste Match',
+                '%${movie.matchScore}',
+                movie.matchScore / 100.0,
+                c.green,
+              ),
+            ] else ...[
+              _buildDialogRow(
+                context,
+                AppLocalizations.of(context)?.get('personal_taste_match') ??
+                    'Personal Taste Match',
+                AppLocalizations.of(context)?.get('no_personal_match') ??
+                    'Personal taste match not calculated',
+                0.0,
+                c.dim,
+              ),
+            ],
             _buildDialogRow(
               context,
               AppLocalizations.of(context)?.get('tmdb_rating') ?? 'TMDB Rating',
@@ -194,15 +223,19 @@ class SynergyBadge extends StatelessWidget {
                 border: Border.all(color: c.borderSoft),
               ),
               child: Text(
-                isTr
-                    ? (communityScore != null &&
+                hasPersonalScore
+                    ? (isTr
+                        ? (communityScore != null &&
+                                  communityScore!['enough'] == true)
+                              ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
+                              : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
+                        : (communityScore != null &&
                               communityScore!['enough'] == true)
-                          ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
-                          : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
-                    : (communityScore != null &&
-                          communityScore!['enough'] == true)
-                    ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
-                    : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).',
+                        ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
+                        : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).')
+                    : (isTr
+                        ? 'Kişisel zevk uyumunuz henüz hesaplanmamıştır. Önerileri iyileştirmek için yapımları oylamaya devam edin.'
+                        : 'Your personal taste match has not been calculated yet. Keep rating titles to improve your recommendations.'),
                 style: TextStyle(color: c.dim, fontSize: 12, height: 1.4),
               ),
             ),

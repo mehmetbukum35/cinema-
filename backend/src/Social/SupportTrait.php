@@ -70,7 +70,7 @@ trait SocialSupportTrait
     private function fetchRatingsMap(int $uid): array
     {
         $st = $this->db->prepare(
-            'SELECT movie_id, is_tv, rating, genre_ids FROM ratings
+            'SELECT movie_id, is_tv, rating, genre_ids, created_at FROM ratings
              WHERE user_id = ? AND deleted = 0 AND rating BETWEEN 0 AND 3'
         );
         $st->execute([$uid]);
@@ -81,6 +81,7 @@ trait SocialSupportTrait
             $map[$key] = [
                 'rating' => (int) $r['rating'],
                 'genres' => is_array($genres) ? $genres : [],
+                'created_at' => isset($r['created_at']) ? (int) $r['created_at'] : null,
             ];
         }
         return $map;
@@ -90,11 +91,23 @@ trait SocialSupportTrait
     {
         static $weights = [3 => 2.0, 2 => 1.0, 1 => -1.0, 0 => -2.0];
         $v = [];
+        $now = time() * 1000;
         foreach ($ratingsMap as $r) {
             $w = $weights[$r['rating']] ?? 0.0;
             if ($w === 0.0) {
                 continue;
             }
+            
+            // Apply client-identical time decay: exp(-0.00385 * daysElapsed)
+            $createdAt = $r['created_at'] ?? $now;
+            if ($createdAt < 10000000000) {
+                // Convert seconds to milliseconds if needed (e.g. from unit tests)
+                $createdAt *= 1000;
+            }
+            $daysElapsed = max(0.0, ($now - $createdAt) / (24 * 3600 * 1000));
+            $decayFactor = exp(-0.00385 * $daysElapsed);
+            $w *= $decayFactor;
+
             foreach ($r['genres'] as $g) {
                 if (is_int($g)) {
                     $v[$g] = ($v[$g] ?? 0.0) + $w;

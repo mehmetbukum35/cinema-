@@ -144,23 +144,34 @@ class BrowseCard extends ConsumerWidget {
                               color: Colors.black.withValues(alpha: 0.66),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: AppColors.green.withValues(alpha: 0.5),
+                                color: (movie.personalizedMatchScore != null
+                                        ? AppColors.green
+                                        : AppColors.gold)
+                                    .withValues(alpha: 0.5),
                                 width: 0.8,
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.bolt_rounded,
-                                  color: AppColors.green,
+                                Icon(
+                                  movie.personalizedMatchScore != null
+                                      ? Icons.bolt_rounded
+                                      : Icons.star_rounded,
+                                  color: movie.personalizedMatchScore != null
+                                      ? AppColors.green
+                                      : AppColors.gold,
                                   size: 11,
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  '${movie.matchScore}',
-                                  style: const TextStyle(
-                                    color: AppColors.green,
+                                  movie.personalizedMatchScore != null
+                                      ? '${movie.matchScore}'
+                                      : movie.voteAverage.toStringAsFixed(1),
+                                  style: TextStyle(
+                                    color: movie.personalizedMatchScore != null
+                                        ? AppColors.green
+                                        : AppColors.gold,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                   ),

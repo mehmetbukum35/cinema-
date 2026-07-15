@@ -189,7 +189,7 @@ class RecommendationEngine {
     final vec = <int, double>{};
     try {
       final ratings = await _getRatings();
-      // En son 25 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
+      // En son 15 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
       final sortedRatings = ratings.toList()
         ..sort(
           (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),

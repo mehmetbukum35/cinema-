@@ -105,7 +105,7 @@ class TmdbService {
   Future<List<Movie>> getSimilar(int id, {bool isTV = false}) async {
     final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
     if (_similarCache.containsKey(cacheKey)) {
-      return _similarCache[cacheKey]!;
+      return _similarCache[cacheKey]!.map((m) => m.clone()).toList();
     }
     final path = isTV ? '/3/tv/$id/similar' : '/3/movie/$id/similar';
     final list = await _fetchList(path, {
@@ -113,13 +113,13 @@ class TmdbService {
       'language': _language,
     }, isTV: isTV);
     _similarCache[cacheKey] = list;
-    return list;
+    return list.map((m) => m.clone()).toList();
   }
 
   Future<List<Movie>> getRecommendations(int id, {bool isTV = false}) async {
     final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
     if (_recommendationsCache.containsKey(cacheKey)) {
-      return _recommendationsCache[cacheKey]!;
+      return _recommendationsCache[cacheKey]!.map((m) => m.clone()).toList();
     }
     final path = isTV
         ? '/3/tv/$id/recommendations'
@@ -129,7 +129,7 @@ class TmdbService {
       'language': _language,
     }, isTV: isTV);
     _recommendationsCache[cacheKey] = list;
-    return list;
+    return list.map((m) => m.clone()).toList();
   }
 
   // ─── Search ─────────────────────────────────────────────────────────────────
@@ -526,10 +526,10 @@ class TmdbService {
     final rawResults = json['results'];
     final Map<String, dynamic>? resultsByRegion =
         rawResults is Map<String, dynamic> ? rawResults : null;
-    final tr = resultsByRegion?['TR'] as Map<String, dynamic>?;
-    final flatrate = tr?['flatrate'] as List<dynamic>? ?? [];
-    final rent = tr?['rent'] as List<dynamic>? ?? [];
-    final buy = tr?['buy'] as List<dynamic>? ?? [];
+    final regionalData = resultsByRegion?[_region.toUpperCase()] as Map<String, dynamic>?;
+    final flatrate = regionalData?['flatrate'] as List<dynamic>? ?? [];
+    final rent = regionalData?['rent'] as List<dynamic>? ?? [];
+    final buy = regionalData?['buy'] as List<dynamic>? ?? [];
     final seen = <int>{};
     return [...flatrate, ...rent, ...buy]
         .cast<Map<String, dynamic>>()

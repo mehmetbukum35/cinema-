@@ -831,6 +831,7 @@ class SocialIntegrationTest extends TestCase
                 title TEXT,
                 poster_path TEXT,
                 genre_ids TEXT,
+                created_at INTEGER,
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 comment TEXT,

@@ -334,39 +334,8 @@ class PrefsService {
   }
 
   static Future<List<int>> getLikedGenreIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final Map<int, int> counts = {};
-
-    // Initial genre selections: weight 1
-    final initialRaw = prefs.getString(_keyInitialGenres) ?? '[]';
-    for (final id in (jsonDecode(initialRaw) as List<dynamic>)) {
-      counts[id as int] = (counts[id] ?? 0) + 1;
-    }
-
-    // Favourite movies/shows: weight 3 (strongest taste signal)
-    final db = DatabaseHelper();
-    final favMovies = await db.getFavorites(false);
-    final favShows = await db.getFavorites(true);
-    for (final movie in [...favMovies, ...favShows]) {
-      for (final id in movie.genreIds) {
-        counts[id] = (counts[id] ?? 0) + 3;
-      }
-    }
-
-    // Rating-derived genres: weight 2
-    final ratings = await db.getRatings();
-    for (final item in ratings) {
-      if ((item['rating'] as int) >= 2) {
-        final genreList = item['genreIds'] as List? ?? const [];
-        for (final id in genreList) {
-          if (id is int) {
-            counts[id] = (counts[id] ?? 0) + 2;
-          }
-        }
-      }
-    }
-
-    final sorted = counts.entries.toList()
+    final weights = await getGenreWeights();
+    final sorted = weights.entries.where((e) => e.value > 0).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(3).map((e) => e.key).toList();
   }

@@ -436,5 +436,111 @@ void main() {
         expect(searchList.map((m) => m.id).toList(), [2, 3, 4]);
       },
     );
+
+    test('Movie.clone should produce a distinct copy with identical properties', () {
+      final original = Movie(
+        id: 42,
+        title: 'Original Title',
+        overview: 'Overview text',
+        voteAverage: 8.5,
+        genreIds: [18, 28],
+      )
+        ..recoReason = 'Friend Recommendation'
+        ..recoReasonType = 'friend'
+        ..recoSource = 'friend';
+
+      final clone = original.clone();
+
+      expect(clone.id, original.id);
+      expect(clone.title, original.title);
+      expect(clone.overview, original.overview);
+      expect(clone.voteAverage, original.voteAverage);
+      expect(clone.genreIds, original.genreIds);
+      expect(clone.recoReason, original.recoReason);
+      expect(clone.recoReasonType, original.recoReasonType);
+      expect(clone.recoSource, original.recoSource);
+
+      // Mutate the clone
+      clone.recoReason = 'New Reason';
+      clone.recoReasonType = 'seed';
+      clone.recoSource = 'seed';
+
+      // Original should remain unchanged
+      expect(original.recoReason, 'Friend Recommendation');
+      expect(original.recoReasonType, 'friend');
+      expect(original.recoSource, 'friend');
+    });
+
+    test('getSimilar should return clones of cached movies', () async {
+      final mockResponse = {
+        'results': [
+          {
+            'id': 501,
+            'title': 'Similar Movie',
+            'overview': 'Overview',
+            'vote_average': 7.0,
+            'genre_ids': [18],
+            'poster_path': '/path.jpg',
+            'vote_count': 100,
+          }
+        ]
+      };
+
+      final client = MockClient((request) async {
+        return http.Response(jsonEncode(mockResponse), 200);
+      });
+
+      final service = TmdbService(client: client);
+
+      // First fetch (cache miss)
+      final firstFetch = await service.getSimilar(100);
+      expect(firstFetch.length, 1);
+      firstFetch[0].recoReason = 'Mutated Reason';
+
+      // Second fetch (cache hit)
+      final secondFetch = await service.getSimilar(100);
+      expect(secondFetch.length, 1);
+      // If it returned a clone, the cache hit object will NOT have the mutated reason
+      expect(secondFetch[0].recoReason, isNull);
+      expect(firstFetch[0] == secondFetch[0], isFalse);
+    });
+
+    test('getWatchProviders should request and use the configured region', () async {
+      final mockResponse = {
+        'results': {
+          'US': {
+            'link': 'https://www.themoviedb.org/movie/123-us/watch',
+            'flatrate': [
+              {
+                'provider_id': 8,
+                'provider_name': 'Netflix',
+              }
+            ]
+          },
+          'TR': {
+            'link': 'https://www.themoviedb.org/movie/123-tr/watch',
+            'flatrate': [
+              {
+                'provider_id': 337,
+                'provider_name': 'Disney Plus',
+              }
+            ]
+          }
+        }
+      };
+
+      final client = MockClient((request) async {
+        expect(request.url.path.endsWith('/3/movie/123/watch/providers'), isTrue);
+        return http.Response(jsonEncode(mockResponse), 200);
+      });
+
+      // Construct with US region
+      final service = TmdbService(client: client, region: 'US');
+      final providers = await service.getWatchProviders(123);
+
+      expect(providers.length, 1);
+      expect(providers[0].name, 'Netflix');
+      expect(providers[0].providerId, 8);
+    });
   });
 }

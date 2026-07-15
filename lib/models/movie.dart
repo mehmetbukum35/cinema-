@@ -119,4 +119,25 @@ class Movie {
     popularity: ((json['popularity'] as num?) ?? 0).toDouble(),
     voteCount: json['vote_count'] as int? ?? 0,
   );
+
+  Movie clone() {
+    final m = Movie(
+      id: id,
+      title: title,
+      posterPath: posterPath,
+      backdropPath: backdropPath,
+      overview: overview,
+      voteAverage: voteAverage,
+      releaseDate: releaseDate,
+      isTV: isTV,
+      genreIds: List<int>.from(genreIds),
+      popularity: popularity,
+      voteCount: voteCount,
+    );
+    m.personalizedMatchScore = personalizedMatchScore;
+    m.recoReason = recoReason;
+    m.recoReasonType = recoReasonType;
+    m.recoSource = recoSource;
+    return m;
+  }
 }

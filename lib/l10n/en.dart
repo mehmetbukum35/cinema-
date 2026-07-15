@@ -718,6 +718,11 @@ const Map<String, String> kEnStrings = {
   'all_data_reset': 'All data has been reset.',
   'profile_like_failed': 'Could not save your like. Please try again.',
   'synergy_score_match': '{}% Match',
+  'general_rating': 'Rating: {}',
+  'semantics_general_rating': 'General rating: {}. Tap for details',
+  'no_personal_match': 'Personal taste match not calculated',
+  'rating_details': 'Rating Details',
+  'rating_button': 'Rating',
   'error_occurred_msg': 'Error: {}',
   'share_profile_text':
       'Follow me on What to Watch! Check out my watchlist and favorites here: {}',

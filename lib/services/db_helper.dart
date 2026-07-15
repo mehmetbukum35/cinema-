@@ -982,7 +982,7 @@ class DatabaseHelper {
           'release_date': item.releaseDate,
           'is_tv': isTV ? 1 : 0,
           'genre_ids': jsonEncode(item.genreIds),
-          'created_at': i,
+          'created_at': now + i,
           'updated_at': now,
           'deleted': 0,
         });

@@ -713,6 +713,11 @@ const Map<String, String> kTrStrings = {
   'all_data_reset': 'Tüm veriler sıfırlandı.',
   'profile_like_failed': 'Beğeni kaydedilemedi. Lütfen tekrar deneyin.',
   'synergy_score_match': '%{} Uyumlu',
+  'general_rating': 'Puan: {}',
+  'semantics_general_rating': 'Genel puan: {}. Detaylar için dokun',
+  'no_personal_match': 'Kişisel uyum hesaplanmadı',
+  'rating_details': 'Puan Detayları',
+  'rating_button': 'Puan',
   'error_occurred_msg': 'Hata oluştu: {}',
   'share_profile_text':
       'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',

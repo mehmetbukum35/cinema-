@@ -91,7 +91,7 @@ class Smtp
         $headers = [
             "MIME-Version: 1.0",
             "Content-Type: text/html; charset=UTF-8",
-            "From: =?UTF-8?B?" . base64_encode("Ne İzlesem") . "?= <{$this->user}>",
+            "From: =?UTF-8?B?" . base64_encode("Cinema+") . "?= <{$this->user}>",
             "To: <{$to}>",
             "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=",
             "Date: " . date('r'),
