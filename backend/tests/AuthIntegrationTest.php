@@ -402,4 +402,50 @@ class AuthIntegrationTest extends TestCase
             $this->assertSame(422, TestHelperRegistry::$lastStatus);
         }
     }
+
+    public function testJwtKeyRotationSupport(): void
+    {
+        $secrets = [
+            'v1' => 'old_secret_key_12345678901234567890',
+            'v2' => 'new_secret_key_67890123456789012345',
+        ];
+        $cfgRotated = $this->cfg;
+        $cfgRotated['jwt_secret'] = $secrets;
+
+        $authRotated = new Auth($this->db, $cfgRotated);
+
+        $hash = password_hash('secret123', PASSWORD_BCRYPT);
+        $t = (int) round(microtime(true) * 1000);
+        $st = $this->db->prepare(
+            'INSERT INTO users (email, password_hash, email_verified, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        );
+        $st->execute(['rotated-jwt@example.com', $hash, 1, $t, $t]);
+        $uid = (int) $this->db->lastInsertId();
+
+        $authRotated->login(['email' => 'rotated-jwt@example.com', 'password' => 'secret123']);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        
+        $tokens = TestHelperRegistry::$lastBody['tokens'];
+        $accessToken = $tokens['access_token'];
+
+        $parts = explode('.', $accessToken);
+        $header = json_decode(base64_decode(strtr($parts[0], '-_', '+/')), true);
+        $this->assertSame('v2', $header['kid']);
+
+        $payload = Jwt::decode($accessToken, $secrets);
+        $this->assertNotNull($payload);
+        $this->assertSame($uid, (int)$payload['sub']);
+
+        $oldPayload = [
+            'sub' => $uid,
+            'typ' => 'access',
+            'iat' => time(),
+            'exp' => time() + 3600,
+        ];
+        $oldToken = Jwt::encode($oldPayload, $secrets, 'v1');
+
+        $decodedOld = Jwt::decode($oldToken, $secrets);
+        $this->assertNotNull($decodedOld);
+        $this->assertSame($uid, (int)$decodedOld['sub']);
+    }
 }

@@ -12,6 +12,11 @@ return [
     ],
 
     // En az 32 karakter rastgele. Üret: bin2hex(random_bytes(32))
+    // Anahtar rotasyonu (kid) için dizi olarak da verilebilir (en sondaki anahtar imzalama için aktiftir):
+    // 'jwt_secret' => [
+    //     'v1' => 'generate_first_key_here',
+    //     'v2' => 'generate_second_key_here',
+    // ],
     'jwt_secret' => 'generate_a_random_32_bytes_hex_string_here',
 
     'access_ttl'  => 2 * 60 * 60,             // access token: 2 saat (saniye)
