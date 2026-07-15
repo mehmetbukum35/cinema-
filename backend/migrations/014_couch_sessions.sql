@@ -18,6 +18,6 @@ CREATE TABLE couch_sessions (
   updated_at BIGINT NOT NULL,
   CONSTRAINT fk_couch_host FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_couch_guest FOREIGN KEY (guest_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE INDEX idx_couch_host_status ON couch_sessions (host_id, status);
 CREATE INDEX idx_couch_guest_status ON couch_sessions (guest_id, status);
