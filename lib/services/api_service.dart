@@ -23,10 +23,14 @@ class ApiClient {
   static const _kRequestTimeout = Duration(seconds: 20);
   static String get baseUrl => AppConfig.apiBaseUrl;
   final http.Client _client;
+  final Duration requestTimeout;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
-  ApiClient({http.Client? client, this.onSessionExpired})
-    : _client = client ?? http.Client();
+  ApiClient({
+    http.Client? client,
+    this.onSessionExpired,
+    this.requestTimeout = _kRequestTimeout,
+  }) : _client = client ?? http.Client();
 
   Future<Map<String, String>> _getHeaders({
     bool requireAuth = true,
@@ -49,7 +53,7 @@ class ApiClient {
   }
 
   Future<http.Response> _withTimeout(Future<http.Response> request) =>
-      request.timeout(_kRequestTimeout);
+      request.timeout(requestTimeout);
 
   String _newRequestId() {
     final random = Random.secure();
@@ -87,7 +91,7 @@ class ApiClient {
         response = await _withTimeout(_client.get(url, headers: headers));
       }
     } on TimeoutException catch (e) {
-      debugPrint("Network request timed out after $_kRequestTimeout: $e");
+      debugPrint("Network request timed out after $requestTimeout: $e");
       rethrow;
     } catch (e) {
       debugPrint("Network request error: $e");
@@ -238,7 +242,7 @@ class ApiClient {
 /// Backwards-compatible facade over focused domain APIs.
 class ApiService extends ApiClient
     with AuthApi, SyncApi, SocialApi, RecommendationApi, CouchApi {
-  ApiService({super.client, super.onSessionExpired});
+  ApiService({super.client, super.onSessionExpired, super.requestTimeout});
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
   static String webProfileUrl(String username, {String lang = 'tr'}) =>

@@ -47,6 +47,8 @@ String _safeErrorMessage(Object error) {
 }
 
 class TmdbService {
+  static const int _memoryCacheLimit = 200;
+
   final http.Client _client;
   final String _language;
   final String _region;
@@ -54,6 +56,33 @@ class TmdbService {
   final Map<String, List<int>> _keywordIdsCache = {};
   final Map<String, List<Movie>> _similarCache = {};
   final Map<String, List<Movie>> _recommendationsCache = {};
+
+  V? _readMemoryCache<V>(Map<String, V> cache, String key) {
+    final value = cache.remove(key);
+    if (value != null) cache[key] = value;
+    return value;
+  }
+
+  void _writeMemoryCache<V>(Map<String, V> cache, String key, V value) {
+    cache.remove(key);
+    cache[key] = value;
+    while (cache.length > _memoryCacheLimit) {
+      cache.remove(cache.keys.first);
+    }
+  }
+
+  @visibleForTesting
+  int get similarMemoryCacheSize => _similarCache.length;
+
+  @visibleForTesting
+  int get recommendationsMemoryCacheSize => _recommendationsCache.length;
+
+  @visibleForTesting
+  int get keywordMemoryCacheSize => _keywordIdsCache.length;
+
+  @visibleForTesting
+  bool isSimilarMemoryCached(int id, {bool isTV = false}) =>
+      _similarCache.containsKey("${isTV ? 'tv' : 'movie'}_$id");
 
   TmdbService({http.Client? client, String? language, String? region})
     : _client = client ?? http.Client(),
@@ -104,22 +133,24 @@ class TmdbService {
 
   Future<List<Movie>> getSimilar(int id, {bool isTV = false}) async {
     final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
-    if (_similarCache.containsKey(cacheKey)) {
-      return _similarCache[cacheKey]!.map((m) => m.clone()).toList();
+    final cached = _readMemoryCache(_similarCache, cacheKey);
+    if (cached != null) {
+      return cached.map((m) => m.clone()).toList();
     }
     final path = isTV ? '/3/tv/$id/similar' : '/3/movie/$id/similar';
     final list = await _fetchList(path, {
       'api_key': _apiKey,
       'language': _language,
     }, isTV: isTV);
-    _similarCache[cacheKey] = list;
+    _writeMemoryCache(_similarCache, cacheKey, list);
     return list.map((m) => m.clone()).toList();
   }
 
   Future<List<Movie>> getRecommendations(int id, {bool isTV = false}) async {
     final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
-    if (_recommendationsCache.containsKey(cacheKey)) {
-      return _recommendationsCache[cacheKey]!.map((m) => m.clone()).toList();
+    final cached = _readMemoryCache(_recommendationsCache, cacheKey);
+    if (cached != null) {
+      return cached.map((m) => m.clone()).toList();
     }
     final path = isTV
         ? '/3/tv/$id/recommendations'
@@ -128,7 +159,7 @@ class TmdbService {
       'api_key': _apiKey,
       'language': _language,
     }, isTV: isTV);
-    _recommendationsCache[cacheKey] = list;
+    _writeMemoryCache(_recommendationsCache, cacheKey, list);
     return list.map((m) => m.clone()).toList();
   }
 
@@ -701,8 +732,9 @@ class TmdbService {
   /// ağ isteği yapmaz.
   Future<List<int>> getKeywordIds(int id, {bool isTV = false}) async {
     final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
-    if (_keywordIdsCache.containsKey(cacheKey)) {
-      return _keywordIdsCache[cacheKey]!;
+    final cached = _readMemoryCache(_keywordIdsCache, cacheKey);
+    if (cached != null) {
+      return cached;
     }
     final path = isTV ? '/3/tv/$id/keywords' : '/3/movie/$id/keywords';
     final json = await _fetchRawWithCache(
@@ -719,7 +751,7 @@ class TmdbService {
         .map((k) => k['id'] as int)
         .take(15)
         .toList();
-    _keywordIdsCache[cacheKey] = ids;
+    _writeMemoryCache(_keywordIdsCache, cacheKey, ids);
     return ids;
   }
 

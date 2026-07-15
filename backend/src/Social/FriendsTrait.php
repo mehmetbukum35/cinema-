@@ -9,9 +9,14 @@ trait SocialFriendsTrait
         $search = trim((string) ($in['search_query'] ?? ''));
         if ($search === '') fail(422, 'Arama sorgusu gerekli.');
 
+        // E-postalar kayıt sırasında küçük harfe normalize edilir. Kullanıcı adı
+        // özgün değerini korurken e-posta karşılaştırmasını da aynı sözleşmeye
+        // çekmek SQLite ve case-sensitive MySQL kurulumlarında davranış farkını önler.
+        $emailSearch = strtolower($search);
+
         // Kendisini eklemesini engelle
         $st = $this->db->prepare('SELECT id, email, username FROM users WHERE (email = ? OR username = ?) AND id != ?');
-        $st->execute([$search, $search, $uid]);
+        $st->execute([$emailSearch, $search, $uid]);
         $target = $st->fetch();
 
         if (!$target) {

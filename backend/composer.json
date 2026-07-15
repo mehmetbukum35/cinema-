@@ -10,7 +10,7 @@
         "phpunit/phpunit": "^11.0"
     },
     "scripts": {
-        "test": "phpunit --configuration phpunit.xml"
+        "test": "phpunit --configuration phpunit.xml --no-coverage"
     },
     "autoload": {
         "classmap": [

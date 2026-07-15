@@ -14,6 +14,7 @@ class MockApiService implements ApiService {
   Map<String, dynamic> pullResponse = {};
   Map<String, dynamic> pushResponse = {'applied': 0};
   bool shouldThrow = false;
+  bool throwOnPull = false;
   int pushCount = 0;
   int pullCount = 0;
   Duration? delay;
@@ -32,7 +33,7 @@ class MockApiService implements ApiService {
     pullCount++;
     pulledSince = since;
     if (delay != null) await Future.delayed(delay!);
-    if (shouldThrow) throw Exception('API Error');
+    if (shouldThrow || throwOnPull) throw Exception('API Error');
     return pullResponse;
   }
 
@@ -234,6 +235,36 @@ void main() {
       expect(mockApi.pushCount, 1);
       expect(mockApi.pullCount, 1);
     });
+
+    test(
+      'should not resend a committed push when the following pull fails',
+      () async {
+        await testDb.insert('search_history', {
+          'query': 'arrival',
+          'created_at': 1005,
+          'updated_at': 1010,
+          'deleted': 0,
+        });
+        mockApi.throwOnPull = true;
+
+        await expectLater(syncService.sync(), throwsException);
+        expect(mockApi.pushedPayload!['search_history'], hasLength(1));
+
+        mockApi.throwOnPull = false;
+        mockApi.pullResponse = {
+          'server_time': 2000,
+          'ratings': [],
+          'watchlist': [],
+          'favorites': [],
+          'watched_seasons': [],
+          'search_history': [],
+        };
+        await syncService.sync();
+
+        expect(mockApi.pushCount, 2);
+        expect(mockApi.pushedPayload!['search_history'], isEmpty);
+      },
+    );
 
     test(
       'should sync all tables (favorites, watched_seasons, search_history)',

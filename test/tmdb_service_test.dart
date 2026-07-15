@@ -509,6 +509,29 @@ void main() {
       expect(firstFetch[0] == secondFetch[0], isFalse);
     });
 
+    test('in-memory similar cache should stay within its LRU limit', () async {
+      var requestCount = 0;
+      final client = MockClient((request) async {
+        requestCount++;
+        return http.Response(jsonEncode({'results': <dynamic>[]}), 200);
+      });
+      final service = TmdbService(client: client);
+
+      for (var id = 1; id <= 201; id++) {
+        await service.getSimilar(id);
+      }
+
+      expect(service.similarMemoryCacheSize, 200);
+      expect(service.isSimilarMemoryCached(1), isFalse);
+
+      // İlk bellek girdisi sınır aşılırken atılmış olmalı. Disk cache tekrar
+      // yüklemeyi ağsız karşılayabilir, fakat bellek yine sınırda kalır.
+      await service.getSimilar(1);
+      expect(requestCount, 201);
+      expect(service.isSimilarMemoryCached(1), isTrue);
+      expect(service.similarMemoryCacheSize, 200);
+    });
+
     test(
       'getWatchProviders should request and use the configured region',
       () async {

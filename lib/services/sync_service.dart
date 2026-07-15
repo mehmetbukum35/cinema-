@@ -59,10 +59,10 @@ class SyncService {
       );
       final pushResult = await _apiService.push(<String, dynamic>{});
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
+      await PrefsService.setLastPushTime(pushWatermark);
       final pullResult = await _apiService.pull(lastPull);
       final serverTime = _asInt(pullResult['server_time']);
       await PrefsService.setLastSyncTime(serverTime);
-      await PrefsService.setLastPushTime(pushWatermark);
       PrefsService.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
       debugPrint(
@@ -194,6 +194,11 @@ class SyncService {
     // Push local updates to server
     final pushResult = await _apiService.push(payload);
     debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
+
+    // Push sunucuda başarıyla commit edildiyse cihaz imlecini hemen ilerlet.
+    // Ardından gelen pull geçici olarak başarısız olduğunda aynı değişikliklerin
+    // bir sonraki denemede gereksiz yere tekrar gönderilmesini önler.
+    await PrefsService.setLastPushTime(pushWatermark);
 
     // 2. PULL remote changes
     final pullResult = await _apiService.pull(lastPull);
@@ -353,7 +358,6 @@ class SyncService {
 
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await PrefsService.setLastSyncTime(serverTime);
-    await PrefsService.setLastPushTime(pushWatermark);
     PrefsService.invalidateGenreWeights();
 
     // Invalidate recommendation engine cache and DNA cache
@@ -416,25 +420,20 @@ enum SyncStatus { idle, syncing, success, error }
 
 class SyncNotifier extends StateNotifier<SyncStatus> {
   final SyncService _syncService;
-  Future<void>? _syncFuture;
 
   SyncNotifier(this._syncService) : super(SyncStatus.idle);
 
   Future<void> performSync() async {
-    if (_syncFuture != null) {
-      return _syncFuture;
-    }
     state = SyncStatus.syncing;
-    _syncFuture = _syncService.sync();
     try {
-      await _syncFuture;
+      // Eşzamanlı çağrıları birleştirme sorumluluğu SyncService'tedir. İkinci
+      // bir kilit aynı davranışı iki katmanda tutup durum yönetimini karmaşıklaştırıyordu.
+      await _syncService.sync();
       state = SyncStatus.success;
     } catch (e) {
       debugPrint("SyncNotifier: Sync failed: $e");
       state = SyncStatus.error;
       rethrow;
-    } finally {
-      _syncFuture = null;
     }
   }
 

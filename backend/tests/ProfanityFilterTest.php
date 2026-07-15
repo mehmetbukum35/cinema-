@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * Küfür/spam filtresi birim testleri (comment_flagged, sanitize_comment).
@@ -10,7 +11,7 @@ class ProfanityFilterTest extends TestCase
 {
     // ─── Masum Türkçe / İngilizce ────────────────────────────────────────────
 
-    /** @dataProvider innocentCommentsProvider */
+    #[DataProvider('innocentCommentsProvider')]
     public function testInnocentCommentsAreNotFlagged(string $comment): void
     {
         $this->assertFalse(comment_flagged($comment));
@@ -35,7 +36,7 @@ class ProfanityFilterTest extends TestCase
 
     // ─── Bariz küfür ─────────────────────────────────────────────────────────
 
-    /** @dataProvider profaneCommentsProvider */
+    #[DataProvider('profaneCommentsProvider')]
     public function testProfaneCommentsAreFlagged(string $comment): void
     {
         $this->assertTrue(comment_flagged($comment));

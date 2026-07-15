@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +21,27 @@ void main() {
   });
 
   group('ApiService Tests', () {
+    test(
+      'request timeout should propagate without clearing auth data',
+      () async {
+        final mockClient = MockClient((request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return http.Response('{}', 200);
+        });
+        final apiService = ApiService(
+          client: mockClient,
+          requestTimeout: const Duration(milliseconds: 5),
+        );
+
+        await expectLater(
+          apiService.login(email: 'test@example.com', password: 'secret123'),
+          throwsA(isA<TimeoutException>()),
+        );
+        expect(await PrefsService.getAccessToken(), 'initial_access');
+        expect(await PrefsService.getRefreshToken(), 'initial_refresh');
+      },
+    );
+
     test('login should send correct payload and return response', () async {
       // 1. Arrange: Setup Mock Client
       final mockClient = MockClient((request) async {

@@ -41,6 +41,15 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('accepted', $this->friendStatus(2, 1));
     }
 
+    public function testFriendRequestNormalizesEmailSearch(): void
+    {
+        $this->social->sendFriendRequest(1, ['search_query' => ' BOB@EXAMPLE.COM ']);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame('pending', TestHelperRegistry::$lastBody['status']);
+        $this->assertSame('pending', $this->friendStatus(1, 2));
+    }
+
     public function testActivitySignalsAndWatchlistIntersectionRespectAcceptedFriendship(): void
     {
         $this->acceptFriendship(1, 2);

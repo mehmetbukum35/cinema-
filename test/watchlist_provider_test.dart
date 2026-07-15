@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,11 +12,14 @@ import 'mocks/secure_storage_mock.dart';
 
 class MockSyncService implements SyncService {
   bool syncCalled = false;
+  Completer<void> started = Completer<void>();
+  Completer<void>? gate;
 
   @override
-  Future<bool> sync() async {
+  Future<void> sync() async {
     syncCalled = true;
-    return true;
+    if (!started.isCompleted) started.complete();
+    await gate?.future;
   }
 
   @override
@@ -90,6 +95,43 @@ void main() {
           error: (e, s) => fail('Loaded error: $e'),
         );
         expect(mockSync.syncCalled, isTrue);
+      },
+    );
+
+    test(
+      'should expose local watchlist before authenticated sync completes',
+      () async {
+        final movie = Movie(
+          id: 104,
+          title: 'Offline Movie',
+          posterPath: '/offline.jpg',
+          overview: 'Locally available',
+          voteAverage: 7.5,
+          isTV: false,
+        );
+        await PrefsService.addToWatchlist(movie);
+        mockSync.gate = Completer<void>();
+
+        container = ProviderContainer(
+          overrides: [
+            authProvider.overrideWith(
+              (ref) => MockAuthNotifier(
+                AuthState(accessToken: 'test_access', user: {'id': 1}),
+              ),
+            ),
+            syncServiceProvider.overrideWithValue(mockSync),
+          ],
+        );
+
+        container.read(watchlistProvider);
+        await mockSync.started.future;
+
+        final stateWhileSyncing = container.read(watchlistProvider);
+        expect(stateWhileSyncing.hasValue, isTrue);
+        expect(stateWhileSyncing.value!.single.id, 104);
+
+        mockSync.gate!.complete();
+        await Future<void>.delayed(Duration.zero);
       },
     );
 
