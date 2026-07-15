@@ -437,39 +437,43 @@ void main() {
       },
     );
 
-    test('Movie.clone should produce a distinct copy with identical properties', () {
-      final original = Movie(
-        id: 42,
-        title: 'Original Title',
-        overview: 'Overview text',
-        voteAverage: 8.5,
-        genreIds: [18, 28],
-      )
-        ..recoReason = 'Friend Recommendation'
-        ..recoReasonType = 'friend'
-        ..recoSource = 'friend';
+    test(
+      'Movie.clone should produce a distinct copy with identical properties',
+      () {
+        final original =
+            Movie(
+                id: 42,
+                title: 'Original Title',
+                overview: 'Overview text',
+                voteAverage: 8.5,
+                genreIds: [18, 28],
+              )
+              ..recoReason = 'Friend Recommendation'
+              ..recoReasonType = 'friend'
+              ..recoSource = 'friend';
 
-      final clone = original.clone();
+        final clone = original.clone();
 
-      expect(clone.id, original.id);
-      expect(clone.title, original.title);
-      expect(clone.overview, original.overview);
-      expect(clone.voteAverage, original.voteAverage);
-      expect(clone.genreIds, original.genreIds);
-      expect(clone.recoReason, original.recoReason);
-      expect(clone.recoReasonType, original.recoReasonType);
-      expect(clone.recoSource, original.recoSource);
+        expect(clone.id, original.id);
+        expect(clone.title, original.title);
+        expect(clone.overview, original.overview);
+        expect(clone.voteAverage, original.voteAverage);
+        expect(clone.genreIds, original.genreIds);
+        expect(clone.recoReason, original.recoReason);
+        expect(clone.recoReasonType, original.recoReasonType);
+        expect(clone.recoSource, original.recoSource);
 
-      // Mutate the clone
-      clone.recoReason = 'New Reason';
-      clone.recoReasonType = 'seed';
-      clone.recoSource = 'seed';
+        // Mutate the clone
+        clone.recoReason = 'New Reason';
+        clone.recoReasonType = 'seed';
+        clone.recoSource = 'seed';
 
-      // Original should remain unchanged
-      expect(original.recoReason, 'Friend Recommendation');
-      expect(original.recoReasonType, 'friend');
-      expect(original.recoSource, 'friend');
-    });
+        // Original should remain unchanged
+        expect(original.recoReason, 'Friend Recommendation');
+        expect(original.recoReasonType, 'friend');
+        expect(original.recoSource, 'friend');
+      },
+    );
 
     test('getSimilar should return clones of cached movies', () async {
       final mockResponse = {
@@ -482,8 +486,8 @@ void main() {
             'genre_ids': [18],
             'poster_path': '/path.jpg',
             'vote_count': 100,
-          }
-        ]
+          },
+        ],
       };
 
       final client = MockClient((request) async {
@@ -505,42 +509,42 @@ void main() {
       expect(firstFetch[0] == secondFetch[0], isFalse);
     });
 
-    test('getWatchProviders should request and use the configured region', () async {
-      final mockResponse = {
-        'results': {
-          'US': {
-            'link': 'https://www.themoviedb.org/movie/123-us/watch',
-            'flatrate': [
-              {
-                'provider_id': 8,
-                'provider_name': 'Netflix',
-              }
-            ]
+    test(
+      'getWatchProviders should request and use the configured region',
+      () async {
+        final mockResponse = {
+          'results': {
+            'US': {
+              'link': 'https://www.themoviedb.org/movie/123-us/watch',
+              'flatrate': [
+                {'provider_id': 8, 'provider_name': 'Netflix'},
+              ],
+            },
+            'TR': {
+              'link': 'https://www.themoviedb.org/movie/123-tr/watch',
+              'flatrate': [
+                {'provider_id': 337, 'provider_name': 'Disney Plus'},
+              ],
+            },
           },
-          'TR': {
-            'link': 'https://www.themoviedb.org/movie/123-tr/watch',
-            'flatrate': [
-              {
-                'provider_id': 337,
-                'provider_name': 'Disney Plus',
-              }
-            ]
-          }
-        }
-      };
+        };
 
-      final client = MockClient((request) async {
-        expect(request.url.path.endsWith('/3/movie/123/watch/providers'), isTrue);
-        return http.Response(jsonEncode(mockResponse), 200);
-      });
+        final client = MockClient((request) async {
+          expect(
+            request.url.path.endsWith('/3/movie/123/watch/providers'),
+            isTrue,
+          );
+          return http.Response(jsonEncode(mockResponse), 200);
+        });
 
-      // Construct with US region
-      final service = TmdbService(client: client, region: 'US');
-      final providers = await service.getWatchProviders(123);
+        // Construct with US region
+        final service = TmdbService(client: client, region: 'US');
+        final providers = await service.getWatchProviders(123);
 
-      expect(providers.length, 1);
-      expect(providers[0].name, 'Netflix');
-      expect(providers[0].providerId, 8);
-    });
+        expect(providers.length, 1);
+        expect(providers[0].name, 'Netflix');
+        expect(providers[0].providerId, 8);
+      },
+    );
   });
 }

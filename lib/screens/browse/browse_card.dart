@@ -144,10 +144,11 @@ class BrowseCard extends ConsumerWidget {
                               color: Colors.black.withValues(alpha: 0.66),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: (movie.personalizedMatchScore != null
-                                        ? AppColors.green
-                                        : AppColors.gold)
-                                    .withValues(alpha: 0.5),
+                                color:
+                                    (movie.personalizedMatchScore != null
+                                            ? AppColors.green
+                                            : AppColors.gold)
+                                        .withValues(alpha: 0.5),
                                 width: 0.8,
                               ),
                             ),

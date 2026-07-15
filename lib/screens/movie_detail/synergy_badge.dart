@@ -37,13 +37,13 @@ class SynergyBadge extends StatelessWidget {
 
     final semanticsText = hasPersonalScore
         ? (AppLocalizations.of(context)
-                ?.get('semantics_synergy_score')
-                .replaceAll('{}', '$synergyScore') ??
-            '$synergyScore percent match. Tap for details')
+                  ?.get('semantics_synergy_score')
+                  .replaceAll('{}', '$synergyScore') ??
+              '$synergyScore percent match. Tap for details')
         : (AppLocalizations.of(context)
-                ?.get('semantics_general_rating')
-                .replaceAll('{}', movie.voteAverage.toStringAsFixed(1)) ??
-            'General rating: ${movie.voteAverage.toStringAsFixed(1)}. Tap for details');
+                  ?.get('semantics_general_rating')
+                  .replaceAll('{}', movie.voteAverage.toStringAsFixed(1)) ??
+              'General rating: ${movie.voteAverage.toStringAsFixed(1)}. Tap for details');
 
     return Tooltip(
       message: semanticsText,
@@ -75,13 +75,16 @@ class SynergyBadge extends StatelessWidget {
                 Text(
                   hasPersonalScore
                       ? (AppLocalizations.of(context)
-                              ?.get('synergy_score_match')
-                              .replaceAll('{}', '$synergyScore') ??
-                          '$synergyScore% Match')
+                                ?.get('synergy_score_match')
+                                .replaceAll('{}', '$synergyScore') ??
+                            '$synergyScore% Match')
                       : (AppLocalizations.of(context)
-                              ?.get('general_rating')
-                              .replaceAll('{}', movie.voteAverage.toStringAsFixed(1)) ??
-                          'Rating: ${movie.voteAverage.toStringAsFixed(1)}'),
+                                ?.get('general_rating')
+                                .replaceAll(
+                                  '{}',
+                                  movie.voteAverage.toStringAsFixed(1),
+                                ) ??
+                            'Rating: ${movie.voteAverage.toStringAsFixed(1)}'),
                   style: TextStyle(
                     color: badgeColor,
                     fontSize: 12,
@@ -119,8 +122,10 @@ class SynergyBadge extends StatelessWidget {
         title: Center(
           child: Text(
             hasPersonalScore
-                ? (AppLocalizations.of(context)?.get('match_details') ?? 'Match Details')
-                : (AppLocalizations.of(context)?.get('rating_details') ?? 'Rating Details'),
+                ? (AppLocalizations.of(context)?.get('match_details') ??
+                      'Match Details')
+                : (AppLocalizations.of(context)?.get('rating_details') ??
+                      'Rating Details'),
             style: TextStyle(
               color: c.ink,
               fontSize: 16,
@@ -138,9 +143,13 @@ class SynergyBadge extends StatelessWidget {
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (hasPersonalScore ? c.green : c.gold).withValues(alpha: 0.1),
+                color: (hasPersonalScore ? c.green : c.gold).withValues(
+                  alpha: 0.1,
+                ),
                 border: Border.all(
-                  color: (hasPersonalScore ? c.green : c.gold).withValues(alpha: 0.3),
+                  color: (hasPersonalScore ? c.green : c.gold).withValues(
+                    alpha: 0.3,
+                  ),
                   width: 2,
                 ),
               ),
@@ -149,7 +158,9 @@ class SynergyBadge extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    hasPersonalScore ? '%$synergyScore' : movie.voteAverage.toStringAsFixed(1),
+                    hasPersonalScore
+                        ? '%$synergyScore'
+                        : movie.voteAverage.toStringAsFixed(1),
                     style: TextStyle(
                       color: hasPersonalScore ? c.green : c.gold,
                       fontSize: 26,
@@ -158,8 +169,10 @@ class SynergyBadge extends StatelessWidget {
                   ),
                   Text(
                     hasPersonalScore
-                        ? (AppLocalizations.of(context)?.get('match_button') ?? 'Match')
-                        : (AppLocalizations.of(context)?.get('rating_button') ?? 'Rating'),
+                        ? (AppLocalizations.of(context)?.get('match_button') ??
+                              'Match')
+                        : (AppLocalizations.of(context)?.get('rating_button') ??
+                              'Rating'),
                     style: TextStyle(
                       color: hasPersonalScore ? c.green : c.gold,
                       fontSize: 10,
@@ -225,17 +238,17 @@ class SynergyBadge extends StatelessWidget {
               child: Text(
                 hasPersonalScore
                     ? (isTr
-                        ? (communityScore != null &&
-                                  communityScore!['enough'] == true)
-                              ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
-                              : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
-                        : (communityScore != null &&
-                              communityScore!['enough'] == true)
-                        ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
-                        : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).')
+                          ? (communityScore != null &&
+                                    communityScore!['enough'] == true)
+                                ? 'Sinerji Skoru; kişisel zevk uyumu (%40), topluluk skoru (%30) ve TMDB puanının (%30) ağırlıklı karmasıdır.'
+                                : 'Sinerji Skoru; kişisel zevk uyumu (%60) ve TMDB puanının (%40) ağırlıklı karmasıdır.'
+                          : (communityScore != null &&
+                                communityScore!['enough'] == true)
+                          ? 'Synergy Score is a weighted mix of taste match (40%), community score (30%), and TMDB rating (30%).'
+                          : 'Synergy Score is a mix of taste match (60%) and TMDB rating (40%).')
                     : (isTr
-                        ? 'Kişisel zevk uyumunuz henüz hesaplanmamıştır. Önerileri iyileştirmek için yapımları oylamaya devam edin.'
-                        : 'Your personal taste match has not been calculated yet. Keep rating titles to improve your recommendations.'),
+                          ? 'Kişisel zevk uyumunuz henüz hesaplanmamıştır. Önerileri iyileştirmek için yapımları oylamaya devam edin.'
+                          : 'Your personal taste match has not been calculated yet. Keep rating titles to improve your recommendations.'),
                 style: TextStyle(color: c.dim, fontSize: 12, height: 1.4),
               ),
             ),

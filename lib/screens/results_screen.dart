@@ -1,9 +1,7 @@
-import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/providers.dart';
@@ -12,6 +10,9 @@ import '../services/recommendation_engine.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import 'movie_detail_sheet.dart';
+import 'results/movie_card.dart';
+import 'results/skeleton_card.dart';
+import 'results/lang_chip.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
   final String? genreStr;
@@ -381,7 +382,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 children: [
                   Builder(
                     builder: (context) {
-                      return _LangChip(
+                      return ResultsLangChip(
                         label:
                             AppLocalizations.of(context)?.get('lang_all') ??
                             'All',
@@ -391,7 +392,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                     },
                   ),
                   ..._languages.map(
-                    (l) => _LangChip(
+                    (l) => ResultsLangChip(
                       label: _getLanguageLabel(l.code, l.label),
                       selected: tempLang == l.code,
                       onTap: () => setModal(
@@ -610,7 +611,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       childAspectRatio: 0.62,
     ),
     itemCount: 6,
-    itemBuilder: (_, i) => _SkeletonCard(delay: i * 80),
+    itemBuilder: (_, i) => ResultsSkeletonCard(delay: i * 80),
   );
 
   Widget _error() {
@@ -724,7 +725,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             childAspectRatio: 0.62,
           ),
           itemCount: _movies.length,
-          itemBuilder: (_, i) => _MovieCard(
+          itemBuilder: (_, i) => ResultsMovieCard(
             movie: _movies[i],
             onTap: () => _showDetail(_movies[i]),
             jointGenres: widget.jointGenres,
@@ -763,306 +764,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => MovieDetailSheet(movie: movie, service: _service),
-    );
-  }
-}
-
-// ─── movie card ──────────────────────────────────────────────────────────────
-class _MovieCard extends StatelessWidget {
-  final Movie movie;
-  final VoidCallback onTap;
-  final List<int>? jointGenres;
-
-  const _MovieCard({
-    required this.movie,
-    required this.onTap,
-    this.jointGenres,
-  });
-
-  int _calculateJointScore(List<int> movieGenreIds, double voteAverage) {
-    if (jointGenres == null || jointGenres!.isEmpty) return 0;
-    if (movieGenreIds.isEmpty) return 0;
-    final common = movieGenreIds.where((id) {
-      final mappedId = movie.isTV
-          ? (switch (id) {
-              10759 => 28,
-              10765 => 878,
-              10762 => 10751,
-              _ => id,
-            })
-          : id;
-      return jointGenres!.contains(mappedId);
-    }).length;
-    if (common == 0) return 0;
-    final double similarity = common / jointGenres!.length;
-    final double rawScore = 0.7 * similarity + 0.3 * (voteAverage / 10.0);
-    final double z = (rawScore - 0.2) * 4.0;
-    final double sigmoid = 1.0 / (1.0 + exp(-z));
-    return (40 + (sigmoid * 58)).round().clamp(40, 98);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            movie.posterUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: movie.posterUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => _placeholder(ctx),
-                    errorWidget: (ctx, url, err) => _placeholder(ctx),
-                  )
-                : _placeholder(context),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.4, 1.0],
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.92),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 10,
-              right: 10,
-              bottom: 10,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    movie.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      (() {
-                        final jointScore = _calculateJointScore(
-                          movie.genreIds,
-                          movie.voteAverage,
-                        );
-                        if (jointScore > 0) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: c.green.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.bolt_rounded,
-                                    color: c.green,
-                                    size: 13,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    '%$jointScore',
-                                    style: TextStyle(
-                                      color: c.green,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      })(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.gold.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star_rounded, color: c.gold, size: 13),
-                            const SizedBox(width: 3),
-                            Text(
-                              movie.voteAverage.toStringAsFixed(1),
-                              style: TextStyle(
-                                color: c.gold,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (movie.isTV ? const Color(0xFF1565C0) : c.red)
-                              .withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          movie.isTV
-                              ? (AppLocalizations.of(
-                                      context,
-                                    )?.get('onboarding_tv') ??
-                                    'Dizi')
-                              : (AppLocalizations.of(
-                                      context,
-                                    )?.get('onboarding_movie') ??
-                                    'Film'),
-                          style: TextStyle(
-                            color: movie.isTV ? const Color(0xFF1565C0) : c.red,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder(BuildContext context) {
-    final c = context.c;
-    return Container(
-      color: c.card,
-      child: Center(
-        child: Icon(Icons.movie_rounded, color: c.border, size: 40),
-      ),
-    );
-  }
-}
-
-// ─── skeleton card ───────────────────────────────────────────────────────────
-class _SkeletonCard extends StatefulWidget {
-  final int delay;
-  const _SkeletonCard({required this.delay});
-  @override
-  State<_SkeletonCard> createState() => _SkeletonCardState();
-}
-
-class _SkeletonCardState extends State<_SkeletonCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _anim = Tween(
-      begin: 0.4,
-      end: 0.9,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _ctrl.repeat(reverse: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _anim,
-    builder: (context, child) => ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        color: Color.lerp(context.c.surface, context.c.cardHi, _anim.value),
-      ),
-    ),
-  );
-}
-
-// ─── language chip ────────────────────────────────────────────────────────────
-class _LangChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _LangChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Semantics(
-      label: label,
-      selected: selected,
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          height: 44,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? c.red.withValues(alpha: 0.15) : c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: selected ? c.red : c.border),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: selected ? c.red : c.dim,
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

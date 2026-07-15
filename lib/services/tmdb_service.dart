@@ -526,7 +526,8 @@ class TmdbService {
     final rawResults = json['results'];
     final Map<String, dynamic>? resultsByRegion =
         rawResults is Map<String, dynamic> ? rawResults : null;
-    final regionalData = resultsByRegion?[_region.toUpperCase()] as Map<String, dynamic>?;
+    final regionalData =
+        resultsByRegion?[_region.toUpperCase()] as Map<String, dynamic>?;
     final flatrate = regionalData?['flatrate'] as List<dynamic>? ?? [];
     final rent = regionalData?['rent'] as List<dynamic>? ?? [];
     final buy = regionalData?['buy'] as List<dynamic>? ?? [];

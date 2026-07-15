@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import 'main_shell.dart';
+import 'onboarding/genre_step.dart';
+import 'onboarding/favorite_pick_step.dart';
+import 'onboarding/rating_widgets.dart';
 
 const _rBerbat = AppColors.rBerbat;
 const _rEh = AppColors.rEh;
 const _rIyi = AppColors.rIyi;
 const _rHarika = AppColors.rHarika;
-
-const _kTotalSteps = 5;
 
 // ─── Genre data ──────────────────────────────────────────────────────────────
 const _movieGenres = [
@@ -269,7 +268,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildStep() {
     switch (_step) {
       case 0:
-        return _GenreStep(
+        return GenreStep(
           key: const ValueKey(0),
           stepIndex: 0,
           title:
@@ -293,7 +292,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onSkip: _skipOnboarding,
         );
       case 1:
-        return _GenreStep(
+        return GenreStep(
           key: const ValueKey(1),
           stepIndex: 1,
           title:
@@ -315,7 +314,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onSkip: _skipOnboarding,
         );
       case 2:
-        return _FavoritePickStep(
+        return FavoritePickStep(
           key: const ValueKey(2),
           stepIndex: 2,
           title:
@@ -331,7 +330,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onSkip: _skipOnboarding,
         );
       case 3:
-        return _FavoritePickStep(
+        return FavoritePickStep(
           key: const ValueKey(3),
           stepIndex: 3,
           title:
@@ -444,7 +443,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: FadeTransition(
               opacity: _fadeAnim,
-              child: _MovieCard(movie: movie),
+              child: OnboardingMovieCard(movie: movie),
             ),
           ),
         ),
@@ -470,26 +469,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                 ),
               ),
-              _RatingBtn(
+              OnboardingRatingBtn(
                 label:
                     AppLocalizations.of(context)?.get('profile_berbat') ?? '',
                 color: _rBerbat,
                 size: 68,
                 onTap: () => _rate(0),
               ),
-              _RatingBtn(
+              OnboardingRatingBtn(
                 label: AppLocalizations.of(context)?.get('profile_eh') ?? '',
                 color: _rEh,
                 size: 80,
                 onTap: () => _rate(1),
               ),
-              _RatingBtn(
+              OnboardingRatingBtn(
                 label: AppLocalizations.of(context)?.get('profile_iyi') ?? '',
                 color: _rIyi,
                 size: 80,
                 onTap: () => _rate(2),
               ),
-              _RatingBtn(
+              OnboardingRatingBtn(
                 label:
                     AppLocalizations.of(context)?.get('profile_harika') ?? '',
                 color: _rHarika,
@@ -524,697 +523,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─── Step dots helper ─────────────────────────────────────────────────────────
-Widget _buildDots(
-  BuildContext context,
-  int currentStep, {
-  VoidCallback? onSkip,
-}) {
-  final c = context.c;
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Row(
-        children: List.generate(_kTotalSteps, (i) {
-          return Padding(
-            padding: EdgeInsets.only(right: i < _kTotalSteps - 1 ? 6 : 0),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: i == currentStep ? 20 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: i == currentStep ? c.red : c.textFaint,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          );
-        }),
-      ),
-      if (onSkip != null)
-        GestureDetector(
-          onTap: onSkip,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: c.glassFill,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              AppLocalizations.of(context)?.get('onboarding_skip') ?? '',
-              style: TextStyle(
-                color: c.dim,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-    ],
-  );
-}
-
-// ─── Continue button helper ───────────────────────────────────────────────────
-Widget _buildContinueBtn(
-  BuildContext context, {
-  required String label,
-  required VoidCallback? onTap,
-}) {
-  final c = context.c;
-  final enabled = onTap != null;
-  return GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: enabled ? LinearGradient(colors: [c.red, c.crimson]) : null,
-        color: enabled ? null : c.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: TextStyle(
-          color: enabled ? Colors.white : c.dim,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    ),
-  );
-}
-
-// ─── Genre selection step ─────────────────────────────────────────────────────
-class _GenreStep extends StatelessWidget {
-  final int stepIndex;
-  final String title;
-  final String subtitle;
-  final List<(int, String, IconData)> genres;
-  final Set<int> selected;
-  final void Function(int) onToggle;
-  final VoidCallback? onNext;
-  final VoidCallback? onSkip;
-
-  const _GenreStep({
-    super.key,
-    required this.stepIndex,
-    required this.title,
-    required this.subtitle,
-    required this.genres,
-    required this.selected,
-    required this.onToggle,
-    required this.onNext,
-    this.onSkip,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDots(context, stepIndex, onSkip: onSkip),
-              const SizedBox(height: 22),
-              Text(
-                title,
-                style: TextStyle(
-                  color: c.ink,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(subtitle, style: TextStyle(color: c.dim, fontSize: 14)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: GridView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.0,
-            ),
-            itemCount: genres.length,
-            itemBuilder: (ctx, i) {
-              final (id, _, icon) = genres[i];
-              final name = PrefsService.genreName(id);
-              final isSel = selected.contains(id);
-              return GestureDetector(
-                onTap: () => onToggle(id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: BoxDecoration(
-                    color: isSel ? c.red.withValues(alpha: 0.12) : c.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSel ? c.red : c.textFaint,
-                      width: isSel ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, color: isSel ? c.red : c.dim, size: 26),
-                      const SizedBox(height: 8),
-                      Text(
-                        name,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        style: TextStyle(
-                          color: isSel ? c.ink : c.dim,
-                          fontSize: 11.5,
-                          fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: _buildContinueBtn(
-            context,
-            label:
-                AppLocalizations.of(context)?.get('onboarding_next') ?? 'Devam',
-            onTap: onNext,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Favourite pick step ──────────────────────────────────────────────────────
-class _FavoritePickStep extends StatefulWidget {
-  final int stepIndex;
-  final String title;
-  final bool isTV;
-  final TmdbService service;
-  final List<Movie> selected;
-  final void Function(Movie) onToggle;
-  final VoidCallback onNext;
-  final VoidCallback? onSkip;
-
-  const _FavoritePickStep({
-    super.key,
-    required this.stepIndex,
-    required this.title,
-    required this.isTV,
-    required this.service,
-    required this.selected,
-    required this.onToggle,
-    required this.onNext,
-    this.onSkip,
-  });
-
-  @override
-  State<_FavoritePickStep> createState() => _FavoritePickStepState();
-}
-
-class _FavoritePickStepState extends State<_FavoritePickStep> {
-  final _ctrl = TextEditingController();
-  List<Movie> _results = [];
-  bool _searching = false;
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _onSearch(String query) {
-    _debounce?.cancel();
-    setState(() {}); // suffix icon
-    if (query.trim().isEmpty) {
-      setState(() {
-        _results = [];
-        _searching = false;
-      });
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 400), () async {
-      if (!mounted) return;
-      setState(() => _searching = true);
-      final all = await widget.service.searchMulti(query);
-      final res = all.where((m) => m.isTV == widget.isTV).toList();
-      if (!mounted) return;
-      setState(() {
-        _results = res;
-        _searching = false;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final canAdd = widget.selected.length < 3;
-
-    return Column(
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDots(context, widget.stepIndex, onSkip: widget.onSkip),
-              const SizedBox(height: 22),
-              Text(
-                widget.title,
-                style: TextStyle(
-                  color: c.ink,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                AppLocalizations.of(context)?.get('onboarding_fav_desc') ?? '',
-                style: TextStyle(color: c.dim, fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              // Search box
-              Container(
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: c.border),
-                ),
-                child: TextField(
-                  controller: _ctrl,
-                  onChanged: _onSearch,
-                  style: TextStyle(color: c.ink, fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: widget.isTV
-                        ? (AppLocalizations.of(
-                                context,
-                              )?.get('onboarding_search_hint_tv') ??
-                              '')
-                        : (AppLocalizations.of(
-                                context,
-                              )?.get('onboarding_search_hint_movie') ??
-                              ''),
-                    hintStyle: TextStyle(color: c.dim),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: c.dim,
-                      size: 20,
-                    ),
-                    suffixIcon: _ctrl.text.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.close_rounded,
-                              color: c.dim,
-                              size: 18,
-                            ),
-                            tooltip:
-                                AppLocalizations.of(
-                                  context,
-                                )?.get('semantics_close') ??
-                                'Close',
-                            onPressed: () {
-                              HapticFeedback.lightImpact();
-                              _ctrl.clear();
-                              setState(() {
-                                _results = [];
-                                _searching = false;
-                              });
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Selected chips
-        if (widget.selected.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.selected.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (ctx, i) {
-                  final m = widget.selected[i];
-                  return GestureDetector(
-                    onTap: () => widget.onToggle(m),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: c.red.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: c.red, width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              m.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: c.ink,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Icon(Icons.close_rounded, color: c.red, size: 13),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-        // Results / empty state
-        Expanded(
-          child: _searching
-              ? const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white38,
-                    ),
-                  ),
-                )
-              : _results.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      _ctrl.text.isEmpty
-                          ? (widget.isTV
-                                ? (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_search_empty_tv') ??
-                                      '')
-                                : (AppLocalizations.of(
-                                        context,
-                                      )?.get('onboarding_search_empty_movie') ??
-                                      ''))
-                          : (AppLocalizations.of(
-                                  context,
-                                )?.get('search_no_results') ??
-                                ''),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.dim, fontSize: 14, height: 1.6),
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                  itemCount: _results.length,
-                  itemBuilder: (ctx, i) {
-                    final m = _results[i];
-                    final sel = widget.selected.any((s) => s.id == m.id);
-                    final disabled = !sel && !canAdd;
-                    return Semantics(
-                      label:
-                          '${m.title}${m.year.isNotEmpty ? ", ${m.year}" : ""}',
-                      button: true,
-                      selected: sel,
-                      enabled: !disabled,
-                      child: GestureDetector(
-                        onTap: disabled
-                            ? null
-                            : () {
-                                final willSelect = !sel;
-                                widget.onToggle(m);
-                                if (willSelect) {
-                                  _ctrl.clear();
-                                  setState(() {
-                                    _results = [];
-                                    _searching = false;
-                                  });
-                                }
-                              },
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 150),
-                          opacity: disabled ? 0.3 : 1.0,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: sel
-                                  ? c.red.withValues(alpha: 0.1)
-                                  : c.surface,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: sel ? c.red : c.border,
-                                width: sel ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.horizontal(
-                                    left: Radius.circular(9),
-                                  ),
-                                  child: m.posterUrl.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: m.posterUrl,
-                                          width: 44,
-                                          height: 64,
-                                          fit: BoxFit.cover,
-                                          placeholder: (context, url) =>
-                                              _posterPlaceholder(context),
-                                          errorWidget: (context, url, error) =>
-                                              _posterPlaceholder(context),
-                                        )
-                                      : _posterPlaceholder(context),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        m.title,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: c.ink,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      if (m.year.isNotEmpty)
-                                        Text(
-                                          m.year,
-                                          style: TextStyle(
-                                            color: c.dim,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: Icon(
-                                    sel
-                                        ? Icons.check_circle_rounded
-                                        : Icons.add_circle_outline_rounded,
-                                    color: sel ? c.red : c.dim,
-                                    size: 22,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-
-        // Continue button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: _buildContinueBtn(
-            context,
-            label: AppLocalizations.of(context)?.get('onboarding_next') ?? '',
-            onTap: widget.onNext,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _posterPlaceholder(BuildContext context) {
-    final c = context.c;
-    return Container(
-      width: 44,
-      height: 64,
-      color: c.surface,
-      child: Center(child: Icon(Icons.movie_rounded, color: c.dim, size: 18)),
-    );
-  }
-}
-
-// ─── Movie card (rating step) ─────────────────────────────────────────────────
-class _MovieCard extends StatelessWidget {
-  final Movie movie;
-  const _MovieCard({required this.movie});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Column(
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                movie.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: movie.posterUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => _placeholder(c),
-                        errorWidget: (context, url, error) => _placeholder(c),
-                      )
-                    : _placeholder(c),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      movie.isTV
-                          ? (AppLocalizations.of(
-                                  context,
-                                )?.get('onboarding_tv') ??
-                                '')
-                          : (AppLocalizations.of(
-                                  context,
-                                )?.get('onboarding_movie') ??
-                                ''),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          movie.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: c.ink,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        if (movie.year.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text('(${movie.year})', style: TextStyle(color: c.dim, fontSize: 14)),
-        ],
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _placeholder(ThemePalette c) => Container(
-    color: c.surface,
-    child: Center(child: Icon(Icons.movie_rounded, color: c.dim, size: 48)),
-  );
-}
-
-// ─── Rating button ────────────────────────────────────────────────────────────
-class _RatingBtn extends StatelessWidget {
-  final String label;
-  final Color color;
-  final double size;
-  final VoidCallback onTap;
-
-  const _RatingBtn({
-    required this.label,
-    required this.color,
-    required this.size,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size > 72 ? 13 : 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
     );
   }
 }

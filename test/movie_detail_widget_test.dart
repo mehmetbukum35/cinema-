@@ -33,45 +33,53 @@ void main() {
     expect(find.text(title), findsWidgets);
   });
 
-  testWidgets('SynergyBadge renders bolt icon and match text when personalizedMatchScore is present (EN)', (tester) async {
-    final movie = Movie(
-      id: 42,
-      title: 'Test Movie',
-      overview: 'Overview',
-      voteAverage: 8.0,
-    )..personalizedMatchScore = 85;
+  testWidgets(
+    'SynergyBadge renders bolt icon and match text when personalizedMatchScore is present (EN)',
+    (tester) async {
+      final movie = Movie(
+        id: 42,
+        title: 'Test Movie',
+        overview: 'Overview',
+        voteAverage: 8.0,
+      )..personalizedMatchScore = 85;
 
-    final service = detailTmdbService(title: 'Test Movie');
+      final service = detailTmdbService(title: 'Test Movie');
 
-    await tester.pumpWidget(
-      pumpApp(MovieDetailSheet(movie: movie, service: service)),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(
+        pumpApp(MovieDetailSheet(movie: movie, service: service)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.textContaining('Match'), findsOneWidget);
-  });
+      expect(find.textContaining('Match'), findsOneWidget);
+    },
+  );
 
-  testWidgets('SynergyBadge renders star icon and rating text when personalizedMatchScore is null (EN)', (tester) async {
-    final movie = Movie(
-      id: 42,
-      title: 'Test Movie',
-      overview: 'Overview',
-      voteAverage: 7.5,
-    );
+  testWidgets(
+    'SynergyBadge renders star icon and rating text when personalizedMatchScore is null (EN)',
+    (tester) async {
+      final movie = Movie(
+        id: 42,
+        title: 'Test Movie',
+        overview: 'Overview',
+        voteAverage: 7.5,
+      );
 
-    final service = detailTmdbService(title: 'Test Movie');
+      final service = detailTmdbService(title: 'Test Movie');
 
-    await tester.pumpWidget(
-      pumpApp(MovieDetailSheet(movie: movie, service: service)),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(
+        pumpApp(MovieDetailSheet(movie: movie, service: service)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('Rating: 7.5'), findsOneWidget);
-  });
+      expect(find.text('Rating: 7.5'), findsOneWidget);
+    },
+  );
 
-  testWidgets('SynergyBadge renders star icon and rating text in TR locale', (tester) async {
+  testWidgets('SynergyBadge renders star icon and rating text in TR locale', (
+    tester,
+  ) async {
     final movie = Movie(
       id: 42,
       title: 'Test Movie',

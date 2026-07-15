@@ -28,7 +28,8 @@ class CouchScreen extends ConsumerStatefulWidget {
   ConsumerState<CouchScreen> createState() => _CouchScreenState();
 }
 
-class _CouchScreenState extends ConsumerState<CouchScreen> with SingleTickerProviderStateMixin {
+class _CouchScreenState extends ConsumerState<CouchScreen>
+    with SingleTickerProviderStateMixin {
   // dispose() içinde ref KULLANILAMAZ ("Cannot use ref after the widget was
   // disposed"); notifier referansı initState'te alınır, dispose ref'siz çalışır.
   late final CouchNotifier _couch;
@@ -45,13 +46,16 @@ class _CouchScreenState extends ConsumerState<CouchScreen> with SingleTickerProv
       duration: const Duration(milliseconds: 300),
     );
 
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(
-      parent: _theirProgressAnimController!,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 50),
+          TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 50),
+        ]).animate(
+          CurvedAnimation(
+            parent: _theirProgressAnimController!,
+            curve: Curves.easeInOut,
+          ),
+        );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -174,10 +178,7 @@ class _CouchScreenState extends ConsumerState<CouchScreen> with SingleTickerProv
     } else if (session.status == 'ended') {
       body = _EndedView(session: session);
     } else {
-      body = _VotingView(
-        session: session,
-        scaleAnimation: _scaleAnimation,
-      );
+      body = _VotingView(session: session, scaleAnimation: _scaleAnimation);
     }
 
     return Scaffold(
@@ -313,10 +314,7 @@ class _VotingView extends ConsumerWidget {
   final CouchSession session;
   final Animation<double> scaleAnimation;
 
-  const _VotingView({
-    required this.session,
-    required this.scaleAnimation,
-  });
+  const _VotingView({required this.session, required this.scaleAnimation});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
