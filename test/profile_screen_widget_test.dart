@@ -96,89 +96,115 @@ void main() {
     expect(identity, findsWidgets);
   });
 
-  testWidgets('ProfileScreen displays Google unlink button and Google badge when google_sub is linked', (tester) async {
-    final mockApi = MockProfileApiService();
+  testWidgets(
+    'ProfileScreen displays Google unlink button and Google badge when google_sub is linked',
+    (tester) async {
+      final mockApi = MockProfileApiService();
 
-    await tester.pumpWidget(pumpApp(
-      const ProfileScreen(),
-      overrides: [
-        apiServiceProvider.overrideWithValue(mockApi),
-        authProvider.overrideWith((ref) {
-          final notifier = AuthNotifier(mockApi, ref);
-          notifier.state = AuthState(
-            accessToken: 'access_token',
-            user: {
-              'id': 1,
-              'email': 'user@google.com',
-              'display_name': 'Google User',
-              'google_sub': 'google_123',
-            },
-          );
-          return notifier;
-        }),
-      ],
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(
+        pumpApp(
+          const ProfileScreen(),
+          overrides: [
+            apiServiceProvider.overrideWithValue(mockApi),
+            authProvider.overrideWith((ref) {
+              final notifier = AuthNotifier(mockApi, ref);
+              notifier.state = AuthState(
+                accessToken: 'access_token',
+                user: {
+                  'id': 1,
+                  'email': 'user@google.com',
+                  'display_name': 'Google User',
+                  'google_sub': 'google_123',
+                },
+              );
+              return notifier;
+            }),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Google'), findsOneWidget);
-    
-    final scrollFinder = find.byType(CustomScrollView);
-    await tester.drag(scrollFinder, const Offset(0, -600));
-    await tester.pump();
-    
-    final googleUnlinkText = find.byWidgetPredicate(
-      (w) => w is Text && w.data != null && (w.data!.contains('Google Bağlantısını Kaldır') || w.data!.contains('Unlink Google Account')),
-    );
-    expect(googleUnlinkText, findsWidgets);
-    
-    expect(find.text('Apple'), findsNothing);
-    final appleUnlinkText = find.byWidgetPredicate(
-      (w) => w is Text && w.data != null && (w.data!.contains('Apple Bağlantısını Kaldır') || w.data!.contains('Unlink Apple Account')),
-    );
-    expect(appleUnlinkText, findsNothing);
-  });
+      expect(find.text('Google'), findsOneWidget);
 
-  testWidgets('ProfileScreen displays Apple unlink button and Apple badge when apple_sub is linked', (tester) async {
-    final mockApi = MockProfileApiService();
+      final scrollFinder = find.byType(CustomScrollView);
+      await tester.drag(scrollFinder, const Offset(0, -600));
+      await tester.pump();
 
-    await tester.pumpWidget(pumpApp(
-      const ProfileScreen(),
-      overrides: [
-        apiServiceProvider.overrideWithValue(mockApi),
-        authProvider.overrideWith((ref) {
-          final notifier = AuthNotifier(mockApi, ref);
-          notifier.state = AuthState(
-            accessToken: 'access_token',
-            user: {
-              'id': 2,
-              'email': 'user@apple.com',
-              'display_name': 'Apple User',
-              'apple_sub': 'apple_456',
-            },
-          );
-          return notifier;
-        }),
-      ],
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      final googleUnlinkText = find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.data != null &&
+            (w.data!.contains('Google Bağlantısını Kaldır') ||
+                w.data!.contains('Unlink Google Account')),
+      );
+      expect(googleUnlinkText, findsWidgets);
 
-    expect(find.text('Apple'), findsOneWidget);
-    
-    final scrollFinder = find.byType(CustomScrollView);
-    await tester.drag(scrollFinder, const Offset(0, -600));
-    await tester.pump();
-    
-    final appleUnlinkText = find.byWidgetPredicate(
-      (w) => w is Text && w.data != null && (w.data!.contains('Apple Bağlantısını Kaldır') || w.data!.contains('Unlink Apple Account')),
-    );
-    expect(appleUnlinkText, findsWidgets);
+      expect(find.text('Apple'), findsNothing);
+      final appleUnlinkText = find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.data != null &&
+            (w.data!.contains('Apple Bağlantısını Kaldır') ||
+                w.data!.contains('Unlink Apple Account')),
+      );
+      expect(appleUnlinkText, findsNothing);
+    },
+  );
 
-    expect(find.text('Google'), findsNothing);
-    final googleUnlinkText = find.byWidgetPredicate(
-      (w) => w is Text && w.data != null && (w.data!.contains('Google Bağlantısını Kaldır') || w.data!.contains('Unlink Google Account')),
-    );
-    expect(googleUnlinkText, findsNothing);
-  });
+  testWidgets(
+    'ProfileScreen displays Apple unlink button and Apple badge when apple_sub is linked',
+    (tester) async {
+      final mockApi = MockProfileApiService();
+
+      await tester.pumpWidget(
+        pumpApp(
+          const ProfileScreen(),
+          overrides: [
+            apiServiceProvider.overrideWithValue(mockApi),
+            authProvider.overrideWith((ref) {
+              final notifier = AuthNotifier(mockApi, ref);
+              notifier.state = AuthState(
+                accessToken: 'access_token',
+                user: {
+                  'id': 2,
+                  'email': 'user@apple.com',
+                  'display_name': 'Apple User',
+                  'apple_sub': 'apple_456',
+                },
+              );
+              return notifier;
+            }),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Apple'), findsOneWidget);
+
+      final scrollFinder = find.byType(CustomScrollView);
+      await tester.drag(scrollFinder, const Offset(0, -600));
+      await tester.pump();
+
+      final appleUnlinkText = find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.data != null &&
+            (w.data!.contains('Apple Bağlantısını Kaldır') ||
+                w.data!.contains('Unlink Apple Account')),
+      );
+      expect(appleUnlinkText, findsWidgets);
+
+      expect(find.text('Google'), findsNothing);
+      final googleUnlinkText = find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.data != null &&
+            (w.data!.contains('Google Bağlantısını Kaldır') ||
+                w.data!.contains('Unlink Google Account')),
+      );
+      expect(googleUnlinkText, findsNothing);
+    },
+  );
 }

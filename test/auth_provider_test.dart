@@ -439,72 +439,78 @@ void main() {
       },
     );
 
-    test('unlinkGoogle should call API and update state by removing google_sub', () async {
-      final notifier = container.read(authProvider.notifier);
-      await pumpEventQueue();
-      
-      notifier.state = notifier.state.copyWith(
-        accessToken: 'access',
-        user: {
-          'id': 1,
-          'email': 'test@example.com',
-          'google_sub': 'google_123',
-        },
-      );
-      
-      expect(container.read(authProvider).user?['google_sub'], 'google_123');
-      
-      final success = await notifier.unlinkGoogle('password123');
-      expect(success, isTrue);
-      expect(mockApi.unlinkGoogleCalled, isTrue);
-      expect(container.read(authProvider).user?['google_sub'], isNull);
-      
-      final storedUser = await PrefsService.getUserData();
-      expect(storedUser?['google_sub'], isNull);
-    });
+    test(
+      'unlinkGoogle should call API and update state by removing google_sub',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
 
-    test('unlinkApple should call API and update state by removing apple_sub', () async {
-      final notifier = container.read(authProvider.notifier);
-      await pumpEventQueue();
-      
-      notifier.state = notifier.state.copyWith(
-        accessToken: 'access',
-        user: {
-          'id': 1,
-          'email': 'test@example.com',
-          'apple_sub': 'apple_456',
-        },
-      );
-      
-      expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
-      
-      final success = await notifier.unlinkApple('password123');
-      expect(success, isTrue);
-      expect(mockApi.unlinkAppleCalled, isTrue);
-      expect(container.read(authProvider).user?['apple_sub'], isNull);
-      
-      final storedUser = await PrefsService.getUserData();
-      expect(storedUser?['apple_sub'], isNull);
-    });
+        notifier.state = notifier.state.copyWith(
+          accessToken: 'access',
+          user: {
+            'id': 1,
+            'email': 'test@example.com',
+            'google_sub': 'google_123',
+          },
+        );
 
-    test('refreshUser should fetch updated user profile and merge it into state', () async {
-      final notifier = container.read(authProvider.notifier);
-      await pumpEventQueue();
-      
-      notifier.state = notifier.state.copyWith(
-        accessToken: 'access',
-        user: {
-          'id': 1,
-          'email': 'test@example.com',
-        },
-      );
-      
-      expect(container.read(authProvider).user?['google_sub'], isNull);
-      
-      await notifier.refreshUser();
-      expect(mockApi.getMeCalled, isTrue);
-      expect(container.read(authProvider).user?['google_sub'], 'google_123');
-      expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
-    });
+        expect(container.read(authProvider).user?['google_sub'], 'google_123');
+
+        final success = await notifier.unlinkGoogle('password123');
+        expect(success, isTrue);
+        expect(mockApi.unlinkGoogleCalled, isTrue);
+        expect(container.read(authProvider).user?['google_sub'], isNull);
+
+        final storedUser = await PrefsService.getUserData();
+        expect(storedUser?['google_sub'], isNull);
+      },
+    );
+
+    test(
+      'unlinkApple should call API and update state by removing apple_sub',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        notifier.state = notifier.state.copyWith(
+          accessToken: 'access',
+          user: {
+            'id': 1,
+            'email': 'test@example.com',
+            'apple_sub': 'apple_456',
+          },
+        );
+
+        expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
+
+        final success = await notifier.unlinkApple('password123');
+        expect(success, isTrue);
+        expect(mockApi.unlinkAppleCalled, isTrue);
+        expect(container.read(authProvider).user?['apple_sub'], isNull);
+
+        final storedUser = await PrefsService.getUserData();
+        expect(storedUser?['apple_sub'], isNull);
+      },
+    );
+
+    test(
+      'refreshUser should fetch updated user profile and merge it into state',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        notifier.state = notifier.state.copyWith(
+          accessToken: 'access',
+          user: {'id': 1, 'email': 'test@example.com'},
+        );
+
+        expect(container.read(authProvider).user?['google_sub'], isNull);
+
+        await notifier.refreshUser();
+        expect(mockApi.getMeCalled, isTrue);
+        expect(container.read(authProvider).user?['google_sub'], 'google_123');
+        expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
+      },
+    );
   });
 }

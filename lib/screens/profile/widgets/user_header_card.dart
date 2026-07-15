@@ -215,11 +215,7 @@ class UserHeaderCard extends ConsumerWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      Icons.apple,
-                                      size: 11,
-                                      color: c.ink,
-                                    ),
+                                    Icon(Icons.apple, size: 11, color: c.ink),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Apple',
