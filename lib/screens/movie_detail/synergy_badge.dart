@@ -3,6 +3,7 @@ import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/spring_button.dart';
+import '../../widgets/responsive_layout.dart';
 
 /// Sinerji Skoru rozeti: kişisel uyum + (yeterliyse) topluluk skoru + TMDB
 /// puanının ağırlıklı karması. Dokununca skor dökümü diyaloğu açılır.
@@ -112,10 +113,12 @@ class SynergyBadge extends StatelessWidget {
   ) {
     final isTr = AppLocalizations.of(context)?.locale.languageCode == 'tr';
     final hasPersonalScore = movie.personalizedMatchScore != null;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final scoreDiameter = 90.0 * textScale.clamp(1.0, 2.0);
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => ResponsiveAlertDialog(
         backgroundColor: c.card,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -139,8 +142,8 @@ class SynergyBadge extends StatelessWidget {
             const SizedBox(height: 10),
             // Featured score circle
             Container(
-              width: 90,
-              height: 90,
+              width: scoreDiameter,
+              height: scoreDiameter,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: (hasPersonalScore ? c.green : c.gold).withValues(
@@ -280,26 +283,24 @@ class SynergyBadge extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: c.dim,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+          AdaptiveLabelValueRow(
+            label: Text(
+              label,
+              style: TextStyle(
+                color: c.dim,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            value: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 6),
           ClipRRect(

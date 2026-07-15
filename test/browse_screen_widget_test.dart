@@ -5,6 +5,7 @@ import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/widgets/shimmer.dart';
 import 'mocks/secure_storage_mock.dart';
 import 'helpers/widget_test_helpers.dart';
+import 'support/responsive_test_matrix.dart';
 
 void main() {
   setupSecureStorageMock();
@@ -13,15 +14,16 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('BrowseScreen shows skeleton while loading', (tester) async {
-    await tester.pumpWidget(
-      pumpApp(
-        const BrowseScreen(),
-        overrides: [tmdbServiceProvider.overrideWithValue(emptyTmdbService())],
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byType(Shimmer), findsWidgets);
-  });
+  responsiveTestWidgets(
+    'BrowseScreen loading layout remains responsive',
+    (testCase) => pumpApp(
+      const BrowseScreen(),
+      locale: testCase.locale,
+      mediaQueryData: testCase.mediaQueryData,
+      overrides: [tmdbServiceProvider.overrideWithValue(emptyTmdbService())],
+    ),
+    verify: (tester, testCase) async {
+      expect(find.byType(Shimmer), findsWidgets);
+    },
+  );
 }

@@ -5,6 +5,7 @@ import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/screens/movie_detail_sheet.dart';
 import 'mocks/secure_storage_mock.dart';
 import 'helpers/widget_test_helpers.dart';
+import 'support/responsive_test_matrix.dart';
 
 void main() {
   setupSecureStorageMock();
@@ -100,4 +101,44 @@ void main() {
 
     expect(find.text('Puan: 7.5'), findsOneWidget);
   });
+
+  responsiveTestWidgets(
+    'rating details dialog remains responsive',
+    (testCase) {
+      final movie = Movie(
+        id: 42,
+        title: 'Test Movie',
+        overview: 'Overview',
+        voteAverage: 7.1,
+      );
+      final service = detailTmdbService(title: 'Test Movie');
+      return pumpApp(
+        MovieDetailSheet(movie: movie, service: service),
+        locale: testCase.locale,
+        mediaQueryData: testCase.mediaQueryData,
+      );
+    },
+    verify: (tester, testCase) async {
+      await tester.pumpAndSettle();
+      expectNoResponsiveLayoutException(
+        tester,
+        stage: '${testCase.name} before opening rating dialog',
+      );
+
+      final badge = testCase.locale.languageCode == 'tr'
+          ? find.text('Puan: 7.1')
+          : find.text('Rating: 7.1');
+      await tester.tap(badge);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          testCase.locale.languageCode == 'tr'
+              ? 'Puan Detayları'
+              : 'Rating Details',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/screens/social_screen.dart';
 import 'mocks/secure_storage_mock.dart';
 import 'helpers/widget_test_helpers.dart';
+import 'support/responsive_test_matrix.dart';
 
 void main() {
   setupSecureStorageMock();
@@ -11,13 +12,19 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('SocialScreen renders tab labels', (tester) async {
-    await tester.pumpWidget(pumpApp(const SocialScreen()));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.text('Friends'), findsOneWidget);
-    expect(find.text('Requests'), findsOneWidget);
-    expect(find.text('Popular'), findsOneWidget);
-  });
+  responsiveTestWidgets(
+    'SocialScreen tab layout remains responsive',
+    (testCase) => pumpApp(
+      const SocialScreen(),
+      locale: testCase.locale,
+      mediaQueryData: testCase.mediaQueryData,
+    ),
+    verify: (tester, testCase) async {
+      await tester.pump(const Duration(milliseconds: 100));
+      final isTr = testCase.locale.languageCode == 'tr';
+      expect(find.text(isTr ? 'Arkadaşlar' : 'Friends'), findsOneWidget);
+      expect(find.text(isTr ? 'İstekler' : 'Requests'), findsOneWidget);
+      expect(find.text(isTr ? 'Popüler' : 'Popular'), findsOneWidget);
+    },
+  );
 }

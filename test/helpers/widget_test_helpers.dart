@@ -11,11 +11,18 @@ Widget pumpApp(
   Widget child, {
   List<Override> overrides = const [],
   Locale locale = const Locale('en', 'US'),
+  MediaQueryData? mediaQueryData,
 }) {
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
       locale: locale,
+      builder: mediaQueryData == null
+          ? null
+          : (context, child) => MediaQuery(
+              data: mediaQueryData,
+              child: child ?? const SizedBox.shrink(),
+            ),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: child,
