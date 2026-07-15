@@ -699,6 +699,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> refreshUser() async {
+    if (!state.isAuthenticated) return;
+    try {
+      final userData = await _apiService.getMe();
+      final user = Map<String, dynamic>.from(state.user ?? {});
+      user.addAll(userData);
+      await PrefsService.saveUserData(user);
+      if (mounted) {
+        state = state.copyWith(user: user);
+      }
+    } catch (e, st) {
+      debugPrint("Failed to refresh user profile from /me: $e\n$st");
+    }
+  }
+
   // POST /auth/forgot-password
   Future<bool> forgotPassword(String email) async {
     state = state.copyWith(loading: true, error: null);

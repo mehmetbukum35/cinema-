@@ -154,6 +154,87 @@ class UserHeaderCard extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(color: c.dim, fontSize: 12),
                       ),
+                      if (isLoggedIn) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (user?['google_sub'] != null &&
+                                (user!['google_sub'] as String).isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: Colors.blue.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'G',
+                                        style: TextStyle(
+                                          color: Color(0xFF4285F4),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Google',
+                                        style: TextStyle(
+                                          color: c.dim,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (user?['apple_sub'] != null &&
+                                (user!['apple_sub'] as String).isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: c.dim.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: c.dim.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.apple,
+                                      size: 11,
+                                      color: c.ink,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Apple',
+                                      style: TextStyle(
+                                        color: c.dim,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

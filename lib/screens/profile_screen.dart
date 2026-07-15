@@ -352,6 +352,7 @@ class ProfileScreen extends ConsumerWidget {
         await Future.wait([
           ref.read(watchlistProvider.notifier).load(),
           ref.read(statsProvider.notifier).load(),
+          ref.read(authProvider.notifier).refreshUser(),
         ]);
       },
       child: CustomScrollView(

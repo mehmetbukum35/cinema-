@@ -38,6 +38,9 @@ class MockApiService implements ApiService {
   bool changePasswordCalled = false;
   bool forgotPasswordCalled = false;
   bool resendVerificationCalled = false;
+  bool unlinkGoogleCalled = false;
+  bool unlinkAppleCalled = false;
+  bool getMeCalled = false;
 
   @override
   Future<Map<String, dynamic>> login({
@@ -90,10 +93,53 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<void> unlinkGoogle({required String password}) async {
+    unlinkGoogleCalled = true;
+  }
+
+  @override
+  Future<void> unlinkApple({required String password}) async {
+    unlinkAppleCalled = true;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getMe() async {
+    getMeCalled = true;
+    return {
+      'id': 1,
+      'email': 'test@example.com',
+      'username': 'testuser',
+      'display_name': 'Test User',
+      'is_public': 1,
+      'google_sub': 'google_123',
+      'apple_sub': 'apple_456',
+    };
+  }
+
+  @override
   Future<Map<String, dynamic>> getRecommendations() async => {
     'recommendations': [],
     'unseen': 0,
   };
+
+  @override
+  Future<Map<String, dynamic>> getSentRecommendations() async => {
+    'recommendations': [],
+  };
+
+  @override
+  Future<Map<String, dynamic>> push(dynamic payload) async => {
+    'server_time': DateTime.now().millisecondsSinceEpoch,
+  };
+
+  @override
+  Future<Map<String, dynamic>> pull(int since) async => {
+    'changes': [],
+    'server_time': DateTime.now().millisecondsSinceEpoch,
+  };
+
+  @override
+  Future<void> registerToken() async {}
 
   @override
   Future<Map<String, dynamic>> getFriends() async => {
@@ -107,6 +153,12 @@ class MockApiService implements ApiService {
 
   @override
   Future<Map<String, dynamic>> getTopProfiles() async => {'profiles': []};
+
+  @override
+  Future<List<dynamic>> getAllTasteMatches() async => [];
+
+  @override
+  Future<void> publishTasteDna(dynamic dna) async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -123,12 +175,15 @@ void main() {
     mockApi = MockApiService();
     container = ProviderContainer(
       overrides: [
+        apiServiceProvider.overrideWithValue(mockApi),
         authProvider.overrideWith((ref) => AuthNotifier(mockApi, ref)),
       ],
     );
   });
 
-  tearDown(() {
+  tearDown(() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     container.dispose();
   });
 
@@ -383,5 +438,73 @@ void main() {
         expect(container.read(authProvider).isAuthenticated, isFalse);
       },
     );
+
+    test('unlinkGoogle should call API and update state by removing google_sub', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      
+      notifier.state = notifier.state.copyWith(
+        accessToken: 'access',
+        user: {
+          'id': 1,
+          'email': 'test@example.com',
+          'google_sub': 'google_123',
+        },
+      );
+      
+      expect(container.read(authProvider).user?['google_sub'], 'google_123');
+      
+      final success = await notifier.unlinkGoogle('password123');
+      expect(success, isTrue);
+      expect(mockApi.unlinkGoogleCalled, isTrue);
+      expect(container.read(authProvider).user?['google_sub'], isNull);
+      
+      final storedUser = await PrefsService.getUserData();
+      expect(storedUser?['google_sub'], isNull);
+    });
+
+    test('unlinkApple should call API and update state by removing apple_sub', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      
+      notifier.state = notifier.state.copyWith(
+        accessToken: 'access',
+        user: {
+          'id': 1,
+          'email': 'test@example.com',
+          'apple_sub': 'apple_456',
+        },
+      );
+      
+      expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
+      
+      final success = await notifier.unlinkApple('password123');
+      expect(success, isTrue);
+      expect(mockApi.unlinkAppleCalled, isTrue);
+      expect(container.read(authProvider).user?['apple_sub'], isNull);
+      
+      final storedUser = await PrefsService.getUserData();
+      expect(storedUser?['apple_sub'], isNull);
+    });
+
+    test('refreshUser should fetch updated user profile and merge it into state', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      
+      notifier.state = notifier.state.copyWith(
+        accessToken: 'access',
+        user: {
+          'id': 1,
+          'email': 'test@example.com',
+        },
+      );
+      
+      expect(container.read(authProvider).user?['google_sub'], isNull);
+      
+      await notifier.refreshUser();
+      expect(mockApi.getMeCalled, isTrue);
+      expect(container.read(authProvider).user?['google_sub'], 'google_123');
+      expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
+    });
   });
 }

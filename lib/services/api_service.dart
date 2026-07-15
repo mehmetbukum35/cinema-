@@ -391,6 +391,20 @@ class ApiService {
     }
   }
 
+  // GET /me (Get Current User Profile)
+  Future<Map<String, dynamic>> getMe() async {
+    final response = await _request('GET', '/me', requireAuth: true);
+    if (response.statusCode != 200) {
+      final data = _decodeJsonMap(response.body);
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Profil alınamadı.',
+        code: data['code'] as String?,
+      );
+    }
+    return _decodeJsonMap(response.body);
+  }
+
   // DELETE /me (Delete Account)
   Future<void> deleteAccount() async {
     final response = await _request('DELETE', '/me', requireAuth: true);
