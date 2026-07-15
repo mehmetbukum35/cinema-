@@ -11,6 +11,7 @@ if (!function_exists('json_out')) {
     {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
+        cinema_send_request_id_header();
         echo json_encode($body, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -26,7 +27,7 @@ if (!function_exists('fail')) {
      */
     function fail(int $status, string $msg, ?string $code = null): void
     {
-        $body = ['error' => $msg];
+        $body = ['error' => $msg, 'request_id' => cinema_request_id()];
         if ($code !== null) {
             $body['code'] = $code;
         }
@@ -309,13 +310,78 @@ function comment_flagged(string $c): bool
  * cinema+ merkezi hata loglama yardımcı fonksiyonu.
  * Bağlamsal verileri (IP, Rota, Kullanıcı ID) otomatik ekler.
  */
+function cinema_request_id(): string
+{
+    static $requestId = null;
+    if ($requestId !== null) {
+        return $requestId;
+    }
+
+    $incoming = trim((string) ($_SERVER['HTTP_X_REQUEST_ID'] ?? ''));
+    if ($incoming !== '' && preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/', $incoming)) {
+        return $requestId = $incoming;
+    }
+
+    try {
+        return $requestId = bin2hex(random_bytes(16));
+    } catch (Throwable) {
+        return $requestId = str_replace('.', '', uniqid('', true));
+    }
+}
+
+function cinema_send_request_id_header(): void
+{
+    if (!headers_sent()) {
+        header('X-Request-ID: ' . cinema_request_id());
+    }
+}
+
+/** Remove credentials and personal secrets before context reaches a log sink. */
+function cinema_redact(mixed $value, ?string $key = null): mixed
+{
+    if ($key !== null && preg_match(
+        '/password|passwd|authorization|cookie|token|secret|api[_-]?key|verification[_-]?code|reset[_-]?code/i',
+        $key
+    )) {
+        return '[REDACTED]';
+    }
+    if (is_array($value)) {
+        $clean = [];
+        foreach ($value as $childKey => $childValue) {
+            $clean[$childKey] = cinema_redact($childValue, (string) $childKey);
+        }
+        return $clean;
+    }
+    if (is_string($value)) {
+        $value = preg_replace('/Bearer\s+[A-Za-z0-9._~+\/-]+=*/i', 'Bearer [REDACTED]', $value) ?? $value;
+        $value = preg_replace('/([?&](?:token|key|code|secret|password)=)[^&\s]+/i', '$1[REDACTED]', $value) ?? $value;
+    }
+    return $value;
+}
+
+function cinema_log(string $level, string $message, array $context = []): void
+{
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    $route = (string) (parse_url($uri, PHP_URL_PATH) ?: '/');
+    $entry = [
+        'timestamp' => gmdate('c'),
+        'service' => 'cinema-plus-api',
+        'level' => strtoupper($level),
+        'message' => cinema_redact($message),
+        'request_id' => cinema_request_id(),
+        'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+        'route' => $route,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'context' => cinema_redact($context),
+    ];
+    error_log((string) json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+/** Backwards-compatible central error logger used throughout the backend. */
 function cinema_error(string $message, ?int $uid = null, ?string $route = null): void
 {
-    $uidStr = $uid !== null ? " [UID: $uid]" : "";
-    $routeStr = $route !== null ? " [Route: $route]" : "";
-    if ($route === null) {
-        $routeStr = isset($_SERVER['REQUEST_URI']) ? " [Route: " . $_SERVER['REQUEST_URI'] . "]" : "";
-    }
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    error_log("cinema+ ERROR$uidStr$routeStr [IP: $ip]: $message");
+    $context = [];
+    if ($uid !== null) $context['user_id'] = $uid;
+    if ($route !== null) $context['route_override'] = $route;
+    cinema_log('error', $message, $context);
 }

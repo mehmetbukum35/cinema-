@@ -3,6 +3,10 @@ declare(strict_types=1);
 // Bu dosyayı "Config.php" olarak kopyala ve gerçek değerlerle doldur.
 // Config.php'yi ASLA repoya ekleme (.gitignore'da olmalı) ve web kök dizini DIŞINDA tut.
 return [
+    // Boş bırakılırsa PHP/SAPI varsayılan error_log hedefi kullanılır. Üretimde
+    // web kökü dışında, yazılabilir bir dosya yolu veya merkezi log collector
+    // tarafından toplanan stderr hedefi kullanın.
+    'error_log_file' => '',
     'db' => [
         'host'    => 'localhost',
         'name'    => 'your_database_name',

@@ -25,6 +25,10 @@ void main() {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.path, '/api/auth/login');
+        expect(
+          request.headers['x-request-id'],
+          matches(RegExp(r'^[a-f0-9]{32}$')),
+        );
 
         final body = jsonDecode(request.body);
         expect(body['email'], 'test@example.com');
@@ -192,6 +196,7 @@ void main() {
 
     test('should automatically refresh token on 401', () async {
       int requestCount = 0;
+      String? originalRequestId;
 
       // 1. Arrange: Mock client handles:
       // - First request returns 401
@@ -202,6 +207,8 @@ void main() {
         if (requestCount == 1) {
           expect(request.url.path, '/api/social/friends');
           expect(request.headers['Authorization'], 'Bearer initial_access');
+          originalRequestId = request.headers['x-request-id'];
+          expect(originalRequestId, matches(RegExp(r'^[a-f0-9]{32}$')));
           return http.Response('Unauthorized', 401);
         } else if (requestCount == 2) {
           expect(request.url.path, '/api/auth/refresh');
@@ -219,6 +226,7 @@ void main() {
         } else {
           expect(request.url.path, '/api/social/friends');
           expect(request.headers['Authorization'], 'Bearer refreshed_access');
+          expect(request.headers['x-request-id'], originalRequestId);
           return http.Response(
             jsonEncode({
               'friends': [],
@@ -240,6 +248,47 @@ void main() {
       expect(requestCount, 3); // 1 original + 1 refresh + 1 retry
       expect(await PrefsService.getAccessToken(), 'refreshed_access');
       expect(await PrefsService.getRefreshToken(), 'refreshed_refresh');
+    });
+
+    test('concurrent 401 responses should share one token refresh', () async {
+      var refreshCount = 0;
+      var protectedCount = 0;
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/auth/refresh') {
+          refreshCount++;
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          return http.Response(
+            jsonEncode({
+              'tokens': {
+                'access_token': 'shared_access',
+                'refresh_token': 'shared_refresh',
+              },
+            }),
+            200,
+          );
+        }
+
+        protectedCount++;
+        if (request.headers['Authorization'] == 'Bearer initial_access') {
+          return http.Response('Unauthorized', 401);
+        }
+        expect(request.headers['Authorization'], 'Bearer shared_access');
+        return http.Response(
+          jsonEncode({
+            'friends': [],
+            'pending_received': [],
+            'pending_sent': [],
+          }),
+          200,
+        );
+      });
+
+      final apiService = ApiService(client: mockClient);
+      await Future.wait(List.generate(3, (_) => apiService.getFriends()));
+
+      expect(refreshCount, 1);
+      expect(protectedCount, 6);
     });
 
     test('getTasteMatch should call taste endpoint and parse score', () async {

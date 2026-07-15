@@ -66,6 +66,19 @@ cd backend && composer test
 
 CI runs format check, analyze, Flutter tests with coverage, and PHPUnit on push/PR to `main`.
 
+## Error monitoring
+
+- Release builds on Android, iOS, and macOS report uncaught Flutter, platform,
+  and asynchronous errors to Firebase Crashlytics. Collection stays disabled in
+  debug builds.
+- Every API call carries an `X-Request-ID`. The backend returns the same header
+  and includes it in structured JSON error logs, so a mobile failure can be
+  correlated with its server-side event.
+- Backend logs redact passwords, auth headers, cookies, tokens, secrets, API
+  keys, and verification/reset codes. Set `error_log_file` in the production
+  `Config.php` to a path outside the web root, or leave it empty for the host's
+  central PHP log sink.
+
 ## Architecture
 
 - **State:** Riverpod

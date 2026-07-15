@@ -1,41 +1,44 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'app_config.dart';
-import 'prefs_service.dart';
-import '../models/social.dart';
 
-/// Refresh denemesinin sonucu:
-/// - [success]: yeni token çifti alındı, istek yeniden denenebilir.
-/// - [denied]: sunucu refresh token'ı REDDETTİ (401/403/422) → oturum gerçekten
-///   bitti, yerel oturum temizlenmeli.
-/// - [transient]: ağ/sunucu hatası (timeout, 5xx…) → token hâlâ geçerli
-///   olabilir; oturum ASLA düşürülmez, istek başarısız bırakılır.
+import '../models/social.dart';
+import 'app_config.dart';
+import 'crash_reporting_service.dart';
+import 'prefs_service.dart';
+
+part 'api/auth_api.dart';
+part 'api/couch_api.dart';
+part 'api/recommendation_api.dart';
+part 'api/social_api.dart';
+part 'api/sync_api.dart';
+
 enum RefreshOutcome { success, denied, transient }
 
-class ApiService {
+/// Shared HTTP transport for headers, retries, refresh, correlation, and errors.
+class ApiClient {
   static const _kRequestTimeout = Duration(seconds: 20);
-
   static String get baseUrl => AppConfig.apiBaseUrl;
-  static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
-
-  /// Web profil URL'i. Uygulama diline göre ?lang=en|tr eklenir.
-  static String webProfileUrl(String username, {String lang = 'tr'}) =>
-      '$webProfileBaseUrl/$username?lang=$lang';
   final http.Client _client;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
-
-  ApiService({http.Client? client, this.onSessionExpired})
+  ApiClient({http.Client? client, this.onSessionExpired})
     : _client = client ?? http.Client();
 
-  // Helper to construct headers with optional authorization bearer token
-  Future<Map<String, String>> _getHeaders({bool requireAuth = true}) async {
+  Future<Map<String, String>> _getHeaders({
+    bool requireAuth = true,
+    String? requestId,
+  }) async {
     final Map<String, String> headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+    if (requestId case final requestId?) {
+      headers['X-Request-ID'] = requestId;
+    }
     if (requireAuth) {
       final token = await PrefsService.getAccessToken();
       if (token != null) {
@@ -48,15 +51,26 @@ class ApiService {
   Future<http.Response> _withTimeout(Future<http.Response> request) =>
       request.timeout(_kRequestTimeout);
 
-  // Base HTTP request wrapper with automatic 401 handling (token refresh)
+  String _newRequestId() {
+    final random = Random.secure();
+    return List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+  }
+
   Future<http.Response> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
     bool requireAuth = true,
   }) async {
+    final requestId = _newRequestId();
     final url = Uri.parse('$baseUrl$path');
-    final headers = await _getHeaders(requireAuth: requireAuth);
+    final headers = await _getHeaders(
+      requireAuth: requireAuth,
+      requestId: requestId,
+    );
     final String? bodyStr = body != null ? jsonEncode(body) : null;
 
     http.Response response;
@@ -85,7 +99,10 @@ class ApiService {
       final outcome = await _attemptTokenRefresh();
       if (outcome == RefreshOutcome.success) {
         // Retry the request with the new access token
-        final newHeaders = await _getHeaders(requireAuth: true);
+        final newHeaders = await _getHeaders(
+          requireAuth: true,
+          requestId: requestId,
+        );
         if (method == 'POST') {
           response = await _withTimeout(
             _client.post(url, headers: newHeaders, body: bodyStr),
@@ -111,6 +128,17 @@ class ApiService {
 
     if (response.statusCode == 429) {
       _throwRateLimited(response);
+    }
+
+    if (response.statusCode >= 500) {
+      final serverRequestId = response.headers['x-request-id'] ?? requestId;
+      unawaited(
+        CrashReportingService.record(
+          StateError('API ${response.statusCode}: $method $path'),
+          StackTrace.current,
+          reason: 'Backend request_id=$serverRequestId',
+        ),
+      );
     }
 
     return response;
@@ -145,7 +173,6 @@ class ApiService {
     throw ApiException(statusCode: 429, message: message, code: code);
   }
 
-  // Attempts to refresh access token using the stored refresh token
   Future<RefreshOutcome> _attemptTokenRefresh() async {
     if (_refreshFuture != null) {
       debugPrint(
@@ -206,1034 +233,16 @@ class ApiService {
 
     return completer.future;
   }
+}
 
-  // ─── Auth Endpoints ──────────────────────────────────────────────────────────
-
-  // POST /auth/register
-  // Yeni akış: sunucu token yerine {pending_verification: true} döner; oturum
-  // verifyEmail ile açılır. (Eski sunucu 201 + tokens dönerdi; ikisi de kabul.)
-  Future<Map<String, dynamic>> register({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    final body = {
-      'email': email,
-      'password': password,
-      'display_name': displayName,
-    };
-    final response = await _request(
-      'POST',
-      '/auth/register',
-      body: body,
-      requireAuth: false,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Kayıt başarısız.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/verify-email — kayıttaki 6 haneli kodu doğrular, oturum açar.
-  Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
-    final response = await _request(
-      'POST',
-      '/auth/verify-email',
-      body: {'email': email, 'code': code},
-      requireAuth: false,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Doğrulama kodu geçersiz.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/resend-verification — doğrulama kodunu yeniden e-postalar.
-  Future<void> resendVerification(String email) async {
-    final response = await _request(
-      'POST',
-      '/auth/resend-verification',
-      body: {'email': email},
-      requireAuth: false,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Doğrulama kodu gönderilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/login
-  Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
-  }) async {
-    final body = {'email': email, 'password': password};
-    final response = await _request(
-      'POST',
-      '/auth/login',
-      body: body,
-      requireAuth: false,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Giriş başarısız.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/google — Google ID token'ı ile giriş/kayıt (sunucu doğrular,
-  // hesabı bulur/bağlar/oluşturur ve bizim JWT çiftimizi döner).
-  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
-    final response = await _request(
-      'POST',
-      '/auth/google',
-      body: {'id_token': idToken},
-      requireAuth: false,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'auth_err_google_failed',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/apple — Apple identity token ile giriş/kayıt. Ad token'da
-  // bulunmadığından ilk yetkilendirmede displayName ayrıca gönderilir.
-  Future<Map<String, dynamic>> loginWithApple(
-    String identityToken, {
-    String? displayName,
-  }) async {
-    final response = await _request(
-      'POST',
-      '/auth/apple',
-      body: {
-        'identity_token': identityToken,
-        if (displayName != null && displayName.isNotEmpty)
-          'display_name': displayName,
-      },
-      requireAuth: false,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'auth_err_apple_failed',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/logout
-  Future<void> logout() async {
-    final refreshToken = await PrefsService.getRefreshToken();
-    if (refreshToken != null) {
-      try {
-        await _request(
-          'POST',
-          '/auth/logout',
-          body: {'refresh_token': refreshToken},
-          requireAuth: false,
-        );
-      } catch (e, st) {
-        // Oturumu kapatırken sunucu çağrısı başarısız olsa bile yerel verileri temizlemeye devam ediyoruz.
-        debugPrint("Sunucu logout isteği başarısız oldu: $e\n$st");
-      }
-    }
-    await PrefsService.clearAuthData();
-  }
-
-  /// Henüz yerel oturuma dönüşmemiş bir token çiftini sunucuda iptal eder
-  /// (çakışma diyaloğunda "Girişi İptal Et" seçilirse yetim refresh token
-  /// kalmasın diye). Best-effort: hata yutulur.
-  Future<void> revokeRefreshToken(String refreshToken) async {
-    try {
-      await _request(
-        'POST',
-        '/auth/logout',
-        body: {'refresh_token': refreshToken},
-        requireAuth: false,
-      );
-    } catch (e) {
-      debugPrint("Refresh token revoke failed (ignored): $e");
-    }
-  }
-
-  // GET /me (Get Current User Profile)
-  Future<Map<String, dynamic>> getMe() async {
-    final response = await _request('GET', '/me', requireAuth: true);
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Profil alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-    return _decodeJsonMap(response.body);
-  }
-
-  // DELETE /me (Delete Account)
-  Future<void> deleteAccount() async {
-    final response = await _request('DELETE', '/me', requireAuth: true);
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Hesap silinemedi.',
-        code: data['code'] as String?,
-      );
-    }
-    await PrefsService.clearAuthData();
-  }
-
-  // POST /auth/change-password
-  Future<void> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    final body = {'old_password': oldPassword, 'new_password': newPassword};
-    final response = await _request(
-      'POST',
-      '/auth/change-password',
-      body: body,
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Parola değiştirilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-    await PrefsService.clearAuthData();
-  }
-
-  // ─── Sync Endpoints ──────────────────────────────────────────────────────────
-
-  // GET /sync?since=<unix_ms>
-  Future<Map<String, dynamic>> pull(int since) async {
-    final response = await _request(
-      'GET',
-      '/sync?since=$since',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message:
-            data['error'] as String? ??
-            'Veri senkronizasyonu (pull) başarısız.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /sync
-  Future<Map<String, dynamic>> push(Map<String, dynamic> payload) async {
-    final response = await _request(
-      'POST',
-      '/sync',
-      body: payload,
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message:
-            data['error'] as String? ??
-            'Veri senkronizasyonu (push) başarısız.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // DELETE /search-history (Clear search history remotely)
-  Future<void> clearRemoteSearchHistory() async {
-    final response = await _request(
-      'DELETE',
-      '/search-history',
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message:
-            data['error'] as String? ?? 'Arama geçmişi sunucudan silinemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // DELETE /sync (Reset remote sync data)
-  Future<void> clearRemoteSyncData() async {
-    final response = await _request('DELETE', '/sync', requireAuth: true);
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Bulut verileri sıfırlanamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/forgot-password
-  Future<void> forgotPassword(String email) async {
-    final response = await _request(
-      'POST',
-      '/auth/forgot-password',
-      body: {'email': email},
-      requireAuth: false,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Sıfırlama kodu gönderilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/verify-reset-code
-  Future<void> verifyResetCode(String email, String code) async {
-    final response = await _request(
-      'POST',
-      '/auth/verify-reset-code',
-      body: {'email': email, 'code': code},
-      requireAuth: false,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Doğrulama kodu geçersiz.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /auth/reset-password
-  Future<void> resetPassword(
-    String email,
-    String code,
-    String newPassword,
-  ) async {
-    final response = await _request(
-      'POST',
-      '/auth/reset-password',
-      body: {'email': email, 'code': code, 'new_password': newPassword},
-      requireAuth: false,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Şifre sıfırlanamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // Not: eski GET /config/tmdb ucu (ve bu metodun eski karşılığı) kaldırıldı.
-  // TMDB istekleri artık TmdbService üzerinden doğrudan backend proxy'sine
-  // (/tmdb/*) gidiyor; anahtar hiçbir zaman client'a indirilmiyor.
-
-  // ─── SOSYAL AĞ & ARKADAŞLIK METODLARI ─────────────────────────────────────
-
-  // POST /social/profile/setup
-  Future<Map<String, dynamic>> setupProfile(
-    String username,
-    bool isPublic,
-  ) async {
-    final response = await _request(
-      'POST',
-      '/social/profile/setup',
-      body: {'username': username, 'is_public': isPublic ? 1 : 0},
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Profil ayarları güncellenemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/device/register — FCM token'ını sunucuya kaydeder.
-  Future<void> registerDevice(String token, {String? platform}) async {
-    final response = await _request(
-      'POST',
-      '/social/device/register',
-      body: {'token': token, 'platform': platform},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Cihaz kaydedilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/device/unregister — çıkışta token'ı siler.
-  Future<void> unregisterDevice(String token) async {
-    final response = await _request(
-      'POST',
-      '/social/device/unregister',
-      body: {'token': token},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Cihaz kaydı silinemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/friends
-  Future<Map<String, dynamic>> getFriends() async {
-    final response = await _request(
-      'GET',
-      '/social/friends',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Arkadaş listesi alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/friends/request
-  Future<Map<String, dynamic>> sendFriendRequest(String searchQuery) async {
-    final response = await _request(
-      'POST',
-      '/social/friends/request',
-      body: {'search_query': searchQuery},
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Arkadaşlık isteği gönderilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/friends/accept
-  Future<void> acceptFriendRequest(int friendId) async {
-    final response = await _request(
-      'POST',
-      '/social/friends/accept',
-      body: {'friend_id': friendId},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'İstek kabul edilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/friends/reject
-  Future<void> rejectFriendRequest(int friendId) async {
-    final response = await _request(
-      'POST',
-      '/social/friends/reject',
-      body: {'friend_id': friendId},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Arkadaşlık silinemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/friends/activity
-  Future<List<dynamic>> getActivityFeed({int? friendId}) async {
-    final path = friendId != null
-        ? '/social/friends/activity?friend_id=$friendId'
-        : '/social/friends/activity';
-    final response = await _request('GET', path, requireAuth: true);
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['activity'] as List<dynamic>;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Aktivite akışı alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/match/watchlist-intersection/{friend_id}
-  Future<List<dynamic>> getWatchlistIntersection(int friendId) async {
-    final response = await _request(
-      'GET',
-      '/social/match/watchlist-intersection/$friendId',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['watchlist'] as List<dynamic>;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Ortak izleme listesi alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/friends/signals
-  Future<FriendSignals> getFriendSignals() async {
-    final response = await _request(
-      'GET',
-      '/social/friends/signals',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      // Eski sunucu boş sinyal kümesini `[]` (liste) dönebilir (PHP boş assoc
-      // dizi tuzağı); Map değilse boş sayılır.
-      final raw = data['signals'];
-      return FriendSignals.fromJson(
-        raw is Map ? Map<String, dynamic>.from(raw) : const {},
-      );
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Arkadaş sinyalleri alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  Future<void> unlinkGoogle({required String password}) async {
-    final response = await _request(
-      'DELETE',
-      '/auth/google/link',
-      body: {'password': password},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'auth_err_google_unlink_failed',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // DELETE /auth/apple/link — Apple hesabı bağlantısını kaldırır.
-  Future<void> unlinkApple({required String password}) async {
-    final response = await _request(
-      'DELETE',
-      '/auth/apple/link',
-      body: {'password': password},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'auth_err_apple_unlink_failed',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/dna — Sinema DNA snapshot'ını yayınlar (public web kartı için).
-  Future<void> publishTasteDna(Map<String, dynamic> snapshot) async {
-    final response = await _request(
-      'POST',
-      '/social/dna',
-      body: {'dna': snapshot},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'DNA yayınlanamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/match/taste-all — tüm arkadaşların uyum skorları tek istekte.
-  // Eski sunucularda uç yoktur (404); çağıran tekil uca geri düşer.
-  Future<List<dynamic>> getAllTasteMatches() async {
-    final response = await _request(
-      'GET',
-      '/social/match/taste-all',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['scores'] as List<dynamic>? ?? const [];
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Uyum skorları alınamadı.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // GET /social/match/taste/{friend_id}
-  Future<Map<String, dynamic>> getTasteMatch(int friendId) async {
-    final response = await _request(
-      'GET',
-      '/social/match/taste/$friendId',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Uyum skoru alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/recommend
-  Future<void> recommendToFriend({
-    required int friendId,
-    required int movieId,
-    required bool isTv,
-    required String title,
-    String? posterPath,
-    String? note,
-  }) async {
-    final response = await _request(
-      'POST',
-      '/social/recommend',
-      body: {
-        'friend_id': friendId,
-        'movie_id': movieId,
-        'is_tv': isTv ? 1 : 0,
-        'title': title,
-        'poster_path': ?posterPath,
-        if (note != null && note.isNotEmpty) 'note': note,
-      },
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Öneri gönderilemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/recommendations
-  Future<Map<String, dynamic>> getRecommendations() async {
-    final response = await _request(
-      'GET',
-      '/social/recommendations',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Öneriler alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/recommendations/seen
-  Future<void> markRecommendationsSeen() async {
-    final response = await _request(
-      'POST',
-      '/social/recommendations/seen',
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'İşaretlenemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/recommendations/sent
-  Future<Map<String, dynamic>> getSentRecommendations() async {
-    final response = await _request(
-      'GET',
-      '/social/recommendations/sent',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Gönderilen öneriler alınamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/profiles/top — en çok beğeni alan 20 herkese açık üye.
-  Future<Map<String, dynamic>> getTopProfiles() async {
-    final response = await _request(
-      'GET',
-      '/social/profiles/top',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Popüler listeler alınamadı.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // POST /social/profile/like — üye profilini beğen / beğeniyi geri al.
-  // Sunucunun döndürdüğü güncel like_count değerini verir.
-  Future<int> likeProfile(int ownerId, bool liked) async {
-    final response = await _request(
-      'POST',
-      '/social/profile/like',
-      body: {'owner_id': ownerId, 'liked': liked},
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return int.tryParse(data['like_count']?.toString() ?? '') ?? 0;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Beğeni gönderilemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // GET /social/title-reviews/{type}/{id}
-  Future<Map<String, dynamic>> getTitleReviews(String type, int id) async {
-    final response = await _request(
-      'GET',
-      '/social/title-reviews/$type/$id',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Yorumlar yüklenemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // POST /social/reviews/report — yorum şikayeti. Yorumlar ratings satırı
-  // olduğundan hedef (user_id, movie_id, is_tv) üçlüsüyle belirtilir.
-  Future<bool> reportReview({
-    required int userId,
-    required int movieId,
-    required bool isTV,
-    required String reason,
-  }) async {
-    final response = await _request(
-      'POST',
-      '/social/reviews/report',
-      body: {
-        'user_id': userId,
-        'movie_id': movieId,
-        'is_tv': isTV ? 1 : 0,
-        'reason': reason,
-      },
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['auto_hidden'] == true;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Şikayet gönderilemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // POST /social/users/block — kullanıcıyı engelle (arkadaşlık da kopar).
-  Future<void> blockUser(int userId) async {
-    final response = await _request(
-      'POST',
-      '/social/users/block',
-      body: {'user_id': userId},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Kullanıcı engellenemedi.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // POST /social/users/unblock
-  Future<void> unblockUser(int userId) async {
-    final response = await _request(
-      'POST',
-      '/social/users/unblock',
-      body: {'user_id': userId},
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Engel kaldırılamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/users/blocked
-  Future<List<dynamic>> getBlockedUsers() async {
-    final response = await _request(
-      'GET',
-      '/social/users/blocked',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['blocked'] as List<dynamic>? ?? [];
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Engellenenler yüklenemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // ─── Birlikte Seç (canlı kanepe modu) ─────────────────────────────────────
-
-  // POST /social/couch/create — deste host istemcide kurulur, sunucu saklar.
-  Future<Map<String, dynamic>> createCouchSession({
-    required int friendId,
-    required List<Map<String, dynamic>> deck,
-  }) async {
-    final response = await _request(
-      'POST',
-      '/social/couch/create',
-      body: {'friend_id': friendId, 'deck': deck},
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Oturum açılamadı.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // GET /social/couch/active — katılımcısı olduğum canlı oturum (yoksa null).
-  Future<Map<String, dynamic>?> getActiveCouchSession() async {
-    final response = await _request(
-      'GET',
-      '/social/couch/active',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>?;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Oturum sorgulanamadı.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // GET /social/couch/{id} — poll ucu.
-  Future<Map<String, dynamic>> getCouchSession(int sessionId) async {
-    final response = await _request(
-      'GET',
-      '/social/couch/$sessionId',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Oturum yüklenemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // POST /social/couch/{id}/vote — güncel oturum durumunu döner (eşleşme dahil).
-  Future<Map<String, dynamic>> voteCouchSession({
-    required int sessionId,
-    required int movieId,
-    required bool isTv,
-    required bool liked,
-  }) async {
-    final response = await _request(
-      'POST',
-      '/social/couch/$sessionId/vote',
-      body: {'movie_id': movieId, 'is_tv': isTv ? 1 : 0, 'liked': liked},
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Oy gönderilemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // POST /social/couch/{id}/cancel — açık oturumda iptal, eşleşmişte kapanış.
-  Future<void> cancelCouchSession(int sessionId) async {
-    final response = await _request(
-      'POST',
-      '/social/couch/$sessionId/cancel',
-      requireAuth: true,
-    );
-    if (response.statusCode != 200) {
-      final data = _decodeJsonMap(response.body);
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Oturum kapatılamadı.',
-        code: data['code'] as String?,
-      );
-    }
-  }
-
-  // GET /social/couch/used-movies — son oturumlardaki oylanmış yapım anahtarlarını döner.
-  Future<List<String>> getUsedCouchMovies(int friendId) async {
-    final response = await _request(
-      'GET',
-      '/social/couch/used-movies?friend_id=$friendId',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      final list = data['used_keys'] as List<dynamic>? ?? const [];
-      return list.map((e) => e.toString()).toList();
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Kullanılmış yapımlar yüklenemedi.',
-      code: data['code'] as String?,
-    );
-  }
-
-  // GET /titles/{type}/{id}/score — cinema+ üyelerinin topluluk skoru
-  Future<Map<String, dynamic>> getTitleScore(String type, int id) async {
-    final response = await _request(
-      'GET',
-      '/titles/$type/$id/score',
-      requireAuth: true,
-    );
-    final data = _decodeJsonMap(response.body);
-    if (response.statusCode == 200) {
-      return data;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['error'] as String? ?? 'Skor yüklenemedi.',
-      code: data['code'] as String?,
-    );
-  }
+/// Backwards-compatible facade over focused domain APIs.
+class ApiService extends ApiClient
+    with AuthApi, SyncApi, SocialApi, RecommendationApi, CouchApi {
+  ApiService({super.client, super.onSessionExpired});
+  static String get baseUrl => AppConfig.apiBaseUrl;
+  static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
+  static String webProfileUrl(String username, {String lang = 'tr'}) =>
+      '$webProfileBaseUrl/$username?lang=$lang';
 }
 
 class ApiException implements Exception {

@@ -5,6 +5,8 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- Release-only Firebase Crashlytics reporting for uncaught Flutter, platform, and asynchronous errors; API 5xx reports are correlated with structured backend JSON logs through redacted `X-Request-ID` metadata
+- Central backend observability: structured JSON logs, global exception capture, configurable log sink, request IDs on responses, and recursive credential/token redaction
 - **Pick Together (live couch mode)**: two friends swipe the same deck on their own phones; the first mutual like wins. Deck is built from the shared watchlist intersection plus the recommendation engine's picks; realtime via short polling (shared-hosting friendly), FCM pushes for invite and match, one-active-session rule, and the opponent's individual votes are never exposed (only progress). New `/social/couch/*` endpoints, `couch_sessions` table (migration 014), Together-tab LIVE card with pending-invite badge, full session screen (friend picker → voting → match celebration / no-match retry)
 - DNA milestone moments in the swipe loop: a one-time invite sheet at the 5th/25th/50th rating surfaces Cinema DNA inside the core loop (its only entry point was a Profile-tab banner) and shows the measured recommendation hit rate for the first time
 - Release-reminder disclosure: adding an unreleased title to the watchlist now tells the user "we'll remind you on release day" (the reminder was already scheduled silently)
@@ -17,6 +19,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - EN trailer fallback caching under the primary locale key (avoids double TMDB fetch)
 
 ### Changed
+- Split the monolithic `ApiService` into a 235-line shared `ApiClient` plus focused auth, sync, social, recommendation, and live-couch API modules while preserving the existing facade and provider contracts
 - Watchlist and stats screens now render local data immediately and refresh after background sync (offline-first, no more sync-blocked spinner)
 - All `ApiService` error paths decode responses defensively (HTML error pages no longer surface as `FormatException`)
 - `/me` response now includes `apple_sub`; verification/reset e-mails rebranded from "Ne İzlesem" to "Cinema+"

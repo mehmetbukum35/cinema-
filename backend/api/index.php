@@ -11,6 +11,16 @@ if (!is_dir($SRC)) {
 }
 
 require_once "$SRC/Helpers.php";
+cinema_send_request_id_header();
+set_exception_handler(static function (Throwable $error): void {
+    cinema_log('critical', 'Unhandled backend exception', [
+        'exception' => get_class($error),
+        'detail' => $error->getMessage(),
+        'file' => $error->getFile(),
+        'line' => $error->getLine(),
+    ]);
+    fail(500, 'Beklenmeyen bir sunucu hatası oluştu.', 'internal_error');
+});
 require_once "$SRC/Db.php";
 require_once "$SRC/Jwt.php";
 require_once "$SRC/GoogleAuth.php";
@@ -30,10 +40,17 @@ if (!is_file($cfgFile)) {
     fail(500, 'Config.php bulunamadı. Config.sample.php dosyasını kopyalayıp doldurun.');
 }
 $cfg = require $cfgFile;
+if (!empty($cfg['error_log_file'])) {
+    ini_set('error_log', (string) $cfg['error_log_file']);
+}
 
 try {
     $db = Db::conn($cfg);
 } catch (Throwable $e) {
+    cinema_log('critical', 'Database connection failed', [
+        'exception' => get_class($e),
+        'detail' => $e->getMessage(),
+    ]);
     fail(500, 'Veritabanına bağlanılamadı.');
 }
 

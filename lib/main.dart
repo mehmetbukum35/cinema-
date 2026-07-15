@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:ui' as ui;
 import 'firebase_options.dart';
 import 'screens/onboarding_screen.dart';
 import 'dart:convert';
@@ -17,9 +18,22 @@ import 'services/notification_service.dart';
 import 'services/providers.dart';
 import 'services/taste_dna_presenter.dart';
 import 'services/app_config.dart';
+import 'services/crash_reporting_service.dart';
 import 'theme/app_theme.dart';
 
-void main() async {
+void main() {
+  runZonedGuarded(
+    _bootstrap,
+    (error, stack) => CrashReportingService.record(
+      error,
+      stack,
+      fatal: true,
+      reason: 'Uncaught asynchronous error',
+    ),
+  );
+}
+
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load Taste DNA lexicon
@@ -46,6 +60,25 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await CrashReportingService.initialize();
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      CrashReportingService.record(
+        details.exception,
+        details.stack ?? StackTrace.current,
+        fatal: true,
+        reason: details.context?.toDescription(),
+      );
+    };
+    ui.PlatformDispatcher.instance.onError = (error, stack) {
+      CrashReportingService.record(
+        error,
+        stack,
+        fatal: true,
+        reason: 'Uncaught platform error',
+      );
+      return true;
+    };
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e, st) {
     // Firebase başlatılamazsa push devre dışı kalır; çekirdek uygulama etkilenmez.
