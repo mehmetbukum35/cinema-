@@ -139,7 +139,7 @@ class MockApiService implements ApiService {
   };
 
   @override
-  Future<void> registerToken() async {}
+  Future<void> registerDevice(String token, {String? platform}) async {}
 
   @override
   Future<Map<String, dynamic>> getFriends() async => {

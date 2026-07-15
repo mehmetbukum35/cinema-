@@ -57,7 +57,7 @@ class MockProfileApiService implements ApiService {
   };
 
   @override
-  Future<void> registerToken() async {}
+  Future<void> registerDevice(String token, {String? platform}) async {}
 
   @override
   Future<void> publishTasteDna(dynamic dna) async {}
