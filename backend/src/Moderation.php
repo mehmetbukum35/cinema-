@@ -55,11 +55,12 @@ class Moderation
                     COUNT(DISTINCT rr.reporter_id) AS report_count,
                     GROUP_CONCAT(DISTINCT rr.reason) AS reasons,
                     MAX(rr.created_at) AS last_report_at,
-                    r.comment, r.is_hidden, r.title, r.rating,
+                    r.comment, r.is_hidden, t.title, r.rating,
                     u.username, u.display_name
              FROM review_reports rr
              JOIN ratings r ON r.user_id = rr.reported_user_id
                            AND r.movie_id = rr.movie_id AND r.is_tv = rr.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
              JOIN users u ON u.id = rr.reported_user_id
               WHERE rr.status = 'open'
               GROUP BY rr.reported_user_id, rr.movie_id, rr.is_tv
@@ -72,9 +73,10 @@ class Moderation
         // Gizlenen yorumlar (otomatik filtre veya moderatör kararı): geri açılabilir.
         $stHidden = $this->db->prepare(
             "SELECT r.user_id AS reported_user_id, r.movie_id, r.is_tv,
-                    r.comment, r.title, r.rating, r.updated_at,
+                    r.comment, t.title, r.rating, r.updated_at,
                     u.username, u.display_name
              FROM ratings r
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
              JOIN users u ON u.id = r.user_id
               WHERE r.is_hidden = 1 AND r.deleted = 0
                 AND r.comment IS NOT NULL AND r.comment <> ''

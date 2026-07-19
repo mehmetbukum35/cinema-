@@ -42,14 +42,15 @@ class SyncIntegrationTest extends TestCase
 
         $rating = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(3, (int) $rating['rating']);
-        $this->assertSame('The Matrix', $rating['title']);
+        $title = $this->titleRow(603, 0);
+        $this->assertSame('The Matrix', $title['title']);
         // JSON kolonu string olarak saklanmalı
-        $this->assertSame([28, 878], json_decode($rating['genre_ids'], true));
+        $this->assertSame([28, 878], json_decode($title['genre_ids'], true));
         // created_at gönderilmediği için updated_at ile doldurulmalı
         $this->assertSame(1000, (int) $rating['created_at']);
 
-        $watch = $this->row('watchlist', 'id', 1399);
-        $this->assertSame('Game of Thrones', $watch['title']);
+        $this->row('watchlist', 'id', 1399);
+        $this->assertSame('Game of Thrones', $this->titleRow(1399, 1)['title']);
     }
 
     // ─── last-write-wins: YENİ kazanır ────────────────────────────────────────
@@ -64,7 +65,7 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(1, $applied);
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(3, (int) $row['rating']);
-        $this->assertSame('New Title', $row['title']);
+        $this->assertSame('New Title', $this->titleRow(603, 0)['title']);
         $this->assertSame(2000, (int) $row['updated_at']);
     }
 
@@ -81,7 +82,7 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(0, $applied);
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(3, (int) $row['rating']);
-        $this->assertSame('Current', $row['title']);
+        $this->assertSame('Current', $this->titleRow(603, 0)['title']);
         $this->assertSame(2000, (int) $row['updated_at']);
     }
 
@@ -123,7 +124,7 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(1, $applied);
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(2, (int) $row['rating']);
-        $this->assertSame('After', $row['title']);
+        $this->assertSame('After', $this->titleRow(603, 0)['title']);
     }
 
     // ─── Soft delete senkronu ────────────────────────────────────────────────
@@ -152,10 +153,11 @@ class SyncIntegrationTest extends TestCase
         // Bob'un kaydı dokunulmadan kalmalı
         $bob = $this->rowForUser('ratings', 2, 'movie_id', 603);
         $this->assertSame(1, (int) $bob['rating']);
-        $this->assertSame('Bob rating', $bob['title']);
+        $this->assertSame(1000, (int) $bob['updated_at']);
         // Alice için yeni kayıt eklenmeli
         $alice = $this->rowForUser('ratings', 1, 'movie_id', 603);
-        $this->assertSame('Alice rating', $alice['title']);
+        $this->assertSame(3, (int) $alice['rating']);
+        $this->assertSame('Alice rating', $this->titleRow(603, 0)['title']);
     }
 
     // ─── Veri kolonu olmayan tablo (watched_seasons) + string anahtar (search) ─
@@ -324,10 +326,26 @@ class SyncIntegrationTest extends TestCase
     private function seedRating(int $uid, int $movieId, int $isTv, int $rating, string $title, int $updatedAt): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, created_at, updated_at, deleted)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, created_at, updated_at, deleted)
+             VALUES (?, ?, ?, ?, ?, ?, 0)'
         );
-        $stmt->execute([$uid, $movieId, $isTv, $rating, $title, $updatedAt, $updatedAt]);
+        $stmt->execute([$uid, $movieId, $isTv, $rating, $updatedAt, $updatedAt]);
+        $stmt = $this->db->prepare(
+            'INSERT INTO titles (tmdb_id, is_tv, title, metadata_updated_at) VALUES (?, ?, ?, ?)
+             ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+               title = excluded.title, metadata_updated_at = excluded.metadata_updated_at
+             WHERE excluded.metadata_updated_at >= titles.metadata_updated_at'
+        );
+        $stmt->execute([$movieId, $isTv, $title, $updatedAt]);
+    }
+
+    private function titleRow(int $tmdbId, int $isTv): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ?');
+        $stmt->execute([$tmdbId, $isTv]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertIsArray($row, "Beklenen katalog kaydı bulunamadı: $tmdbId/$isTv");
+        return $row;
     }
 
     /** user_id = 1 varsayımıyla tek satır okur. */
@@ -356,12 +374,9 @@ class SyncIntegrationTest extends TestCase
         );
         $this->db->exec('INSERT INTO users (id, review_banned) VALUES (1, 0), (2, 0)');
         $this->db->exec(
-            'CREATE TABLE ratings (
-                user_id INTEGER NOT NULL,
-                movie_id INTEGER NOT NULL,
+            'CREATE TABLE titles (
+                tmdb_id INTEGER NOT NULL,
                 is_tv INTEGER NOT NULL,
-                rating INTEGER,
-                genre_ids TEXT,
                 title TEXT,
                 poster_path TEXT,
                 backdrop_path TEXT,
@@ -369,6 +384,17 @@ class SyncIntegrationTest extends TestCase
                 vote_average REAL,
                 release_date TEXT,
                 popularity REAL,
+                genre_ids TEXT,
+                metadata_updated_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (tmdb_id, is_tv)
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE ratings (
+                user_id INTEGER NOT NULL,
+                movie_id INTEGER NOT NULL,
+                is_tv INTEGER NOT NULL,
+                rating INTEGER,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,
@@ -384,13 +410,6 @@ class SyncIntegrationTest extends TestCase
                 user_id INTEGER NOT NULL,
                 id INTEGER NOT NULL,
                 is_tv INTEGER NOT NULL,
-                title TEXT,
-                poster_path TEXT,
-                backdrop_path TEXT,
-                overview TEXT,
-                vote_average REAL,
-                release_date TEXT,
-                genre_ids TEXT,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,
@@ -402,13 +421,6 @@ class SyncIntegrationTest extends TestCase
                 user_id INTEGER NOT NULL,
                 id INTEGER NOT NULL,
                 is_tv INTEGER NOT NULL,
-                title TEXT,
-                poster_path TEXT,
-                backdrop_path TEXT,
-                overview TEXT,
-                vote_average REAL,
-                release_date TEXT,
-                genre_ids TEXT,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,

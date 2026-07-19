@@ -23,6 +23,40 @@ php -S localhost:8000 -t api
 composer test
 ```
 
+## Database maintenance
+
+Run migrations first, then add the bounded maintenance command to the hosting
+cron. The command is CLI-only and uses a lock file to prevent overlapping runs:
+
+```bash
+php migrate.php
+php maintenance.php
+```
+
+Example daily cron (replace with the real absolute paths):
+
+```cron
+20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php >> /home/USER/logs/cinema-maintenance.log 2>&1
+```
+
+Maintenance caps active search history at 50 rows per user, expires old Couch
+sessions, and removes expired temporary authentication records. Small relation
+tombstones are retained for offline deletion propagation.
+
+## Central title catalog rollout
+
+Deploy the normalized title catalog without an API/schema mismatch window:
+
+1. Run `migrations/017_central_titles.sql` in phpMyAdmin. This creates and
+   backfills `titles` but deliberately keeps the legacy metadata columns.
+2. Upload the catalog-aware files from `src/` and verify `/api/health`, sync,
+   activity feed, and a public profile.
+3. Run `migrations/018_drop_legacy_title_metadata.sql` in phpMyAdmin to remove
+   metadata duplicated in `ratings`, `watchlist`, and `favorites`.
+
+Take a database backup before steps 1 and 3. Do not run migration 018 before
+the updated backend has been uploaded.
+
 ## Uçlar
 
 Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>` gerektirir.

@@ -30,16 +30,28 @@ CREATE TABLE `favorites` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `id` int(11) NOT NULL,
   `is_tv` tinyint(1) NOT NULL,
-  `title` varchar(512) NOT NULL,
+  `created_at` bigint(20) NOT NULL,
+  `updated_at` bigint(20) NOT NULL,
+  `deleted` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+-- Shared TMDB metadata, stored once per movie/TV title.
+CREATE TABLE `titles` (
+  `tmdb_id` int(11) NOT NULL,
+  `is_tv` tinyint(1) NOT NULL,
+  `title` varchar(512) DEFAULT NULL,
   `poster_path` varchar(255) DEFAULT NULL,
   `backdrop_path` varchar(255) DEFAULT NULL,
   `overview` text DEFAULT NULL,
   `vote_average` double DEFAULT NULL,
   `release_date` varchar(20) DEFAULT NULL,
+  `popularity` double DEFAULT NULL,
   `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
-  `created_at` bigint(20) NOT NULL,
-  `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `metadata_updated_at` bigint(20) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`tmdb_id`,`is_tv`),
+  KEY `idx_titles_metadata_updated` (`metadata_updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -81,14 +93,6 @@ CREATE TABLE `ratings` (
   `movie_id` int(11) NOT NULL,
   `is_tv` tinyint(1) NOT NULL,
   `rating` int(11) NOT NULL,
-  `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
-  `title` varchar(512) DEFAULT NULL,
-  `poster_path` varchar(255) DEFAULT NULL,
-  `backdrop_path` varchar(255) DEFAULT NULL,
-  `overview` text DEFAULT NULL,
-  `vote_average` double DEFAULT NULL,
-  `release_date` varchar(20) DEFAULT NULL,
-  `popularity` double DEFAULT NULL,
   `comment` text DEFAULT NULL,
   `is_spoiler` tinyint(1) NOT NULL DEFAULT 0,
   `is_private` tinyint(1) NOT NULL DEFAULT 0,
@@ -233,13 +237,6 @@ CREATE TABLE `watchlist` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `id` int(11) NOT NULL,
   `is_tv` tinyint(1) NOT NULL,
-  `title` varchar(512) NOT NULL,
-  `poster_path` varchar(255) DEFAULT NULL,
-  `backdrop_path` varchar(255) DEFAULT NULL,
-  `overview` text DEFAULT NULL,
-  `vote_average` double DEFAULT NULL,
-  `release_date` varchar(20) DEFAULT NULL,
-  `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT 0

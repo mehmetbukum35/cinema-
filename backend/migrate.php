@@ -110,6 +110,45 @@ if ($migrationCount === 0 && $tableExists($db, 'users')) {
             $autoApplied['008_google_sub_widen.sql'] = true;
         }
     }
+    // Check Migration 009 (profile likes)
+    if ($tableExists($db, 'profile_likes')) {
+        $autoApplied['009_profile_likes.sql'] = true;
+    }
+    // Check Migration 010 (review moderation schema)
+    if ($columnExists($db, 'ratings', 'is_hidden') && $tableExists($db, 'review_reports')) {
+        $autoApplied['010_review_moderation.sql'] = true;
+    }
+    // Check Migration 011 (review ban flag)
+    if ($columnExists($db, 'users', 'review_banned')) {
+        $autoApplied['011_review_ban.sql'] = true;
+    }
+    // Check Migration 012 (email verification)
+    if ($columnExists($db, 'users', 'email_verified') && $tableExists($db, 'email_verifications')) {
+        $autoApplied['012_email_verification.sql'] = true;
+    }
+    // Check Migration 013 (Apple authentication)
+    if ($columnExists($db, 'users', 'apple_sub')) {
+        $autoApplied['013_apple_auth.sql'] = true;
+    }
+    // Check Migration 014 (Couch sessions). Migration 015 is intentionally not
+    // auto-marked: re-running its charset conversion is safe and repairs older
+    // dumps that created this table with a legacy engine/collation.
+    if ($tableExists($db, 'couch_sessions')) {
+        $autoApplied['014_couch_sessions.sql'] = true;
+    }
+    // Check Migration 017 (central title catalog).
+    if ($tableExists($db, 'titles')) {
+        $autoApplied['017_central_titles.sql'] = true;
+    }
+    // Check Migration 018 (legacy metadata removed from relation tables).
+    if (
+        $tableExists($db, 'titles')
+        && !$columnExists($db, 'ratings', 'title')
+        && !$columnExists($db, 'watchlist', 'title')
+        && !$columnExists($db, 'favorites', 'title')
+    ) {
+        $autoApplied['018_drop_legacy_title_metadata.sql'] = true;
+    }
 
     // Insert auto-detected applied migrations
     if (!empty($autoApplied)) {

@@ -15,9 +15,11 @@ trait SocialMatchTrait
 
         // Watchlist kesişimini al
         $st = $this->db->prepare(
-            'SELECT w1.id, w1.is_tv, w1.title, w1.poster_path, w1.backdrop_path, w1.overview, w1.vote_average, w1.release_date, w1.genre_ids
+            'SELECT w1.id, w1.is_tv, t.title, t.poster_path, t.backdrop_path,
+                    t.overview, t.vote_average, t.release_date, t.genre_ids
              FROM watchlist w1
              JOIN watchlist w2 ON w1.id = w2.id AND w1.is_tv = w2.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = w1.id AND t.is_tv = w1.is_tv
              WHERE w1.user_id = ? AND w2.user_id = ?
                AND w1.deleted = 0 AND w2.deleted = 0
              ORDER BY w1.created_at DESC'

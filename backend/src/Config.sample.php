@@ -35,6 +35,16 @@ return [
     // GET/POST /sync için kullanıcı başına dakikalık sınır (120).
     // 'sync_rate_limit_per_min' => 120,
 
+    // Daily data lifecycle, run with: php maintenance.php
+    // Sync tombstones are retained for offline deletion propagation.
+    'maintenance' => [
+        'batch_limit' => 500,
+        'search_history_limit' => 50,
+        'couch_open_hours' => 24,
+        'couch_cancelled_days' => 7,
+        'couch_terminal_days' => 30,
+    ],
+
     'smtp' => [
         'host' => 'mail.example.com',
         'port' => 465,

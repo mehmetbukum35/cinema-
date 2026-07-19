@@ -887,6 +887,56 @@ class SocialIntegrationTest extends TestCase
             )'
         );
         $this->db->exec(
+            'CREATE TABLE titles (
+                tmdb_id INTEGER NOT NULL,
+                is_tv INTEGER NOT NULL,
+                title TEXT,
+                poster_path TEXT,
+                backdrop_path TEXT,
+                overview TEXT,
+                vote_average REAL,
+                release_date TEXT,
+                popularity REAL,
+                genre_ids TEXT,
+                metadata_updated_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (tmdb_id, is_tv)
+            )'
+        );
+        // Legacy fixtures still carry metadata inline. Mirror it into the
+        // canonical catalog so production social queries exercise `titles`.
+        $this->db->exec(
+            'CREATE TRIGGER ratings_title_fixture AFTER INSERT ON ratings BEGIN
+                INSERT INTO titles
+                    (tmdb_id, is_tv, title, poster_path, genre_ids, metadata_updated_at)
+                VALUES
+                    (NEW.movie_id, NEW.is_tv, NEW.title, NEW.poster_path, NEW.genre_ids, NEW.updated_at)
+                ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+                    title = COALESCE(excluded.title, titles.title),
+                    poster_path = COALESCE(excluded.poster_path, titles.poster_path),
+                    genre_ids = COALESCE(excluded.genre_ids, titles.genre_ids),
+                    metadata_updated_at = MAX(excluded.metadata_updated_at, titles.metadata_updated_at);
+            END'
+        );
+        $this->db->exec(
+            'CREATE TRIGGER watchlist_title_fixture AFTER INSERT ON watchlist BEGIN
+                INSERT INTO titles
+                    (tmdb_id, is_tv, title, poster_path, backdrop_path, overview,
+                     vote_average, release_date, genre_ids, metadata_updated_at)
+                VALUES
+                    (NEW.id, NEW.is_tv, NEW.title, NEW.poster_path, NEW.backdrop_path,
+                     NEW.overview, NEW.vote_average, NEW.release_date, NEW.genre_ids, NEW.updated_at)
+                ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+                    title = COALESCE(excluded.title, titles.title),
+                    poster_path = COALESCE(excluded.poster_path, titles.poster_path),
+                    backdrop_path = COALESCE(excluded.backdrop_path, titles.backdrop_path),
+                    overview = COALESCE(excluded.overview, titles.overview),
+                    vote_average = COALESCE(excluded.vote_average, titles.vote_average),
+                    release_date = COALESCE(excluded.release_date, titles.release_date),
+                    genre_ids = COALESCE(excluded.genre_ids, titles.genre_ids),
+                    metadata_updated_at = MAX(excluded.metadata_updated_at, titles.metadata_updated_at);
+            END'
+        );
+        $this->db->exec(
             'CREATE TABLE device_tokens (
                 token TEXT PRIMARY KEY,
                 user_id INTEGER NOT NULL,

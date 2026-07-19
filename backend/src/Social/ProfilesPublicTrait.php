@@ -72,9 +72,11 @@ trait SocialProfilesPublicTrait
         $st->execute([$uid]);
 
         $posterStmt = $this->db->prepare(
-             'SELECT title, poster_path, movie_id, is_tv FROM ratings
-              WHERE user_id = ? AND rating >= 2 AND deleted = 0 AND is_private = 0 AND poster_path IS NOT NULL
-              ORDER BY rating DESC, updated_at DESC
+             'SELECT t.title, t.poster_path, r.movie_id, r.is_tv FROM ratings r
+              JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+              WHERE r.user_id = ? AND r.rating >= 2 AND r.deleted = 0
+                AND r.is_private = 0 AND t.poster_path IS NOT NULL
+              ORDER BY r.rating DESC, r.updated_at DESC
               LIMIT 10'
         );
 

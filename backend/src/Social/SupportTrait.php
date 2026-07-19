@@ -70,8 +70,9 @@ trait SocialSupportTrait
     private function fetchRatingsMap(int $uid): array
     {
         $st = $this->db->prepare(
-            'SELECT movie_id, is_tv, rating, genre_ids, created_at FROM ratings
-             WHERE user_id = ? AND deleted = 0 AND rating BETWEEN 0 AND 3'
+            'SELECT r.movie_id, r.is_tv, r.rating, t.genre_ids, r.created_at FROM ratings r
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             WHERE r.user_id = ? AND r.deleted = 0 AND r.rating BETWEEN 0 AND 3'
         );
         $st->execute([$uid]);
         $map = [];

@@ -9,22 +9,21 @@ class Sync
     private const TABLES = [
         'ratings' => [
             'keys' => ['movie_id', 'is_tv'],
-            'cols' => ['rating', 'genre_ids', 'title', 'poster_path', 'backdrop_path',
-                       'overview', 'vote_average', 'release_date', 'popularity', 'created_at',
-                       'comment', 'is_spoiler', 'is_private'],
-            'json' => ['genre_ids'],
+            'cols' => ['rating', 'created_at', 'comment', 'is_spoiler', 'is_private'],
+            'json' => [],
+            'title_key' => 'movie_id',
         ],
         'watchlist' => [
             'keys' => ['id', 'is_tv'],
-            'cols' => ['title', 'poster_path', 'backdrop_path', 'overview',
-                       'vote_average', 'release_date', 'genre_ids', 'created_at'],
-            'json' => ['genre_ids'],
+            'cols' => ['created_at'],
+            'json' => [],
+            'title_key' => 'id',
         ],
         'favorites' => [
             'keys' => ['id', 'is_tv'],
-            'cols' => ['title', 'poster_path', 'backdrop_path', 'overview',
-                       'vote_average', 'release_date', 'genre_ids', 'created_at'],
-            'json' => ['genre_ids'],
+            'cols' => ['created_at'],
+            'json' => [],
+            'title_key' => 'id',
         ],
         'watched_seasons' => [
             'keys' => ['tv_id', 'season_number'],
@@ -59,14 +58,22 @@ class Sync
     {
         $out = ['server_time' => now_ms()];
         foreach (self::TABLES as $table => $def) {
+            $select = "SELECT d.*";
+            $join = '';
+            if (isset($def['title_key'])) {
+                $select .= ', t.title, t.poster_path, t.backdrop_path, t.overview,
+                            t.vote_average, t.release_date, t.popularity, t.genre_ids';
+                $join = " LEFT JOIN titles t ON t.tmdb_id = d.`{$def['title_key']}` AND t.is_tv = d.is_tv";
+            }
             $st = $this->db->prepare(
-                "SELECT * FROM `$table` WHERE user_id = ? AND updated_at > ? ORDER BY updated_at ASC"
+                "$select FROM `$table` d$join
+                 WHERE d.user_id = ? AND d.updated_at > ? ORDER BY d.updated_at ASC"
             );
             $st->execute([$uid, $since]);
             $rows = [];
             foreach ($st->fetchAll() as $r) {
                 unset($r['user_id']);
-                foreach ($def['json'] as $jc) {
+                foreach (array_unique(array_merge($def['json'], isset($def['title_key']) ? ['genre_ids'] : [])) as $jc) {
                     if (isset($r[$jc])) $r[$jc] = json_decode($r[$jc], true);
                 }
                 $r['deleted'] = (bool) $r['deleted'];
@@ -175,6 +182,10 @@ class Sync
         $updatedAt = (int) ($item['updated_at'] ?? now_ms());
         $deleted   = !empty($item['deleted']) ? 1 : 0;
 
+        if (isset($def['title_key']) && !$deleted) {
+            $this->upsertTitle($item, (string) $def['title_key'], $updatedAt);
+        }
+
         // Anahtara göre WHERE (user_id + tablo anahtarları) — her iki motorda aynı.
         $whereParts = ['`user_id` = ?'];
         $whereVals  = [$uid];
@@ -257,5 +268,58 @@ class Sync
         $this->db->prepare("UPDATE `$table` SET " . implode(', ', $setParts) . " WHERE $whereSql")
                  ->execute(array_merge($setVals, $whereVals));
         return true;
+    }
+
+    /** Store shared TMDB metadata once; stale clients cannot overwrite newer data. */
+    private function upsertTitle(array $item, string $idKey, int $updatedAt): void
+    {
+        $tmdbId = (int) ($item[$idKey] ?? 0);
+        if ($tmdbId <= 0) return;
+        $isTv = !empty($item['is_tv']) ? 1 : 0;
+        $fields = [
+            'title', 'poster_path', 'backdrop_path', 'overview', 'vote_average',
+            'release_date', 'popularity', 'genre_ids',
+        ];
+        $hasMetadata = false;
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $item) && $item[$field] !== null && $item[$field] !== '') {
+                $hasMetadata = true;
+                break;
+            }
+        }
+        if (!$hasMetadata) return;
+
+        $select = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ?');
+        $select->execute([$tmdbId, $isTv]);
+        $existing = $select->fetch(PDO::FETCH_ASSOC);
+        if ($existing !== false && $updatedAt < (int) $existing['metadata_updated_at']) return;
+
+        $values = ['tmdb_id' => $tmdbId, 'is_tv' => $isTv];
+        foreach ($fields as $field) {
+            $incoming = $item[$field] ?? null;
+            if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
+                $incoming = json_encode($incoming, JSON_UNESCAPED_UNICODE);
+            }
+            $values[$field] = ($incoming === null || $incoming === '') && $existing !== false
+                ? $existing[$field]
+                : $incoming;
+        }
+        $values['metadata_updated_at'] = max($updatedAt, (int) ($existing['metadata_updated_at'] ?? 0));
+
+        if ($existing === false) {
+            $columns = array_keys($values);
+            $list = '`' . implode('`, `', $columns) . '`';
+            $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+            $this->db->prepare("INSERT INTO titles ($list) VALUES ($placeholders)")
+                     ->execute(array_values($values));
+            return;
+        }
+        $set = implode(', ', array_map(fn (string $field): string => "`$field` = ?", array_slice($fields, 0)));
+        $params = array_map(fn (string $field): mixed => $values[$field], $fields);
+        $params[] = $values['metadata_updated_at'];
+        $params[] = $tmdbId;
+        $params[] = $isTv;
+        $this->db->prepare("UPDATE titles SET $set, metadata_updated_at = ? WHERE tmdb_id = ? AND is_tv = ?")
+                 ->execute($params);
     }
 }

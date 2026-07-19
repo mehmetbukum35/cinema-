@@ -33,10 +33,11 @@ class SocialWebRenderer
 
         // Beğendikleri (Rating = 3 "Harika")
         $stRatings = $this->db->prepare(
-            'SELECT movie_id, is_tv, title, poster_path, vote_average, release_date
-             FROM ratings
-             WHERE user_id = ? AND rating = 3 AND deleted = 0 AND is_private = 0
-             ORDER BY updated_at DESC
+            'SELECT r.movie_id, r.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+             FROM ratings r
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
+             ORDER BY r.updated_at DESC
              LIMIT 12'
         );
         $stRatings->execute([$userId]);
@@ -44,10 +45,11 @@ class SocialWebRenderer
 
         // İyi Buldukları (Rating = 2 "İyi")
         $stGoodRatings = $this->db->prepare(
-            'SELECT movie_id, is_tv, title, poster_path, vote_average, release_date
-             FROM ratings
-             WHERE user_id = ? AND rating = 2 AND deleted = 0 AND is_private = 0
-             ORDER BY updated_at DESC
+            'SELECT r.movie_id, r.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+             FROM ratings r
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
+             ORDER BY r.updated_at DESC
              LIMIT 12'
         );
         $stGoodRatings->execute([$userId]);
@@ -55,10 +57,11 @@ class SocialWebRenderer
 
         // Watchlist
         $stWatch = $this->db->prepare(
-            'SELECT id as movie_id, is_tv, title, poster_path, vote_average, release_date
-             FROM watchlist
-             WHERE user_id = ? AND deleted = 0
-             ORDER BY created_at DESC
+            'SELECT w.id as movie_id, w.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+             FROM watchlist w
+             LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv
+             WHERE w.user_id = ? AND w.deleted = 0
+             ORDER BY w.created_at DESC
              LIMIT 12'
         );
         $stWatch->execute([$userId]);
