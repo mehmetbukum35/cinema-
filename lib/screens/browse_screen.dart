@@ -160,6 +160,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
     }
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
+    final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
     if (isAuthenticated && background) {
       // initState/build sırasında provider state'i değiştirmek yasaktır
       // (Riverpod "Tried to modify a provider while the widget tree was
@@ -217,13 +218,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final seedCandidates = await engine.fetchSeedCandidates(
         rng: Random(daySeed + _reloadNonce * 101 + 7),
       );
+      if (!mounted) return;
 
       Map<String, List<String>> friendSignals = const {};
       if (isAuthenticated) {
         try {
-          friendSignals =
-              (await ref.read(apiServiceProvider).getFriendSignals())
-                  .toRecommendationMap();
+          friendSignals = (await apiService!.getFriendSignals())
+              .toRecommendationMap();
         } catch (e) {
           debugPrint("Friend signals unavailable for browse: $e");
         }

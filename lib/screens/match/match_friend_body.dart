@@ -286,42 +286,45 @@ class _FriendPickerView extends StatelessWidget {
               final name = f.displayName ?? f.username;
               final handle = f.username;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Material(
                   color: palette.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: palette.borderSoft),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: palette.borderSoft),
                   ),
-                  leading: CircleAvatar(
-                    backgroundColor: palette.border,
-                    foregroundColor: palette.ink,
-                    child: Text(name[0].toUpperCase()),
-                  ),
-                  title: Text(
-                    name,
-                    style: TextStyle(
-                      color: palette.ink,
-                      fontWeight: FontWeight.w700,
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
                     ),
+                    leading: CircleAvatar(
+                      backgroundColor: palette.border,
+                      foregroundColor: palette.ink,
+                      child: Text(name[0].toUpperCase()),
+                    ),
+                    title: Text(
+                      name,
+                      style: TextStyle(
+                        color: palette.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: handle.isNotEmpty
+                        ? Text(
+                            '@$handle',
+                            style: TextStyle(color: palette.dim, fontSize: 12),
+                          )
+                        : null,
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: palette.dim,
+                      size: 14,
+                    ),
+                    onTap: () => onSelectFriend(f),
                   ),
-                  subtitle: handle.isNotEmpty
-                      ? Text(
-                          '@$handle',
-                          style: TextStyle(color: palette.dim, fontSize: 12),
-                        )
-                      : null,
-                  trailing: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: palette.dim,
-                    size: 14,
-                  ),
-                  onTap: () => onSelectFriend(f),
                 ),
               );
             },

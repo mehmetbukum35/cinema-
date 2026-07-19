@@ -274,6 +274,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         debugPrint("Sync failed on friend select: $e\n$st");
       }
     }
+    if (!mounted) return;
     ref.read(socialProvider.notifier).loadWatchlistIntersection(friend.id);
   }
 

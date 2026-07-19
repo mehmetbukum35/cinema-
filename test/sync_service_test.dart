@@ -174,7 +174,8 @@ void main() {
             'id': 999,
             'is_tv': 1,
             'metadata_locale': 'en',
-            'title': 'Remote Show',
+            // Catalog metadata may be absent after tombstone compaction.
+            'title': null,
             'poster_path': '/show.jpg',
             'backdrop_path': '/show_back.jpg',
             'overview': 'Show overview',
@@ -186,7 +187,23 @@ void main() {
             'deleted': true, // Remote soft delete
           },
         ],
-        'favorites': [],
+        'favorites': [
+          {
+            'id': 1000,
+            'is_tv': 0,
+            'metadata_locale': 'en',
+            'title': null,
+            'poster_path': null,
+            'backdrop_path': null,
+            'overview': null,
+            'vote_average': null,
+            'release_date': null,
+            'genre_ids': null,
+            'created_at': 1502,
+            'updated_at': 1800,
+            'deleted': true,
+          },
+        ],
         'watched_seasons': [],
         'search_history': [],
       };
@@ -218,6 +235,16 @@ void main() {
       expect(dbWatchlist, hasLength(1));
       expect(dbWatchlist[0]['deleted'], 1);
       expect(dbWatchlist[0]['metadata_locale'], 'en');
+      expect(dbWatchlist[0]['title'], '');
+
+      final dbFavorites = await testDb.query(
+        'favorites',
+        where: 'id = ?',
+        whereArgs: [1000],
+      );
+      expect(dbFavorites, hasLength(1));
+      expect(dbFavorites[0]['deleted'], 1);
+      expect(dbFavorites[0]['title'], '');
 
       // Verify last sync time was updated to server time (2000)
       expect(await PrefsService.getLastSyncTime(), 2000);

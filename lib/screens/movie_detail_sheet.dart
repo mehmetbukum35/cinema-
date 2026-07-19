@@ -471,6 +471,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         isSpoiler: _isSpoiler ? 1 : 0,
         isPrivate: _isPrivate ? 1 : 0,
       );
+      if (!mounted) return;
       ref
           .read(recommendationEngineProvider)
           .invalidateCache(isNegativeChange: _currentRating! <= 1)

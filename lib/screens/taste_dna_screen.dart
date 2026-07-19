@@ -45,19 +45,19 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
     });
     try {
       final userId = ref.read(authProvider).user?['id']?.toString();
-      final dna = await ref
-          .read(tasteDnaServiceProvider)
-          .generate(userId: userId);
+      final isAuthenticated = ref.read(authProvider).isAuthenticated;
+      final dnaService = ref.read(tasteDnaServiceProvider);
+      final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
+      final dna = await dnaService.generate(userId: userId);
       // Snapshot'ı arka planda backend'e yayınla (public web kartı için).
       // Best-effort: başarısızsa ekran yine de görünür.
-      if (ref.read(authProvider).isAuthenticated) {
+      if (isAuthenticated) {
         final cachedData = await PrefsService.getCachedDna();
         final currentHash = cachedData?['hash'];
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
         if (currentHash != null && currentHash != lastPublishedHash) {
-          ref
-              .read(apiServiceProvider)
+          apiService!
               .publishTasteDna(dna.toJson())
               .then((_) => PrefsService.setLastPublishedDnaHash(currentHash))
               .catchError((e) => debugPrint('DNA publish failed: $e'));

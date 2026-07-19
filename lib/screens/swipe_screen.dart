@@ -47,6 +47,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     _checkGuide();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _fadeCtrl.forward();
       if (ref.read(authProvider).isAuthenticated) {
         ref.read(socialProvider.notifier).loadFriendSignals();

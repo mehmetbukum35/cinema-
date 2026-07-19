@@ -286,7 +286,10 @@ class SyncService {
           'is_tv': w['is_tv'],
           'metadata_locale':
               w['metadata_locale'] ?? PrefsService.activeLanguageCode,
-          'title': w['title'],
+          // Compacted legacy tombstones may no longer have catalog metadata.
+          // SQLite keeps this legacy column NOT NULL, so retain a harmless
+          // placeholder for deleted rows instead of aborting the entire sync.
+          'title': w['title'] ?? '',
           'poster_path': w['poster_path'],
           'backdrop_path': w['backdrop_path'],
           'overview': w['overview'],
@@ -314,7 +317,8 @@ class SyncService {
           'is_tv': f['is_tv'],
           'metadata_locale':
               f['metadata_locale'] ?? PrefsService.activeLanguageCode,
-          'title': f['title'],
+          // Favorites has the same legacy NOT NULL constraint as watchlist.
+          'title': f['title'] ?? '',
           'poster_path': f['poster_path'],
           'backdrop_path': f['backdrop_path'],
           'overview': f['overview'],

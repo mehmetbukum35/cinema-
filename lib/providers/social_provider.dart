@@ -107,6 +107,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadFriendSignals() async {
     try {
       final map = await _apiService.getFriendSignals();
+      if (!mounted) return;
       state = state.copyWith(signals: map);
     } catch (e, st) {
       // Fail silently to keep the swiping UI stable
