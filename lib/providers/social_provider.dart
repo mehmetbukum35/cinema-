@@ -405,7 +405,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
 
   /// "Popüler Listeler" sıralamasını yükler.
   Future<void> loadTopProfiles() async {
-    state = state.copyWith(topProfilesLoading: true, error: () => null);
+    state = state.copyWith(topProfilesLoading: true);
     try {
       final res = await _apiService.getTopProfiles();
       final list =
@@ -414,13 +414,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
               .toList() ??
           const <TopProfile>[];
       state = state.copyWith(topProfiles: list, topProfilesLoading: false);
-    } on ApiException catch (e) {
-      state = state.copyWith(topProfilesLoading: false, error: () => e.message);
-    } catch (e) {
-      state = state.copyWith(
-        topProfilesLoading: false,
-        error: () => e.toString(),
-      );
+    } catch (e, st) {
+      // Popüler profiller arkadaş listesinin arka plan verisidir; geçici ağ
+      // hatası tüm sosyal ekranı hata durumuna sokmamalı.
+      debugPrint('Failed to load top profiles: $e\n$st');
+      if (mounted) state = state.copyWith(topProfilesLoading: false);
     }
   }
 

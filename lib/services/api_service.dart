@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -24,12 +25,14 @@ class ApiClient {
   static String get baseUrl => AppConfig.apiBaseUrl;
   final http.Client _client;
   final Duration requestTimeout;
+  final Duration transientRetryDelay;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
   ApiClient({
     http.Client? client,
     this.onSessionExpired,
     this.requestTimeout = _kRequestTimeout,
+    this.transientRetryDelay = const Duration(milliseconds: 250),
   }) : _client = client ?? http.Client();
 
   Future<Map<String, String>> _getHeaders({
@@ -56,6 +59,49 @@ class ApiClient {
   Future<http.Response> _withTimeout(Future<http.Response> request) =>
       request.timeout(requestTimeout);
 
+  bool _isTransientTransportError(Object error) =>
+      error is TimeoutException ||
+      error is http.ClientException ||
+      error is SocketException;
+
+  Future<http.Response> _sendTransport(
+    String method,
+    Uri url,
+    Map<String, String> headers,
+    String? body,
+  ) async {
+    // GET is idempotent: shared hosting may occasionally close a stale
+    // keep-alive connection before sending headers, so retry transport-only
+    // failures. Mutating requests are never retried to avoid duplicate writes.
+    final maxAttempts = method == 'GET' ? 3 : 1;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (method == 'POST') {
+          return await _withTimeout(
+            _client.post(url, headers: headers, body: body),
+          );
+        }
+        if (method == 'DELETE') {
+          return await _withTimeout(
+            _client.delete(url, headers: headers, body: body),
+          );
+        }
+        return await _withTimeout(_client.get(url, headers: headers));
+      } catch (error) {
+        if (attempt == maxAttempts || !_isTransientTransportError(error)) {
+          rethrow;
+        }
+        final delay = transientRetryDelay * attempt;
+        debugPrint(
+          'Transient GET failure ($attempt/$maxAttempts), retrying in '
+          '${delay.inMilliseconds}ms: $error',
+        );
+        await Future<void>.delayed(delay);
+      }
+    }
+    throw StateError('HTTP transport exhausted unexpectedly.');
+  }
+
   String _newRequestId() {
     final random = Random.secure();
     return List.generate(
@@ -80,17 +126,7 @@ class ApiClient {
 
     http.Response response;
     try {
-      if (method == 'POST') {
-        response = await _withTimeout(
-          _client.post(url, headers: headers, body: bodyStr),
-        );
-      } else if (method == 'DELETE') {
-        response = await _withTimeout(
-          _client.delete(url, headers: headers, body: bodyStr),
-        );
-      } else {
-        response = await _withTimeout(_client.get(url, headers: headers));
-      }
+      response = await _sendTransport(method, url, headers, bodyStr);
     } on TimeoutException catch (e) {
       debugPrint("Network request timed out after $requestTimeout: $e");
       rethrow;
@@ -108,17 +144,7 @@ class ApiClient {
           requireAuth: true,
           requestId: requestId,
         );
-        if (method == 'POST') {
-          response = await _withTimeout(
-            _client.post(url, headers: newHeaders, body: bodyStr),
-          );
-        } else if (method == 'DELETE') {
-          response = await _withTimeout(
-            _client.delete(url, headers: newHeaders, body: bodyStr),
-          );
-        } else {
-          response = await _withTimeout(_client.get(url, headers: newHeaders));
-        }
+        response = await _sendTransport(method, url, newHeaders, bodyStr);
       } else if (outcome == RefreshOutcome.denied) {
         debugPrint("Refresh token rejected by server. Ending local session.");
         // Clear local auth session so the app returns to logged-out state
@@ -243,7 +269,12 @@ class ApiClient {
 /// Backwards-compatible facade over focused domain APIs.
 class ApiService extends ApiClient
     with AuthApi, SyncApi, SocialApi, RecommendationApi, CouchApi {
-  ApiService({super.client, super.onSessionExpired, super.requestTimeout});
+  ApiService({
+    super.client,
+    super.onSessionExpired,
+    super.requestTimeout,
+    super.transientRetryDelay,
+  });
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;
   static String webProfileUrl(String username, {String lang = 'tr'}) =>

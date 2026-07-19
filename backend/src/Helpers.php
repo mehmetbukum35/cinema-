@@ -12,7 +12,15 @@ if (!function_exists('json_out')) {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         cinema_send_request_id_header();
-        echo json_encode($body, JSON_UNESCAPED_UNICODE);
+        $json = json_encode($body, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            cinema_log('critical', 'json_encode failed: ' . json_last_error_msg());
+            $json = json_encode([
+                'error' => 'Sunucu yanıtı serileştirilemedi: ' . json_last_error_msg(),
+                'request_id' => cinema_request_id()
+            ]);
+        }
+        echo $json;
         exit;
     }
 }

@@ -147,7 +147,10 @@ void main() {
         expect(request.method, 'GET');
         expect(request.url.path, '/api/social/friends');
         expect(request.headers['Authorization'], 'Bearer initial_access');
-        expect(request.headers['accept-language'], PrefsService.activeLanguageCode);
+        expect(
+          request.headers['accept-language'],
+          PrefsService.activeLanguageCode,
+        );
 
         return http.Response(
           jsonEncode({
@@ -169,6 +172,53 @@ void main() {
       // 3. Assert
       expect(res['friends'], hasLength(1));
       expect(res['friends'][0]['username'], 'friend1');
+    });
+
+    test('transient GET transport failures should be retried', () async {
+      var attempts = 0;
+      final mockClient = MockClient((request) async {
+        attempts++;
+        if (attempts < 3) {
+          throw http.ClientException(
+            'Connection closed before full header was received',
+            request.url,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'friends': [],
+            'pending_received': [],
+            'pending_sent': [],
+          }),
+          200,
+        );
+      });
+      final apiService = ApiService(
+        client: mockClient,
+        transientRetryDelay: Duration.zero,
+      );
+
+      await apiService.getFriends();
+
+      expect(attempts, 3);
+    });
+
+    test('mutating requests should not retry transport failures', () async {
+      var attempts = 0;
+      final mockClient = MockClient((request) async {
+        attempts++;
+        throw http.ClientException('connection dropped', request.url);
+      });
+      final apiService = ApiService(
+        client: mockClient,
+        transientRetryDelay: Duration.zero,
+      );
+
+      await expectLater(
+        apiService.login(email: 'test@example.com', password: 'secret123'),
+        throwsA(isA<http.ClientException>()),
+      );
+      expect(attempts, 1);
     });
 
     test('should throw ApiException on HTTP 400', () async {
