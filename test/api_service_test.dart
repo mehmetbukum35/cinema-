@@ -147,6 +147,7 @@ void main() {
         expect(request.method, 'GET');
         expect(request.url.path, '/api/social/friends');
         expect(request.headers['Authorization'], 'Bearer initial_access');
+        expect(request.headers['accept-language'], PrefsService.activeLanguageCode);
 
         return http.Response(
           jsonEncode({

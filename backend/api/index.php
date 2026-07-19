@@ -287,7 +287,7 @@ switch (true) {
     case $route === 'GET /sync':
         $uid = $auth->requireUser();
         rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120), true);
-        $sync->pull($uid, (int) ($_GET['since'] ?? 0));
+        $sync->pull($uid, (int) ($_GET['since'] ?? 0), $_GET['locale'] ?? null);
         break;
 
     case $route === 'POST /sync':

@@ -39,6 +39,7 @@ class ApiClient {
     final Map<String, String> headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Accept-Language': PrefsService.activeLanguageCode,
     };
     if (requestId case final requestId?) {
       headers['X-Request-ID'] = requestId;

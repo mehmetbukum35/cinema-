@@ -53,6 +53,34 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame('Game of Thrones', $this->titleRow(1399, 1)['title']);
     }
 
+    public function testLocalizedMetadataIsIsolatedByLocale(): void
+    {
+        $this->sync->push(1, [
+            'metadata_locale' => 'tr',
+            'watchlist' => [[
+                'id' => 278, 'is_tv' => 0, 'title' => 'Esaretin Bedeli',
+                'updated_at' => 1000,
+            ]],
+        ]);
+        $this->sync->push(1, [
+            'metadata_locale' => 'en',
+            'watchlist' => [[
+                'id' => 278, 'is_tv' => 0, 'title' => 'The Shawshank Redemption',
+                'updated_at' => 1100,
+            ]],
+        ]);
+
+        $this->assertSame('Esaretin Bedeli', $this->titleRow(278, 0, 'tr')['title']);
+        $this->assertSame('The Shawshank Redemption', $this->titleRow(278, 0, 'en')['title']);
+
+        TestHelperRegistry::reset();
+        $this->sync->pull(1, 0, 'tr');
+        $this->assertSame('Esaretin Bedeli', TestHelperRegistry::$lastBody['watchlist'][0]['title']);
+        TestHelperRegistry::reset();
+        $this->sync->pull(1, 0, 'en');
+        $this->assertSame('The Shawshank Redemption', TestHelperRegistry::$lastBody['watchlist'][0]['title']);
+    }
+
     // ─── last-write-wins: YENİ kazanır ────────────────────────────────────────
     public function testNewerWriteWins(): void
     {
@@ -331,18 +359,18 @@ class SyncIntegrationTest extends TestCase
         );
         $stmt->execute([$uid, $movieId, $isTv, $rating, $updatedAt, $updatedAt]);
         $stmt = $this->db->prepare(
-            'INSERT INTO titles (tmdb_id, is_tv, title, metadata_updated_at) VALUES (?, ?, ?, ?)
-             ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+            'INSERT INTO titles (tmdb_id, is_tv, locale, title, metadata_updated_at) VALUES (?, ?, \'und\', ?, ?)
+             ON CONFLICT(tmdb_id, is_tv, locale) DO UPDATE SET
                title = excluded.title, metadata_updated_at = excluded.metadata_updated_at
              WHERE excluded.metadata_updated_at >= titles.metadata_updated_at'
         );
         $stmt->execute([$movieId, $isTv, $title, $updatedAt]);
     }
 
-    private function titleRow(int $tmdbId, int $isTv): array
+    private function titleRow(int $tmdbId, int $isTv, string $locale = 'und'): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ?');
-        $stmt->execute([$tmdbId, $isTv]);
+        $stmt = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ? AND locale = ?');
+        $stmt->execute([$tmdbId, $isTv, $locale]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $this->assertIsArray($row, "Beklenen katalog kaydı bulunamadı: $tmdbId/$isTv");
         return $row;
@@ -377,6 +405,7 @@ class SyncIntegrationTest extends TestCase
             'CREATE TABLE titles (
                 tmdb_id INTEGER NOT NULL,
                 is_tv INTEGER NOT NULL,
+                locale TEXT NOT NULL,
                 title TEXT,
                 poster_path TEXT,
                 backdrop_path TEXT,
@@ -386,7 +415,7 @@ class SyncIntegrationTest extends TestCase
                 popularity REAL,
                 genre_ids TEXT,
                 metadata_updated_at INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (tmdb_id, is_tv)
+                PRIMARY KEY (tmdb_id, is_tv, locale)
             )'
         );
         $this->db->exec(

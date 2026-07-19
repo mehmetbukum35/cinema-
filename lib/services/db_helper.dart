@@ -67,7 +67,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 8,
+      version: 9,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
     );
@@ -85,6 +85,7 @@ class DatabaseHelper {
         vote_average REAL,
         release_date TEXT,
         is_tv INTEGER NOT NULL,
+        metadata_locale TEXT NOT NULL DEFAULT 'und',
         genre_ids TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL DEFAULT 0,
@@ -98,6 +99,7 @@ class DatabaseHelper {
       CREATE TABLE ratings (
         movie_id INTEGER,
         is_tv INTEGER NOT NULL,
+        metadata_locale TEXT NOT NULL DEFAULT 'und',
         rating INTEGER NOT NULL,
         genre_ids TEXT,
         created_at INTEGER NOT NULL,
@@ -149,6 +151,7 @@ class DatabaseHelper {
         vote_average REAL,
         release_date TEXT,
         is_tv INTEGER NOT NULL,
+        metadata_locale TEXT NOT NULL DEFAULT 'und',
         genre_ids TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL DEFAULT 0,
@@ -368,6 +371,17 @@ class DatabaseHelper {
         debugPrint("Error migrating database to v8 (adding is_private): $e");
       }
     }
+    if (oldVersion < 9) {
+      try {
+        for (final table in ['ratings', 'watchlist', 'favorites']) {
+          await db.execute(
+            "ALTER TABLE $table ADD COLUMN metadata_locale TEXT NOT NULL DEFAULT 'und'",
+          );
+        }
+      } catch (e) {
+        debugPrint('Error migrating database to v9 (metadata locale): $e');
+      }
+    }
   }
 
   // ─── Ratings Operations ──────────────────────────────────────────────────────
@@ -383,6 +397,7 @@ class DatabaseHelper {
     Object? comment = unset,
     Object? isSpoiler = unset,
     Object? isPrivate = unset,
+    String metadataLocale = 'tr',
   }) async {
     final db = await database;
     final finalMovieId = movieId ?? movie?.id ?? 0;
@@ -411,6 +426,7 @@ class DatabaseHelper {
       _mockRatings.add({
         'movie_id': finalMovieId,
         'is_tv': finalIsTV ? 1 : 0,
+        'metadata_locale': metadataLocale,
         'rating': rating,
         'genre_ids': jsonEncode(finalGenreIds),
         'created_at': createdAt,
@@ -434,6 +450,7 @@ class DatabaseHelper {
     await db.insert('ratings', {
       'movie_id': finalMovieId,
       'is_tv': finalIsTV ? 1 : 0,
+      'metadata_locale': metadataLocale,
       'rating': rating,
       'genre_ids': jsonEncode(finalGenreIds),
       'created_at': createdAt,
@@ -692,6 +709,7 @@ class DatabaseHelper {
     Movie movie, {
     int? updatedAt,
     int? deleted,
+    String metadataLocale = 'tr',
   }) async {
     final db = await database;
     final now = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
@@ -709,6 +727,7 @@ class DatabaseHelper {
         'vote_average': movie.voteAverage,
         'release_date': movie.releaseDate,
         'is_tv': movie.isTV ? 1 : 0,
+        'metadata_locale': metadataLocale,
         'genre_ids': jsonEncode(movie.genreIds),
         'created_at': now,
         'updated_at': now,
@@ -725,6 +744,7 @@ class DatabaseHelper {
       'vote_average': movie.voteAverage,
       'release_date': movie.releaseDate,
       'is_tv': movie.isTV ? 1 : 0,
+      'metadata_locale': metadataLocale,
       'genre_ids': jsonEncode(movie.genreIds),
       'created_at': now,
       'updated_at': now,
@@ -965,7 +985,11 @@ class DatabaseHelper {
 
   // ─── Favorites Operations ────────────────────────────────────────────────────
 
-  Future<void> saveFavorites(List<Movie> items, bool isTV) async {
+  Future<void> saveFavorites(
+    List<Movie> items,
+    bool isTV, {
+    String metadataLocale = 'tr',
+  }) async {
     final db = await database;
     final now = DateTime.now().millisecondsSinceEpoch;
     if (db == null) {
@@ -981,6 +1005,7 @@ class DatabaseHelper {
           'vote_average': item.voteAverage,
           'release_date': item.releaseDate,
           'is_tv': isTV ? 1 : 0,
+          'metadata_locale': metadataLocale,
           'genre_ids': jsonEncode(item.genreIds),
           'created_at': now + i,
           'updated_at': now,
@@ -1008,6 +1033,7 @@ class DatabaseHelper {
           'vote_average': item.voteAverage,
           'release_date': item.releaseDate,
           'is_tv': isTV ? 1 : 0,
+          'metadata_locale': metadataLocale,
           'genre_ids': jsonEncode(item.genreIds),
           'created_at': i,
           'updated_at': now,

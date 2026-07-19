@@ -6,6 +6,7 @@ trait SocialMatchTrait
     // ─── GET /social/match/watchlist-intersection/{friend_id} ───────────────
     public function getWatchlistIntersection(int $uid, int $friendId): void
     {
+        $locale = cinema_content_locale();
         // Arkadaşlık ilişkisini doğrula
         $check = $this->db->prepare('SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? AND status = \'accepted\'');
         $check->execute([$uid, $friendId]);
@@ -15,16 +16,23 @@ trait SocialMatchTrait
 
         // Watchlist kesişimini al
         $st = $this->db->prepare(
-            'SELECT w1.id, w1.is_tv, t.title, t.poster_path, t.backdrop_path,
-                    t.overview, t.vote_average, t.release_date, t.genre_ids
+            'SELECT w1.id, w1.is_tv,
+                    COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                    COALESCE(t.overview, tf.overview) AS overview,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date,
+                    COALESCE(t.genre_ids, tf.genre_ids) AS genre_ids
              FROM watchlist w1
              JOIN watchlist w2 ON w1.id = w2.id AND w1.is_tv = w2.is_tv
-             LEFT JOIN titles t ON t.tmdb_id = w1.id AND t.is_tv = w1.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = w1.id AND t.is_tv = w1.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = w1.id AND tf.is_tv = w1.is_tv AND tf.locale = \'und\'
              WHERE w1.user_id = ? AND w2.user_id = ?
                AND w1.deleted = 0 AND w2.deleted = 0
              ORDER BY w1.created_at DESC'
         );
-        $st->execute([$uid, $friendId]);
+        $st->execute([$locale, $uid, $friendId]);
         $items = $st->fetchAll();
 
         // JSON formatına uygun parse et

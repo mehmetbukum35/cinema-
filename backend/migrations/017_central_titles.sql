@@ -73,4 +73,5 @@ ON DUPLICATE KEY UPDATE
   metadata_updated_at = GREATEST(titles.metadata_updated_at, VALUES(metadata_updated_at));
 
 -- Legacy metadata columns are intentionally kept during this migration.
--- Deploy the catalog-aware backend, verify it, then run migration 018.
+-- Next run migration 018, deploy the locale-aware backend/app, verify them,
+-- and only then run migration 019.

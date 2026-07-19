@@ -890,6 +890,7 @@ class SocialIntegrationTest extends TestCase
             'CREATE TABLE titles (
                 tmdb_id INTEGER NOT NULL,
                 is_tv INTEGER NOT NULL,
+                locale TEXT NOT NULL,
                 title TEXT,
                 poster_path TEXT,
                 backdrop_path TEXT,
@@ -899,7 +900,7 @@ class SocialIntegrationTest extends TestCase
                 popularity REAL,
                 genre_ids TEXT,
                 metadata_updated_at INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (tmdb_id, is_tv)
+                PRIMARY KEY (tmdb_id, is_tv, locale)
             )'
         );
         // Legacy fixtures still carry metadata inline. Mirror it into the
@@ -907,10 +908,10 @@ class SocialIntegrationTest extends TestCase
         $this->db->exec(
             'CREATE TRIGGER ratings_title_fixture AFTER INSERT ON ratings BEGIN
                 INSERT INTO titles
-                    (tmdb_id, is_tv, title, poster_path, genre_ids, metadata_updated_at)
+                    (tmdb_id, is_tv, locale, title, poster_path, genre_ids, metadata_updated_at)
                 VALUES
-                    (NEW.movie_id, NEW.is_tv, NEW.title, NEW.poster_path, NEW.genre_ids, NEW.updated_at)
-                ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+                    (NEW.movie_id, NEW.is_tv, \'tr\', NEW.title, NEW.poster_path, NEW.genre_ids, NEW.updated_at)
+                ON CONFLICT(tmdb_id, is_tv, locale) DO UPDATE SET
                     title = COALESCE(excluded.title, titles.title),
                     poster_path = COALESCE(excluded.poster_path, titles.poster_path),
                     genre_ids = COALESCE(excluded.genre_ids, titles.genre_ids),
@@ -920,12 +921,12 @@ class SocialIntegrationTest extends TestCase
         $this->db->exec(
             'CREATE TRIGGER watchlist_title_fixture AFTER INSERT ON watchlist BEGIN
                 INSERT INTO titles
-                    (tmdb_id, is_tv, title, poster_path, backdrop_path, overview,
+                    (tmdb_id, is_tv, locale, title, poster_path, backdrop_path, overview,
                      vote_average, release_date, genre_ids, metadata_updated_at)
                 VALUES
-                    (NEW.id, NEW.is_tv, NEW.title, NEW.poster_path, NEW.backdrop_path,
+                    (NEW.id, NEW.is_tv, \'tr\', NEW.title, NEW.poster_path, NEW.backdrop_path,
                      NEW.overview, NEW.vote_average, NEW.release_date, NEW.genre_ids, NEW.updated_at)
-                ON CONFLICT(tmdb_id, is_tv) DO UPDATE SET
+                ON CONFLICT(tmdb_id, is_tv, locale) DO UPDATE SET
                     title = COALESCE(excluded.title, titles.title),
                     poster_path = COALESCE(excluded.poster_path, titles.poster_path),
                     backdrop_path = COALESCE(excluded.backdrop_path, titles.backdrop_path),

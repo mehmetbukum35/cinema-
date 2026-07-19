@@ -56,6 +56,7 @@ trait SocialProfilesPublicTrait
     // yapımlardan 4 afiş önizlemesi eklenir.
     public function getTopProfiles(int $uid): void
     {
+        $locale = cinema_content_locale();
         $st = $this->db->prepare(
             'SELECT u.id, u.display_name, u.username,
                     (SELECT COUNT(*) FROM profile_likes pl
@@ -72,17 +73,20 @@ trait SocialProfilesPublicTrait
         $st->execute([$uid]);
 
         $posterStmt = $this->db->prepare(
-             'SELECT t.title, t.poster_path, r.movie_id, r.is_tv FROM ratings r
-              JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             'SELECT COALESCE(t.title, tf.title) AS title,
+                     COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                     r.movie_id, r.is_tv FROM ratings r
+              LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
               WHERE r.user_id = ? AND r.rating >= 2 AND r.deleted = 0
-                AND r.is_private = 0 AND t.poster_path IS NOT NULL
+                AND r.is_private = 0 AND COALESCE(t.poster_path, tf.poster_path) IS NOT NULL
               ORDER BY r.rating DESC, r.updated_at DESC
               LIMIT 10'
         );
 
         $profiles = [];
         foreach ($st->fetchAll() as $u) {
-            $posterStmt->execute([(int) $u['id']]);
+            $posterStmt->execute([$locale, (int) $u['id']]);
             $previews = [];
             foreach ($posterStmt->fetchAll() as $p) {
                 $previews[] = [

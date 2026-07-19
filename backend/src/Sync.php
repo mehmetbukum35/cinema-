@@ -54,22 +54,34 @@ class Sync
 
     // ─── GET /sync?since=<unix_ms> ──────────────────────────────────────────
     // since'ten sonra değişen tüm kayıtları (silmeler dahil) döner.
-    public function pull(int $uid, int $since): void
+    public function pull(int $uid, int $since, ?string $locale = null): void
     {
+        $locale = cinema_content_locale($locale);
         $out = ['server_time' => now_ms()];
         foreach (self::TABLES as $table => $def) {
             $select = "SELECT d.*";
             $join = '';
             if (isset($def['title_key'])) {
-                $select .= ', t.title, t.poster_path, t.backdrop_path, t.overview,
-                            t.vote_average, t.release_date, t.popularity, t.genre_ids';
-                $join = " LEFT JOIN titles t ON t.tmdb_id = d.`{$def['title_key']}` AND t.is_tv = d.is_tv";
+                $select .= ', COALESCE(t.locale, tf.locale) AS metadata_locale,
+                            COALESCE(t.title, tf.title) AS title,
+                            COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                            COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                            COALESCE(t.overview, tf.overview) AS overview,
+                            COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                            COALESCE(t.release_date, tf.release_date) AS release_date,
+                            COALESCE(t.popularity, tf.popularity) AS popularity,
+                            COALESCE(t.genre_ids, tf.genre_ids) AS genre_ids';
+                $join = " LEFT JOIN titles t ON t.tmdb_id = d.`{$def['title_key']}`
+                          AND t.is_tv = d.is_tv AND t.locale = ?
+                          LEFT JOIN titles tf ON tf.tmdb_id = d.`{$def['title_key']}`
+                          AND tf.is_tv = d.is_tv AND tf.locale = 'und'";
             }
             $st = $this->db->prepare(
                 "$select FROM `$table` d$join
                  WHERE d.user_id = ? AND d.updated_at > ? ORDER BY d.updated_at ASC"
             );
-            $st->execute([$uid, $since]);
+            $params = isset($def['title_key']) ? [$locale, $uid, $since] : [$uid, $since];
+            $st->execute($params);
             $rows = [];
             foreach ($st->fetchAll() as $r) {
                 unset($r['user_id']);
@@ -93,6 +105,7 @@ class Sync
 
     public function push(int $uid, array $in): void
     {
+        $locale = self::metadataLocale($in['metadata_locale'] ?? null);
         // Sınır kontrolü transaction'a girmeden yapılır.
         foreach (self::TABLES as $table => $def) {
             $items = $in[$table] ?? null;
@@ -109,7 +122,7 @@ class Sync
                 if (!is_array($items)) continue;
                 foreach ($items as $item) {
                     if (!is_array($item)) continue;
-                    $applied += $this->upsert($uid, $table, $def, $item) ? 1 : 0;
+                    $applied += $this->upsert($uid, $table, $def, $item, $locale) ? 1 : 0;
                 }
             }
             $this->db->commit();
@@ -158,7 +171,7 @@ class Sync
     // SQLite'ta çalışır (MySQL'e özgü `ON DUPLICATE KEY UPDATE` kullanılmaz).
     // Dönüş: kayıt yazıldı/güncellendiyse true; gelen veri eski olduğu için
     // yok sayıldıysa false (böylece `applied` sayacı gerçekten uygulananları sayar).
-    private function upsert(int $uid, string $table, array $def, array $item): bool
+    private function upsert(int $uid, string $table, array $def, array $item, string $locale): bool
     {
         // Anahtarlar zorunlu
         foreach ($def['keys'] as $k) {
@@ -183,7 +196,8 @@ class Sync
         $deleted   = !empty($item['deleted']) ? 1 : 0;
 
         if (isset($def['title_key']) && !$deleted) {
-            $this->upsertTitle($item, (string) $def['title_key'], $updatedAt);
+            $itemLocale = self::metadataLocale($item['metadata_locale'] ?? $locale);
+            $this->upsertTitle($item, (string) $def['title_key'], $updatedAt, $itemLocale);
         }
 
         // Anahtara göre WHERE (user_id + tablo anahtarları) — her iki motorda aynı.
@@ -271,7 +285,7 @@ class Sync
     }
 
     /** Store shared TMDB metadata once; stale clients cannot overwrite newer data. */
-    private function upsertTitle(array $item, string $idKey, int $updatedAt): void
+    private function upsertTitle(array $item, string $idKey, int $updatedAt, string $locale): void
     {
         $tmdbId = (int) ($item[$idKey] ?? 0);
         if ($tmdbId <= 0) return;
@@ -289,12 +303,12 @@ class Sync
         }
         if (!$hasMetadata) return;
 
-        $select = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ?');
-        $select->execute([$tmdbId, $isTv]);
+        $select = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ? AND locale = ?');
+        $select->execute([$tmdbId, $isTv, $locale]);
         $existing = $select->fetch(PDO::FETCH_ASSOC);
         if ($existing !== false && $updatedAt < (int) $existing['metadata_updated_at']) return;
 
-        $values = ['tmdb_id' => $tmdbId, 'is_tv' => $isTv];
+        $values = ['tmdb_id' => $tmdbId, 'is_tv' => $isTv, 'locale' => $locale];
         foreach ($fields as $field) {
             $incoming = $item[$field] ?? null;
             if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
@@ -319,7 +333,14 @@ class Sync
         $params[] = $values['metadata_updated_at'];
         $params[] = $tmdbId;
         $params[] = $isTv;
-        $this->db->prepare("UPDATE titles SET $set, metadata_updated_at = ? WHERE tmdb_id = ? AND is_tv = ?")
+        $params[] = $locale;
+        $this->db->prepare("UPDATE titles SET $set, metadata_updated_at = ? WHERE tmdb_id = ? AND is_tv = ? AND locale = ?")
                  ->execute($params);
+    }
+
+    private static function metadataLocale(mixed $value): string
+    {
+        $locale = strtolower(trim((string) $value));
+        return in_array($locale, ['tr', 'en'], true) ? $locale : 'und';
     }
 }

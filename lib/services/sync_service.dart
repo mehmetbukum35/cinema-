@@ -57,7 +57,9 @@ class SyncService {
       debugPrint(
         "Starting sync (mock DB). pull since: $lastPull, push since: $lastPush",
       );
-      final pushResult = await _apiService.push(<String, dynamic>{});
+      final pushResult = await _apiService.push(<String, dynamic>{
+        'metadata_locale': PrefsService.activeLanguageCode,
+      });
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
       await PrefsService.setLastPushTime(pushWatermark);
       final pullResult = await _apiService.pull(lastPull);
@@ -75,7 +77,9 @@ class SyncService {
     debugPrint("Starting sync. pull since: $lastPull, push since: $lastPush");
 
     // 1. Build and PUSH local changes
-    final payload = <String, dynamic>{};
+    final payload = <String, dynamic>{
+      'metadata_locale': PrefsService.activeLanguageCode,
+    };
 
     // Ratings
     final localRatings = await db.query(
@@ -88,6 +92,7 @@ class SyncService {
           (r) => {
             'movie_id': r['movie_id'],
             'is_tv': r['is_tv'],
+            'metadata_locale': r['metadata_locale'],
             'rating': r['rating'],
             'genre_ids': jsonDecode(r['genre_ids'] as String),
             'title': r['title'],
@@ -118,6 +123,7 @@ class SyncService {
           (w) => {
             'id': w['id'],
             'is_tv': w['is_tv'],
+            'metadata_locale': w['metadata_locale'],
             'title': w['title'],
             'poster_path': w['poster_path'],
             'backdrop_path': w['backdrop_path'],
@@ -143,6 +149,7 @@ class SyncService {
           (f) => {
             'id': f['id'],
             'is_tv': f['is_tv'],
+            'metadata_locale': f['metadata_locale'],
             'title': f['title'],
             'poster_path': f['poster_path'],
             'backdrop_path': f['backdrop_path'],
@@ -244,6 +251,8 @@ class SyncService {
         await txn.insert('ratings', {
           'movie_id': r['movie_id'],
           'is_tv': r['is_tv'],
+          'metadata_locale':
+              r['metadata_locale'] ?? PrefsService.activeLanguageCode,
           'rating': r['rating'],
           'genre_ids': jsonEncode(r['genre_ids']),
           'title': r['title'],
@@ -275,6 +284,8 @@ class SyncService {
         await txn.insert('watchlist', {
           'id': w['id'],
           'is_tv': w['is_tv'],
+          'metadata_locale':
+              w['metadata_locale'] ?? PrefsService.activeLanguageCode,
           'title': w['title'],
           'poster_path': w['poster_path'],
           'backdrop_path': w['backdrop_path'],
@@ -301,6 +312,8 @@ class SyncService {
         await txn.insert('favorites', {
           'id': f['id'],
           'is_tv': f['is_tv'],
+          'metadata_locale':
+              f['metadata_locale'] ?? PrefsService.activeLanguageCode,
           'title': f['title'],
           'poster_path': f['poster_path'],
           'backdrop_path': f['backdrop_path'],

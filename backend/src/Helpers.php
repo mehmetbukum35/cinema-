@@ -336,6 +336,22 @@ function cinema_send_request_id_header(): void
     }
 }
 
+/** Supported metadata language from an explicit value or Accept-Language. */
+function cinema_content_locale(?string $explicit = null): string
+{
+    $candidate = strtolower(trim((string) ($explicit ?? '')));
+    if ($candidate === 'tr' || str_starts_with($candidate, 'tr-')) return 'tr';
+    if ($candidate === 'en' || str_starts_with($candidate, 'en-')) return 'en';
+
+    $header = strtolower((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''));
+    foreach (explode(',', $header) as $part) {
+        $tag = trim(explode(';', $part)[0]);
+        if ($tag === 'tr' || str_starts_with($tag, 'tr-')) return 'tr';
+        if ($tag === 'en' || str_starts_with($tag, 'en-')) return 'en';
+    }
+    return 'tr';
+}
+
 /** Remove credentials and personal secrets before context reaches a log sink. */
 function cinema_redact(mixed $value, ?string $key = null): mixed
 {

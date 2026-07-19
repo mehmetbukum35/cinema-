@@ -33,38 +33,50 @@ class SocialWebRenderer
 
         // Beğendikleri (Rating = 3 "Harika")
         $stRatings = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+            'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
              FROM ratings r
-             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
              WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
              ORDER BY r.updated_at DESC
              LIMIT 12'
         );
-        $stRatings->execute([$userId]);
+        $stRatings->execute([$lang, $userId]);
         $ratings = $stRatings->fetchAll();
 
         // İyi Buldukları (Rating = 2 "İyi")
         $stGoodRatings = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+            'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
              FROM ratings r
-             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
              WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
              ORDER BY r.updated_at DESC
              LIMIT 12'
         );
-        $stGoodRatings->execute([$userId]);
+        $stGoodRatings->execute([$lang, $userId]);
         $goodRatings = $stGoodRatings->fetchAll();
 
         // Watchlist
         $stWatch = $this->db->prepare(
-            'SELECT w.id as movie_id, w.is_tv, t.title, t.poster_path, t.vote_average, t.release_date
+            'SELECT w.id as movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
              FROM watchlist w
-             LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv
+             LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
              WHERE w.user_id = ? AND w.deleted = 0
              ORDER BY w.created_at DESC
              LIMIT 12'
         );
-        $stWatch->execute([$userId]);
+        $stWatch->execute([$lang, $userId]);
         $watchlist = $stWatch->fetchAll();
 
         $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);

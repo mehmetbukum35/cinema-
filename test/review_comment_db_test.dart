@@ -35,6 +35,7 @@ void main() {
           CREATE TABLE ratings (
             movie_id INTEGER,
             is_tv INTEGER NOT NULL,
+            metadata_locale TEXT NOT NULL DEFAULT 'und',
             rating INTEGER NOT NULL,
             genre_ids TEXT,
             created_at INTEGER NOT NULL,

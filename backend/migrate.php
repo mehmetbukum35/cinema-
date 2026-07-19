@@ -140,14 +140,19 @@ if ($migrationCount === 0 && $tableExists($db, 'users')) {
     if ($tableExists($db, 'titles')) {
         $autoApplied['017_central_titles.sql'] = true;
     }
-    // Check Migration 018 (legacy metadata removed from relation tables).
+    // Check Migration 018 (locale-aware title catalog).
+    if ($tableExists($db, 'titles') && $columnExists($db, 'titles', 'locale')) {
+        $autoApplied['018_title_locales.sql'] = true;
+    }
+    // Check Migration 019 (legacy metadata removed from relation tables).
     if (
         $tableExists($db, 'titles')
+        && $columnExists($db, 'titles', 'locale')
         && !$columnExists($db, 'ratings', 'title')
         && !$columnExists($db, 'watchlist', 'title')
         && !$columnExists($db, 'favorites', 'title')
     ) {
-        $autoApplied['018_drop_legacy_title_metadata.sql'] = true;
+        $autoApplied['019_drop_legacy_title_metadata.sql'] = true;
     }
 
     // Insert auto-detected applied migrations

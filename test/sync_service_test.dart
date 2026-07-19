@@ -59,7 +59,7 @@ void main() {
     // 2. Open Fresh In-Memory Test SQLite Database
     testDb = await openDatabase(
       inMemoryDatabasePath,
-      version: 8,
+      version: 9,
       onCreate: DatabaseHelper().onCreate,
       onUpgrade: DatabaseHelper().onUpgrade,
     );
@@ -127,17 +127,20 @@ void main() {
 
       // 3. Assert: Verify the push payload contained correct fields
       expect(mockApi.pushedPayload, isNotNull);
+      expect(mockApi.pushedPayload!['metadata_locale'], 'tr');
       final ratingsPayload = mockApi.pushedPayload!['ratings'] as List<dynamic>;
       expect(ratingsPayload, hasLength(1));
       expect(ratingsPayload[0]['movie_id'], 123);
       expect(ratingsPayload[0]['rating'], 3);
       expect(ratingsPayload[0]['deleted'], false);
+      expect(ratingsPayload[0]['metadata_locale'], 'und');
 
       final watchlistPayload =
           mockApi.pushedPayload!['watchlist'] as List<dynamic>;
       expect(watchlistPayload, hasLength(1));
       expect(watchlistPayload[0]['id'], 456);
       expect(watchlistPayload[0]['deleted'], true);
+      expect(watchlistPayload[0]['metadata_locale'], 'und');
 
       // Verify last sync time was updated to 1100
       expect(await PrefsService.getLastSyncTime(), 1100);
@@ -151,6 +154,7 @@ void main() {
           {
             'movie_id': 789,
             'is_tv': 0,
+            'metadata_locale': 'en',
             'rating': 2,
             'genre_ids': [12, 14],
             'title': 'Remote Movie',
@@ -169,6 +173,7 @@ void main() {
           {
             'id': 999,
             'is_tv': 1,
+            'metadata_locale': 'en',
             'title': 'Remote Show',
             'poster_path': '/show.jpg',
             'backdrop_path': '/show_back.jpg',
@@ -201,6 +206,7 @@ void main() {
       expect(dbRatings, hasLength(1));
       expect(dbRatings[0]['rating'], 2);
       expect(dbRatings[0]['title'], 'Remote Movie');
+      expect(dbRatings[0]['metadata_locale'], 'en');
       expect(jsonDecode(dbRatings[0]['genre_ids'] as String), [12, 14]);
 
       // Verify watchlist soft-delete was applied locally
@@ -211,6 +217,7 @@ void main() {
       );
       expect(dbWatchlist, hasLength(1));
       expect(dbWatchlist[0]['deleted'], 1);
+      expect(dbWatchlist[0]['metadata_locale'], 'en');
 
       // Verify last sync time was updated to server time (2000)
       expect(await PrefsService.getLastSyncTime(), 2000);

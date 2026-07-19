@@ -231,12 +231,20 @@ class PrefsService {
   // ─── Favourite movies / shows ────────────────────────────────────────────────
 
   static Future<void> saveFavoriteMovies(List<Movie> movies) async {
-    await DatabaseHelper().saveFavorites(movies, false);
+    await DatabaseHelper().saveFavorites(
+      movies,
+      false,
+      metadataLocale: activeLanguageCode,
+    );
     invalidateGenreWeights();
   }
 
   static Future<void> saveFavoriteTvShows(List<Movie> shows) async {
-    await DatabaseHelper().saveFavorites(shows, true);
+    await DatabaseHelper().saveFavorites(
+      shows,
+      true,
+      metadataLocale: activeLanguageCode,
+    );
     invalidateGenreWeights();
   }
 
@@ -315,6 +323,7 @@ class PrefsService {
       comment: comment,
       isSpoiler: isSpoiler,
       isPrivate: isPrivate,
+      metadataLocale: activeLanguageCode,
     );
     invalidateGenreWeights();
   }
@@ -629,7 +638,10 @@ class PrefsService {
   // ─── Watchlist ───────────────────────────────────────────────────────────────
 
   static Future<void> addToWatchlist(Movie movie) async {
-    await DatabaseHelper().addToWatchlist(movie);
+    await DatabaseHelper().addToWatchlist(
+      movie,
+      metadataLocale: activeLanguageCode,
+    );
   }
 
   static Future<void> removeFromWatchlist(int id, bool isTV) async {

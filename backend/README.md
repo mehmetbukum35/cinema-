@@ -49,13 +49,14 @@ Deploy the normalized title catalog without an API/schema mismatch window:
 
 1. Run `migrations/017_central_titles.sql` in phpMyAdmin. This creates and
    backfills `titles` but deliberately keeps the legacy metadata columns.
-2. Upload the catalog-aware files from `src/` and verify `/api/health`, sync,
-   activity feed, and a public profile.
-3. Run `migrations/018_drop_legacy_title_metadata.sql` in phpMyAdmin to remove
+2. Run `migrations/018_title_locales.sql` to separate Turkish and English
+   metadata, then upload the locale-aware backend and app.
+3. Verify Turkish/English sync, activity feed, and a public profile.
+4. Run `migrations/019_drop_legacy_title_metadata.sql` in phpMyAdmin to remove
    metadata duplicated in `ratings`, `watchlist`, and `favorites`.
 
-Take a database backup before steps 1 and 3. Do not run migration 018 before
-the updated backend has been uploaded.
+Take a database backup before steps 1, 2, and 4. Do not run migration 019 before
+the locale-aware backend and app have both been deployed and verified.
 
 ## Uçlar
 

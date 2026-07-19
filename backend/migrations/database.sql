@@ -41,6 +41,7 @@ CREATE TABLE `favorites` (
 CREATE TABLE `titles` (
   `tmdb_id` int(11) NOT NULL,
   `is_tv` tinyint(1) NOT NULL,
+  `locale` varchar(3) NOT NULL DEFAULT 'und',
   `title` varchar(512) DEFAULT NULL,
   `poster_path` varchar(255) DEFAULT NULL,
   `backdrop_path` varchar(255) DEFAULT NULL,
@@ -50,7 +51,7 @@ CREATE TABLE `titles` (
   `popularity` double DEFAULT NULL,
   `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
   `metadata_updated_at` bigint(20) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`tmdb_id`,`is_tv`),
+  PRIMARY KEY (`tmdb_id`,`is_tv`,`locale`),
   KEY `idx_titles_metadata_updated` (`metadata_updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

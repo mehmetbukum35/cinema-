@@ -106,7 +106,7 @@ void main() {
     });
 
     test('should upgrade database from v1 to v8 successfully', () async {
-      await helper.onUpgrade(db, 1, 8);
+      await helper.onUpgrade(db, 1, 9);
 
       final ratingsRows = await db.query('ratings');
       expect(ratingsRows, hasLength(1));
@@ -153,7 +153,7 @@ void main() {
     });
 
     test('migrated schema matches fresh onCreate schema (no drift)', () async {
-      await helper.onUpgrade(db, 1, 8);
+      await helper.onUpgrade(db, 1, 9);
 
       final migratedColumns = <String, Set<String>>{};
       const tables = [
@@ -172,7 +172,7 @@ void main() {
 
       final fresh = await openDatabase(
         inMemoryDatabasePath,
-        version: 8,
+        version: 9,
         onCreate: helper.onCreate,
       );
       try {
@@ -204,7 +204,7 @@ void main() {
     setUp(() async {
       db = await openDatabase(
         inMemoryDatabasePath,
-        version: 8,
+        version: 9,
         onCreate: helper.onCreate,
       );
       DatabaseHelper.databaseInstance = db;

@@ -214,7 +214,7 @@ void main() {
 
   Future<Database> openDeviceDb() => openDatabase(
     inMemoryDatabasePath,
-    version: 8,
+    version: 9,
     onCreate: DatabaseHelper().onCreate,
     onUpgrade: DatabaseHelper().onUpgrade,
   );
