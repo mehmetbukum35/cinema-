@@ -259,7 +259,8 @@ ALTER TABLE `favorites`
 --
 ALTER TABLE `friends`
   ADD PRIMARY KEY (`user_id`,`friend_id`),
-  ADD KEY `fk_friends_friend` (`friend_id`);
+  ADD KEY `fk_friends_friend` (`friend_id`),
+  ADD KEY `idx_friends_user_status` (`user_id`,`status`,`friend_id`);
 
 --
 -- Tablo için indeksler `password_resets`
@@ -279,7 +280,8 @@ ALTER TABLE `email_verifications`
 ALTER TABLE `ratings`
   ADD PRIMARY KEY (`user_id`,`movie_id`,`is_tv`),
   ADD KEY `idx_ratings_sync` (`user_id`,`updated_at`),
-  ADD KEY `idx_ratings_title` (`movie_id`,`is_tv`);
+  ADD KEY `idx_ratings_title` (`movie_id`,`is_tv`),
+  ADD KEY `idx_ratings_social_feed` (`user_id`,`deleted`,`is_private`,`updated_at`);
 
 --
 -- Tablo için indeksler `recommendations`
@@ -326,7 +328,8 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_users_email` (`email`),
   ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `idx_users_google_sub` (`google_sub`);
+  ADD UNIQUE KEY `idx_users_google_sub` (`google_sub`),
+  ADD KEY `idx_users_public_profiles` (`is_public`,`id`);
 
 --
 -- Tablo için indeksler `watched_seasons`

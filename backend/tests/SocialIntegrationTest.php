@@ -77,6 +77,30 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame([28, 35], TestHelperRegistry::$lastBody['watchlist'][0]['genre_ids']);
     }
 
+    public function testActivityFeedUsesStableCursorPagination(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $this->insertRating(2, 101, 0, 3, 'Newest', 3000);
+        $this->insertRating(2, 102, 0, 3, 'Middle', 2000);
+        $this->insertRating(2, 103, 0, 3, 'Oldest', 1000);
+
+        $this->social->getActivityFeed(1, null, null, 2);
+        $first = TestHelperRegistry::$lastBody;
+        $this->assertCount(2, $first['activity']);
+        $this->assertTrue($first['has_more']);
+        $this->assertNotEmpty($first['next_cursor']);
+        $this->assertSame(101, (int) $first['activity'][0]['movie_id']);
+        $this->assertSame(102, (int) $first['activity'][1]['movie_id']);
+
+        TestHelperRegistry::reset();
+        $this->social->getActivityFeed(1, null, $first['next_cursor'], 2);
+        $second = TestHelperRegistry::$lastBody;
+        $this->assertCount(1, $second['activity']);
+        $this->assertFalse($second['has_more']);
+        $this->assertNull($second['next_cursor']);
+        $this->assertSame(103, (int) $second['activity'][0]['movie_id']);
+    }
+
     public function testPrivateRatingsAreFilteredFromSocialViews(): void
     {
         $this->acceptFriendship(1, 2);

@@ -58,6 +58,19 @@ Deploy the normalized title catalog without an API/schema mismatch window:
 Take a database backup before steps 1, 2, and 4. Do not run migration 019 before
 the locale-aware backend and app have both been deployed and verified.
 
+## Social scale rollout
+
+After the central catalog rollout is complete:
+
+1. Run `migrations/020_social_scale.sql` once in phpMyAdmin.
+2. Upload the updated `api/index.php`, `src/Social/FeedTrait.php`, and
+   `src/Social/ProfilesPublicTrait.php` files.
+3. Deploy the updated app. Duplicate concurrent GET requests are coalesced,
+   activity responses expose an opaque cursor, and the expensive public-profile
+   ranking payload is cached for 60 seconds.
+
+The migration only adds indexes and does not rewrite or delete user data.
+
 ## Uçlar
 
 Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>` gerektirir.

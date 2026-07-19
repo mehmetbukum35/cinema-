@@ -361,7 +361,28 @@ void main() {
       await Future.wait(List.generate(3, (_) => apiService.getFriends()));
 
       expect(refreshCount, 1);
-      expect(protectedCount, 6);
+      expect(protectedCount, 2);
+    });
+
+    test('duplicate concurrent GET requests should share one flight', () async {
+      var requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return http.Response(
+          jsonEncode({
+            'friends': [],
+            'pending_received': [],
+            'pending_sent': [],
+          }),
+          200,
+        );
+      });
+      final apiService = ApiService(client: mockClient);
+
+      await Future.wait(List.generate(4, (_) => apiService.getFriends()));
+
+      expect(requestCount, 1);
     });
 
     test('getTasteMatch should call taste endpoint and parse score', () async {

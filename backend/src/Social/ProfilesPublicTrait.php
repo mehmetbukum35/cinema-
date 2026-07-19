@@ -46,6 +46,9 @@ trait SocialProfilesPublicTrait
 
         $cnt = $this->db->prepare('SELECT COUNT(*) FROM profile_likes WHERE owner_id = ?');
         $cnt->execute([$ownerId]);
+        foreach (['tr', 'en', 'und'] as $cacheLocale) {
+            @unlink($this->topProfilesCacheFile($cacheLocale));
+        }
         json_out(200, ['ok' => true, 'liked' => $liked, 'like_count' => (int) $cnt->fetchColumn()]);
     }
 
@@ -57,23 +60,23 @@ trait SocialProfilesPublicTrait
     public function getTopProfiles(int $uid): void
     {
         $locale = cinema_content_locale();
-        $st = $this->db->prepare(
-            'SELECT u.id, u.display_name, u.username,
+        $profiles = $this->readTopProfilesCache($locale);
+        if ($profiles === null) {
+            $st = $this->db->prepare(
+                'SELECT u.id, u.display_name, u.username,
                     (SELECT COUNT(*) FROM profile_likes pl
                       WHERE pl.owner_id = u.id) AS like_count,
-                    EXISTS(SELECT 1 FROM profile_likes pl2
-                            WHERE pl2.owner_id = u.id AND pl2.voter_id = ?) AS me_liked,
                     (SELECT COUNT(*) FROM ratings r
                       WHERE r.user_id = u.id AND r.rating >= 2 AND r.deleted = 0) AS liked_titles
              FROM users u
              WHERE u.is_public = 1 AND u.username IS NOT NULL
              ORDER BY like_count DESC, liked_titles DESC, u.id ASC
              LIMIT 20'
-        );
-        $st->execute([$uid]);
+            );
+            $st->execute();
 
-        $posterStmt = $this->db->prepare(
-             'SELECT COALESCE(t.title, tf.title) AS title,
+            $posterStmt = $this->db->prepare(
+                'SELECT COALESCE(t.title, tf.title) AS title,
                      COALESCE(t.poster_path, tf.poster_path) AS poster_path,
                      r.movie_id, r.is_tv FROM ratings r
               LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
@@ -82,32 +85,73 @@ trait SocialProfilesPublicTrait
                 AND r.is_private = 0 AND COALESCE(t.poster_path, tf.poster_path) IS NOT NULL
               ORDER BY r.rating DESC, r.updated_at DESC
               LIMIT 10'
-        );
+            );
 
-        $profiles = [];
-        foreach ($st->fetchAll() as $u) {
-            $posterStmt->execute([$locale, (int) $u['id']]);
-            $previews = [];
-            foreach ($posterStmt->fetchAll() as $p) {
-                $previews[] = [
-                    'title'       => $p['title'],
-                    'poster_path' => $p['poster_path'],
-                    'movie_id'    => (int) $p['movie_id'],
-                    'is_tv'       => (int) $p['is_tv'] === 1,
+            $profiles = [];
+            foreach ($st->fetchAll() as $u) {
+                $posterStmt->execute([$locale, (int) $u['id']]);
+                $previews = [];
+                foreach ($posterStmt->fetchAll() as $p) {
+                    $previews[] = [
+                        'title'       => $p['title'],
+                        'poster_path' => $p['poster_path'],
+                        'movie_id'    => (int) $p['movie_id'],
+                        'is_tv'       => (int) $p['is_tv'] === 1,
+                    ];
+                }
+                $profiles[] = [
+                    'id'           => (int) $u['id'],
+                    'display_name' => $u['display_name'],
+                    'username'     => $u['username'],
+                    'like_count'   => (int) $u['like_count'],
+                    'liked_titles' => (int) $u['liked_titles'],
+                    'previews'     => $previews,
                 ];
             }
-            $profiles[] = [
-                'id'           => (int) $u['id'],
-                'display_name' => $u['display_name'],
-                'username'     => $u['username'],
-                'like_count'   => (int) $u['like_count'],
-                'me_liked'     => (int) $u['me_liked'] === 1,
-                'is_me'        => (int) $u['id'] === $uid,
-                'liked_titles' => (int) $u['liked_titles'],
-                'previews'     => $previews,
-            ];
+            $this->writeTopProfilesCache($locale, $profiles);
         }
+
+        $likedOwnerIds = [];
+        if ($profiles !== []) {
+            $ids = array_column($profiles, 'id');
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $likes = $this->db->prepare(
+                "SELECT owner_id FROM profile_likes WHERE voter_id = ? AND owner_id IN ($placeholders)"
+            );
+            $likes->execute(array_merge([$uid], $ids));
+            $likedOwnerIds = array_fill_keys(array_map('intval', $likes->fetchAll(PDO::FETCH_COLUMN)), true);
+        }
+        foreach ($profiles as &$profile) {
+            $profile['me_liked'] = isset($likedOwnerIds[(int) $profile['id']]);
+            $profile['is_me'] = (int) $profile['id'] === $uid;
+        }
+        unset($profile);
         json_out(200, ['profiles' => $profiles]);
+    }
+
+    private function topProfilesCacheFile(string $locale): string
+    {
+        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_top_profiles_' . $locale . '.json';
+    }
+
+    private function readTopProfilesCache(string $locale): ?array
+    {
+        // Integration tests use isolated in-memory SQLite databases.
+        if ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') return null;
+        $file = $this->topProfilesCacheFile($locale);
+        if (!is_readable($file) || filemtime($file) < time() - 60) return null;
+        $data = json_decode((string) file_get_contents($file), true);
+        return is_array($data) ? $data : null;
+    }
+
+    private function writeTopProfilesCache(string $locale, array $profiles): void
+    {
+        if ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') return;
+        @file_put_contents(
+            $this->topProfilesCacheFile($locale),
+            json_encode($profiles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
+        );
     }
 
     // ─── GET /profile/{username} (Halka Açık Web Görünümü) ───────────────────

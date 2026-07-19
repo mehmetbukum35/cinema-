@@ -4,8 +4,14 @@ declare(strict_types=1);
 trait SocialFeedTrait
 {
     // ─── GET /social/friends/activity ───────────────────────────────────────
-    public function getActivityFeed(int $uid, ?int $friendId = null): void
+    public function getActivityFeed(
+        int $uid,
+        ?int $friendId = null,
+        ?string $cursor = null,
+        int $limit = 50
+    ): void
     {
+        $limit = max(1, min(50, $limit));
         $locale = cinema_content_locale();
         // Gizlenen (is_hidden=1) yorum metni akışa sızmaz; puan aktivitesi kalır.
         $sql = 'SELECT r.movie_id, r.is_tv, r.rating,
@@ -29,15 +35,64 @@ trait SocialFeedTrait
             $params[] = $friendId;
         }
 
+        $cursorData = $this->decodeActivityCursor($cursor);
+        if ($cursorData !== null) {
+            $sql .= ' AND (
+                r.updated_at < ? OR
+                (r.updated_at = ? AND f.friend_id < ?) OR
+                (r.updated_at = ? AND f.friend_id = ? AND r.movie_id < ?) OR
+                (r.updated_at = ? AND f.friend_id = ? AND r.movie_id = ? AND r.is_tv < ?)
+            )';
+            $params = array_merge($params, [
+                $cursorData['updated_at'],
+                $cursorData['updated_at'], $cursorData['friend_id'],
+                $cursorData['updated_at'], $cursorData['friend_id'], $cursorData['movie_id'],
+                $cursorData['updated_at'], $cursorData['friend_id'], $cursorData['movie_id'], $cursorData['is_tv'],
+            ]);
+        }
+
         $sql .= ' AND (r.rating >= 2 OR (r.comment IS NOT NULL AND r.comment <> \'\'))
                   AND r.deleted = 0
-                ORDER BY r.updated_at DESC
-                LIMIT 50';
+                ORDER BY r.updated_at DESC, f.friend_id DESC, r.movie_id DESC, r.is_tv DESC
+                LIMIT ' . ($limit + 1);
 
         $st = $this->db->prepare($sql);
         $st->execute($params);
         $feed = $st->fetchAll();
+        $hasMore = count($feed) > $limit;
+        if ($hasMore) array_pop($feed);
+        $nextCursor = null;
+        if ($hasMore && $feed !== []) {
+            $last = $feed[array_key_last($feed)];
+            $nextCursor = rtrim(strtr(base64_encode((string) json_encode([
+                'updated_at' => (int) $last['updated_at'],
+                'friend_id' => (int) $last['friend_id'],
+                'movie_id' => (int) $last['movie_id'],
+                'is_tv' => (int) $last['is_tv'],
+            ])), '+/', '-_'), '=');
+        }
 
-        json_out(200, ['activity' => $feed]);
+        json_out(200, [
+            'activity' => $feed,
+            'next_cursor' => $nextCursor,
+            'has_more' => $hasMore,
+        ]);
+    }
+
+    private function decodeActivityCursor(?string $cursor): ?array
+    {
+        if ($cursor === null || $cursor === '') return null;
+        $normalized = strtr($cursor, '-_', '+/');
+        $normalized .= str_repeat('=', (4 - strlen($normalized) % 4) % 4);
+        $raw = base64_decode($normalized, true);
+        if ($raw === false) fail(422, 'Geçersiz aktivite cursor değeri.');
+        $data = json_decode($raw, true);
+        if (!is_array($data)) fail(422, 'Geçersiz aktivite cursor değeri.');
+        foreach (['updated_at', 'friend_id', 'movie_id', 'is_tv'] as $key) {
+            if (!isset($data[$key]) || !is_numeric($data[$key])) {
+                fail(422, 'Geçersiz aktivite cursor değeri.');
+            }
+        }
+        return array_map('intval', $data);
     }
 }

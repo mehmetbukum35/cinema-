@@ -28,6 +28,7 @@ class ApiClient {
   final Duration transientRetryDelay;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
+  final Map<String, Future<http.Response>> _inFlightGets = {};
   ApiClient({
     http.Client? client,
     this.onSessionExpired,
@@ -115,6 +116,43 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool requireAuth = true,
+  }) {
+    if (method != 'GET') {
+      return _performRequest(
+        method,
+        path,
+        body: body,
+        requireAuth: requireAuth,
+      );
+    }
+
+    final key = '${requireAuth ? 1 : 0}:$path';
+    final existing = _inFlightGets[key];
+    if (existing != null) {
+      debugPrint('Coalescing duplicate GET $path');
+      return existing;
+    }
+    late final Future<http.Response> request;
+    request =
+        _performRequest(
+          method,
+          path,
+          body: body,
+          requireAuth: requireAuth,
+        ).whenComplete(() {
+          if (identical(_inFlightGets[key], request)) {
+            _inFlightGets.remove(key);
+          }
+        });
+    _inFlightGets[key] = request;
+    return request;
+  }
+
+  Future<http.Response> _performRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    required bool requireAuth,
   }) async {
     final requestId = _newRequestId();
     final url = Uri.parse('$baseUrl$path');
