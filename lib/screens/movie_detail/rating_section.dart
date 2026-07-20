@@ -108,11 +108,7 @@ class _RatingButton extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                // Berbat (kırmızı zemin) beyaz metin ister; Eh/İyi/Harika'nın
-                // açık zeminlerinde koyu metin okunur.
-                color: active
-                    ? (rating == 0 ? Colors.white : Colors.black87)
-                    : c.dim,
+                color: active ? AppColors.onRatingFill(color) : c.dim,
                 fontSize: 12,
                 fontWeight: active ? FontWeight.w800 : FontWeight.w500,
               ),

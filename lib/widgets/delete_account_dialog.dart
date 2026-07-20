@@ -126,7 +126,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: Text(
-            tr?.get('profile_cancel') ?? 'Vazgeç',
+            tr?.get('profile_cancel') ?? 'Cancel',
             style: TextStyle(color: c.dim),
           ),
         ),

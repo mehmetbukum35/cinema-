@@ -46,7 +46,7 @@ class SwipeRatingButtonRow extends StatelessWidget {
                     Semantics(
                       label:
                           AppLocalizations.of(context)?.get('semantics_undo') ??
-                          'Değerlendirmeyi geri al',
+                          'Undo rating',
                       button: true,
                       enabled: currentIndex > 0,
                       child: SpringButton(
@@ -79,7 +79,7 @@ class SwipeRatingButtonRow extends StatelessWidget {
                     SwipeRatingBtn(
                       label:
                           AppLocalizations.of(context)?.get('profile_berbat') ??
-                          'Berbat',
+                          'Awful',
                       color: c.rBerbat,
                       size: berbatSize,
                       onTap: () => onRate(0),
@@ -87,7 +87,7 @@ class SwipeRatingButtonRow extends StatelessWidget {
                     SwipeRatingBtn(
                       label:
                           AppLocalizations.of(context)?.get('profile_eh') ??
-                          'Eh',
+                          'Meh',
                       color: c.rEh,
                       size: ehSize,
                       onTap: () => onRate(1),
@@ -95,7 +95,7 @@ class SwipeRatingButtonRow extends StatelessWidget {
                     SwipeRatingBtn(
                       label:
                           AppLocalizations.of(context)?.get('profile_iyi') ??
-                          'İyi',
+                          'Good',
                       color: c.rIyi,
                       size: iyiSize,
                       onTap: () => onRate(2),
@@ -103,7 +103,7 @@ class SwipeRatingButtonRow extends StatelessWidget {
                     SwipeRatingBtn(
                       label:
                           AppLocalizations.of(context)?.get('profile_harika') ??
-                          'Harika',
+                          'Amazing',
                       color: c.rHarika,
                       size: harikaSize,
                       onTap: () => onRate(3),

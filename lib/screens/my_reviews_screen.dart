@@ -225,7 +225,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
       'profile_iyi',
       'profile_harika',
     ];
-    const ratingFallbacks = ['Berbat', 'Eh', 'İyi', 'Harika'];
+    const ratingFallbacks = ['Awful', 'Meh', 'Good', 'Amazing'];
     final badgeColor = ratingColors[rating];
     final badgeText = tr?.get(ratingKeys[rating]) ?? ratingFallbacks[rating];
 

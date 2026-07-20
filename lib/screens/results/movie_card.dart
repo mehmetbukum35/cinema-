@@ -175,11 +175,11 @@ class ResultsMovieCard extends StatelessWidget {
                               ? (AppLocalizations.of(
                                       context,
                                     )?.get('onboarding_tv') ??
-                                    'Dizi')
-                              : (AppLocalizations.of(
-                                      context,
-                                    )?.get('onboarding_movie') ??
-                                    'Film'),
+                                    'TV')
+                                : (AppLocalizations.of(
+                                        context,
+                                      )?.get('onboarding_movie') ??
+                                      'Movie'),
                           style: TextStyle(
                             color: movie.isTV ? const Color(0xFF1565C0) : c.red,
                             fontSize: 11.5,

@@ -545,7 +545,7 @@ class _MatchView extends ConsumerWidget {
                 tr
                         ?.get('couch_match_desc')
                         .replaceAll('{}', session.friendName) ??
-                    '${session.friendName} ile anlaştınız. İyi seyirler!',
+                    '${session.friendName} — enjoy the show!',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.dim, fontSize: 13.5),
               ),

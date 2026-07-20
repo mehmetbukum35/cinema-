@@ -423,7 +423,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                         alignment: Alignment.center,
                         child: Text(
                           AppLocalizations.of(context)?.get('search_clear') ??
-                              'Sıfırla',
+                              'Clear',
                           style: TextStyle(
                             color: c.dim,
                             fontSize: 14,

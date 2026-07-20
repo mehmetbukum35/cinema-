@@ -116,7 +116,7 @@ class OnboardingRatingBtn extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.onRatingFill(color),
             fontSize: size > 72 ? 13 : 11,
             fontWeight: FontWeight.w800,
           ),

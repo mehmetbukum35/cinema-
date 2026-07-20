@@ -36,16 +36,28 @@ void main() {
 Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load Taste DNA lexicon
-  try {
-    final jsonStr = await rootBundle.loadString('assets/lexicon/theme_tr.json');
-    final Map<String, dynamic> decoded = json.decode(jsonStr);
-    TasteDnaPresenter.themeTr = decoded.map(
-      (k, v) => MapEntry(k, v.toString()),
-    );
-  } catch (e) {
-    debugPrint("Failed to load theme_tr.json at startup: $e");
+  // Load Taste DNA theme lexicons (TR translations + EN display labels)
+  Future<void> loadLexicon(
+    String asset,
+    void Function(Map<String, String>) assign,
+  ) async {
+    try {
+      final jsonStr = await rootBundle.loadString(asset);
+      final Map<String, dynamic> decoded = json.decode(jsonStr);
+      assign(decoded.map((k, v) => MapEntry(k, v.toString())));
+    } catch (e) {
+      debugPrint('Failed to load $asset at startup: $e');
+    }
   }
+
+  await loadLexicon(
+    'assets/lexicon/theme_tr.json',
+    (m) => TasteDnaPresenter.themeTr = m,
+  );
+  await loadLexicon(
+    'assets/lexicon/theme_en.json',
+    (m) => TasteDnaPresenter.themeEn = m,
+  );
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -135,6 +147,19 @@ class NeIzlesemApp extends ConsumerWidget {
     final darkTheme = darkBase.copyWith(
       textTheme: CinemaText.theme(darkBase.textTheme),
       pageTransitionsTheme: pageTransitions,
+      // Marka kırmızısı (#E94560) üstünde beyaz ~3.8:1; dolgu koyulaştırılır.
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.crimson,
+          foregroundColor: Colors.white,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.crimson,
+          foregroundColor: Colors.white,
+        ),
+      ),
     );
 
     // ── Açık tema (ALTERNATİF — sıcak/sinematik beyaz) ───────────────────────
@@ -156,6 +181,18 @@ class NeIzlesemApp extends ConsumerWidget {
     final lightTheme = lightBase.copyWith(
       textTheme: CinemaText.lightTheme(lightBase.textTheme),
       pageTransitionsTheme: pageTransitions,
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColorsLight.crimson,
+          foregroundColor: Colors.white,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColorsLight.crimson,
+          foregroundColor: Colors.white,
+        ),
+      ),
     );
 
     return MaterialApp(

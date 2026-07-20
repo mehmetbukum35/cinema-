@@ -22,7 +22,6 @@ class SwipeRatingBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final visualSize = size;
     final touchSize = visualSize < 44.0 ? 44.0 : visualSize;
-    final c = context.c;
 
     return Semantics(
       label: (AppLocalizations.of(context)?.locale.languageCode == 'tr')
@@ -44,10 +43,7 @@ class SwipeRatingBtn extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color:
-                      (color == c.rEh || color == c.rHarika || color == c.rIyi)
-                      ? Colors.black87
-                      : Colors.white,
+                  color: AppColors.onRatingFill(color),
                   fontSize: visualSize > 72
                       ? 14
                       : 12 * (visualSize / 80.0).clamp(0.85, 1.0),

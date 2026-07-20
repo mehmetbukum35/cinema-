@@ -15,14 +15,14 @@ class SearchFilterLabels {
   static Map<String, String> languages(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     return {
-      'ko': localizations?.get('lang_ko') ?? 'Kore Sineması',
+      'ko': localizations?.get('lang_ko') ?? 'Korean Cinema',
       'fr|es|de|it|pt|sv|da|no|fi|nl|pl':
-          localizations?.get('lang_eu') ?? 'Avrupa Sineması',
+          localizations?.get('lang_eu') ?? 'European Cinema',
       'en': localizations?.get('lang_en') ?? 'Hollywood',
-      'tr': localizations?.get('lang_tr') ?? 'Türk Sineması',
-      'ja': localizations?.get('lang_ja') ?? 'Japon Sineması',
+      'tr': localizations?.get('lang_tr') ?? 'Turkish Cinema',
+      'ja': localizations?.get('lang_ja') ?? 'Japanese Cinema',
       'hi': localizations?.get('lang_hi') ?? 'Bollywood',
-      'fa': localizations?.get('lang_fa') ?? 'İran Sineması',
+      'fa': localizations?.get('lang_fa') ?? 'Iranian Cinema',
     };
   }
 

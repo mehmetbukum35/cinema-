@@ -5,6 +5,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- English Taste DNA theme lexicon (`assets/lexicon/theme_en.json`) loaded alongside Turkish
 - Android release CI now injects a real upload keystore from GitHub secrets (`ANDROID_KEYSTORE_*`), fails closed when signing is missing, and rejects debug-signed APKs before uploading artifacts
 - Release-only Firebase Crashlytics reporting for uncaught Flutter, platform, and asynchronous errors; API 5xx reports are correlated with structured backend JSON logs through redacted `X-Request-ID` metadata
 - Central backend observability: structured JSON logs, global exception capture, configurable log sink, request IDs on responses, and recursive credential/token redaction
@@ -30,6 +31,8 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - `backend/src/Social.php` split into domain traits under `backend/src/Social/`
 
 ### Fixed
+- Rating button and primary CTA contrast (WCAG): dark labels on light fills, deeper red fills, crimson elevated buttons, readable light-theme gold
+- Hardcoded Turkish UI fallbacks now default to English; notification channels localize by active language
 - Taste DNA was regenerated and re-published to the server on every sync: recommendation-cache invalidation no longer wipes the DNA cache or the last-published hash (DNA cache self-validates via its input hash)
 - `GET /social/friends` no longer exposes user e-mail addresses (username → e-mail harvesting via pending requests)
 - Removed dead code: `PrefsService.getMovieRating`, `RecommendationEngine.invalidateTasteVector`, no-op `forceEnforce` parameter in `TmdbService`

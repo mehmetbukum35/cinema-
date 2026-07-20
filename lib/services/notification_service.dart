@@ -72,18 +72,42 @@ class NotificationService {
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'social_channel',
-    'Sosyal Bildirimler',
-    description: 'Arkadaşlık istekleri ve sosyal etkileşimler',
+    'Social Notifications',
+    description: 'Friend requests and social activity',
     importance: Importance.high,
   );
 
   static const AndroidNotificationChannel _releaseChannel =
       AndroidNotificationChannel(
         'release_channel',
-        'Çıkış Hatırlatıcıları',
-        description: 'İzleme listendeki yapımlar yayınlandığında haber verir',
+        'Release Reminders',
+        description: 'Alerts when watchlist titles are released',
         importance: Importance.high,
       );
+
+  static AndroidNotificationChannel get _localizedSocialChannel {
+    final tr = PrefsService.activeLanguageCode == 'tr';
+    return AndroidNotificationChannel(
+      _channel.id,
+      tr ? 'Sosyal Bildirimler' : _channel.name,
+      description: tr
+          ? 'Arkadaşlık istekleri ve sosyal etkileşimler'
+          : _channel.description,
+      importance: Importance.high,
+    );
+  }
+
+  static AndroidNotificationChannel get _localizedReleaseChannel {
+    final tr = PrefsService.activeLanguageCode == 'tr';
+    return AndroidNotificationChannel(
+      _releaseChannel.id,
+      tr ? 'Çıkış Hatırlatıcıları' : _releaseChannel.name,
+      description: tr
+          ? 'İzleme listendeki yapımlar yayınlandığında haber verir'
+          : _releaseChannel.description,
+      importance: Importance.high,
+    );
+  }
 
   /// Uygulama açılışında bir kez çağrılır. Birden çok çağrı güvenlidir.
   Future<void> init(ApiService api) async {
@@ -109,8 +133,8 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await androidPlugin?.createNotificationChannel(_channel);
-      await androidPlugin?.createNotificationChannel(_releaseChannel);
+      await androidPlugin?.createNotificationChannel(_localizedSocialChannel);
+      await androidPlugin?.createNotificationChannel(_localizedReleaseChannel);
 
       // Zamanlanmış bildirimler için saat dilimi veritabanı
       await _ensureTimezone();
@@ -234,9 +258,9 @@ class NotificationService {
         body: n.body,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            _channel.id,
-            _channel.name,
-            channelDescription: _channel.description,
+            _localizedSocialChannel.id,
+            _localizedSocialChannel.name,
+            channelDescription: _localizedSocialChannel.description,
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
@@ -293,9 +317,9 @@ class NotificationService {
         scheduledDate: when,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            _releaseChannel.id,
-            _releaseChannel.name,
-            channelDescription: _releaseChannel.description,
+            _localizedReleaseChannel.id,
+            _localizedReleaseChannel.name,
+            channelDescription: _localizedReleaseChannel.description,
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',

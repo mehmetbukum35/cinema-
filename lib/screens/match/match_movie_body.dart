@@ -222,11 +222,11 @@ class MatchMovieBody extends StatelessWidget {
                                   ? (AppLocalizations.of(
                                           context,
                                         )?.get('onboarding_tv') ??
-                                        'Dizi')
-                                  : (AppLocalizations.of(
-                                          context,
-                                        )?.get('onboarding_movie') ??
-                                        'Film'),
+                                        'TV')
+                                    : (AppLocalizations.of(
+                                            context,
+                                          )?.get('onboarding_movie') ??
+                                          'Movie'),
                               style: TextStyle(
                                 color: m.isTV ? c.blue : c.red,
                                 fontSize: 10,

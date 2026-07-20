@@ -464,7 +464,7 @@ class _AppMenu extends ConsumerWidget {
                       ),
                     ),
                     _divider(c),
-                    _groupLabel(c, tr?.get('menu_account') ?? 'Hesap'),
+                    _groupLabel(c, tr?.get('menu_account') ?? 'Account'),
                     _row(
                       c,
                       icon: Icons.person_rounded,

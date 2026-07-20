@@ -167,11 +167,11 @@ class SwipeCard extends ConsumerWidget {
                                   ? (AppLocalizations.of(
                                           context,
                                         )?.get('onboarding_tv') ??
-                                        'Dizi')
+                                        'TV')
                                   : (AppLocalizations.of(
                                           context,
                                         )?.get('onboarding_movie') ??
-                                        'Film'),
+                                        'Movie'),
                               style: TextStyle(
                                 color: movie.isTV ? c.blue : c.red,
                                 fontSize: 11,

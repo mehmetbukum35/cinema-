@@ -320,9 +320,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          chip(tr?.get('lang_all') ?? 'Tümü', _TypeFilter.all),
-          chip(tr?.get('onboarding_movie') ?? 'Film', _TypeFilter.movie),
-          chip(tr?.get('onboarding_tv') ?? 'Dizi', _TypeFilter.tv),
+          chip(tr?.get('lang_all') ?? 'All', _TypeFilter.all),
+          chip(tr?.get('onboarding_movie') ?? 'Movie', _TypeFilter.movie),
+          chip(tr?.get('onboarding_tv') ?? 'TV', _TypeFilter.tv),
           const Spacer(),
           PopupMenuButton<_Sort>(
             tooltip: tr?.get('sort_added') ?? 'Sırala',
@@ -480,7 +480,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           ][rating];
           final ratingLabel =
               AppLocalizations.of(context)?.get(ratingLabelKey) ??
-              const ['Berbat', 'Eh', 'İyi', 'Harika'][rating];
+              const ['Awful', 'Meh', 'Good', 'Amazing'][rating];
 
           return GestureDetector(
             onTap: () => _openDetail(m),
@@ -721,7 +721,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               Navigator.pop(ctx, false);
             },
             child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
               style: TextStyle(color: c.dim),
             ),
           ),
@@ -781,7 +781,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               Navigator.pop(ctx, false);
             },
             child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
               style: TextStyle(color: c.dim),
             ),
           ),

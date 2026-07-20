@@ -714,7 +714,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                           .loadMoreActivityFeed(),
                       child: Text(
                         AppLocalizations.of(context)?.get('load_more') ??
-                            (isTr ? 'Daha fazla yükle' : 'Load more'),
+                            'Load more',
                       ),
                     ),
             ),

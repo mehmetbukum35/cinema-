@@ -145,7 +145,7 @@ gh api repos/mehmetbukum35/cinema-/branches/main/protection \
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["CI"]
+    "contexts": ["flutter", "php"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
@@ -158,13 +158,13 @@ gh api repos/mehmetbukum35/cinema-/branches/main/protection \
 EOF
 ```
 
-Adjust the `contexts` array if your workflow job name differs (check the green check name on a recent PR).
+Adjust the `contexts` array if your workflow job names differ (check the green check names on a recent PR — currently `flutter` and `php`).
 
 ### Manual (GitHub web UI)
 
 1. Open **Settings → Branches → Add branch protection rule**
 2. Branch name pattern: `main`
-3. Enable **Require status checks to pass before merging** and select the **CI** workflow
+3. Enable **Require status checks to pass before merging** and select **flutter** and **php**
 4. Enable **Require branches to be up to date before merging**
 5. Disable force pushes and branch deletion (recommended)
 

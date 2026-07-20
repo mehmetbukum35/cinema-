@@ -116,7 +116,7 @@ class RatingDistributionCard extends StatelessWidget {
   final Map<String, dynamic> stats;
   const RatingDistributionCard({super.key, required this.stats});
 
-  static const _ratingLabels = ['Berbat', 'Eh', 'İyi', 'Harika'];
+  static const _ratingLabels = ['Awful', 'Meh', 'Good', 'Amazing'];
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +144,7 @@ class RatingDistributionCard extends StatelessWidget {
         children: [
           Text(
             AppLocalizations.of(context)?.get('profile_stats') ??
-                'DEĞERLENDİRMELERİM',
+                'MY RATINGS',
             style: TextStyle(
               color: c.dim,
               fontSize: 11,

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ne_izlesem/models/taste_dna.dart';
+import 'package:ne_izlesem/services/localization_service.dart';
 import 'package:ne_izlesem/services/taste_dna_presenter.dart';
 
 TasteDna _dna({
@@ -40,10 +42,16 @@ TasteDna _dna({
 
 void main() {
   setUpAll(() {
-    final file = File('assets/lexicon/theme_tr.json');
-    final jsonStr = file.readAsStringSync();
-    final Map<String, dynamic> decoded = json.decode(jsonStr);
-    TasteDnaPresenter.themeTr = decoded.map(
+    final trFile = File('assets/lexicon/theme_tr.json');
+    final trDecoded =
+        json.decode(trFile.readAsStringSync()) as Map<String, dynamic>;
+    TasteDnaPresenter.themeTr = trDecoded.map(
+      (k, v) => MapEntry(k, v.toString()),
+    );
+    final enFile = File('assets/lexicon/theme_en.json');
+    final enDecoded =
+        json.decode(enFile.readAsStringSync()) as Map<String, dynamic>;
+    TasteDnaPresenter.themeEn = enDecoded.map(
       (k, v) => MapEntry(k, v.toString()),
     );
   });
@@ -127,6 +135,15 @@ void main() {
         _dna(themes: ['revenge', 'dystopia', 'obscurekeyword']),
       );
       expect(p.themeChips, ['İntikam', 'Distopya', 'Obscurekeyword']);
+    });
+
+    test('EN etiket sözlüğünden Title Case gösterir', () {
+      final l10n = AppLocalizations(const Locale('en'));
+      final p = TasteDnaPresenter(
+        l10n,
+        _dna(themes: ['revenge', 'coming of age']),
+      );
+      expect(p.themeChips, ['Revenge', 'Coming Of Age']);
     });
 
     test('paylaşım metni arketip + link içerir', () {

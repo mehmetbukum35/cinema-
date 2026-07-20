@@ -169,11 +169,11 @@ class DetailHeroRow extends StatelessWidget {
                           ? (AppLocalizations.of(
                                   context,
                                 )?.get('onboarding_tv') ??
-                                'Dizi')
+                                'TV')
                           : (AppLocalizations.of(
                                   context,
                                 )?.get('onboarding_movie') ??
-                                'Film'),
+                                'Movie'),
                       style: TextStyle(
                         color: movie.isTV ? c.blue : c.red,
                         fontSize: 12,
@@ -184,7 +184,7 @@ class DetailHeroRow extends StatelessWidget {
                   if (runtime > 0) ...[
                     const SizedBox(width: 8),
                     Text(
-                      '$runtime ${AppLocalizations.of(context)?.get('detail_minutes') ?? 'dk'}',
+                      '$runtime ${AppLocalizations.of(context)?.get('detail_minutes') ?? 'min'}',
                       style: TextStyle(color: c.dim, fontSize: 12),
                     ),
                   ],

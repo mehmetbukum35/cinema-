@@ -167,7 +167,7 @@ class RatedMovieCard extends StatelessWidget {
     this.onDelete,
   });
 
-  static const _ratingLabels = ['Berbat', 'Eh', 'İyi', 'Harika'];
+  static const _ratingLabels = ['Awful', 'Meh', 'Good', 'Amazing'];
 
   @override
   Widget build(BuildContext context) {

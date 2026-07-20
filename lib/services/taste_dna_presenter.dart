@@ -50,9 +50,10 @@ class TasteDnaPresenter {
     return tens[n % 100]!;
   }
 
-  /// TMDB keyword'leri yalnızca İngilizce döner; sık temalar için TR sözlüğü.
-  /// PHP karşılığı: backend/src/TasteDnaWebText.php — ikisi senkron tutulmalı.
+  /// TMDB keyword'leri İngilizce döner; TR sözlüğü + EN görünen etiketler.
+  /// PHP karşılığı: backend/src/TasteDnaWebText.php — senkron tutulmalı.
   static Map<String, String> themeTr = {};
+  static Map<String, String> themeEn = {};
 
   // ── Arketip ──
   // ── Arketip ──
@@ -240,10 +241,10 @@ class TasteDnaPresenter {
     return out;
   }
 
-  // ── Tema çipleri: TR'de sözlükten çevrilir, EN'de olduğu gibi;
-  //    eşleşme yoksa İngilizce kalır (baş harf büyütülmüş).
+  // ── Tema çipleri: TR sözlük / EN etiket; yoksa ham anahtar (baş harf büyük).
   List<String> get themeChips => dna.themes.map((t) {
-    final raw = _isEn ? t : (themeTr[t.toLowerCase().trim()] ?? t);
+    final key = t.toLowerCase().trim();
+    final raw = _isEn ? (themeEn[key] ?? t) : (themeTr[key] ?? t);
     if (raw.isEmpty) return raw;
     // Dart toUpperCase() İngilizce kural uygular ('i'→'I'); Türkçe kelimede
     // baş harf 'i' → 'İ' olmalı (intikam → İntikam).

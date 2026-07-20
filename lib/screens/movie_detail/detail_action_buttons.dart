@@ -109,8 +109,8 @@ class DetailActionButtons extends StatelessWidget {
                     onTap: () {
                       final tr = AppLocalizations.of(context);
                       final typeLabel = movie.isTV
-                          ? (tr?.get('onboarding_tv') ?? 'Dizi')
-                          : (tr?.get('onboarding_movie') ?? 'Film');
+                          ? (tr?.get('onboarding_tv') ?? 'TV')
+                          : (tr?.get('onboarding_movie') ?? 'Movie');
                       final shareTemplate =
                           tr?.get('detail_share_text') ??
                           'What to Watch recommendation: {}';

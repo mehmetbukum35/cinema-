@@ -40,16 +40,16 @@ class ReviewItem extends StatelessWidget {
     switch (ratingVal) {
       case 3:
         badgeColor = c.rHarika;
-        badgeText = tr?.get('profile_harika') ?? 'Harika';
+        badgeText = tr?.get('profile_harika') ?? 'Amazing';
       case 2:
         badgeColor = c.rIyi;
-        badgeText = tr?.get('profile_iyi') ?? 'İyi';
+        badgeText = tr?.get('profile_iyi') ?? 'Good';
       case 1:
         badgeColor = c.rEh;
-        badgeText = tr?.get('profile_eh') ?? 'Eh';
+        badgeText = tr?.get('profile_eh') ?? 'Meh';
       case 0:
         badgeColor = c.rBerbat;
-        badgeText = tr?.get('profile_berbat') ?? 'Berbat';
+        badgeText = tr?.get('profile_berbat') ?? 'Awful';
     }
 
     // Moderasyon menüsü karta uzun basmayla açılır: ufak bir ikonu nişanlamak

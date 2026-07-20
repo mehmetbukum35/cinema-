@@ -62,14 +62,14 @@ class ProfileScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
               style: TextStyle(color: c.dim),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              AppLocalizations.of(context)?.get('profile_reset') ?? 'Sıfırla',
+              AppLocalizations.of(context)?.get('profile_reset') ?? 'Reset',
               style: TextStyle(color: c.red, fontWeight: FontWeight.w700),
             ),
           ),
@@ -166,7 +166,7 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.pop(ctx, false);
             },
             child: Text(
-              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Vazgeç',
+              AppLocalizations.of(context)?.get('profile_cancel') ?? 'Cancel',
               style: TextStyle(color: c.dim),
             ),
           ),

@@ -39,10 +39,16 @@ class AppColors {
   static const glassStroke = Color(0x1FFFFFFF); // ince üst ışık kenarı
 
   // Değerlendirme renkleri
-  static const rBerbat = Color(0xFFE53935);
+  // rBerbat: Material Red 800 — beyaz etiket WCAG AA (~5.1:1); eski #E53935 ~4.2:1 idi.
+  static const rBerbat = Color(0xFFC62828);
   static const rEh = Color(0xFFFDD835);
   static const rIyi = Color(0xFFFB8C00);
   static const rHarika = Color(0xFF43A047);
+
+  /// Puan dolgusu üstünde okunur etiket rengi (açık sarı/turuncu/yeşil → koyu;
+  /// koyu kırmızı → beyaz).
+  static Color onRatingFill(Color fill) =>
+      fill.computeLuminance() > 0.22 ? const Color(0xFF121212) : Colors.white;
 }
 
 /// Sinematik gradyanlar.
@@ -215,11 +221,10 @@ class AppColorsLight {
   static const crimson = Color(0xFFC9304E);
   static const ember = Color(0xFFFF6B81);
 
-  static const gold = Color(0xFFB8893E); // beyazda okunur derin şampanya
-  // Koyu temanın #CBA45E'si krem zeminde ~2:1 kontrasta düşüyordu (öneri
-  // gerekçesi gibi 11-12px metinler okunmuyordu); açık temada koyulaştırıldı.
+  // Krem zeminde metin olarak kullanıldığında WCAG AA (~4.5:1+) için koyu bronz.
+  static const gold = Color(0xFF7A5A20);
   static const goldSoft = Color(0xFF8A6520);
-  static const goldDeep = Color(0xFF9C7430);
+  static const goldDeep = Color(0xFF7A5A20);
 
   static const green = Color(0xFF2E7D32);
   static const blue = Color(0xFF1F6BBA);
@@ -234,10 +239,12 @@ class AppColorsLight {
   static const glassStroke = Color(0x14000000);
 
   // Değerlendirme renkleri (beyazda okunur tonlar)
-  static const rBerbat = Color(0xFFE53935);
+  static const rBerbat = Color(0xFFC62828);
   static const rEh = Color(0xFFF4A720);
   static const rIyi = Color(0xFFFB8C00);
-  static const rHarika = Color(0xFF43A047);
+  static const rHarika = Color(
+    0xFF2E7D32,
+  ); // yeşil metin/çubuk AA; dolgu butonunda koyu etiket
 }
 
 /// Çalışma anında değiştirilebilir renk seti. Koyu/açık değerleri tek arayüzde

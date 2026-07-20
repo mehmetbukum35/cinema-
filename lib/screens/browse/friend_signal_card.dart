@@ -35,7 +35,7 @@ class FriendSignalCard extends ConsumerWidget {
         : 'browse_rating_good';
     final ratingText =
         AppLocalizations.of(context)?.get(ratingKey) ??
-        (rating >= 3 ? 'Harika dedi' : 'İyi dedi');
+        (rating >= 3 ? 'loved it' : 'liked it');
 
     final movie = Movie(
       id: item.movieId,
