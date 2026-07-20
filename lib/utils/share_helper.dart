@@ -23,7 +23,9 @@ Future<void> shareMessage({
       sharePositionOrigin ??
       (anchorContext != null ? sharePositionOriginFrom(anchorContext) : null);
   try {
-    await Share.share(message, sharePositionOrigin: shareOrigin);
+    await SharePlus.instance.share(
+      ShareParams(text: message, sharePositionOrigin: shareOrigin),
+    );
   } catch (_) {
     if (!context.mounted) return;
     showAppToast(
@@ -46,10 +48,8 @@ Future<void> shareFiles({
       sharePositionOrigin ??
       (anchorContext != null ? sharePositionOriginFrom(anchorContext) : null);
   try {
-    await Share.shareXFiles(
-      files,
-      text: text,
-      sharePositionOrigin: shareOrigin,
+    await SharePlus.instance.share(
+      ShareParams(files: files, text: text, sharePositionOrigin: shareOrigin),
     );
   } catch (_) {
     if (!context.mounted) return;

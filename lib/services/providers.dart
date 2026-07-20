@@ -10,6 +10,7 @@ import 'package:flutter/material.dart'
         WidgetsBindingObserver,
         AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:http/http.dart' as http;
 import 'app_config.dart';
 import 'tmdb_service.dart';

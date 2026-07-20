@@ -55,7 +55,7 @@ class NotificationService {
       try {
         tzdata.initializeTimeZones();
         final localTz = await FlutterTimezone.getLocalTimezone();
-        tz.setLocalLocation(tz.getLocation(localTz));
+        tz.setLocalLocation(tz.getLocation(localTz.identifier));
         return true;
       } catch (e) {
         final isTest =
@@ -96,7 +96,10 @@ class NotificationService {
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosInit = DarwinInitializationSettings();
       await _local.initialize(
-        const InitializationSettings(android: androidInit, iOS: iosInit),
+        settings: const InitializationSettings(
+          android: androidInit,
+          iOS: iosInit,
+        ),
         onDidReceiveNotificationResponse: (resp) =>
             _routeFromPayload(resp.payload),
       );
@@ -226,10 +229,10 @@ class NotificationService {
     if (n == null) return;
     try {
       await _local.show(
-        n.hashCode,
-        n.title,
-        n.body,
-        NotificationDetails(
+        id: n.hashCode,
+        title: n.title,
+        body: n.body,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channel.id,
             _channel.name,
@@ -284,11 +287,11 @@ class NotificationService {
                 : '${movie.title} is out today. It\'s waiting on your watchlist!');
 
       await _local.zonedSchedule(
-        _releaseNotifId(movie.id, movie.isTV),
-        title,
-        body,
-        when,
-        NotificationDetails(
+        id: _releaseNotifId(movie.id, movie.isTV),
+        title: title,
+        body: body,
+        scheduledDate: when,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _releaseChannel.id,
             _releaseChannel.name,
@@ -300,8 +303,6 @@ class NotificationService {
           iOS: const DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'release|${movie.id}|${movie.isTV}',
       );
     } catch (e, st) {
@@ -316,7 +317,7 @@ class NotificationService {
 
   Future<void> cancelReleaseReminder(int movieId, bool isTV) async {
     try {
-      await _local.cancel(_releaseNotifId(movieId, isTV));
+      await _local.cancel(id: _releaseNotifId(movieId, isTV));
     } catch (e) {
       final isTest =
           const bool.fromEnvironment('dart.library.io') &&
@@ -342,7 +343,7 @@ class NotificationService {
       for (final p in pending) {
         if ((p.id & _releaseIdMask) == 0) continue; // hatırlatıcı değil
         if (!expected.containsKey(p.id)) {
-          await _local.cancel(p.id);
+          await _local.cancel(id: p.id);
         } else {
           scheduled.add(p.id);
         }
