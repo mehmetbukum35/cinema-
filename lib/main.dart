@@ -206,11 +206,8 @@ class NeIzlesemApp extends ConsumerWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeResolutionCallback: (locale, supportedLocales) {
-        if (locale == null) return const Locale('en', 'US');
-        for (var supportedLocale in supportedLocales) {
-          if (supportedLocale.languageCode == locale.languageCode) {
-            return supportedLocale;
-          }
+        if (locale != null && locale.languageCode == 'tr') {
+          return const Locale('tr', 'TR');
         }
         return const Locale('en', 'US');
       },

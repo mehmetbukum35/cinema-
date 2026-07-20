@@ -143,8 +143,7 @@ class RatingDistributionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context)?.get('profile_stats') ??
-                'MY RATINGS',
+            AppLocalizations.of(context)?.get('profile_stats') ?? 'MY RATINGS',
             style: TextStyle(
               color: c.dim,
               fontSize: 11,

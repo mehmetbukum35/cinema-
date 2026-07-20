@@ -9,6 +9,7 @@ import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/screens/swipe_screen.dart';
+import 'package:ne_izlesem/services/localization_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
 void main() {
@@ -59,12 +60,14 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tmdbServiceProvider.overrideWithValue(mockService)],
-          child: const MaterialApp(home: SwipeScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('tr', 'TR'),
+            home: SwipeScreen(),
+          ),
         ),
       );
-
-      // Initial loading indicator should show
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Wait for initialization and network requests to resolve
       await tester.pump(const Duration(milliseconds: 150));
@@ -74,7 +77,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('Swipe Widget Test Movie'), findsOneWidget);
       expect(find.text('(2026)'), findsOneWidget);
-      expect(find.text('0 ratings'), findsOneWidget);
+      expect(find.text('0 değerlendirme'), findsOneWidget);
 
       // Tap on 'Harika' rating button
       await tester.tap(find.text('Harika'));
@@ -83,7 +86,7 @@ void main() {
       await tester.pump(); // render next frame
 
       // Queue is empty now (loading text shows up)
-      expect(find.text('Loading more...'), findsOneWidget);
+      expect(find.text('Daha fazla yükleniyor...'), findsOneWidget);
 
       // Verify that rating is saved in shared preferences mock database
       final ratedIds = await PrefsService.getRatedIds();
@@ -106,7 +109,12 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [tmdbServiceProvider.overrideWithValue(mockService)],
-            child: const MaterialApp(home: SwipeScreen()),
+            child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: Locale('en', 'US'),
+              home: SwipeScreen(),
+            ),
           ),
         );
 

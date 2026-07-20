@@ -26,8 +26,8 @@ class LocaleNotifier extends StateNotifier<Locale> {
 
   static Locale _getInitialLocale() {
     final sysLang = ui.PlatformDispatcher.instance.locale.languageCode;
-    final supported = ['tr', 'en'].contains(sysLang) ? sysLang : 'en';
-    return Locale(supported);
+    final lang = sysLang == 'tr' ? 'tr' : 'en';
+    return Locale(lang);
   }
 
   void _init() async {
@@ -37,9 +37,9 @@ class LocaleNotifier extends StateNotifier<Locale> {
       PrefsService.activeLanguageCode = saved;
     } else {
       final sysLang = ui.PlatformDispatcher.instance.locale.languageCode;
-      final supported = ['tr', 'en'].contains(sysLang) ? sysLang : 'en';
-      state = Locale(supported);
-      PrefsService.activeLanguageCode = supported;
+      final lang = sysLang == 'tr' ? 'tr' : 'en';
+      state = Locale(lang);
+      PrefsService.activeLanguageCode = lang;
     }
   }
 
