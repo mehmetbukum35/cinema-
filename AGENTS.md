@@ -77,14 +77,16 @@ Widget smoke tests exist for: profile, browse, social, movie detail, swipe, main
 ## CI
 
 - **ci.yml** — runs on push/PR to `main`: format check, analyze, Flutter tests + coverage, PHPUnit
-- **ios.yml** — manual unsigned IPA build
-- **android-release.yml** — manual or tag (`v*`) APK + AAB artifacts
+- **ios.yml** — manual signed IPA + TestFlight upload
+- **android-release.yml** — manual or tag (`v*`) **release-signed** APK + AAB (requires keystore secrets)
 
 ## Secrets & config
 
-Never commit: `backend/config.php`, keystore files, API secrets, `.claude/settings.local.json`
+Never commit: `backend/src/Config.php`, keystore files, API secrets, `.claude/settings.local.json`
 
-TMDB and JWT secrets live only on the server / local config.
+TMDB and JWT secrets live only on the server / local config (`backend/src/Config.sample.php` → `Config.php`).
+
+Android release (`android-release.yml`) needs GitHub Actions secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS`.
 
 ## When refactoring large screens
 

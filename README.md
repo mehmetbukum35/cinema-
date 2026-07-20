@@ -53,7 +53,7 @@ composer install
 php -S localhost:8000 -t api
 ```
 
-Copy `backend/config.example.php` to `backend/config.php` and set DB credentials, JWT secret, and TMDB key (see backend README).
+Copy `backend/src/Config.sample.php` to `backend/src/Config.php` and set DB credentials, JWT secret, and TMDB key (see backend README).
 
 ## Tests & quality
 

@@ -14,11 +14,19 @@ plugins {
 // Load signing config from key.properties (kept out of version control).
 // If the file is missing, the build falls back to debug keys so that
 // `flutter run --release` still works for local testing.
+// CI release jobs set ANDROID_REQUIRE_RELEASE_SIGNING=1 to fail closed
+// instead of silently shipping a debug-signed APK/AAB.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasKeystore = keystorePropertiesFile.exists()
 if (hasKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+if (System.getenv("ANDROID_REQUIRE_RELEASE_SIGNING") == "1" && !hasKeystore) {
+    throw GradleException(
+        "Release signing required: android/key.properties is missing. " +
+            "See android/key.properties.example and .github/workflows/android-release.yml.",
+    )
 }
 
 android {

@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*'
 
+# Required GitHub Actions secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  — base64 of the .jks/.keystore file
+#       Windows:  [Convert]::ToBase64String([IO.File]::ReadAllBytes("upload-keystore.jks"))
+#       macOS/Linux:  base64 -i upload-keystore.jks | pbcopy
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_PASSWORD     — often same as store password
+#   ANDROID_KEY_ALIAS        — e.g. upload
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -14,18 +22,72 @@ jobs:
         with:
           channel: stable
           cache: true
+
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Decode release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD ANDROID_KEY_ALIAS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Add the Android signing secrets listed at the top of this workflow file."
+            exit 1
+          fi
+
+          # Place next to key.properties; storeFile is relative to android/app/
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          printf '%s\n' \
+            "storePassword=$ANDROID_KEYSTORE_PASSWORD" \
+            "keyPassword=$ANDROID_KEY_PASSWORD" \
+            "keyAlias=$ANDROID_KEY_ALIAS" \
+            "storeFile=../upload-keystore.jks" \
+            > android/key.properties
+
       # --build-number: iOS (ios.yml) ile aynı desen. Verilmezse pubspec'teki
       # +1 kullanılıyordu → versionCode hep 1 kalıyordu; Play Store aynı
       # versionCode ile ikinci paketi reddeder ve "Hakkında"da Build 1 görünür.
       - name: Build release APK
+        env:
+          ANDROID_REQUIRE_RELEASE_SIGNING: "1"
         run: flutter build apk --release --build-number=$GITHUB_RUN_NUMBER --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+
       - name: Build release App Bundle
+        env:
+          ANDROID_REQUIRE_RELEASE_SIGNING: "1"
         run: flutter build appbundle --release --build-number=$GITHUB_RUN_NUMBER --dart-define=GOOGLE_SERVER_CLIENT_ID=925394401867-pkgskofm1romudrtlhap7hauerbkvesm.apps.googleusercontent.com
+
+      - name: Verify APK is not debug-signed
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          CERT=$(keytool -printcert -jarfile "$APK")
+          echo "$CERT"
+          if echo "$CERT" | grep -qi "CN=Android Debug"; then
+            echo "::error::APK is still debug-signed — release keystore was not applied"
+            exit 1
+          fi
+          echo "Release signing certificate OK"
+
       - uses: actions/upload-artifact@v4
         with:
           name: android-release
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
+
+      - name: Scrub keystore from runner
+        if: always()
+        run: |
+          rm -f android/upload-keystore.jks android/key.properties

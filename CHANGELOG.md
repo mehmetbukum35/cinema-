@@ -5,6 +5,7 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- Android release CI now injects a real upload keystore from GitHub secrets (`ANDROID_KEYSTORE_*`), fails closed when signing is missing, and rejects debug-signed APKs before uploading artifacts
 - Release-only Firebase Crashlytics reporting for uncaught Flutter, platform, and asynchronous errors; API 5xx reports are correlated with structured backend JSON logs through redacted `X-Request-ID` metadata
 - Central backend observability: structured JSON logs, global exception capture, configurable log sink, request IDs on responses, and recursive credential/token redaction
 - **Pick Together (live couch mode)**: two friends swipe the same deck on their own phones; the first mutual like wins. Deck is built from the shared watchlist intersection plus the recommendation engine's picks; realtime via short polling (shared-hosting friendly), FCM pushes for invite and match, one-active-session rule, and the opponent's individual votes are never exposed (only progress). New `/social/couch/*` endpoints, `couch_sessions` table (migration 014), Together-tab LIVE card with pending-invite badge, full session screen (friend picker → voting → match celebration / no-match retry)

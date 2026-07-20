@@ -5,10 +5,17 @@
 #   keytool -genkey -v -keystore upload-keystore.jks \
 #     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 #
-# storeFile yolu key.properties dosyasına göre değil, mutlak ya da
-# android/ klasörüne göreli verilebilir (ör. upload-keystore.jks).
+# storeFile: android/app/build.gradle.kts içindeki file() android/app/'e görelidir.
+# Keystore android/ altındaysa:  storeFile=../upload-keystore.jks
+# Keystore android/app/ altındaysa: storeFile=upload-keystore.jks
+#
+# GitHub Actions (android-release.yml) secrets:
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+#   ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS
+# Base64 (PowerShell):
+#   [Convert]::ToBase64String([IO.File]::ReadAllBytes("upload-keystore.jks"))
 
 storePassword=KEYSTORE_SIFRESI
 keyPassword=ANAHTAR_SIFRESI
 keyAlias=upload
-storeFile=upload-keystore.jks
+storeFile=../upload-keystore.jks
