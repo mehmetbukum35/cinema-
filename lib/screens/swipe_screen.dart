@@ -34,6 +34,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   late Animation<double> _fadeAnim;
   double _dragX = 0.0;
   bool _showGuide = false;
+  // Re-entrancy guard: bir puanlama/geri-alma sürerken gelen ikinci swipe veya
+  // buton dokunuşu aynı kartı iki kez puanlayıp sıradakini atlamasın — rate()
+  // ve undo() paylaşılan state.current imlecini okuyup yazıyor.
+  bool _busy = false;
 
   @override
   void initState() {
@@ -69,13 +73,36 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   }
 
   Future<void> _rate(int rating) async {
-    HapticFeedback.mediumImpact();
-    final notifier = ref.read(swipeProvider.notifier);
-    final disableAnims =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    var rated = false;
-    if (disableAnims) {
+    if (_busy) return;
+    _busy = true;
+    try {
+      HapticFeedback.mediumImpact();
+      final notifier = ref.read(swipeProvider.notifier);
+      final disableAnims =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      var rated = false;
+      if (disableAnims) {
+        try {
+          await notifier.rate(rating);
+          rated = true;
+        } catch (e) {
+          debugPrint("Error rating movie: $e");
+          if (mounted) {
+            showAppToast(
+              context,
+              AppLocalizations.of(context)?.get('error_saving_rating') ??
+                  'Error saving rating.',
+              success: false,
+            );
+          }
+        }
+        if (rated && mounted) {
+          await maybeShowDnaMilestone(context);
+        }
+        return;
+      }
       try {
+        await _fadeCtrl.reverse();
         await notifier.rate(rating);
         rated = true;
       } catch (e) {
@@ -88,35 +115,18 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
             success: false,
           );
         }
+      } finally {
+        if (mounted) {
+          _fadeCtrl.forward();
+        }
       }
+      // Eşik anı: 5/25/50. puanlamada DNA'yı çekirdek döngünün içinde
+      // keşfettir (bir kez; bkz. PrefsService.pendingDnaMilestone).
       if (rated && mounted) {
         await maybeShowDnaMilestone(context);
       }
-      return;
-    }
-    try {
-      await _fadeCtrl.reverse();
-      await notifier.rate(rating);
-      rated = true;
-    } catch (e) {
-      debugPrint("Error rating movie: $e");
-      if (mounted) {
-        showAppToast(
-          context,
-          AppLocalizations.of(context)?.get('error_saving_rating') ??
-              'Error saving rating.',
-          success: false,
-        );
-      }
     } finally {
-      if (mounted) {
-        _fadeCtrl.forward();
-      }
-    }
-    // Eşik anı: 5/25/50. puanlamada DNA'yı çekirdek döngünün içinde
-    // keşfettir (bir kez; bkz. PrefsService.pendingDnaMilestone).
-    if (rated && mounted) {
-      await maybeShowDnaMilestone(context);
+      _busy = false;
     }
   }
 
@@ -134,12 +144,31 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   Future<void> _undo() async {
     final state = ref.read(swipeProvider);
     if (state.current == 0) return;
-    HapticFeedback.lightImpact();
-    final notifier = ref.read(swipeProvider.notifier);
-    final disableAnims =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (disableAnims) {
+    if (_busy) return;
+    _busy = true;
+    try {
+      HapticFeedback.lightImpact();
+      final notifier = ref.read(swipeProvider.notifier);
+      final disableAnims =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      if (disableAnims) {
+        try {
+          await notifier.undo();
+        } catch (e) {
+          debugPrint("Error undoing rating: $e");
+          if (mounted) {
+            showAppToast(
+              context,
+              AppLocalizations.of(context)?.get('error_undoing_rating') ??
+                  'Error undoing rating.',
+              success: false,
+            );
+          }
+        }
+        return;
+      }
       try {
+        await _fadeCtrl.reverse();
         await notifier.undo();
       } catch (e) {
         debugPrint("Error undoing rating: $e");
@@ -151,26 +180,13 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
             success: false,
           );
         }
-      }
-      return;
-    }
-    try {
-      await _fadeCtrl.reverse();
-      await notifier.undo();
-    } catch (e) {
-      debugPrint("Error undoing rating: $e");
-      if (mounted) {
-        showAppToast(
-          context,
-          AppLocalizations.of(context)?.get('error_undoing_rating') ??
-              'Error undoing rating.',
-          success: false,
-        );
+      } finally {
+        if (mounted) {
+          _fadeCtrl.forward();
+        }
       }
     } finally {
-      if (mounted) {
-        _fadeCtrl.forward();
-      }
+      _busy = false;
     }
   }
 

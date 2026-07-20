@@ -94,6 +94,84 @@ void main() {
     });
 
     testWidgets(
+      'rapid double-tap rates only one card (re-entrancy guard)',
+      (WidgetTester tester) async {
+        // İki farklı film: hızlı çift dokunuş guard'sızken ikincisini
+        // atlayıp aynı kartı iki kez puanlıyordu (current imleci 0→2).
+        final mockMovies = {
+          'results': [
+            {
+              'id': 3001,
+              'title': 'Reentrancy Movie One',
+              'overview': 'First.',
+              'vote_average': 8.0,
+              'release_date': '2026-01-01',
+              'genre_ids': [28],
+              'poster_path': '/one.jpg',
+              'vote_count': 100,
+            },
+            {
+              'id': 3002,
+              'title': 'Reentrancy Movie Two',
+              'overview': 'Second.',
+              'vote_average': 7.0,
+              'release_date': '2026-02-01',
+              'genre_ids': [28],
+              'poster_path': '/two.jpg',
+              'vote_count': 100,
+            },
+          ],
+        };
+        final client = MockClient((request) async {
+          if (request.url.path.endsWith('/3/movie/popular') ||
+              request.url.path.endsWith('/3/discover/movie')) {
+            return http.Response(jsonEncode(mockMovies), 200);
+          }
+          return http.Response('{"results": []}', 200);
+        });
+        final mockService = TmdbService(client: client);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [tmdbServiceProvider.overrideWithValue(mockService)],
+            child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: Locale('tr', 'TR'),
+              home: SwipeScreen(),
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump();
+
+        expect(find.text('0 değerlendirme'), findsOneWidget);
+
+        // İlk dokunuş _rate#1'i başlatır: _busy=true, 200 ms fade reverse
+        // beklemeye girer. Aralarında pump YOK — ikinci dokunuş _busy hâlâ
+        // true iken tanınır ve guard tarafından yok sayılmalı.
+        await tester.tap(find.text('Harika'));
+        await tester.tap(find.text('Harika'));
+        await tester.pump();
+
+        // Animasyonu ve bekleyen microtask'ları çöz (pumpAndSettle,
+        // CinematicBackground'ın sonsuz animasyonu yüzünden kullanılamaz).
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+
+        // Yalnızca BİR kart puanlanmış olmalı (guard yoksa "2 değerlendirme"
+        // ve ikinci kart atlanırdı).
+        expect(find.text('1 değerlendirme'), findsOneWidget);
+        expect(find.text('2 değerlendirme'), findsNothing);
+        final ratedIds = await PrefsService.getRatedIds();
+        expect(ratedIds.length, 1);
+      },
+    );
+
+    testWidgets(
       'SwipeScreen should show gesture guide overlay when not shown before',
       (WidgetTester tester) async {
         SharedPreferences.setMockInitialValues({});
