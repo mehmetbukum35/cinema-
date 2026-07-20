@@ -287,8 +287,18 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     // kalıyordu — kullanıcı ne mesajı ne de geri al'ı görebiliyordu. Toast
     // her şeyin üstünde görünür; geri almak isteyen aynı butona tekrar basar.
     if (inWatchlist) {
-      await ref.read(watchlistProvider.notifier).remove(movie.id, movie.isTV);
+      final success = await ref
+          .read(watchlistProvider.notifier)
+          .remove(movie.id, movie.isTV);
       if (!mounted) return;
+      if (!success) {
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('watchlist_update_failed') ??
+              'Watchlist could not be updated. Please try again.',
+        );
+        return;
+      }
       showAppToast(
         context,
         AppLocalizations.of(context)
@@ -297,8 +307,16 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             '${movie.title} removed from watchlist.',
       );
     } else {
-      await ref.read(watchlistProvider.notifier).add(movie);
+      final success = await ref.read(watchlistProvider.notifier).add(movie);
       if (!mounted) return;
+      if (!success) {
+        showAppToast(
+          context,
+          AppLocalizations.of(context)?.get('watchlist_update_failed') ??
+              'Watchlist could not be updated. Please try again.',
+        );
+        return;
+      }
       final added =
           AppLocalizations.of(
             context,

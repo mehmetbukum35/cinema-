@@ -740,6 +740,9 @@ const Map<String, String> kTrStrings = {
       'Eşitleme başarısız oldu. Değişiklikleriniz bu cihazda güvende.',
   'sync_retry': 'Tekrar Dene',
   'retry': 'Tekrar dene',
+  'onboarding_search_error': 'Arama başarısız oldu. Lütfen tekrar deneyin.',
+  'watchlist_update_failed':
+      'İzleme listesi güncellenemedi. Lütfen tekrar deneyin.',
   'splash_tagline': ' | Ne İzlesem?',
   'web_profile': 'Web Profili',
   'social_customize_desc':

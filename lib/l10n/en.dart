@@ -745,6 +745,9 @@ const Map<String, String> kEnStrings = {
   'sync_error_message': 'Sync failed. Your changes are safe on this device.',
   'sync_retry': 'Retry',
   'retry': 'Try again',
+  'onboarding_search_error': 'Search failed. Please try again.',
+  'watchlist_update_failed':
+      'Watchlist could not be updated. Please try again.',
   'splash_tagline': ' | What to Watch?',
   'web_profile': 'Web Profile',
   'social_customize_desc':

@@ -38,7 +38,9 @@ class _FavoritePickStepState extends State<FavoritePickStep> {
   final _ctrl = TextEditingController();
   List<Movie> _results = [];
   bool _searching = false;
+  bool _searchFailed = false;
   Timer? _debounce;
+  int _searchRequestId = 0;
 
   @override
   void dispose() {
@@ -49,24 +51,38 @@ class _FavoritePickStepState extends State<FavoritePickStep> {
 
   void _onSearch(String query) {
     _debounce?.cancel();
+    final requestId = ++_searchRequestId;
     setState(() {}); // suffix icon
     if (query.trim().isEmpty) {
       setState(() {
         _results = [];
         _searching = false;
+        _searchFailed = false;
       });
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 400), () async {
       if (!mounted) return;
-      setState(() => _searching = true);
-      final all = await widget.service.searchMulti(query);
-      final res = all.where((m) => m.isTV == widget.isTV).toList();
-      if (!mounted) return;
       setState(() {
-        _results = res;
-        _searching = false;
+        _searching = true;
+        _searchFailed = false;
       });
+      try {
+        final all = await widget.service.searchMulti(query);
+        final res = all.where((m) => m.isTV == widget.isTV).toList();
+        if (!mounted || requestId != _searchRequestId) return;
+        setState(() {
+          _results = res;
+          _searching = false;
+        });
+      } catch (_) {
+        if (!mounted || requestId != _searchRequestId) return;
+        setState(() {
+          _results = [];
+          _searching = false;
+          _searchFailed = true;
+        });
+      }
     });
   }
 
@@ -143,8 +159,10 @@ class _FavoritePickStepState extends State<FavoritePickStep> {
                               HapticFeedback.lightImpact();
                               _ctrl.clear();
                               setState(() {
+                                _searchRequestId++;
                                 _results = [];
                                 _searching = false;
+                                _searchFailed = false;
                               });
                             },
                           )
@@ -229,7 +247,12 @@ class _FavoritePickStepState extends State<FavoritePickStep> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      _ctrl.text.isEmpty
+                      _searchFailed
+                          ? (AppLocalizations.of(
+                                  context,
+                                )?.get('onboarding_search_error') ??
+                                'Search failed. Please try again.')
+                          : _ctrl.text.isEmpty
                           ? (widget.isTV
                                 ? (AppLocalizations.of(
                                         context,

@@ -46,6 +46,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   TmdbService get _service => ref.read(tmdbServiceProvider);
   final _ctrl = TextEditingController();
   Timer? _debounce;
+  int _searchRequestId = 0;
+  int _similarRequestId = 0;
 
   @override
   void initState() {
@@ -81,9 +83,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   void _search(String q) {
     _debounce?.cancel();
+    final requestId = ++_searchRequestId;
     setState(() {});
     if (q.trim().length < 2) {
-      setState(() => _searchResults = []);
+      setState(() {
+        _searchResults = [];
+        _searching = false;
+      });
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 380), () async {
@@ -91,13 +97,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       setState(() => _searching = true);
       try {
         final results = await _service.searchMulti(q);
-        if (!mounted) return;
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _searchResults = results.take(8).toList();
           _searching = false;
         });
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _searchResults = [];
           _searching = false;
@@ -107,6 +113,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 
   Future<void> _selectMovie(Movie movie) async {
+    final requestId = ++_similarRequestId;
     _ctrl.text = movie.title;
     setState(() {
       _selected = movie;
@@ -148,13 +155,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       }
       if (filtered.length < 10) filtered = ranked;
 
-      if (!mounted) return;
+      if (!mounted || requestId != _similarRequestId) return;
       setState(() {
         _similar = filtered.take(20).toList();
         _loadingSimilar = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _similarRequestId) return;
       setState(() {
         _similar = [];
         _loadingSimilar = false;
@@ -163,11 +170,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 
   void _clearSearch() {
+    _searchRequestId++;
+    _similarRequestId++;
     _ctrl.clear();
     setState(() {
       _searchResults = [];
       _selected = null;
       _similar = [];
+      _searching = false;
+      _loadingSimilar = false;
     });
   }
 

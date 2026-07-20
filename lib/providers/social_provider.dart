@@ -118,6 +118,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
   final Ref _ref;
 
   SocialNotifier(this._apiService, this._ref) : super(SocialState());
+  bool _friendsLoading = false;
+  bool _activityLoading = false;
 
   Future<void> loadFriendSignals() async {
     try {
@@ -131,6 +133,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   Future<void> loadFriends() async {
+    _friendsLoading = true;
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.getFriends();
@@ -155,18 +158,24 @@ class SocialNotifier extends StateNotifier<SocialState> {
         friends: friendsList,
         pendingReceived: pendingReceivedList,
         pendingSent: pendingSentList,
-        loading: false,
+        loading: _activityLoading,
       );
       // Rozetler için uyum skorlarını arka planda yükle (await edilmez).
       unawaited(loadTasteScores());
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: () => e.message);
+      state = state.copyWith(loading: _activityLoading, error: () => e.message);
     } catch (e) {
-      state = state.copyWith(loading: false, error: () => e.toString());
+      state = state.copyWith(
+        loading: _activityLoading,
+        error: () => e.toString(),
+      );
+    } finally {
+      _friendsLoading = false;
     }
   }
 
   Future<void> loadActivityFeed() async {
+    _activityLoading = true;
     state = state.copyWith(loading: true, error: () => null);
     try {
       final page = await _apiService.getActivityFeedPage();
@@ -177,12 +186,17 @@ class SocialNotifier extends StateNotifier<SocialState> {
         activityFeed: feedList,
         activityCursor: () => page.nextCursor,
         activityHasMore: page.hasMore,
-        loading: false,
+        loading: _friendsLoading,
       );
     } on ApiException catch (e) {
-      state = state.copyWith(loading: false, error: () => e.message);
+      state = state.copyWith(loading: _friendsLoading, error: () => e.message);
     } catch (e) {
-      state = state.copyWith(loading: false, error: () => e.toString());
+      state = state.copyWith(
+        loading: _friendsLoading,
+        error: () => e.toString(),
+      );
+    } finally {
+      _activityLoading = false;
     }
   }
 

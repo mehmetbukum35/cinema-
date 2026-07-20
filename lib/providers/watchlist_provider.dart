@@ -50,7 +50,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     }
   }
 
-  Future<void> add(Movie movie) async {
+  Future<bool> add(Movie movie) async {
     try {
       await PrefsService.addToWatchlist(movie);
       if (mounted) {
@@ -73,12 +73,14 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           debugPrint('Background sync failed on watchlist add: $e');
         });
       }
+      return true;
     } catch (e) {
-      // Keep state intact
+      debugPrint('Failed to add watchlist item: $e');
+      return false;
     }
   }
 
-  Future<void> remove(int id, bool isTV) async {
+  Future<bool> remove(int id, bool isTV) async {
     try {
       await PrefsService.removeFromWatchlist(id, isTV);
       if (mounted) {
@@ -101,8 +103,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           debugPrint('Background sync failed on watchlist remove: $e');
         });
       }
+      return true;
     } catch (e) {
-      // Keep state intact
+      debugPrint('Failed to remove watchlist item: $e');
+      return false;
     }
   }
 }
