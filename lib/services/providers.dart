@@ -136,6 +136,9 @@ final tasteDnaServiceProvider = Provider<TasteDnaService>((ref) {
 
 final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
 
+/// Keşfet ekranını arka planda yeniden yükle (giriş + sync, dil değişimi dışı).
+final browseRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
 class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
   Timer? _timer;
 

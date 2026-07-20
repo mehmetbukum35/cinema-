@@ -472,6 +472,8 @@ class SyncService {
       _ref?.invalidate(statsProvider);
       _ref?.invalidate(swipeProvider);
       _ref?.invalidate(socialProvider);
+      // Buluttan gelen puanlar "Sana Özel" / Tonight seçkisini değiştirir.
+      _ref?.read(browseRefreshTriggerProvider.notifier).state++;
     }
 
     debugPrint(

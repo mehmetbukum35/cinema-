@@ -40,6 +40,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   TmdbService get _service => ref.read(tmdbServiceProvider);
   final _rng = Random();
   final ScrollController _scrollController = ScrollController();
+  Timer? _authSyncRefreshDebounce;
 
   Movie? _tonight;
 
@@ -73,6 +74,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
   @override
   void dispose() {
+    _authSyncRefreshDebounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -487,6 +489,17 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       if (previous != next) {
         _load();
       }
+    });
+
+    // Giriş/çıkış veya sync sonrası: iskelete düşmeden rayları yenile.
+    // Auth restore + sync aynı anda iki kez tetikleyebilir → kısa debounce.
+    ref.listen<int>(browseRefreshTriggerProvider, (previous, next) {
+      if (previous == next || next <= 0) return;
+      _authSyncRefreshDebounce?.cancel();
+      _authSyncRefreshDebounce = Timer(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        _load(background: true);
+      });
     });
 
     return Scaffold(

@@ -545,6 +545,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     ]);
     await _ref.read(recommendationEngineProvider).invalidateCache();
     _ref.invalidate(swipeProvider);
+    // Buluttan gelen puan/liste + arkadaş sinyalleri Keşfet'i besler.
+    _ref.read(browseRefreshTriggerProvider.notifier).state++;
   }
 
   Future<void> _invalidateGuestProviders() async {
@@ -553,6 +555,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(swipeProvider);
     _ref.invalidate(socialProvider);
     await _ref.read(recommendationEngineProvider).invalidateCache();
+    _ref.read(browseRefreshTriggerProvider.notifier).state++;
   }
 
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
