@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/app_config.dart';
@@ -38,6 +39,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    HapticFeedback.lightImpact();
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(authProvider.notifier);
     final result = _isRegister
@@ -53,11 +56,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _googleSignIn() async {
+    HapticFeedback.lightImpact();
+    FocusScope.of(context).unfocus();
     final result = await ref.read(authProvider.notifier).signInWithGoogle();
     await _handleAuthResult(result);
   }
 
   Future<void> _appleSignIn() async {
+    HapticFeedback.lightImpact();
+    FocusScope.of(context).unfocus();
     final result = await ref.read(authProvider.notifier).signInWithApple();
     await _handleAuthResult(result);
   }
@@ -425,7 +432,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-        AuthLoadingOverlay(visible: auth.loading),
+        AuthLoadingOverlay(
+          visible: auth.loading,
+          messageKey: auth.loadingMessageKey,
+        ),
       ],
     );
   }

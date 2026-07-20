@@ -297,7 +297,10 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ),
-        AuthLoadingOverlay(visible: auth.loading),
+        AuthLoadingOverlay(
+          visible: auth.loading,
+          messageKey: auth.loadingMessageKey,
+        ),
       ],
     );
   }

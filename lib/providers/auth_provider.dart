@@ -31,29 +31,37 @@ class AuthResult {
 
 class AuthState {
   final bool loading;
+  final String? loadingMessageKey;
   final Map<String, dynamic>? user; // contains id, email, display_name
   final String? error;
   final String? accessToken;
 
-  AuthState({this.loading = false, this.user, this.error, this.accessToken});
+  AuthState({
+    this.loading = false,
+    this.loadingMessageKey,
+    this.user,
+    this.error,
+    this.accessToken,
+  });
 
   bool get isAuthenticated => user != null && accessToken != null;
   bool get isLoggedIn => isAuthenticated;
 
-  // `error` için sentinel deseni: parametre hiç verilmezse mevcut hata korunur,
-  // açıkça `error: null` verilirse hata TEMİZLENİR. (Eski `error ?? this.error`
-  // deseni null'ı yutuyordu; başarısız denemeden kalan hata mesajı bir sonraki
-  // denemede ekranda kalıyordu.)
+  // `error` ve `loadingMessageKey` için sentinel deseni
   static const Object _unset = Object();
 
   AuthState copyWith({
     bool? loading,
+    Object? loadingMessageKey = _unset,
     Map<String, dynamic>? user,
     Object? error = _unset,
     String? accessToken,
   }) {
     return AuthState(
       loading: loading ?? this.loading,
+      loadingMessageKey: identical(loadingMessageKey, _unset)
+          ? this.loadingMessageKey
+          : loadingMessageKey as String?,
       user: user ?? this.user,
       error: identical(error, _unset) ? this.error : error as String?,
       accessToken: accessToken ?? this.accessToken,
@@ -213,7 +221,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // POST /auth/login
   Future<AuthResult> login(String email, String password) async {
-    state = state.copyWith(loading: true, error: null);
+    state = state.copyWith(
+      loading: true,
+      loadingMessageKey: 'auth_signing_in_email',
+      error: null,
+    );
     try {
       final data = await _apiService.login(email: email, password: password);
       return await _finalizeAuth(data);
@@ -240,7 +252,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String password, {
     String? displayName,
   }) async {
-    state = state.copyWith(loading: true, error: null);
+    state = state.copyWith(
+      loading: true,
+      loadingMessageKey: 'auth_signing_in_email',
+      error: null,
+    );
     try {
       final data = await _apiService.register(
         email: email,
@@ -267,7 +283,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // POST /auth/verify-email — kayıttaki kodu doğrular, oturumu açar.
   Future<AuthResult> verifyEmail(String email, String code) async {
-    state = state.copyWith(loading: true, error: null);
+    state = state.copyWith(
+      loading: true,
+      loadingMessageKey: 'auth_signing_in_email',
+      error: null,
+    );
     try {
       final data = await _apiService.verifyEmail(email, code);
       return await _finalizeAuth(data);
@@ -303,7 +323,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       const errMsg = 'auth_err_google_not_configured';
       return AuthResult(status: AuthStatus.error, errorMessage: errMsg);
     }
-    state = state.copyWith(loading: true, error: null);
+    state = state.copyWith(
+      loading: true,
+      loadingMessageKey: 'auth_signing_in_google',
+      error: null,
+    );
     try {
       final signIn = GoogleSignIn.instance;
       if (!_googleInitialized) {
@@ -337,7 +361,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (!mounted) {
         return AuthResult(status: AuthStatus.cancelled);
       }
-      state = state.copyWith(loading: true, error: null);
+      state = state.copyWith(
+        loading: true,
+        loadingMessageKey: 'auth_signing_in_google',
+        error: null,
+      );
 
       final idToken = account.authentication.idToken;
       if (kDebugMode) {
@@ -387,7 +415,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// hattımızla kurulur. Ad-soyad yalnızca İLK yetkilendirmede gelir ve
   /// backend'e display_name olarak iletilir.
   Future<AuthResult> signInWithApple() async {
-    state = state.copyWith(loading: true, error: null);
+    state = state.copyWith(
+      loading: true,
+      loadingMessageKey: 'auth_signing_in_apple',
+      error: null,
+    );
     try {
       final AuthorizationCredentialAppleID credential;
       try {
