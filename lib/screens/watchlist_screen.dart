@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../providers/watchlist_provider.dart';
 import '../services/prefs_service.dart';
@@ -10,6 +9,7 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/cinematic_background.dart';
+import '../widgets/app_cached_image.dart';
 import '../widgets/pulsing_placeholder.dart';
 import '../widgets/entrance.dart';
 import 'movie_detail_sheet.dart';
@@ -527,15 +527,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          m.posterUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: m.posterUrl,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 240,
-                  placeholder: (ctx, url) => const PulsingPlaceholder(),
-                  errorWidget: (ctx, url, err) => const PulsingPlaceholder(),
-                )
-              : const PulsingPlaceholder(),
+          AppCachedNetworkImage(
+            imageUrl: m.posterUrl,
+            fit: BoxFit.cover,
+            preset: AppImageCachePreset.poster,
+          ),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(

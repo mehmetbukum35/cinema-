@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-
 import '../models/movie.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
-import 'pulsing_placeholder.dart';
+import 'app_cached_image.dart';
 
 /// Filmin öneri gerekçesini kullanıcı diline çevirir:
 /// seed → "X'i beğendiğin için", friend → "X buna bayıldı". Gerekçe yoksa null.
@@ -113,16 +111,11 @@ class TonightPickCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              const PulsingPlaceholder(),
-                          errorWidget: (context, url, error) =>
-                              const PulsingPlaceholder(),
-                        )
-                      : const PulsingPlaceholder(),
+                  AppCachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    preset: AppImageCachePreset.backdrop,
+                  ),
                   // Okunabilirlik için alttan yukarı koyulaşan gradyan.
                   DecoratedBox(
                     decoration: BoxDecoration(

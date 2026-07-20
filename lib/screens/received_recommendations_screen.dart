@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/social.dart';
 import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
-import '../widgets/pulsing_placeholder.dart';
+import '../widgets/app_cached_image.dart';
 import '../widgets/spring_button.dart';
 import 'social/open_movie_detail.dart';
 
@@ -148,32 +147,18 @@ class _ReceivedRecommendationsScreenState
               child: SizedBox(
                 width: 42,
                 height: 63,
-                child: item.posterPath != null
-                    ? CachedNetworkImage(
-                        imageUrl:
-                            'https://image.tmdb.org/t/p/w200${item.posterPath}',
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const PulsingPlaceholder(),
-                        errorWidget: (context, url, error) => Container(
-                          color: c.border,
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.movie_outlined,
-                            color: c.dim,
-                            size: 18,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: c.border,
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.movie_outlined,
-                          color: c.dim,
-                          size: 18,
-                        ),
-                      ),
+                child: AppCachedNetworkImage(
+                  imageUrl: item.posterPath != null
+                      ? 'https://image.tmdb.org/t/p/w200${item.posterPath}'
+                      : '',
+                  fit: BoxFit.cover,
+                  preset: AppImageCachePreset.avatar,
+                  errorWidget: (context, url, error) => Container(
+                    color: c.border,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.movie_outlined, color: c.dim, size: 18),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),

@@ -2,8 +2,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'app_cached_image.dart';
 import '../utils/share_helper.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
@@ -557,14 +557,13 @@ class _WrappedModalState extends State<WrappedModal> {
                         Expanded(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: movie.posterUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: movie.posterUrl,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (context, url, error) =>
-                                        Container(color: Colors.white10),
-                                  )
-                                : Container(color: Colors.white10),
+                            child: AppCachedNetworkImage(
+                              imageUrl: movie.posterUrl,
+                              fit: BoxFit.cover,
+                              preset: AppImageCachePreset.poster,
+                              errorWidget: (context, url, error) =>
+                                  Container(color: Colors.white10),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),

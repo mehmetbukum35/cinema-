@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
@@ -19,14 +19,13 @@ class OnboardingMovieCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                movie.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: movie.posterUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => _placeholder(c),
-                        errorWidget: (context, url, error) => _placeholder(c),
-                      )
-                    : _placeholder(c),
+                AppCachedNetworkImage(
+                  imageUrl: movie.posterUrl,
+                  fit: BoxFit.cover,
+                  preset: AppImageCachePreset.poster,
+                  placeholder: (context, url) => _placeholder(c),
+                  errorWidget: (context, url, error) => _placeholder(c),
+                ),
                 Positioned(
                   top: 12,
                   right: 12,

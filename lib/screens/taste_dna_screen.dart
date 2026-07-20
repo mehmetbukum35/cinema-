@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/app_cached_image.dart';
 import '../utils/share_helper.dart';
 
 import '../models/movie.dart';
@@ -545,16 +545,14 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: m.posterUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: m.posterUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (ctx, url) =>
-                                  ColoredBox(color: c.surface),
-                              errorWidget: (ctx, url, err) =>
-                                  ColoredBox(color: c.surface),
-                            )
-                          : ColoredBox(color: c.surface),
+                      child: AppCachedNetworkImage(
+                        imageUrl: m.posterUrl,
+                        fit: BoxFit.cover,
+                        preset: AppImageCachePreset.poster,
+                        placeholder: (ctx, url) => ColoredBox(color: c.surface),
+                        errorWidget: (ctx, url, err) =>
+                            ColoredBox(color: c.surface),
+                      ),
                     ),
                   ),
                 );

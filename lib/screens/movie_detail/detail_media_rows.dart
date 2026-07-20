@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../models/cast_member.dart';
 import '../../models/watch_provider.dart';
@@ -34,17 +34,14 @@ class DetailProvidersRow extends StatelessWidget {
                   child: SizedBox(
                     width: 40,
                     height: 40,
-                    child: p.logoUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: p.logoUrl,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 80,
-                            placeholder: (context, url) =>
-                                ColoredBox(color: c.card),
-                            errorWidget: (context, url, error) =>
-                                ColoredBox(color: c.card),
-                          )
-                        : ColoredBox(color: c.card),
+                    child: AppCachedNetworkImage(
+                      imageUrl: p.logoUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.avatar,
+                      placeholder: (context, url) => ColoredBox(color: c.card),
+                      errorWidget: (context, url, error) =>
+                          ColoredBox(color: c.card),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -129,17 +126,15 @@ class DetailCastRow extends StatelessWidget {
                     child: SizedBox(
                       width: 56,
                       height: 56,
-                      child: c.profileUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: c.profileUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 90,
-                              placeholder: (context, url) =>
-                                  _avatarPlaceholder(ctx, c.name),
-                              errorWidget: (context, url, error) =>
-                                  _avatarPlaceholder(ctx, c.name),
-                            )
-                          : _avatarPlaceholder(ctx, c.name),
+                      child: AppCachedNetworkImage(
+                        imageUrl: c.profileUrl,
+                        fit: BoxFit.cover,
+                        preset: AppImageCachePreset.avatar,
+                        placeholder: (context, url) =>
+                            _avatarPlaceholder(ctx, c.name),
+                        errorWidget: (context, url, error) =>
+                            _avatarPlaceholder(ctx, c.name),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -203,17 +198,14 @@ class SimilarTitlesRow extends StatelessWidget {
               margin: const EdgeInsets.only(right: 10),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: s.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: s.posterUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 150,
-                        placeholder: (context, url) =>
-                            ColoredBox(color: c.card),
-                        errorWidget: (context, url, error) =>
-                            ColoredBox(color: c.card),
-                      )
-                    : ColoredBox(color: c.card),
+                child: AppCachedNetworkImage(
+                  imageUrl: s.posterUrl,
+                  fit: BoxFit.cover,
+                  preset: AppImageCachePreset.poster,
+                  placeholder: (context, url) => ColoredBox(color: c.card),
+                  errorWidget: (context, url, error) =>
+                      ColoredBox(color: c.card),
+                ),
               ),
             ),
           );
@@ -258,17 +250,15 @@ class CollectionRow extends StatelessWidget {
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: m.posterUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: m.posterUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 150,
-                              placeholder: (context, url) =>
-                                  ColoredBox(color: c.card),
-                              errorWidget: (context, url, error) =>
-                                  ColoredBox(color: c.card),
-                            )
-                          : ColoredBox(color: c.card),
+                      child: AppCachedNetworkImage(
+                        imageUrl: m.posterUrl,
+                        fit: BoxFit.cover,
+                        preset: AppImageCachePreset.poster,
+                        placeholder: (context, url) =>
+                            ColoredBox(color: c.card),
+                        errorWidget: (context, url, error) =>
+                            ColoredBox(color: c.card),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

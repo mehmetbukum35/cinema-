@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/movie.dart';
 import '../../models/social.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/pulsing_placeholder.dart';
+import '../../widgets/app_cached_image.dart';
 import '../movie_detail_sheet.dart';
 
 /// "Arkadaşlarından Son Sinyaller" rayındaki poster kartı: arkadaşın puan
@@ -70,18 +69,13 @@ class FriendSignalCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         color: c.surface,
-                        child: posterPath.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl:
-                                    'https://image.tmdb.org/t/p/w342$posterPath',
-                                fit: BoxFit.cover,
-                                memCacheWidth: 180,
-                                placeholder: (context, url) =>
-                                    const PulsingPlaceholder(),
-                                errorWidget: (context, url, error) =>
-                                    const PulsingPlaceholder(),
-                              )
-                            : const PulsingPlaceholder(),
+                        child: AppCachedNetworkImage(
+                          imageUrl: posterPath.isNotEmpty
+                              ? 'https://image.tmdb.org/t/p/w342$posterPath'
+                              : '',
+                          fit: BoxFit.cover,
+                          preset: AppImageCachePreset.poster,
+                        ),
                       ),
                     ),
                     Positioned(

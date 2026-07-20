@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
@@ -37,17 +37,14 @@ class DetailHeroRow extends StatelessWidget {
               child: SizedBox(
                 width: 100,
                 height: 150,
-                child: movie.posterUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: movie.posterUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 180,
-                        placeholder: (context, url) =>
-                            ColoredBox(color: c.card),
-                        errorWidget: (context, url, error) =>
-                            ColoredBox(color: c.card),
-                      )
-                    : ColoredBox(color: c.card),
+                child: AppCachedNetworkImage(
+                  imageUrl: movie.posterUrl,
+                  fit: BoxFit.cover,
+                  preset: AppImageCachePreset.poster,
+                  placeholder: (context, url) => ColoredBox(color: c.card),
+                  errorWidget: (context, url, error) =>
+                      ColoredBox(color: c.card),
+                ),
               ),
             ),
             Positioned(

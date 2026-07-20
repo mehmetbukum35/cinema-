@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/social.dart';
 import '../../providers/social_provider.dart';
@@ -10,6 +9,7 @@ import '../../services/localization_service.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../widgets/pulsing_placeholder.dart';
 
 /// Popüler profiller sıralamasındaki tek kart: madalya rengi, beğeni kalbi
@@ -207,10 +207,11 @@ class TopProfileCard extends ConsumerWidget {
                                     color: c.dim,
                                   ),
                                 )
-                              : CachedNetworkImage(
+                              : AppCachedNetworkImage(
                                   imageUrl: pv.posterUrl,
                                   width: 62,
                                   fit: BoxFit.cover,
+                                  preset: AppImageCachePreset.avatar,
                                   placeholder: (_, _) => const SizedBox(
                                     width: 62,
                                     height: 92,
@@ -218,6 +219,7 @@ class TopProfileCard extends ConsumerWidget {
                                   ),
                                   errorWidget: (_, _, _) => Container(
                                     width: 62,
+                                    height: 92,
                                     color: c.bg,
                                     child: Icon(
                                       Icons.movie_rounded,

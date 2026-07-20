@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../services/tmdb_service.dart';
@@ -178,16 +178,14 @@ class MatchMovieBody extends StatelessWidget {
                   child: SizedBox(
                     width: 44,
                     height: 64,
-                    child: m.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: m.posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (ctx, url) =>
-                                ColoredBox(color: c.border),
-                            errorWidget: (ctx, url, err) =>
-                                ColoredBox(color: c.border),
-                          )
-                        : ColoredBox(color: c.border),
+                    child: AppCachedNetworkImage(
+                      imageUrl: m.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.avatar,
+                      placeholder: (ctx, url) => ColoredBox(color: c.border),
+                      errorWidget: (ctx, url, err) =>
+                          ColoredBox(color: c.border),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

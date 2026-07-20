@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/social.dart';
 import '../../providers/social_provider.dart';
@@ -9,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../services/localization_service.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../widgets/pulsing_placeholder.dart';
 
 /// Keşfet'teki yatay "Popüler Listeler" rayının profil kartı: sıra rengi,
@@ -194,11 +194,12 @@ class BrowseTopProfileCard extends ConsumerWidget {
                                     size: 14,
                                   ),
                                 )
-                              : CachedNetworkImage(
+                              : AppCachedNetworkImage(
                                   imageUrl: pv.posterUrl,
                                   width: 38,
                                   height: 58,
                                   fit: BoxFit.cover,
+                                  preset: AppImageCachePreset.avatar,
                                   placeholder: (_, _) => const SizedBox(
                                     width: 38,
                                     height: 58,

@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../services/sync_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_cached_image.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/spring_button.dart';
@@ -250,19 +250,19 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
                   child: SizedBox(
                     width: 42,
                     height: 63,
-                    child: movie.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: movie.posterUrl,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            color: c.border,
-                            child: Icon(
-                              Icons.movie_outlined,
-                              color: c.dim,
-                              size: 18,
-                            ),
-                          ),
+                    child: AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                      errorWidget: (ctx, url, err) => Container(
+                        color: c.border,
+                        child: Icon(
+                          Icons.movie_outlined,
+                          color: c.dim,
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

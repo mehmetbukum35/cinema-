@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../theme/app_theme.dart';
 
@@ -20,15 +20,13 @@ class SimilarCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            movie.posterUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: movie.posterUrl,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 240,
-                    placeholder: (ctx, url) => _placeholder(context),
-                    errorWidget: (ctx, url, err) => _placeholder(context),
-                  )
-                : _placeholder(context),
+            AppCachedNetworkImage(
+              imageUrl: movie.posterUrl,
+              fit: BoxFit.cover,
+              preset: AppImageCachePreset.poster,
+              placeholder: (ctx, url) => _placeholder(context),
+              errorWidget: (ctx, url, err) => _placeholder(context),
+            ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(

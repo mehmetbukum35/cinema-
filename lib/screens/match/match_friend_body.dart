@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../models/social.dart';
 import '../../providers/auth_provider.dart';
@@ -573,16 +573,13 @@ class _IntersectionPoster extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: movie.posterUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: movie.posterUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (ctx, url) =>
-                          ColoredBox(color: palette.card),
-                      errorWidget: (ctx, url, err) =>
-                          ColoredBox(color: palette.card),
-                    )
-                  : ColoredBox(color: palette.card),
+              child: AppCachedNetworkImage(
+                imageUrl: movie.posterUrl,
+                fit: BoxFit.cover,
+                preset: AppImageCachePreset.poster,
+                placeholder: (ctx, url) => ColoredBox(color: palette.card),
+                errorWidget: (ctx, url, err) => ColoredBox(color: palette.card),
+              ),
             ),
           ),
           const SizedBox(height: 4),

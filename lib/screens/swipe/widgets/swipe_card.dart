@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../models/movie.dart';
 import '../../../providers/social_provider.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
-import '../../../widgets/pulsing_placeholder.dart';
+import '../../../widgets/app_cached_image.dart';
 import '../../../widgets/spring_button.dart';
 import '../../../widgets/tonight_pick_card.dart' show recoReasonLabel;
 import '../../movie_detail_sheet.dart';
@@ -62,17 +61,11 @@ class SwipeCard extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    movie.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: movie.posterUrl,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 500,
-                            placeholder: (context, url) =>
-                                const PulsingPlaceholder(),
-                            errorWidget: (context, url, error) =>
-                                const PulsingPlaceholder(),
-                          )
-                        : const PulsingPlaceholder(),
+                    AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                    ),
                     Positioned(
                       top: 12,
                       right: 12,

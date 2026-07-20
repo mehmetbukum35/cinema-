@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../widgets/app_cached_image.dart';
 import '../../../models/movie.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
@@ -65,17 +65,15 @@ class SearchResultsList extends ConsumerWidget {
                       child: SizedBox(
                         width: 58,
                         height: 84,
-                        child: m.posterUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: m.posterUrl,
-                                fit: BoxFit.cover,
-                                memCacheWidth: 120,
-                                placeholder: (context, url) =>
-                                    ColoredBox(color: c.border),
-                                errorWidget: (context, url, error) =>
-                                    ColoredBox(color: c.border),
-                              )
-                            : ColoredBox(color: c.border),
+                        child: AppCachedNetworkImage(
+                          imageUrl: m.posterUrl,
+                          fit: BoxFit.cover,
+                          preset: AppImageCachePreset.avatar,
+                          placeholder: (context, url) =>
+                              ColoredBox(color: c.border),
+                          errorWidget: (context, url, error) =>
+                              ColoredBox(color: c.border),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),

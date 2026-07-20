@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
@@ -49,14 +49,13 @@ class ResultsMovieCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            movie.posterUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: movie.posterUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => _placeholder(ctx),
-                    errorWidget: (ctx, url, err) => _placeholder(ctx),
-                  )
-                : _placeholder(context),
+            AppCachedNetworkImage(
+              imageUrl: movie.posterUrl,
+              fit: BoxFit.cover,
+              preset: AppImageCachePreset.poster,
+              placeholder: (ctx, url) => _placeholder(ctx),
+              errorWidget: (ctx, url, err) => _placeholder(ctx),
+            ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/social.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/pulsing_placeholder.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../widgets/spring_button.dart';
 import 'open_movie_detail.dart';
 
@@ -64,24 +63,18 @@ class RecommendationInboxCard extends ConsumerWidget {
                 child: SizedBox(
                   width: 60,
                   height: 90,
-                  child: posterPath != null
-                      ? CachedNetworkImage(
-                          imageUrl:
-                              'https://image.tmdb.org/t/p/w200$posterPath',
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              const PulsingPlaceholder(),
-                          errorWidget: (context, url, error) => Container(
-                            color: c.border,
-                            alignment: Alignment.center,
-                            child: Icon(Icons.movie_rounded, color: c.dim),
-                          ),
-                        )
-                      : Container(
-                          color: c.border,
-                          alignment: Alignment.center,
-                          child: Icon(Icons.movie_rounded, color: c.dim),
-                        ),
+                  child: AppCachedNetworkImage(
+                    imageUrl: posterPath != null
+                        ? 'https://image.tmdb.org/t/p/w200$posterPath'
+                        : '',
+                    fit: BoxFit.cover,
+                    preset: AppImageCachePreset.avatar,
+                    errorWidget: (context, url, error) => Container(
+                      color: c.border,
+                      alignment: Alignment.center,
+                      child: Icon(Icons.movie_rounded, color: c.dim),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),

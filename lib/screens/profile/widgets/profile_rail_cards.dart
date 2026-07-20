@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../widgets/app_cached_image.dart';
 import '../../../models/movie.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
@@ -101,16 +101,13 @@ class WatchlistCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    movie.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: movie.posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (ctx, url) =>
-                                ColoredBox(color: c.card),
-                            errorWidget: (ctx, url, err) =>
-                                ColoredBox(color: c.card),
-                          )
-                        : ColoredBox(color: c.card),
+                    AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                      placeholder: (ctx, url) => ColoredBox(color: c.card),
+                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
+                    ),
                     Positioned(
                       top: 4,
                       right: 4,
@@ -202,16 +199,13 @@ class RatedMovieCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    movie.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: movie.posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (ctx, url) =>
-                                ColoredBox(color: c.card),
-                            errorWidget: (ctx, url, err) =>
-                                ColoredBox(color: c.card),
-                          )
-                        : ColoredBox(color: c.card),
+                    AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                      placeholder: (ctx, url) => ColoredBox(color: c.card),
+                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
+                    ),
                     Positioned(
                       bottom: 6,
                       left: 6,

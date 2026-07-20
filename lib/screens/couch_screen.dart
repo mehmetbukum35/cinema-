@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +9,8 @@ import '../providers/social_provider.dart';
 import '../services/localization_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_cached_image.dart';
 import '../widgets/app_toast.dart';
-import '../widgets/pulsing_placeholder.dart';
 import '../widgets/spring_button.dart';
 import 'login_screen.dart';
 import 'movie_detail_sheet.dart';
@@ -391,16 +390,11 @@ class _VotingView extends ConsumerWidget {
                             aspectRatio: 2 / 3,
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              child: card.posterUrl.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: card.posterUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) =>
-                                          const PulsingPlaceholder(),
-                                      errorWidget: (context, url, error) =>
-                                          const PulsingPlaceholder(),
-                                    )
-                                  : const PulsingPlaceholder(),
+                              child: AppCachedNetworkImage(
+                                imageUrl: card.posterUrl,
+                                fit: BoxFit.cover,
+                                preset: AppImageCachePreset.poster,
+                              ),
                             ),
                           ),
                         ),
@@ -562,16 +556,11 @@ class _MatchView extends ConsumerWidget {
                   aspectRatio: 2 / 3,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: movie.posterUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: movie.posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                const PulsingPlaceholder(),
-                            errorWidget: (context, url, error) =>
-                                const PulsingPlaceholder(),
-                          )
-                        : const PulsingPlaceholder(),
+                    child: AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                    ),
                   ),
                 ),
               ),

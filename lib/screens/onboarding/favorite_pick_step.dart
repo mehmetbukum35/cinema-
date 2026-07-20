@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../services/tmdb_service.dart';
 import '../../services/localization_service.dart';
@@ -297,18 +297,17 @@ class _FavoritePickStepState extends State<FavoritePickStep> {
                                   borderRadius: const BorderRadius.horizontal(
                                     left: Radius.circular(9),
                                   ),
-                                  child: m.posterUrl.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: m.posterUrl,
-                                          width: 44,
-                                          height: 64,
-                                          fit: BoxFit.cover,
-                                          placeholder: (context, url) =>
-                                              _posterPlaceholder(context),
-                                          errorWidget: (context, url, error) =>
-                                              _posterPlaceholder(context),
-                                        )
-                                      : _posterPlaceholder(context),
+                                  child: AppCachedNetworkImage(
+                                    imageUrl: m.posterUrl,
+                                    width: 44,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                    preset: AppImageCachePreset.avatar,
+                                    placeholder: (context, url) =>
+                                        _posterPlaceholder(context),
+                                    errorWidget: (context, url, error) =>
+                                        _posterPlaceholder(context),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
