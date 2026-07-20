@@ -40,8 +40,19 @@ Example daily cron (replace with the real absolute paths):
 ```
 
 Maintenance caps active search history at 50 rows per user, expires old Couch
-sessions, and removes expired temporary authentication records. Small relation
-tombstones are retained for offline deletion propagation.
+sessions, and removes expired temporary authentication records. After migration
+021, tombstones older than 30 days are physically deleted only when every active
+device has acknowledged them. Devices inactive for 90 days must perform a safe
+full resync before pushing again.
+
+## Device-aware tombstone cleanup rollout
+
+1. Back up the database.
+2. Run `migrations/021_sync_device_acknowledgements.sql` in phpMyAdmin.
+3. Upload `api/index.php`, `src/Sync.php`, and `src/Maintenance.php`.
+4. Deploy the updated app so sync requests include a stable device id.
+5. Keep the existing daily maintenance cron. Do not upload the new
+   `Maintenance.php` before migration 021 has completed.
 
 ## Central title catalog rollout
 
@@ -95,7 +106,7 @@ Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>
 
 | Yöntem | Yol | Açıklama | Auth |
 |---|---|---|---|
-| GET | `/sync?since=<ms>` | Belirtilen zamandan sonra değişen tüm verileri çeker | Bearer |
+| GET | `/sync?since=<ms>&ack_cursor=<ms>&device_id=<uuid>` | Değişiklikleri çeker ve önceki başarılı cursor'u onaylar | Bearer |
 | POST | `/sync` | Yerel veri değişikliklerini sunucuya iter (çakışmada son yazan kazanır) | Bearer |
 | DELETE | `/sync` | Kullanıcının sunucudaki tüm senkronizasyon verilerini sıfırlar | Bearer |
 | DELETE | `/search-history` | Arama geçmişini temizler (tekil uç) | Bearer |
@@ -165,7 +176,7 @@ curl -s -X POST $BASE/sync -H "Authorization: Bearer ACCESS" -H 'Content-Type: a
   -d '{"ratings":[{"movie_id":603,"is_tv":0,"rating":3,"genre_ids":[28,878],"title":"The Matrix","updated_at":1719579999000,"deleted":false}]}'
 
 # Çek
-curl -s "$BASE/sync?since=0" -H "Authorization: Bearer ACCESS"
+curl -s "$BASE/sync?since=0&ack_cursor=0&device_id=manual-test-device-0001" -H "Authorization: Bearer ACCESS"
 ```
 
 ## Production Smoke Testing & Verification
@@ -203,7 +214,7 @@ The PHP/MySQL backend is deployed and verified. To perform a production smoke te
      -d '{"ratings":[{"movie_id":603,"is_tv":0,"rating":3,"genre_ids":[28,878],"title":"The Matrix","updated_at":1719579999000,"deleted":false}]}'
 
    # Sync pull
-   curl -s "https://cinema.mbkm.com.tr/api/sync?since=0" \
+   curl -s "https://cinema.mbkm.com.tr/api/sync?since=0&ack_cursor=0&device_id=manual-test-device-0001" \
      -H "Authorization: Bearer <ACCESS_TOKEN>"
    ```
 

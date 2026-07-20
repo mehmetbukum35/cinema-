@@ -10,11 +10,13 @@ import 'package:ne_izlesem/services/sync_service.dart';
 // Simple mock for ApiService
 class MockApiService implements ApiService {
   Map<String, dynamic>? pushedPayload;
+  final List<Map<String, dynamic>> pushedPayloads = [];
   int? pulledSince;
   Map<String, dynamic> pullResponse = {};
   Map<String, dynamic> pushResponse = {'applied': 0};
   bool shouldThrow = false;
   bool throwOnPull = false;
+  bool resetRequiredOnFirstPush = false;
   int pushCount = 0;
   int pullCount = 0;
   Duration? delay;
@@ -23,6 +25,14 @@ class MockApiService implements ApiService {
   Future<Map<String, dynamic>> push(Map<String, dynamic> payload) async {
     pushCount++;
     pushedPayload = payload;
+    pushedPayloads.add(payload);
+    if (resetRequiredOnFirstPush && pushCount == 1) {
+      throw ApiException(
+        statusCode: 409,
+        message: 'Full resync required',
+        code: 'sync_reset_required',
+      );
+    }
     if (delay != null) await Future.delayed(delay!);
     if (shouldThrow) throw Exception('API Error');
     return pushResponse;
@@ -142,8 +152,63 @@ void main() {
       expect(watchlistPayload[0]['deleted'], true);
       expect(watchlistPayload[0]['metadata_locale'], 'und');
 
-      // Verify last sync time was updated to 1100
-      expect(await PrefsService.getLastSyncTime(), 1100);
+      // One millisecond overlap prevents equal-watermark writes being skipped.
+      expect(await PrefsService.getLastSyncTime(), 1099);
+    });
+
+    test('should tolerate null genre metadata in legacy rows', () async {
+      await testDb.insert('ratings', {
+        'movie_id': 321,
+        'is_tv': 0,
+        'rating': 4,
+        'genre_ids': null,
+        'created_at': 1001,
+        'updated_at': 1002,
+        'deleted': 0,
+      });
+      mockApi.pullResponse = {
+        'server_time': 1100,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      final ratings = mockApi.pushedPayload!['ratings'] as List<dynamic>;
+      expect(ratings.single['genre_ids'], isEmpty);
+    });
+
+    test('should split large pushes into 500-row batches', () async {
+      final batch = testDb.batch();
+      for (var i = 0; i < 501; i++) {
+        batch.insert('ratings', {
+          'movie_id': 10000 + i,
+          'is_tv': 0,
+          'rating': 3,
+          'genre_ids': '[]',
+          'created_at': 1001,
+          'updated_at': 1002 + i,
+          'deleted': 0,
+        });
+      }
+      await batch.commit(noResult: true);
+      mockApi.pullResponse = {
+        'server_time': 2000,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      expect(mockApi.pushCount, 2);
+      expect(mockApi.pushedPayloads[0]['ratings'], hasLength(500));
+      expect(mockApi.pushedPayloads[1]['ratings'], hasLength(1));
     });
 
     test('should pull remote changes and apply them locally', () async {
@@ -246,8 +311,7 @@ void main() {
       expect(dbFavorites[0]['deleted'], 1);
       expect(dbFavorites[0]['title'], '');
 
-      // Verify last sync time was updated to server time (2000)
-      expect(await PrefsService.getLastSyncTime(), 2000);
+      expect(await PrefsService.getLastSyncTime(), 1999);
     });
 
     test('should coalesce multiple concurrent sync requests', () async {
@@ -471,7 +535,7 @@ void main() {
       // Verify that lastSync is the future server time, but lastPush is device time (near 'now')
       final lastSync = await PrefsService.getLastSyncTime();
       final lastPush = await PrefsService.getLastPushTime();
-      expect(lastSync, serverTimeFarAhead);
+      expect(lastSync, serverTimeFarAhead - 1);
       expect(lastPush, isNot(serverTimeFarAhead));
       expect(lastPush, greaterThan(t1));
 
@@ -495,5 +559,49 @@ void main() {
       expect(mockApi.pushedPayload!['ratings'], hasLength(1));
       expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
     });
+
+    test(
+      'should clear stale local data and retry when device expired',
+      () async {
+        await testDb.insert('ratings', {
+          'movie_id': 10,
+          'is_tv': 0,
+          'rating': 3,
+          'genre_ids': '[]',
+          'created_at': 1001,
+          'updated_at': 1002,
+          'deleted': 0,
+        });
+        mockApi.resetRequiredOnFirstPush = true;
+        mockApi.pullResponse = {
+          'server_time': 5000,
+          'ratings': [
+            {
+              'movie_id': 20,
+              'is_tv': 0,
+              'metadata_locale': 'tr',
+              'rating': 4,
+              'genre_ids': <int>[],
+              'title': 'Cloud Movie',
+              'created_at': 4000,
+              'updated_at': 4000,
+              'deleted': false,
+            },
+          ],
+          'watchlist': [],
+          'favorites': [],
+          'watched_seasons': [],
+          'search_history': [],
+        };
+
+        await syncService.sync();
+
+        expect(mockApi.pushCount, 2);
+        expect(mockApi.pushedPayloads[1]['ratings'], isEmpty);
+        final rows = await testDb.query('ratings');
+        expect(rows, hasLength(1));
+        expect(rows.single['movie_id'], 20);
+      },
+    );
   });
 }

@@ -335,6 +335,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final showBanner =
           ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
 
+      if (!mounted) return;
       setState(() {
         _tonight = tonightPick;
         _tonightPool = pool;

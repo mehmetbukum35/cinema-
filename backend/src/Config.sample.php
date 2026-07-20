@@ -43,6 +43,8 @@ return [
         'couch_open_hours' => 24,
         'couch_cancelled_days' => 7,
         'couch_terminal_days' => 30,
+        'tombstone_retention_days' => 30,
+        'sync_device_inactive_days' => 90,
     ],
 
     'smtp' => [
@@ -85,7 +87,7 @@ return [
     // GET /tmdb/* proxy'si için IP başına dakikalık istek sınırı.
     'tmdb_rate_limit_per_min' => 120,
 
-    // Yorum moderasyon paneli (GET /admin/moderation?key=...) için anahtar.
+    // Yorum moderasyon panelindeki POST giriş formu için anahtar.
     // En az 32 karakter rastgele üret: bin2hex(random_bytes(32)).
     // Boş bırakılırsa panel tamamen devre dışı kalır (404 döner).
     'admin_key' => '',

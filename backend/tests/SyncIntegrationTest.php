@@ -344,6 +344,68 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(3, (int) $row['rating']);
     }
 
+    public function testPullRegistersAndAdvancesDeviceAcknowledgement(): void
+    {
+        $deviceId = 'device-sync-test-0001';
+        $this->sync->pull(1, 0, 'tr', $deviceId, 1234, true);
+
+        $row = $this->db->query(
+            "SELECT * FROM sync_devices WHERE user_id = 1 AND device_id = '$deviceId'"
+        )->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(1234, (int) $row['last_ack_cursor']);
+
+        TestHelperRegistry::reset();
+        $this->sync->pull(1, 1234, 'tr', $deviceId, 2345, true);
+        $ack = $this->db->query(
+            "SELECT last_ack_cursor FROM sync_devices WHERE user_id = 1 AND device_id = '$deviceId'"
+        )->fetchColumn();
+        $this->assertSame(2345, (int) $ack);
+    }
+
+    public function testInvalidatedDeviceMustResetBeforePush(): void
+    {
+        $this->db->exec(
+            "INSERT INTO sync_devices VALUES
+             (1, 'device-expired-0001', 5000, 1000, 1000, 2000)"
+        );
+
+        try {
+            $this->sync->push(1, [
+                'device_id' => 'device-expired-0001',
+                'ack_cursor' => 5000,
+                'ratings' => [[
+                    'movie_id' => 999, 'is_tv' => 0, 'rating' => 3,
+                    'updated_at' => 4000,
+                ]],
+            ], true);
+            $this->fail('Expired device push should require a reset.');
+        } catch (TestExitException $e) {
+            $this->assertSame(409, $e->getCode());
+            $this->assertSame('sync_reset_required', TestHelperRegistry::$lastBody['code']);
+        }
+        $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM ratings')->fetchColumn());
+
+        TestHelperRegistry::reset();
+        $this->sync->push(1, [
+            'device_id' => 'device-expired-0001',
+            'ack_cursor' => 0,
+        ], true);
+        $row = $this->db->query(
+            "SELECT last_ack_cursor, invalidated_at FROM sync_devices
+             WHERE device_id = 'device-expired-0001'"
+        )->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0, (int) $row['last_ack_cursor']);
+        $this->assertNull($row['invalidated_at']);
+    }
+
+    public function testUnknownOldDeviceResetsAfterGarbageCollectionStarted(): void
+    {
+        $this->db->exec('INSERT INTO sync_gc_state VALUES (1, 3000, 4000)');
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(409);
+        $this->sync->pull(1, 2000, 'tr', 'device-unknown-0001', 2000, true);
+    }
+
     private function push(int $uid, string $table, array $items): int
     {
         TestHelperRegistry::reset();
@@ -474,6 +536,24 @@ class SyncIntegrationTest extends TestCase
                 updated_at INTEGER NOT NULL,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, query)
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE sync_devices (
+                user_id INTEGER NOT NULL,
+                device_id TEXT NOT NULL,
+                last_ack_cursor INTEGER NOT NULL DEFAULT 0,
+                last_seen_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                invalidated_at INTEGER,
+                PRIMARY KEY (user_id, device_id)
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE sync_gc_state (
+                user_id INTEGER PRIMARY KEY,
+                gc_cursor INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL
             )'
         );
     }

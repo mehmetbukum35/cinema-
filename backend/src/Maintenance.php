@@ -4,9 +4,9 @@ declare(strict_types=1);
 /**
  * Bounded, idempotent database housekeeping for shared hosting.
  *
- * Sync tombstones are compacted but not deleted. Without a per-device
- * acknowledgement cursor, deleting them could let an old offline client
- * resurrect data on its next push.
+ * Sync tombstones are deleted only after the retention window and after every
+ * active device has acknowledged their cursor. Dormant devices are invalidated
+ * and must perform a full pull before they can push again.
  */
 final class Maintenance
 {
@@ -16,6 +16,8 @@ final class Maintenance
         'couch_open_hours' => 24,
         'couch_cancelled_days' => 7,
         'couch_terminal_days' => 30,
+        'tombstone_retention_days' => 30,
+        'sync_device_inactive_days' => 90,
     ];
 
     private array $options;
@@ -25,6 +27,8 @@ final class Maintenance
         $this->options = array_replace(self::DEFAULTS, $options);
         $this->options['batch_limit'] = max(1, min(5000, (int) $this->options['batch_limit']));
         $this->options['search_history_limit'] = max(0, min(500, (int) $this->options['search_history_limit']));
+        $this->options['tombstone_retention_days'] = max(7, min(365, (int) $this->options['tombstone_retention_days']));
+        $this->options['sync_device_inactive_days'] = max(30, min(730, (int) $this->options['sync_device_inactive_days']));
     }
 
     /** @return array<string, int> affected row counts */
@@ -36,11 +40,26 @@ final class Maintenance
         $this->db->beginTransaction();
         try {
             $result['search_history_tombstoned'] = $this->capSearchHistory($nowMs);
-            // Metadata now lives once in `titles`; relation tombstones are
-            // already small and remain for offline deletion propagation.
+            $result['sync_devices_invalidated'] = $this->invalidateInactiveSyncDevices($nowMs);
             $result['ratings_tombstones_compacted'] = 0;
             $result['watchlist_tombstones_compacted'] = 0;
             $result['favorites_tombstones_compacted'] = 0;
+            $tombstoneCutoff = $nowMs - ((int) $this->options['tombstone_retention_days'] * 86400000);
+            $result['ratings_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
+                'ratings', ['movie_id', 'is_tv'], $tombstoneCutoff, $nowMs
+            );
+            $result['watchlist_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
+                'watchlist', ['id', 'is_tv'], $tombstoneCutoff, $nowMs
+            );
+            $result['favorites_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
+                'favorites', ['id', 'is_tv'], $tombstoneCutoff, $nowMs
+            );
+            $result['watched_seasons_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
+                'watched_seasons', ['tv_id', 'season_number'], $tombstoneCutoff, $nowMs
+            );
+            $result['search_history_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
+                'search_history', ['query'], $tombstoneCutoff, $nowMs
+            );
             $result['couch_sessions_expired'] = $this->expireOpenCouchSessions($nowMs);
             $result['couch_sessions_deleted'] = $this->deleteOldCouchSessions($nowMs);
             $result['refresh_tokens_deleted'] = $this->deleteExpired('refresh_tokens', 'expires_at', intdiv($nowMs, 1000));
@@ -54,6 +73,86 @@ final class Maintenance
         }
 
         return $result;
+    }
+
+    private function invalidateInactiveSyncDevices(int $nowMs): int
+    {
+        $cutoff = $nowMs - ((int) $this->options['sync_device_inactive_days'] * 86400000);
+        $st = $this->db->prepare(
+            'UPDATE sync_devices SET invalidated_at = ?
+             WHERE invalidated_at IS NULL AND last_seen_at < ?'
+        );
+        $st->execute([$nowMs, $cutoff]);
+        return $st->rowCount();
+    }
+
+    private function deleteAcknowledgedTombstones(
+        string $table,
+        array $keys,
+        int $cutoff,
+        int $nowMs
+    ): int {
+        $allowed = [
+            'ratings' => ['movie_id', 'is_tv'],
+            'watchlist' => ['id', 'is_tv'],
+            'favorites' => ['id', 'is_tv'],
+            'watched_seasons' => ['tv_id', 'season_number'],
+            'search_history' => ['query'],
+        ];
+        if (($allowed[$table] ?? null) !== $keys) {
+            throw new InvalidArgumentException('Unsupported tombstone table.');
+        }
+
+        $columns = implode(', ', array_map(fn (string $key): string => "d.`$key`", $keys));
+        $select = $this->db->prepare(
+            "SELECT d.user_id, $columns, d.updated_at
+             FROM `$table` d
+             WHERE d.deleted = 1 AND d.updated_at < ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM sync_devices sd
+                 WHERE sd.user_id = d.user_id
+                   AND sd.invalidated_at IS NULL
+                   AND sd.last_ack_cursor < d.updated_at
+               )
+             ORDER BY d.updated_at ASC
+             LIMIT " . (int) $this->options['batch_limit']
+        );
+        $select->execute([$cutoff]);
+        $rows = $select->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows === []) return 0;
+
+        $where = implode(' AND ', array_map(fn (string $key): string => "`$key` = ?", $keys));
+        $delete = $this->db->prepare(
+            "DELETE FROM `$table` WHERE user_id = ? AND $where AND deleted = 1"
+        );
+        $gcByUser = [];
+        $changed = 0;
+        foreach ($rows as $row) {
+            $params = [(int) $row['user_id']];
+            foreach ($keys as $key) $params[] = $row[$key];
+            $delete->execute($params);
+            $changed += $delete->rowCount();
+            $uid = (int) $row['user_id'];
+            $gcByUser[$uid] = max($gcByUser[$uid] ?? 0, (int) $row['updated_at']);
+        }
+
+        $findGc = $this->db->prepare('SELECT gc_cursor FROM sync_gc_state WHERE user_id = ?');
+        $insertGc = $this->db->prepare(
+            'INSERT INTO sync_gc_state (user_id, gc_cursor, updated_at) VALUES (?, ?, ?)'
+        );
+        $updateGc = $this->db->prepare(
+            'UPDATE sync_gc_state SET gc_cursor = ?, updated_at = ? WHERE user_id = ?'
+        );
+        foreach ($gcByUser as $uid => $cursor) {
+            $findGc->execute([$uid]);
+            $existing = $findGc->fetchColumn();
+            if ($existing === false) {
+                $insertGc->execute([$uid, $cursor, $nowMs]);
+            } elseif ($cursor > (int) $existing) {
+                $updateGc->execute([$cursor, $nowMs, $uid]);
+            }
+        }
+        return $changed;
     }
 
     private function capSearchHistory(int $nowMs): int

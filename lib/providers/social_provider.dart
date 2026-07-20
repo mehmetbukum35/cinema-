@@ -34,6 +34,9 @@ class SocialState {
   /// "Popüler Listeler": en çok beğeni alan üyeler (sunucudan sıralı gelir).
   final List<TopProfile> topProfiles;
   final bool topProfilesLoading;
+  final String? activityCursor;
+  final bool activityHasMore;
+  final bool activityLoadingMore;
 
   final bool loading;
   final String? error;
@@ -53,6 +56,9 @@ class SocialState {
     this.friendActivities = const {},
     this.topProfiles = const [],
     this.topProfilesLoading = false,
+    this.activityCursor,
+    this.activityHasMore = false,
+    this.activityLoadingMore = false,
     this.loading = false,
     this.error,
   });
@@ -72,6 +78,9 @@ class SocialState {
     Map<int, List<ActivityItem>>? friendActivities,
     List<TopProfile>? topProfiles,
     bool? topProfilesLoading,
+    String? Function()? activityCursor,
+    bool? activityHasMore,
+    bool? activityLoadingMore,
     bool? loading,
     String? Function()? error,
   }) {
@@ -92,6 +101,11 @@ class SocialState {
       friendActivities: friendActivities ?? this.friendActivities,
       topProfiles: topProfiles ?? this.topProfiles,
       topProfilesLoading: topProfilesLoading ?? this.topProfilesLoading,
+      activityCursor: activityCursor != null
+          ? activityCursor()
+          : this.activityCursor,
+      activityHasMore: activityHasMore ?? this.activityHasMore,
+      activityLoadingMore: activityLoadingMore ?? this.activityLoadingMore,
       loading: loading ?? this.loading,
       error: error != null ? error() : this.error,
     );
@@ -154,17 +168,52 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadActivityFeed() async {
     state = state.copyWith(loading: true, error: () => null);
     try {
-      final feed = await _apiService.getActivityFeed();
-      final feedList =
-          (feed as List<dynamic>?)
-              ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const [];
-      state = state.copyWith(activityFeed: feedList, loading: false);
+      final page = await _apiService.getActivityFeedPage();
+      final feedList = page.items
+          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .toList();
+      state = state.copyWith(
+        activityFeed: feedList,
+        activityCursor: () => page.nextCursor,
+        activityHasMore: page.hasMore,
+        loading: false,
+      );
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
       state = state.copyWith(loading: false, error: () => e.toString());
+    }
+  }
+
+  Future<void> loadMoreActivityFeed() async {
+    if (state.activityLoadingMore || !state.activityHasMore) return;
+    final cursor = state.activityCursor;
+    if (cursor == null) return;
+    state = state.copyWith(activityLoadingMore: true);
+    try {
+      final page = await _apiService.getActivityFeedPage(cursor: cursor);
+      if (!mounted) return;
+      final incoming = page.items
+          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .toList();
+      state = state.copyWith(
+        activityFeed: [...state.activityFeed, ...incoming],
+        activityCursor: () => page.nextCursor,
+        activityHasMore: page.hasMore,
+        activityLoadingMore: false,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(
+        activityLoadingMore: false,
+        error: () => e.message,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(
+        activityLoadingMore: false,
+        error: () => e.toString(),
+      );
     }
   }
 

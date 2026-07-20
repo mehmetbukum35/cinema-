@@ -164,7 +164,7 @@ const Map<String, String> kTrStrings = {
   'change_password_confirm_password': 'Yeni Şifreyi Onayla',
   'change_password_button': 'Şifreyi Güncelle',
   'change_password_error_mismatch': 'Yeni şifreler eşleşmiyor.',
-  'change_password_error_short': 'Yeni şifre en az 6 karakter olmalıdır.',
+  'change_password_error_short': 'Yeni şifre en az 8 karakter olmalıdır.',
   'change_password_success': 'Şifreniz başarıyla değiştirildi.',
   'google_unlink_title': 'Google Bağlantısını Kaldır',
   'google_unlink_desc': 'Devam etmek için hesap parolanızı girin.',
@@ -695,6 +695,7 @@ const Map<String, String> kTrStrings = {
   'all': '🎬 Tümü',
   'no_more_content': 'İçerik Kalmadı',
   'loading_more': 'Daha fazla yükleniyor...',
+  'load_more': 'Daha fazla yükle',
   'no_more_content_matches_your_f':
       'Filtrenize uygun başka içerik kalmadı.\nFiltreleri temizleyerek devam edebilirsiniz.',
   'discovery_gestures': 'Keşfetme Hareketleri',

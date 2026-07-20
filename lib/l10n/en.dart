@@ -162,7 +162,7 @@ const Map<String, String> kEnStrings = {
   'change_password_confirm_password': 'Confirm New Password',
   'change_password_button': 'Update Password',
   'change_password_error_mismatch': 'New passwords do not match.',
-  'change_password_error_short': 'Password must be at least 6 characters.',
+  'change_password_error_short': 'Password must be at least 8 characters.',
   'change_password_success': 'Password changed successfully.',
   'google_unlink_title': 'Unlink Google Account',
   'google_unlink_desc': 'Enter your account password to continue.',
@@ -700,6 +700,7 @@ const Map<String, String> kEnStrings = {
   'all': '🎬 All',
   'no_more_content': 'No More Content',
   'loading_more': 'Loading more...',
+  'load_more': 'Load more',
   'no_more_content_matches_your_f':
       'No more content matches your filters.\nYou can clear the filters to continue.',
   'discovery_gestures': 'Discovery Gestures',

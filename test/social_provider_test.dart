@@ -103,6 +103,7 @@ class MockApiService implements ApiService {
   String? recommendedNote;
   int? loadedIntersectionFriendId;
   int? loadedActivityFriendId;
+  bool paginateActivity = false;
 
   @override
   Future<Map<String, dynamic>> getFriends() async => friendsResponse;
@@ -111,6 +112,26 @@ class MockApiService implements ApiService {
   Future<List<dynamic>> getActivityFeed({int? friendId}) async {
     loadedActivityFriendId = friendId;
     return activityResponse;
+  }
+
+  @override
+  Future<ActivityFeedPage> getActivityFeedPage({
+    int? friendId,
+    String? cursor,
+    int limit = 50,
+  }) async {
+    loadedActivityFriendId = friendId;
+    if (paginateActivity && cursor == 'page-2') {
+      final second = Map<String, dynamic>.from(
+        activityResponse.single as Map<String, dynamic>,
+      )..['movie_id'] = 202;
+      return ActivityFeedPage(items: [second], hasMore: false);
+    }
+    return ActivityFeedPage(
+      items: activityResponse,
+      nextCursor: paginateActivity ? 'page-2' : null,
+      hasMore: paginateActivity,
+    );
   }
 
   @override
@@ -237,6 +258,19 @@ void main() {
       expect(state.activityFeed, hasLength(1));
       expect(state.activityFeed[0].movieId, 101);
       expect(state.activityFeed[0].friendUsername, 'testfriend');
+    });
+
+    test('loadMoreActivityFeed should append the cursor page', () async {
+      final notifier = container.read(socialProvider.notifier);
+      mockApi.paginateActivity = true;
+
+      await notifier.loadActivityFeed();
+      await notifier.loadMoreActivityFeed();
+
+      final state = container.read(socialProvider);
+      expect(state.activityFeed, hasLength(2));
+      expect(state.activityFeed.last.movieId, 202);
+      expect(state.activityHasMore, isFalse);
     });
 
     test('sendFriendRequest should invoke API and reload friends', () async {

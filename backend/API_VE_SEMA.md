@@ -367,7 +367,12 @@ Kullanıcıyı ve `ON DELETE CASCADE` sayesinde tüm verilerini (ratings, watchl
 
 ## 3. Senkronizasyon (delta-sync)
 
-### GET `/sync?since=<unix_ms>` *(Bearer)*
+### GET `/sync?since=<unix_ms>&ack_cursor=<unix_ms>&device_id=<uuid>` *(Bearer)*
+
+`ack_cursor`, cihazın başarıyla uyguladığı önceki pull cursor'udur. Aktif tüm
+cihazlar bir silme cursor'unu onayladıktan ve saklama süresi dolduktan sonra
+tombstone fiziksel olarak temizlenebilir. Uzun süre pasif kalan cihazlar
+`sync_reset_required` alır ve push yapmadan önce tam pull gerçekleştirir.
 `since` zamanından sonra değişen tüm kayıtları döner (silmeler `deleted:true` ile).
 ```json
 {
@@ -388,6 +393,8 @@ Yorum doğrulaması (sunucu tarafı, istemciye güvenilmez):
 - Basit TR+EN küfür/spam listesine takılan yorum `ratings.is_hidden = 1` ile otomatik gizlenir: kullanıcının kendi cihazında görünmeye devam eder ama başkalarına gösterilmez. Yorum metni değişince yeniden değerlendirilir (küfür temizlenirse görünürlük döner); metin değişmeden yapılan güncellemeler moderatör gizlemesini KALDIRMAZ. `is_hidden` sync kolonu değildir, istemciden gelen değeri yok sayılır.
 ```json
 {
+  "device_id": "550e8400-e29b-41d4-a716-446655440000",
+  "ack_cursor": 1719579900000,
   "ratings":   [ { "movie_id":603, "is_tv":0, "rating":3, "genre_ids":[28,878], "comment":"Yorum", "is_spoiler":0, "updated_at":1719579999000, "deleted":false } ],
   "watchlist": [ ... ]
 }
@@ -536,7 +543,7 @@ dönmez — yalnızca ilerleme sayısı (`their_progress`) görünür.
 Oturum durumları: `pending → active → matched | ended` (+ `cancelled`).
 Şema: `couch_sessions` (bkz. migration 014).
 
-### GET `/admin/moderation?key=<admin_key>`
+### GET/POST `/admin/moderation`
 Moderasyon paneli (HTML): açık şikayetler, gizlenen yorumlar ve susturulan
 kullanıcılar. Aksiyonlar (`POST /admin/moderation/action`): yorum bazlı gizle /
 geri aç / şikayeti kapat; kullanıcı bazlı **sustur** (`ban_user`:

@@ -676,8 +676,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
         ? 0
         : state.recommendations.length + 1;
 
+    final loadMoreCount = state.activityHasMore ? 1 : 0;
     return ListView.builder(
-      itemCount: recCount + state.activityFeed.length,
+      itemCount: recCount + state.activityFeed.length + loadMoreCount,
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, idx) {
         if (recCount > 0 && idx == 0) {
@@ -699,6 +700,24 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
           return RecommendationInboxCard(
             rec: state.recommendations[idx - 1],
             isLast: idx == recCount - 1,
+          );
+        }
+        if (idx == recCount + state.activityFeed.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: state.activityLoadingMore
+                  ? CircularProgressIndicator(color: c.gold)
+                  : TextButton(
+                      onPressed: () => ref
+                          .read(socialProvider.notifier)
+                          .loadMoreActivityFeed(),
+                      child: Text(
+                        AppLocalizations.of(context)?.get('load_more') ??
+                            (isTr ? 'Daha fazla yükle' : 'Load more'),
+                      ),
+                    ),
+            ),
           );
         }
         return ActivityCard(act: state.activityFeed[idx - recCount]);

@@ -3,9 +3,10 @@ part of '../api_service.dart';
 /// Offline synchronization backend operations.
 mixin SyncApi on ApiClient {
   Future<Map<String, dynamic>> pull(int since) async {
+    final deviceId = await PrefsService.getSyncDeviceId();
     final response = await _request(
       'GET',
-      '/sync?since=$since',
+      '/sync?since=$since&ack_cursor=$since&device_id=${Uri.encodeQueryComponent(deviceId)}&locale=${Uri.encodeQueryComponent(PrefsService.activeLanguageCode)}',
       requireAuth: true,
     );
     final data = _decodeJsonMap(response.body);
@@ -24,10 +25,13 @@ mixin SyncApi on ApiClient {
   }
 
   Future<Map<String, dynamic>> push(Map<String, dynamic> payload) async {
+    final enrichedPayload = Map<String, dynamic>.from(payload);
+    enrichedPayload['device_id'] ??= await PrefsService.getSyncDeviceId();
+    enrichedPayload['ack_cursor'] ??= await PrefsService.getLastSyncTime();
     final response = await _request(
       'POST',
       '/sync',
-      body: payload,
+      body: enrichedPayload,
       requireAuth: true,
     );
     final data = _decodeJsonMap(response.body);

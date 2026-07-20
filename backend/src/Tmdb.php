@@ -20,6 +20,32 @@ class Tmdb
     // SSRF'i önlemek için yalnızca resmi TMDB v3 API yollarına izin ver.
     private const ALLOWED_PREFIX = '/3/';
 
+    public static function cacheTtlForPath(string $path): int
+    {
+        if (str_contains($path, '/search/')) return 60;
+        if (str_contains($path, '/discover/') || str_contains($path, '/trending/')) return 300;
+        if (str_contains($path, '/configuration') || str_contains($path, '/genre/')) return 86400;
+        return 3600;
+    }
+
+    private static function cacheFile(string $path, array $query): string
+    {
+        $safeQuery = $query;
+        unset($safeQuery['api_key']);
+        ksort($safeQuery);
+        $key = hash('sha256', $path . '?' . http_build_query($safeQuery));
+        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_tmdb_' . $key . '.json';
+    }
+
+    private static function sendResponse(int $status, string $body, string $cacheState): never
+    {
+        http_response_code($status > 0 ? $status : 502);
+        header('Content-Type: application/json; charset=utf-8');
+        header('X-Cinema-Cache: ' . $cacheState);
+        echo $body;
+        exit;
+    }
+
     public function __construct(string $apiKey)
     {
         $this->apiKey = $apiKey;
@@ -78,6 +104,15 @@ class Tmdb
         $query['include_adult'] = 'false'; // Katman 1: Sunucu düzeyinde adult filtresi zorunluluğu
 
         $url = self::BASE . $path . '?' . http_build_query($query);
+        $cacheFile = self::cacheFile($path, $query);
+        $ttl = self::cacheTtlForPath($path);
+        $cachedBody = is_readable($cacheFile)
+            ? (string) @file_get_contents($cacheFile)
+            : '';
+        $cachedMtime = $cachedBody !== '' ? @filemtime($cacheFile) : false;
+        if ($cachedMtime !== false && $cachedMtime + $ttl > time()) {
+            self::sendResponse(200, $cachedBody, 'HIT');
+        }
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -101,14 +136,14 @@ class Tmdb
 
         // Katman 2: Yanıt düzeyinde adult=true filtreleme
         $body = $this->filterResponse($status, $body);
+        if ($status === 200 && $body !== '') {
+            @file_put_contents($cacheFile, $body, LOCK_EX);
+        }
 
         // TMDB'nin ham cevabını client'a aynen ilet. Bu cevap hiçbir zaman
         // api_key içermez (TMDB kendi yanıtına isteği yansıtmaz), bu yüzden
         // doğrudan geçirmek güvenlidir.
-        http_response_code($status > 0 ? $status : 502);
-        header('Content-Type: application/json; charset=utf-8');
-        echo $body;
-        exit;
+        self::sendResponse($status, $body, 'MISS');
     }
 
     public function filterResponse(int $status, string $body): string

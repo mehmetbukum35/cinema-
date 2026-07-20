@@ -48,11 +48,11 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       return;
     }
 
-    if (newPass.length < 6) {
+    if (newPass.length < 8) {
       setState(() {
         _localError =
             tr?.get('change_password_error_short') ??
-            'Yeni şifre en az 6 karakter olmalıdır.';
+            'Yeni şifre en az 8 karakter olmalıdır.';
       });
       return;
     }

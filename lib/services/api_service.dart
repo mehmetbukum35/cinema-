@@ -19,6 +19,18 @@ part 'api/sync_api.dart';
 
 enum RefreshOutcome { success, denied, transient }
 
+class ActivityFeedPage {
+  final List<dynamic> items;
+  final String? nextCursor;
+  final bool hasMore;
+
+  const ActivityFeedPage({
+    required this.items,
+    this.nextCursor,
+    required this.hasMore,
+  });
+}
+
 /// Shared HTTP transport for headers, retries, refresh, correlation, and errors.
 class ApiClient {
   static const _kRequestTimeout = Duration(seconds: 20);

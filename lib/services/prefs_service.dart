@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:uuid/uuid.dart';
 import '../models/movie.dart';
 import 'db_helper.dart';
 
@@ -697,6 +698,7 @@ class PrefsService {
   static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyLastSyncTime = 'sync_last_time';
   static const _keyLastPushTime = 'sync_last_push_time';
+  static const _keySyncDeviceId = 'sync_device_id';
   static const _keyUserData = 'auth_user_data';
 
   // Secure storage okumak (özellikle Android Keystore) her HTTP isteğinde
@@ -771,6 +773,15 @@ class PrefsService {
   static Future<void> setLastPushTime(int time) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyLastPushTime, time);
+  }
+
+  static Future<String> getSyncDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_keySyncDeviceId);
+    if (existing != null && existing.length >= 16) return existing;
+    final generated = const Uuid().v4();
+    await prefs.setString(_keySyncDeviceId, generated);
+    return generated;
   }
 
   static Future<Map<String, dynamic>?> getUserData() async {

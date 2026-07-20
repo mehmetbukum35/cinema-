@@ -117,12 +117,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else if (_step == 1) {
       final all = {..._selectedMovieGenres, ..._selectedTvGenres};
       await PrefsService.saveInitialGenres(all.toList());
+      if (!mounted) return;
       setState(() => _step = 2);
     } else if (_step == 2) {
       await PrefsService.saveFavoriteMovies(_favMovies);
+      if (!mounted) return;
       setState(() => _step = 3);
     } else if (_step == 3) {
       await PrefsService.saveFavoriteTvShows(_favTvShows);
+      if (!mounted) return;
       setState(() {
         _step = 4;
         _loadingCards = true;

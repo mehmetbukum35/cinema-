@@ -48,16 +48,35 @@ jobs:
 
   php:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: cinema_test_root
+          MYSQL_DATABASE: cinema_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pcinema_test_root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_sqlite, sqlite3, pcov
+          extensions: pdo_sqlite, sqlite3, pdo_mysql, pcov
           coverage: pcov
       - name: Install Composer dependencies
         run: composer install --working-dir=backend
+      - name: Validate production schema on MySQL 8
+        env:
+          MYSQL_PWD: cinema_test_root
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root cinema_test < backend/migrations/database.sql
+          php -r '$pdo=new PDO("mysql:host=127.0.0.1;dbname=cinema_test;charset=utf8mb4","root",getenv("MYSQL_PWD")); if ((int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=\"cinema_test\"")->fetchColumn() < 10) { throw new RuntimeException("Schema smoke test failed"); }'
       - name: Run PHPUnit tests
         run: backend/vendor/bin/phpunit --configuration backend/phpunit.xml --coverage-clover backend/coverage.xml
       - name: Check PHP coverage threshold (≥60% lines)

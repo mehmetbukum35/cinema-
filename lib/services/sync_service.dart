@@ -18,12 +18,64 @@ import '../providers/social_provider.dart';
 int _asInt(Object? v) =>
     v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
 
+List<dynamic> _decodeJsonList(Object? value) {
+  if (value is List) return List<dynamic>.from(value);
+  if (value is! String || value.trim().isEmpty) return const [];
+  try {
+    final decoded = jsonDecode(value);
+    return decoded is List ? List<dynamic>.from(decoded) : const [];
+  } on FormatException {
+    return const [];
+  }
+}
+
+/// Bir milisaniyelik örtüşme, watermark ile tam aynı anda yazılan satırların
+/// sonraki turda sessizce atlanmasını önler. Push/pull upsert'leri idempotenttir.
+int _overlappingCursor(int value) => value > 0 ? value - 1 : 0;
+
 class SyncService {
+  static const int _pushBatchSize = 500;
   final ApiService _apiService;
   final Ref? _ref;
   Future<void>? _syncFuture;
 
   SyncService(this._apiService, [this._ref]);
+
+  Future<int> _pushPayloadInChunks(Map<String, dynamic> payload) async {
+    const tables = [
+      'ratings',
+      'watchlist',
+      'favorites',
+      'watched_seasons',
+      'search_history',
+    ];
+    final maxLength = tables.fold<int>(0, (max, table) {
+      final length = (payload[table] as List?)?.length ?? 0;
+      return length > max ? length : max;
+    });
+    final batchCount = maxLength == 0 ? 1 : (maxLength / _pushBatchSize).ceil();
+    var applied = 0;
+
+    for (var batch = 0; batch < batchCount; batch++) {
+      final start = batch * _pushBatchSize;
+      final chunk = <String, dynamic>{
+        'metadata_locale': payload['metadata_locale'],
+      };
+      for (final table in tables) {
+        final items = payload[table] as List? ?? const [];
+        if (start < items.length) {
+          final candidateEnd = start + _pushBatchSize;
+          final end = candidateEnd < items.length ? candidateEnd : items.length;
+          chunk[table] = items.sublist(start, end);
+        } else {
+          chunk[table] = const [];
+        }
+      }
+      final result = await _apiService.push(chunk);
+      applied += _asInt(result['applied']);
+    }
+    return applied;
+  }
 
   // Core 2-way delta-sync method
   Future<void> sync() async {
@@ -34,9 +86,40 @@ class SyncService {
     _syncFuture = _performSync();
     try {
       await _syncFuture;
+    } on ApiException catch (e) {
+      if (e.code != 'sync_reset_required') rethrow;
+      debugPrint('Sync device expired; performing a safe full resync.');
+      await _resetLocalSyncState();
+      _syncFuture = _performSync();
+      await _syncFuture;
     } finally {
       _syncFuture = null;
     }
+  }
+
+  Future<void> _resetLocalSyncState() async {
+    final db = await DatabaseHelper().database;
+    if (db != null) {
+      await db.transaction((txn) async {
+        for (final table in const [
+          'ratings',
+          'watchlist',
+          'favorites',
+          'watched_seasons',
+          'search_history',
+        ]) {
+          await txn.delete(table);
+        }
+      });
+    }
+    await PrefsService.setLastSyncTime(0);
+    await PrefsService.setLastPushTime(0);
+    PrefsService.invalidateGenreWeights();
+    await _ref?.read(recommendationEngineProvider).invalidateCache();
+    _ref?.invalidate(watchlistProvider);
+    _ref?.invalidate(statsProvider);
+    _ref?.invalidate(swipeProvider);
+    _ref?.invalidate(socialProvider);
   }
 
   Future<void> _performSync() async {
@@ -61,10 +144,10 @@ class SyncService {
         'metadata_locale': PrefsService.activeLanguageCode,
       });
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
-      await PrefsService.setLastPushTime(pushWatermark);
+      await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
       final pullResult = await _apiService.pull(lastPull);
       final serverTime = _asInt(pullResult['server_time']);
-      await PrefsService.setLastSyncTime(serverTime);
+      await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
       PrefsService.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
       debugPrint(
@@ -94,7 +177,7 @@ class SyncService {
             'is_tv': r['is_tv'],
             'metadata_locale': r['metadata_locale'],
             'rating': r['rating'],
-            'genre_ids': jsonDecode(r['genre_ids'] as String),
+            'genre_ids': _decodeJsonList(r['genre_ids']),
             'title': r['title'],
             'poster_path': r['poster_path'],
             'backdrop_path': r['backdrop_path'],
@@ -130,7 +213,7 @@ class SyncService {
             'overview': w['overview'],
             'vote_average': w['vote_average'],
             'release_date': w['release_date'],
-            'genre_ids': jsonDecode(w['genre_ids'] as String),
+            'genre_ids': _decodeJsonList(w['genre_ids']),
             'created_at': w['created_at'],
             'updated_at': w['updated_at'],
             'deleted': w['deleted'] == 1,
@@ -156,7 +239,7 @@ class SyncService {
             'overview': f['overview'],
             'vote_average': f['vote_average'],
             'release_date': f['release_date'],
-            'genre_ids': jsonDecode(f['genre_ids'] as String),
+            'genre_ids': _decodeJsonList(f['genre_ids']),
             'created_at': f['created_at'],
             'updated_at': f['updated_at'],
             'deleted': f['deleted'] == 1,
@@ -199,13 +282,13 @@ class SyncService {
         .toList();
 
     // Push local updates to server
-    final pushResult = await _apiService.push(payload);
-    debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
+    final applied = await _pushPayloadInChunks(payload);
+    debugPrint("Push complete. Applied changes: $applied");
 
     // Push sunucuda başarıyla commit edildiyse cihaz imlecini hemen ilerlet.
     // Ardından gelen pull geçici olarak başarısız olduğunda aynı değişikliklerin
     // bir sonraki denemede gereksiz yere tekrar gönderilmesini önler.
-    await PrefsService.setLastPushTime(pushWatermark);
+    await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
 
     // 2. PULL remote changes
     final pullResult = await _apiService.pull(lastPull);
@@ -374,7 +457,7 @@ class SyncService {
     });
 
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
-    await PrefsService.setLastSyncTime(serverTime);
+    await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
     PrefsService.invalidateGenreWeights();
 
     // Invalidate recommendation engine cache and DNA cache

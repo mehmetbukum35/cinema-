@@ -86,4 +86,11 @@ class TmdbTest extends TestCase
         $this->assertSame(102, $data['results'][1]['id']);
         $this->assertSame(103, $data['results'][2]['id']);
     }
+    public function testCacheTtlVariesByEndpointVolatility(): void
+    {
+        $this->assertSame(60, Tmdb::cacheTtlForPath('/3/search/movie'));
+        $this->assertSame(300, Tmdb::cacheTtlForPath('/3/trending/movie/day'));
+        $this->assertSame(86400, Tmdb::cacheTtlForPath('/3/genre/movie/list'));
+        $this->assertSame(3600, Tmdb::cacheTtlForPath('/3/movie/550'));
+    }
 }

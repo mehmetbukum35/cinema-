@@ -212,19 +212,19 @@ class ProfileScreen extends ConsumerWidget {
   static String? _lastPublishedUserId;
 
   void _autoPublishDna(WidgetRef ref) {
+    final userId = ref.read(authProvider).user?['id']?.toString();
+    final dnaService = ref.read(tasteDnaServiceProvider);
+    final apiService = ref.read(apiServiceProvider);
     Future.microtask(() async {
       try {
-        final userId = ref.read(authProvider).user?['id']?.toString();
-        final dna = await ref
-            .read(tasteDnaServiceProvider)
-            .generate(userId: userId);
+        final dna = await dnaService.generate(userId: userId);
 
         final cachedData = await PrefsService.getCachedDna();
         final currentHash = cachedData?['hash'];
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
         if (currentHash != null && currentHash != lastPublishedHash) {
-          await ref.read(apiServiceProvider).publishTasteDna(dna.toJson());
+          await apiService.publishTasteDna(dna.toJson());
           await PrefsService.setLastPublishedDnaHash(currentHash);
           debugPrint("Background DNA auto-publish succeeded!");
         } else {

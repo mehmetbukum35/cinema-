@@ -3,7 +3,8 @@ declare(strict_types=1);
 // Yorum moderasyon paneli: şikayet edilen ve gizlenen yorumları listeler,
 // gizle/geri aç/şikayeti kapat aksiyonlarını uygular.
 //
-// Erişim: Config'deki 'admin_key' ile (GET /admin/moderation?key=...).
+// Erişim: Config'deki admin_key, URL'ye yazılmadan POST giriş formunda alınır;
+// doğrulama sonrasında HttpOnly/SameSite oturumu ve CSRF belirteci kullanılır.
 // Anahtar boşsa panel yok sayılır (404) — varlığı bile sızdırılmaz.
 // Panel kasıtlı olarak tek dosyalık, bağımsız bir HTML sayfasıdır: paylaşımlı
 // hosting'de ekstra kurulum gerektirmez.
@@ -12,13 +13,45 @@ class Moderation
 {
     public function __construct(private PDO $db, private string $adminKey) {}
 
+    private function startSession(): void
+    {
+        if (session_status() !== PHP_SESSION_NONE) return;
+        session_name('cinema_moderation');
+        session_set_cookie_params([
+            'httponly' => true,
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'samesite' => 'Strict',
+            'path' => $this->panelPath(),
+        ]);
+        session_start();
+    }
+
     private function requireKey(): string
     {
-        $key = (string) ($_GET['key'] ?? $_POST['key'] ?? '');
-        if ($this->adminKey === '' || $key === '' || !hash_equals($this->adminKey, $key)) {
-            fail(404, 'Bilinmeyen uç.');
+        $this->startSession();
+        if (($_SESSION['moderation_admin'] ?? false) === true) {
+            $csrf = (string) ($_SESSION['moderation_csrf'] ?? '');
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $provided = (string) ($_POST['csrf'] ?? '');
+                if ($csrf === '' || $provided === '' || !hash_equals($csrf, $provided)) {
+                    fail(403, 'Geçersiz istek doğrulaması.');
+                }
+            }
+            return $csrf;
         }
-        return $key;
+
+        $key = (string) ($_POST['key'] ?? '');
+        if ($key === '' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->renderLogin(false);
+        }
+        if ($this->adminKey === '') fail(404, 'Bilinmeyen uç.');
+        if ($key === '' || !hash_equals($this->adminKey, $key)) {
+            $this->renderLogin(true);
+        }
+        session_regenerate_id(true);
+        $_SESSION['moderation_admin'] = true;
+        $_SESSION['moderation_csrf'] = bin2hex(random_bytes(24));
+        $this->redirectToPanel();
     }
 
     /**
@@ -38,9 +71,25 @@ class Moderation
     }
 
     /** İşlem sonrası paneli mutlak yolla yeniden yükler. */
-    private function redirectToPanel(string $key): never
+    private function redirectToPanel(): never
     {
-        header('Location: ' . $this->panelPath() . '?key=' . rawurlencode($key), true, 302);
+        header('Location: ' . $this->panelPath(), true, 303);
+        exit;
+    }
+
+    private function renderLogin(bool $failed): never
+    {
+        if ($this->adminKey === '') fail(404, 'Bilinmeyen uç.');
+        header('Content-Type: text/html; charset=utf-8');
+        header('X-Robots-Tag: noindex, nofollow');
+        $error = $failed ? '<p style="color:#e86868">Anahtar geçersiz.</p>' : '';
+        echo '<!doctype html><html lang="tr"><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Cinema+ Moderasyon</title><body style="font-family:system-ui;background:#14100c;color:#efe7db;max-width:420px;margin:10vh auto;padding:24px">'
+            . '<h1>Moderasyon Girişi</h1>' . $error
+            . '<form method="post" action="' . htmlspecialchars($this->panelPath(), ENT_QUOTES, 'UTF-8') . '">'
+            . '<input type="password" name="key" autocomplete="current-password" required style="box-sizing:border-box;width:100%;padding:12px">'
+            . '<button style="margin-top:12px;padding:10px 18px">Giriş yap</button></form></body></html>';
         exit;
     }
 
@@ -142,7 +191,7 @@ class Moderation
                 $closeReports->execute([$userId]);
             }
 
-            $this->redirectToPanel($key);
+            $this->redirectToPanel();
         }
 
         if ($movieId <= 0) {
@@ -163,7 +212,7 @@ class Moderation
         );
         $upR->execute([$newStatus, $userId, $movieId, $isTV]);
 
-        $this->redirectToPanel($key);
+        $this->redirectToPanel();
     }
 
     private function html(string $key, array $open, array $hidden, array $banned): string
@@ -183,7 +232,7 @@ class Moderation
             $btnHtml = '';
             foreach ($buttons as [$action, $label, $cls]) {
                 $btnHtml .= '<form method="post" action="' . $actionUrl . '">'
-                    . '<input type="hidden" name="key" value="' . $keyH . '">'
+                    . '<input type="hidden" name="csrf" value="' . $keyH . '">'
                     . '<input type="hidden" name="user_id" value="' . (int) $r['reported_user_id'] . '">'
                     . '<input type="hidden" name="movie_id" value="' . (int) $r['movie_id'] . '">'
                     . '<input type="hidden" name="is_tv" value="' . (int) $r['is_tv'] . '">'
@@ -223,7 +272,7 @@ class Moderation
                     . '<div class="meta">Yeni yorumları otomatik gizleniyor. Yasağı kaldırmak eski'
                     . ' yorumları geri açmaz; onları "Gizlenen Yorumlar"dan tek tek geri açın.</div>'
                     . '<div class="actions"><form method="post" action="' . $actionUrl . '">'
-                    . '<input type="hidden" name="key" value="' . $keyH . '">'
+                    . '<input type="hidden" name="csrf" value="' . $keyH . '">'
                     . '<input type="hidden" name="user_id" value="' . (int) $u['id'] . '">'
                     . '<input type="hidden" name="action" value="unban_user">'
                     . '<button class="ok">Susturmayı Kaldır</button></form></div></div>';

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Cloud sync is authoritative; restoring stale local state can revive
+         old sessions or overwrite newer ratings with device timestamps. -->
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+</full-backup-content>

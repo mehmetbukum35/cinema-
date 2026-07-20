@@ -158,7 +158,9 @@ class NotificationService {
 
       if (kDebugMode) {
         final debugToken = await FirebaseMessaging.instance.getToken();
-        debugPrint('🔑 FCM TOKEN: $debugToken');
+        debugPrint(
+          'FCM token acquired (${debugToken?.length ?? 0} chars; value redacted).',
+        );
       }
     } catch (e, st) {
       // Firebase yapılandırılmamış olabilir; sessizce geç.

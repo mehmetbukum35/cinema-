@@ -130,13 +130,30 @@ mixin SocialApi on ApiClient {
   }
 
   Future<List<dynamic>> getActivityFeed({int? friendId}) async {
-    final path = friendId != null
-        ? '/social/friends/activity?friend_id=$friendId'
-        : '/social/friends/activity';
+    final page = await getActivityFeedPage(friendId: friendId);
+    return page.items;
+  }
+
+  Future<ActivityFeedPage> getActivityFeedPage({
+    int? friendId,
+    String? cursor,
+    int limit = 50,
+  }) async {
+    final query = <String>[
+      if (friendId != null) 'friend_id=$friendId',
+      if (cursor != null && cursor.isNotEmpty)
+        'cursor=${Uri.encodeQueryComponent(cursor)}',
+      'limit=$limit',
+    ].join('&');
+    final path = '/social/friends/activity?$query';
     final response = await _request('GET', path, requireAuth: true);
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['activity'] as List<dynamic>;
+      return ActivityFeedPage(
+        items: data['activity'] as List<dynamic>? ?? const [],
+        nextCursor: data['next_cursor'] as String?,
+        hasMore: data['has_more'] == true,
+      );
     } else {
       throw ApiException(
         statusCode: response.statusCode,

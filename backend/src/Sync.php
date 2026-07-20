@@ -39,6 +39,58 @@ class Sync
 
     public function __construct(private PDO $db) {}
 
+    private function acknowledgeDevice(
+        int $uid,
+        ?string $deviceId,
+        int $ackCursor,
+        bool $required
+    ): void {
+        $deviceId = trim((string) $deviceId);
+        if ($deviceId === '' && !$required) return;
+        if (!preg_match('/^[A-Za-z0-9_-]{16,64}$/', $deviceId)) {
+            fail(422, 'Geçerli device_id gerekli.', 'sync_device_required');
+        }
+        $ackCursor = max(0, $ackCursor);
+        $now = now_ms();
+
+        $st = $this->db->prepare(
+            'SELECT last_ack_cursor, invalidated_at FROM sync_devices
+             WHERE user_id = ? AND device_id = ?'
+        );
+        $st->execute([$uid, $deviceId]);
+        $device = $st->fetch();
+
+        if ($device !== false) {
+            $wasInvalidated = $device['invalidated_at'] !== null;
+            if ($wasInvalidated && $ackCursor > 0) {
+                fail(409, 'Bu cihaz tam yeniden senkronizasyon gerektiriyor.', 'sync_reset_required');
+            }
+            $nextAck = $wasInvalidated
+                ? 0
+                : max((int) $device['last_ack_cursor'], $ackCursor);
+            $up = $this->db->prepare(
+                'UPDATE sync_devices
+                 SET last_ack_cursor = ?, last_seen_at = ?, invalidated_at = NULL
+                 WHERE user_id = ? AND device_id = ?'
+            );
+            $up->execute([$nextAck, $now, $uid, $deviceId]);
+            return;
+        }
+
+        $gc = $this->db->prepare('SELECT gc_cursor FROM sync_gc_state WHERE user_id = ?');
+        $gc->execute([$uid]);
+        if ((int) ($gc->fetchColumn() ?: 0) > 0 && $ackCursor > 0) {
+            fail(409, 'Bu cihaz tam yeniden senkronizasyon gerektiriyor.', 'sync_reset_required');
+        }
+
+        $insert = $this->db->prepare(
+            'INSERT INTO sync_devices
+             (user_id, device_id, last_ack_cursor, last_seen_at, created_at, invalidated_at)
+             VALUES (?, ?, ?, ?, ?, NULL)'
+        );
+        $insert->execute([$uid, $deviceId, $ackCursor, $now, $now]);
+    }
+
     /** Push başına kullanıcı yasağı bir kez okunur (upsert kayıt başına çağrılır). */
     private array $reviewBanCache = [];
 
@@ -54,8 +106,16 @@ class Sync
 
     // ─── GET /sync?since=<unix_ms> ──────────────────────────────────────────
     // since'ten sonra değişen tüm kayıtları (silmeler dahil) döner.
-    public function pull(int $uid, int $since, ?string $locale = null): void
+    public function pull(
+        int $uid,
+        int $since,
+        ?string $locale = null,
+        ?string $deviceId = null,
+        int $ackCursor = 0,
+        bool $requireDevice = false
+    ): void
     {
+        $this->acknowledgeDevice($uid, $deviceId, $ackCursor, $requireDevice);
         $locale = cinema_content_locale($locale);
         $out = ['server_time' => now_ms()];
         foreach (self::TABLES as $table => $def) {
@@ -101,10 +161,16 @@ class Sync
     // Tek istekte tablo başına kabul edilen azami kayıt. Meşru delta sync'ler
     // bunun çok altında kalır; sınır, kimlikli bir istemcinin depoyu sınırsız
     // şişirmesini ve upsert döngüsünün transaction'ı kilitlemesini önler.
-    private const MAX_ITEMS_PER_TABLE = 10000;
+    private const MAX_ITEMS_PER_TABLE = 500;
 
-    public function push(int $uid, array $in): void
+    public function push(int $uid, array $in, bool $requireDevice = false): void
     {
+        $this->acknowledgeDevice(
+            $uid,
+            isset($in['device_id']) ? (string) $in['device_id'] : null,
+            (int) ($in['ack_cursor'] ?? 0),
+            $requireDevice
+        );
         $locale = self::metadataLocale($in['metadata_locale'] ?? null);
         // Sınır kontrolü transaction'a girmeden yapılır.
         foreach (self::TABLES as $table => $def) {

@@ -287,13 +287,20 @@ switch (true) {
     case $route === 'GET /sync':
         $uid = $auth->requireUser();
         rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120), true);
-        $sync->pull($uid, (int) ($_GET['since'] ?? 0), $_GET['locale'] ?? null);
+        $sync->pull(
+            $uid,
+            (int) ($_GET['since'] ?? 0),
+            $_GET['locale'] ?? null,
+            $_GET['device_id'] ?? null,
+            (int) ($_GET['ack_cursor'] ?? 0),
+            true
+        );
         break;
 
     case $route === 'POST /sync':
         $uid = $auth->requireUser();
         rate_limit('sync_u' . $uid, (int) ($cfg['sync_rate_limit_per_min'] ?? 120), true);
-        $sync->push($uid, read_json());
+        $sync->push($uid, read_json(), true);
         break;
 
     // ── Klasik tekil uç örneği (melez) ─────────────────────────────────────
@@ -425,7 +432,7 @@ switch (true) {
         break;
 
     // Admin paneli: Config'de admin_key boşsa 404 döner (varlığı sızdırılmaz).
-    case $route === 'GET /admin/moderation':
+    case $route === 'GET /admin/moderation' || $route === 'POST /admin/moderation':
         rate_limit('admin_moderation', 30, true);
         $moderation->renderPanel();
         break;
