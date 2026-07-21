@@ -833,12 +833,19 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           context,
         )?.get(isTV ? 'popular_top_tv_title' : 'popular_top_movies_title') ??
         (isTV ? 'Cinema+ Top 20 Dizi' : 'Cinema+ Top 20 Film');
+    final subtitle = AppLocalizations.of(
+      context,
+    )?.get(isTV ? 'popular_top_tv_subtitle' : 'popular_top_movies_subtitle');
     return SliverToBoxAdapter(
       child: EntranceFade(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BrowseSectionHeader(title: title, gradient: CinemaGradients.gold),
+            BrowseSectionHeader(
+              title: title,
+              subtitle: subtitle,
+              gradient: CinemaGradients.gold,
+            ),
             SizedBox(
               height: 250,
               child: ListView.builder(

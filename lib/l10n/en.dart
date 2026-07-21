@@ -803,7 +803,11 @@ const Map<String, String> kEnStrings = {
       'Username must be 3-30 characters and contain only letters, numbers, or underscores.',
   // ─── Community Cinema+ Top 20 ──────────────────────────────────────────────
   'popular_top_movies_title': 'Cinema+ Top 20 Movies',
+  'popular_top_movies_subtitle':
+      'Masterpiece movies most featured in members\' personal Top 20 lists',
   'popular_top_tv_title': 'Cinema+ Top 20 Shows',
+  'popular_top_tv_subtitle':
+      'Masterpiece shows most featured in members\' personal Top 20 lists',
   'popular_votes_label': '{} favorites',
   // ─── Top 20 (personal pantheon) ────────────────────────────────────────────
   'top_list_section': 'My Top 20',

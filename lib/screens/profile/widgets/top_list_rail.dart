@@ -42,7 +42,8 @@ class TopListRail extends ConsumerWidget {
     final c = context.c;
     final tr = AppLocalizations.of(context);
     final list = ref.watch(topListProvider(isTV)).value ?? const <Movie>[];
-    final label = (isTV
+    final label =
+        (isTV
             ? tr?.get('top_list_tv_short')
             : tr?.get('top_list_movies_short')) ??
         (isTV ? 'TOP 20 DİZİ' : 'TOP 20 FİLM');
@@ -109,11 +110,7 @@ class TopListRail extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(
-                        Icons.tune_rounded,
-                        color: c.red,
-                        size: 13,
-                      ),
+                      Icon(Icons.tune_rounded, color: c.red, size: 13),
                     ],
                   ),
                 ),

@@ -797,7 +797,11 @@ const Map<String, String> kTrStrings = {
       'Kullanıcı adı 3-30 karakter olmalı; yalnızca harf, rakam ve alt çizgi kullanılabilir.',
   // ─── Topluluk Cinema+ Top 20 ───────────────────────────────────────────────
   'popular_top_movies_title': 'Cinema+ Top 20 Film',
+  'popular_top_movies_subtitle':
+      'Üyelerin profil vitrinine (Top 20) en çok eklediği başyapıtlar',
   'popular_top_tv_title': 'Cinema+ Top 20 Dizi',
+  'popular_top_tv_subtitle':
+      'Üyelerin profil vitrinine (Top 20) en çok eklediği başyapıt diziler',
   'popular_votes_label': '{} favori',
   // ─── Top 20 (kişisel panteon) ──────────────────────────────────────────────
   'top_list_section': "Top 20'm",

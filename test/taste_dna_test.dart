@@ -73,7 +73,9 @@ void main() {
     test('favoriler (Top 20) arketip ve top türleri şekillendirir', () {
       // Oy tarafı zayıf (tek komedi beğenisi); favoriler bilim kurgu ağırlıklı.
       final dna = TasteDnaService.compute(
-        ratings: [_r(rating: 2, genres: [35])],
+        ratings: [
+          _r(rating: 2, genres: [35]),
+        ],
         themes: const [],
         accuracy: null,
         accuracySample: 0,
@@ -93,7 +95,9 @@ void main() {
         themes: const [],
         accuracy: null,
         accuracySample: 0,
-        favorites: [(genreIds: [27], weight: 2.0)], // korku
+        favorites: [
+          (genreIds: [27], weight: 2.0),
+        ], // korku
         nowMs: _now,
       );
       expect(dna.archetypeKey, 'dark_chronicler');

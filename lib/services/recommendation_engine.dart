@@ -376,7 +376,9 @@ class RecommendationEngine {
       // Favoriler (Top 20) rank sırasıyla, film/dizi harmanlı — cold-start yedeği
       // DEĞİL, birinci sınıf tohum. En sevdiklerin keşif havuzunu her zaman besler
       // ("X'i favorine aldığın için" gerekçesiyle).
-      final favMovies = await db.getFavorites(false).catchError((_) => <Movie>[]);
+      final favMovies = await db
+          .getFavorites(false)
+          .catchError((_) => <Movie>[]);
       final favShows = await db.getFavorites(true).catchError((_) => <Movie>[]);
       final rankedFavs = _interleaveByRank(favMovies, favShows);
 

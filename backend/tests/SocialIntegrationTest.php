@@ -50,6 +50,15 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('pending', $this->friendStatus(1, 2));
     }
 
+    public function testFriendRequestNormalizesUsernameSearchWithMixedCase(): void
+    {
+        $this->social->sendFriendRequest(1, ['search_query' => ' BoB ']);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame('pending', TestHelperRegistry::$lastBody['status']);
+        $this->assertSame('pending', $this->friendStatus(1, 2));
+    }
+
     public function testActivitySignalsAndWatchlistIntersectionRespectAcceptedFriendship(): void
     {
         $this->acceptFriendship(1, 2);

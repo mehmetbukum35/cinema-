@@ -18,8 +18,10 @@ class PopularTitle {
 /// `isTV` ile parametreli topluluk popüler listesi. Sunucu cron ile önhesaplar;
 /// istemci tarafı bu FutureProvider ile oturum boyunca önbelleğe alır (Keşfet
 /// pull-to-refresh'te invalidate edilir).
-final popularTitlesProvider =
-    FutureProvider.family<List<PopularTitle>, bool>((ref, isTV) async {
+final popularTitlesProvider = FutureProvider.family<List<PopularTitle>, bool>((
+  ref,
+  isTV,
+) async {
   final api = ref.read(apiServiceProvider);
   final raw = await api.getPopularTitles(isTV);
   return raw

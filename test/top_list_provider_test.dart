@@ -69,18 +69,21 @@ void main() {
   tearDown(() => container.dispose());
 
   group('TopListProvider', () {
-    test('load exposes stored favorites and triggers sync when authed', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2)]);
-      container = buildContainer();
+    test(
+      'load exposes stored favorites and triggers sync when authed',
+      () async {
+        await PrefsService.saveFavoriteMovies([_movie(1), _movie(2)]);
+        container = buildContainer();
 
-      final notifier = container.read(topListProvider(false).notifier);
-      await notifier.load();
-      await pumpEventQueue(); // constructor'ın tetiklediği load'u da boşalt
+        final notifier = container.read(topListProvider(false).notifier);
+        await notifier.load();
+        await pumpEventQueue(); // constructor'ın tetiklediği load'u da boşalt
 
-      final state = container.read(topListProvider(false));
-      expect(state.value?.map((m) => m.id).toList(), [1, 2]);
-      expect(mockSync.syncCalled, isTrue);
-    });
+        final state = container.read(topListProvider(false));
+        expect(state.value?.map((m) => m.id).toList(), [1, 2]);
+        expect(mockSync.syncCalled, isTrue);
+      },
+    );
 
     test('add appends, dedupes, and enforces the 20 cap', () async {
       container = buildContainer(authed: false);
@@ -116,11 +119,7 @@ void main() {
     });
 
     test('reorder moves an item to the new rank', () async {
-      await PrefsService.saveFavoriteMovies([
-        _movie(1),
-        _movie(2),
-        _movie(3),
-      ]);
+      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2), _movie(3)]);
       container = buildContainer();
       final notifier = container.read(topListProvider(false).notifier);
       await notifier.load();

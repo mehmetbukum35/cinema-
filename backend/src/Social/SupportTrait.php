@@ -69,15 +69,16 @@ trait SocialSupportTrait
 
     private function fetchRatingsMap(int $uid): array
     {
+        $locale = cinema_content_locale();
         $st = $this->db->prepare(
             'SELECT r.movie_id, r.is_tv, r.rating,
                     COALESCE(t.genre_ids, tf.genre_ids) AS genre_ids, r.created_at
              FROM ratings r
-             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = \'tr\'
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
              WHERE r.user_id = ? AND r.deleted = 0 AND r.rating BETWEEN 0 AND 3'
         );
-        $st->execute([$uid]);
+        $st->execute([$locale, $uid]);
         $map = [];
         foreach ($st->fetchAll() as $r) {
             $key = ($r['is_tv'] ? 'tv_' : 'movie_') . $r['movie_id'];
@@ -98,50 +99,41 @@ trait SocialSupportTrait
         $now = time() * 1000;
         foreach ($ratingsMap as $r) {
             $w = $weights[$r['rating']] ?? 0.0;
-            if ($w === 0.0) {
-                continue;
-            }
-            
-            // Apply client-identical time decay: exp(-0.00385 * daysElapsed)
-            $createdAt = $r['created_at'] ?? $now;
-            if ($createdAt < 10000000000) {
-                // Convert seconds to milliseconds if needed (e.g. from unit tests)
-                $createdAt *= 1000;
-            }
-            $daysElapsed = max(0.0, ($now - $createdAt) / (24 * 3600 * 1000));
-            $decayFactor = exp(-0.00385 * $daysElapsed);
-            $w *= $decayFactor;
+            if ($w == 0.0) continue;
 
-            foreach ($r['genres'] as $g) {
-                if (is_int($g)) {
-                    $v[$g] = ($v[$g] ?? 0.0) + $w;
-                }
+            // Zaman ağırlığı (recyency decay): 180 gün yarı ömür. Eski oyların
+            // etkisi yavaşça azalır, son zevkler daha baskın olur.
+            $decay = 1.0;
+            if (!empty($r['created_at'])) {
+                $daysOld = max(0, ($now - (int) $r['created_at']) / (86400 * 1000));
+                $decay = exp(-$daysOld / 180.0);
+            }
+
+            foreach ($r['genres'] as $gId) {
+                $gid = (int) $gId;
+                $v[$gid] = ($v[$gid] ?? 0.0) + ($w * $decay);
             }
         }
         return $v;
     }
 
-    private function cosine(array $a, array $b): float
+    private function cosine(array $v1, array $v2): float
     {
-        if (!$a || !$b) {
-            return 0.0;
-        }
         $dot = 0.0;
-        foreach ($a as $k => $va) {
-            if (isset($b[$k])) {
-                $dot += $va * $b[$k];
+        $mag1 = 0.0;
+        $mag2 = 0.0;
+
+        foreach ($v1 as $k => $val) {
+            $mag1 += $val * $val;
+            if (isset($v2[$k])) {
+                $dot += $val * $v2[$k];
             }
         }
-        $na = sqrt(array_sum(array_map(fn($x) => $x * $x, $a)));
-        $nb = sqrt(array_sum(array_map(fn($x) => $x * $x, $b)));
-        if ($na == 0.0 || $nb == 0.0) {
-            return 0.0;
+        foreach ($v2 as $val) {
+            $mag2 += $val * $val;
         }
-        return $dot / ($na * $nb);
-    }
 
-    private function webRenderer(): SocialWebRenderer
-    {
-        return $this->webRenderer ??= new SocialWebRenderer($this->db);
+        if ($mag1 == 0.0 || $mag2 == 0.0) return 0.0;
+        return $dot / (sqrt($mag1) * sqrt($mag2));
     }
 }
