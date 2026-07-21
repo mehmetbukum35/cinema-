@@ -1007,7 +1007,10 @@ class DatabaseHelper {
           'is_tv': isTV ? 1 : 0,
           'metadata_locale': metadataLocale,
           'genre_ids': jsonEncode(item.genreIds),
-          'created_at': now + i,
+          // created_at = liste içi 0-tabanlı SIRA (rank), zaman damgası değil.
+          // DB (sqflite) yolu da 'created_at': i yazar; öneri motoru bunu sıra
+          // ağırlığı olarak okur (bkz. PrefsService.favoriteRankWeight).
+          'created_at': i,
           'updated_at': now,
           'deleted': 0,
         });

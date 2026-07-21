@@ -66,6 +66,34 @@ void main() {
       },
     );
 
+    test('favorites feed genre weights by rank (no decay-to-zero)', () async {
+      // #1 favori → tür 18, #2 favori → tür 27 (aynı listede, farklı sıra).
+      await PrefsService.saveFavoriteMovies([
+        Movie(id: 1, title: 'A', overview: '', voteAverage: 8, genreIds: [18]),
+        Movie(id: 2, title: 'B', overview: '', voteAverage: 8, genreIds: [27]),
+      ]);
+
+      final w = await PrefsService.getGenreWeights();
+      // Favoriler artık cihazda da katkı veriyor (created_at = sıra, decay yok).
+      expect((w[18] ?? 0) > 0, isTrue);
+      expect((w[27] ?? 0) > 0, isTrue);
+      // #1 (rank 0) tam taban katsayısını (3.0) alır; #2 (rank 1) biraz daha az.
+      expect(w[18]!, closeTo(3.0, 1e-9));
+      expect(w[18]! > w[27]!, isTrue);
+    });
+
+    test('favoriteRankWeight: #1 tam, sona doğru azalır', () {
+      expect(PrefsService.favoriteRankWeight(0), closeTo(1.0, 1e-9));
+      expect(PrefsService.favoriteRankWeight(19), closeTo(0.2, 1e-9));
+      // Sıra dışı (ör. bozuk) değerler güvenle kıstırılır.
+      expect(PrefsService.favoriteRankWeight(999), closeTo(0.2, 1e-9));
+      expect(
+        PrefsService.favoriteRankWeight(0) >
+            PrefsService.favoriteRankWeight(10),
+        isTrue,
+      );
+    });
+
     test(
       'getStats should return correct rating counts and top genres',
       () async {

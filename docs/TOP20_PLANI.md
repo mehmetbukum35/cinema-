@@ -1,9 +1,42 @@
 # Top 20 — Kişisel Panteon + Topluluk Popüler Listeleri (Uygulama Planı)
 
-> Durum: **Faz 1 + Faz 2 uygulandı.** Kişisel Top 20 (Film + Dizi) ve topluluk
-> "Popüler Top 20" (cron önhesaplı) hazır. **Dağıtım için kalan:** sunucuda
-> migration `022_popular_titles.sql` çalıştırılmalı; cron zaten `maintenance.php`'yi
-> çağırdığı için ek cron kaydı gerekmez (recompute o adıma bindi).
+> Durum: **Faz 1 + 2 + 3 uygulandı.** Kişisel Top 20 (Film + Dizi), topluluk
+> "Popüler Top 20" (cron önhesaplı) ve **Top 20 → öneri motoru entegrasyonu** hazır.
+> **Dağıtım için kalan:** sunucuda migration `022_popular_titles.sql` çalıştırılmalı;
+> cron zaten `maintenance.php`'yi çağırdığı için ek cron kaydı gerekmez.
+
+---
+
+## FAZ 3 — Top 20 → öneri motoru ("seni tanıyorum")
+
+**Bulgu (regresyon):** `favorites.created_at` hem SIRA (0-tabanlı rank) hem de
+tür ağırlığında ZAMAN decay'i için kullanılıyordu. Sıra küçük bir indeks (0..19)
+olduğundan `days ≈ 20000`, `decay ≈ 0` → favorilerin +3.0 tür sinyali **cihazda
+tümüyle ölüyordu**. Ayrıca mock `now+i`, cihaz `i` yazdığı için testler bunu
+gizliyordu.
+
+**Çözüm — favori = decaysiz, rank-ağırlıklı KALICI çıpa:**
+- `db_helper` mock'u cihazla hizalandı: favori `created_at = i` (sıra), her yerde.
+- `PrefsService.favoriteRankWeight(rank)`: tek sıra eğrisi — #1 (rank 0) = 1.0,
+  son (cap−1) ≈ 0.2. Tür ağırlığı ve keyword vektörü ortak kullanır.
+- **Tür ağırlıkları** (`_calculateGenreWeights`): favori tür katkısı zaman decay'i
+  yerine `3.0 × favoriteRankWeight(rank)`. #1 tam +3.0, sona doğru azalır.
+- **Keyword vektörü** (`buildUserKeywordVector`): en üst ~10 favori, decaysiz,
+  `1.5 × favoriteRankWeight` ile eklendi → ince re-rank artık "hayatımın yapımları"
+  temasını taşıyor (motorun "tema türden güçlüdür" ilkesi).
+- **Tohumlar** (`fetchSeedCandidates`): favoriler artık cold-start yedeği değil,
+  **birinci sınıf tohum** — `finalSeedCount`'un ~1/3'ü üst-sıra favorilere ayrılır
+  (film/dizi harmanlı), gerekçe "X'i favorine aldığın için".
+- Favori değişince (`top_list_provider._persist`) motorun bellek önbelleği
+  invalidate edilir → düzenleme anında önerilere yansır.
+
+**Denge kararları:** favoriler cosine ile normalize edildiğinden tek tür şişmesi
+kendini sınırlar; favori = yavaş/sönmeyen çıpa, oy = hızlı sönen mod (ayrı decay).
+Testler: rank-ağırlıklı tür katkısı + `favoriteRankWeight` uçları
+(`prefs_service_test`).
+
+**Sonraki (opsiyonel):** Taste DNA / Wrapped'e Top 20'yi katmak; film↔dizi tür id
+köprüsünü favori sinyaline de uygulamak.
 
 ## Kararlar (kesin)
 

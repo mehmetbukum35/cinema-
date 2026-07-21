@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
+import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
 
@@ -82,6 +83,10 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     } else {
       await PrefsService.saveFavoriteMovies(list);
     }
+    // Favori değişti → öneri motorunun bellek önbelleğini (keyword vektörü + oy
+    // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
+    // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)
+    await ref.read(recommendationEngineProvider).invalidateCache();
     final auth = ref.read(authProvider);
     if (auth.isAuthenticated) {
       ref.read(syncProvider.notifier).performSync().catchError((e) {
