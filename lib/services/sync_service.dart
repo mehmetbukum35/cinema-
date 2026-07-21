@@ -63,6 +63,7 @@ class SyncService {
   final ApiService _apiService;
   final Ref? _ref;
   Future<void>? _syncFuture;
+
   /// After a local wipe for sync_reset_required, declare local_reset until
   /// one successful sync clears the server-side invalidation.
   bool _declareLocalReset = false;
@@ -579,9 +580,7 @@ class SyncService {
     final trimmedFavorites = await DatabaseHelper().normalizeFavoritesCap();
     if (trimmedFavorites > 0) {
       appliedCount += trimmedFavorites;
-      debugPrint(
-        'Sync trimmed $trimmedFavorites favorites over Top 20 cap.',
-      );
+      debugPrint('Sync trimmed $trimmedFavorites favorites over Top 20 cap.');
     }
     await _pushFavoritesTouchedSince(normalizeStartMs);
 

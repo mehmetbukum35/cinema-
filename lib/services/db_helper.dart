@@ -1135,16 +1135,19 @@ class DatabaseHelper {
 
     if (db == null) {
       for (final isTv in [0, 1]) {
-        final active = _mockFavorites
-            .where((e) => e['is_tv'] == isTv && e['deleted'] != 1)
-            .toList()
-          ..sort((a, b) {
-            final rank = ((a['created_at'] as int?) ?? 0).compareTo(
-              (b['created_at'] as int?) ?? 0,
-            );
-            if (rank != 0) return rank;
-            return ((a['id'] as int?) ?? 0).compareTo((b['id'] as int?) ?? 0);
-          });
+        final active =
+            _mockFavorites
+                .where((e) => e['is_tv'] == isTv && e['deleted'] != 1)
+                .toList()
+              ..sort((a, b) {
+                final rank = ((a['created_at'] as int?) ?? 0).compareTo(
+                  (b['created_at'] as int?) ?? 0,
+                );
+                if (rank != 0) return rank;
+                return ((a['id'] as int?) ?? 0).compareTo(
+                  (b['id'] as int?) ?? 0,
+                );
+              });
         for (var i = 0; i < active.length; i++) {
           if (i < cap) {
             if (active[i]['created_at'] != i) {

@@ -616,18 +616,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                   onToggleSpoiler: () {
                     final next = !_isSpoiler;
                     setState(() => _isSpoiler = next);
-                    _persistRatingFlags(
-                      isSpoiler: next,
-                      isPrivate: _isPrivate,
-                    );
+                    _persistRatingFlags(isSpoiler: next, isPrivate: _isPrivate);
                   },
                   onTogglePrivate: () {
                     final next = !_isPrivate;
                     setState(() => _isPrivate = next);
-                    _persistRatingFlags(
-                      isSpoiler: _isSpoiler,
-                      isPrivate: next,
-                    );
+                    _persistRatingFlags(isSpoiler: _isSpoiler, isPrivate: next);
                   },
                   onSave: _saveComment,
                 ),

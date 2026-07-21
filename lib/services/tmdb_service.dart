@@ -705,8 +705,14 @@ class TmdbService {
     if (isFamily) {
       // Theatrical now-playing window via Discover so certification applies.
       final now = DateTime.now();
-      final gte = now.subtract(const Duration(days: 40)).toIso8601String().substring(0, 10);
-      final lte = now.add(const Duration(days: 7)).toIso8601String().substring(0, 10);
+      final gte = now
+          .subtract(const Duration(days: 40))
+          .toIso8601String()
+          .substring(0, 10);
+      final lte = now
+          .add(const Duration(days: 7))
+          .toIso8601String()
+          .substring(0, 10);
       return _fetchList('/3/discover/movie', {
         'api_key': _apiKey,
         'language': _language,

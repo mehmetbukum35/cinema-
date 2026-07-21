@@ -497,74 +497,77 @@ void main() {
       },
     );
 
-    test('should handle device time behind server time using dual watermark', () async {
-      // 1. Arrange: Device time is behind server time.
-      // We simulate this by letting the server return a timestamp far in the future (e.g. +10 days),
-      // while device writes use the actual current device time.
-      await PrefsService.setLastSyncTime(0);
-      await PrefsService.setLastPushTime(0);
+    test(
+      'should handle device time behind server time using dual watermark',
+      () async {
+        // 1. Arrange: Device time is behind server time.
+        // We simulate this by letting the server return a timestamp far in the future (e.g. +10 days),
+        // while device writes use the actual current device time.
+        await PrefsService.setLastSyncTime(0);
+        await PrefsService.setLastPushTime(0);
 
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final t1 = now - 5000;
-      final serverTimeFarAhead =
-          now + 10 * 24 * 60 * 60 * 1000; // 10 days in future
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final t1 = now - 5000;
+        final serverTimeFarAhead =
+            now + 10 * 24 * 60 * 60 * 1000; // 10 days in future
 
-      // Create a local rating at device time t1
-      await testDb.insert('ratings', {
-        'movie_id': 123,
-        'is_tv': 0,
-        'rating': 3,
-        'genre_ids': jsonEncode([28]),
-        'title': 'Local Movie',
-        'created_at': t1,
-        'updated_at': t1,
-        'deleted': 0,
-      });
+        // Create a local rating at device time t1
+        await testDb.insert('ratings', {
+          'movie_id': 123,
+          'is_tv': 0,
+          'rating': 3,
+          'genre_ids': jsonEncode([28]),
+          'title': 'Local Movie',
+          'created_at': t1,
+          'updated_at': t1,
+          'deleted': 0,
+        });
 
-      mockApi.pullResponse = {
-        'server_time': serverTimeFarAhead,
-        'ratings': [],
-        'watchlist': [],
-        'favorites': [],
-        'watched_seasons': [],
-        'search_history': [],
-      };
+        mockApi.pullResponse = {
+          'server_time': serverTimeFarAhead,
+          'ratings': [],
+          'watchlist': [],
+          'favorites': [],
+          'watched_seasons': [],
+          'search_history': [],
+        };
 
-      // 2. Act: First Sync
-      await syncService.sync();
+        // 2. Act: First Sync
+        await syncService.sync();
 
-      // Verify that local rating at t1 was pushed
-      expect(mockApi.pushedPayload, isNotNull);
-      expect(mockApi.pushedPayload!['ratings'], hasLength(1));
+        // Verify that local rating at t1 was pushed
+        expect(mockApi.pushedPayload, isNotNull);
+        expect(mockApi.pushedPayload!['ratings'], hasLength(1));
 
-      // Verify that lastSync is the future server time, but lastPush tracks
-      // the max pushed updated_at (not wall clock / not server_time).
-      final lastSync = await PrefsService.getLastSyncTime();
-      final lastPush = await PrefsService.getLastPushTime();
-      expect(lastSync, serverTimeFarAhead - 1);
-      expect(lastPush, isNot(serverTimeFarAhead));
-      expect(lastPush, t1);
+        // Verify that lastSync is the future server time, but lastPush tracks
+        // the max pushed updated_at (not wall clock / not server_time).
+        final lastSync = await PrefsService.getLastSyncTime();
+        final lastPush = await PrefsService.getLastPushTime();
+        expect(lastSync, serverTimeFarAhead - 1);
+        expect(lastPush, isNot(serverTimeFarAhead));
+        expect(lastPush, t1);
 
-      // 3. Create another local rating at current device time (which is > lastPush, but < serverTimeFarAhead)
-      final t2 = DateTime.now().millisecondsSinceEpoch + 1000;
-      await testDb.insert('ratings', {
-        'movie_id': 124,
-        'is_tv': 0,
-        'rating': 2,
-        'genre_ids': jsonEncode([28]),
-        'title': 'Another Local',
-        'created_at': t2,
-        'updated_at': t2,
-        'deleted': 0,
-      });
+        // 3. Create another local rating at current device time (which is > lastPush, but < serverTimeFarAhead)
+        final t2 = DateTime.now().millisecondsSinceEpoch + 1000;
+        await testDb.insert('ratings', {
+          'movie_id': 124,
+          'is_tv': 0,
+          'rating': 2,
+          'genre_ids': jsonEncode([28]),
+          'title': 'Another Local',
+          'created_at': t2,
+          'updated_at': t2,
+          'deleted': 0,
+        });
 
-      // 4. Act: Second Sync
-      await syncService.sync();
+        // 4. Act: Second Sync
+        await syncService.sync();
 
-      // Verify that the second local rating at t2 was pushed because its updated_at (t2) > lastPush (t1)
-      expect(mockApi.pushedPayload!['ratings'], hasLength(1));
-      expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
-    });
+        // Verify that the second local rating at t2 was pushed because its updated_at (t2) > lastPush (t1)
+        expect(mockApi.pushedPayload!['ratings'], hasLength(1));
+        expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
+      },
+    );
 
     test('empty push does not advance lastPush via wall clock', () async {
       await PrefsService.setLastSyncTime(0);

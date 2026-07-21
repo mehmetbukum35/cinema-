@@ -62,7 +62,8 @@ class Movie {
           const [],
       popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0.0,
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
-      adult: json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
+      adult:
+          json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
     );
   }
 
