@@ -18,6 +18,8 @@ final class Maintenance
         'couch_terminal_days' => 30,
         'tombstone_retention_days' => 30,
         'sync_device_inactive_days' => 90,
+        'popular_min_votes' => 1,
+        'popular_limit' => 20,
     ];
 
     private array $options;
@@ -29,6 +31,8 @@ final class Maintenance
         $this->options['search_history_limit'] = max(0, min(500, (int) $this->options['search_history_limit']));
         $this->options['tombstone_retention_days'] = max(7, min(365, (int) $this->options['tombstone_retention_days']));
         $this->options['sync_device_inactive_days'] = max(30, min(730, (int) $this->options['sync_device_inactive_days']));
+        $this->options['popular_min_votes'] = max(1, min(100000, (int) $this->options['popular_min_votes']));
+        $this->options['popular_limit'] = max(1, min(50, (int) $this->options['popular_limit']));
     }
 
     /** @return array<string, int> affected row counts */
@@ -72,7 +76,67 @@ final class Maintenance
             throw $e;
         }
 
+        // Topluluk "Popüler Top 20" önhesabı ana bakım transaction'ının DIŞINDA
+        // koşar: favorites üzerindeki tam tablo GROUP BY'ı ana temizlik kilidiyle
+        // birleştirmemek için kendi (is_tv başına) transaction'ını kullanır.
+        $result['popular_titles_written'] = $this->recomputePopularTitles($nowMs);
+
         return $result;
+    }
+
+    /// `favorites`'ı türe göre gruplayıp en çok favorilenen ilk N başlığı
+    /// `popular_titles`'a yazar (film + dizi ayrı). İstek yolunda değil, cron'da
+    /// koşar; endpoint yalnızca sonucu okur. Yazılan toplam satır sayısını döner.
+    private function recomputePopularTitles(int $nowMs): int
+    {
+        $minVotes = (int) $this->options['popular_min_votes'];
+        $limit = (int) $this->options['popular_limit'];
+        $written = 0;
+
+        foreach ([0, 1] as $isTv) {
+            // isTv/minVotes/limit hepsi kontrollü tamsayı; LIMIT gibi inline'lanır.
+            // (Bağlı parametre HAVING'de SQLite'ta integer<text tuzağına düşüyor;
+            // ayrıca HAVING'de alias yerine ifade kullanılır — taşınabilirlik.)
+            $select = $this->db->query(
+                'SELECT id, COUNT(DISTINCT user_id) AS votes
+                 FROM favorites
+                 WHERE deleted = 0 AND is_tv = ' . $isTv . '
+                 GROUP BY id
+                 HAVING COUNT(DISTINCT user_id) >= ' . $minVotes . '
+                 ORDER BY votes DESC, id ASC
+                 LIMIT ' . $limit
+            );
+            $rows = $select->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->db->beginTransaction();
+            try {
+                $delete = $this->db->prepare('DELETE FROM popular_titles WHERE is_tv = ?');
+                $delete->execute([$isTv]);
+
+                $insert = $this->db->prepare(
+                    'INSERT INTO popular_titles (is_tv, `rank`, tmdb_id, votes, computed_at)
+                     VALUES (?, ?, ?, ?, ?)'
+                );
+                $rank = 1;
+                foreach ($rows as $row) {
+                    $insert->execute([
+                        $isTv,
+                        $rank,
+                        (int) $row['id'],
+                        (int) $row['votes'],
+                        $nowMs,
+                    ]);
+                    $rank++;
+                    $written++;
+                }
+                $this->db->commit();
+            } catch (Throwable $e) {
+                if ($this->db->inTransaction()) $this->db->rollBack();
+                throw $e;
+            }
+        }
+
+        return $written;
     }
 
     private function invalidateInactiveSyncDevices(int $nowMs): int

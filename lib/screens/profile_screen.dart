@@ -22,6 +22,7 @@ import 'profile/widgets/unlink_google_sheet.dart';
 import 'profile/widgets/unlink_apple_sheet.dart';
 import 'profile/widgets/user_header_card.dart';
 import 'profile/widgets/profile_rail_cards.dart';
+import 'profile/widgets/top_list_rail.dart';
 import 'profile/widgets/family_mode_card.dart';
 import 'profile/widgets/settings_nav_card.dart';
 import 'profile/widgets/my_reviews_card.dart';
@@ -388,6 +389,28 @@ class ProfileScreen extends ConsumerWidget {
 
           // 1. User Header Card — profil, çıkış ve senkron (Google bağlantısı Ayarlar'da)
           const SliverToBoxAdapter(child: UserHeaderCard()),
+
+          // 1.5 Top 20 — kişisel panteon (Film + Dizi). Profilin gurur vitrini;
+          // izleme listesi/geçmişten farklı olarak sıralı "en sevdiklerim".
+          SliverToBoxAdapter(
+            child: _sectionHeader(
+              context,
+              c,
+              tr?.get('top_list_section') ?? "Top 20'm",
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 20),
+              child: TopListRail(isTV: false),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: TopListRail(isTV: true),
+            ),
+          ),
 
           // 2. Kütüphane vitrini — son 10 öğe + "Tümünü Gör" uç kartı.
           // Arşivin tamamı LibraryScreen'de (showroom); ray artık listenin

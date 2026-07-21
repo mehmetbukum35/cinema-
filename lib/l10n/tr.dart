@@ -795,4 +795,28 @@ const Map<String, String> kTrStrings = {
   'username_prompt_later': 'Daha Sonra',
   'username_invalid_format':
       'Kullanıcı adı 3-30 karakter olmalı; yalnızca harf, rakam ve alt çizgi kullanılabilir.',
+  // ─── Topluluk Popüler Top 20 ───────────────────────────────────────────────
+  'popular_top_movies_title': 'Popüler Top 20 Film',
+  'popular_top_tv_title': 'Popüler Top 20 Dizi',
+  'popular_votes_label': '{} favori',
+  // ─── Top 20 (kişisel panteon) ──────────────────────────────────────────────
+  'top_list_section': "Top 20'm",
+  'top_list_movies_short': 'TOP 20 FİLM',
+  'top_list_tv_short': 'TOP 20 DİZİ',
+  'top_list_edit': 'Düzenle',
+  'top_list_edit_title': "Top 20'ni Düzenle",
+  'top_list_tab_movies': 'Film',
+  'top_list_tab_tv': 'Dizi',
+  'top_list_add': 'Ekle',
+  'top_list_add_movie': 'Film ekle',
+  'top_list_add_tv': 'Dizi ekle',
+  'top_list_full': "Liste dolu (20/20) — eklemek için birini çıkar.",
+  'top_list_empty_title': 'Panteonunu oluştur',
+  'top_list_empty_desc':
+      'En sevdiğin yapımları sırala; en tepedeki #1 senin başyapıtın olsun.',
+  'top_list_empty_cta': 'Top 20 oluştur',
+  'top_list_reorder_hint': 'Basılı tutup sürükle',
+  'top_list_search_hint': 'Eklemek için ara',
+  'top_list_remove': 'Çıkar',
+  'top_list_added': "{}, Top 20'ne eklendi.",
 };

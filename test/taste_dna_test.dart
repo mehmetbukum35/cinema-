@@ -69,6 +69,36 @@ void main() {
       );
       expect(dna.archetypeKey, 'genre_nomad');
     });
+
+    test('favoriler (Top 20) arketip ve top türleri şekillendirir', () {
+      // Oy tarafı zayıf (tek komedi beğenisi); favoriler bilim kurgu ağırlıklı.
+      final dna = TasteDnaService.compute(
+        ratings: [_r(rating: 2, genres: [35])],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        favorites: [
+          (genreIds: [878], weight: 2.0), // #1 favori
+          (genreIds: [878, 14], weight: 1.5),
+        ],
+        nowMs: _now,
+      );
+      expect(dna.topGenres.first, 878);
+      expect(dna.archetypeKey, 'world_builder');
+    });
+
+    test('sadece favoriler bile arketip üretir (oy yokken)', () {
+      final dna = TasteDnaService.compute(
+        ratings: const [],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        favorites: [(genreIds: [27], weight: 2.0)], // korku
+        nowMs: _now,
+      );
+      expect(dna.archetypeKey, 'dark_chronicler');
+      expect(dna.topGenres.first, 27);
+    });
   });
 
   group('TasteDnaService.compute — kör nokta', () {

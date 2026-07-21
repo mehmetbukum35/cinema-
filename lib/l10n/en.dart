@@ -801,4 +801,28 @@ const Map<String, String> kEnStrings = {
   'username_prompt_later': 'Later',
   'username_invalid_format':
       'Username must be 3-30 characters and contain only letters, numbers, or underscores.',
+  // ─── Community Popular Top 20 ──────────────────────────────────────────────
+  'popular_top_movies_title': 'Popular Top 20 Movies',
+  'popular_top_tv_title': 'Popular Top 20 Shows',
+  'popular_votes_label': '{} favorites',
+  // ─── Top 20 (personal pantheon) ────────────────────────────────────────────
+  'top_list_section': 'My Top 20',
+  'top_list_movies_short': 'TOP 20 MOVIES',
+  'top_list_tv_short': 'TOP 20 SHOWS',
+  'top_list_edit': 'Edit',
+  'top_list_edit_title': 'Edit your Top 20',
+  'top_list_tab_movies': 'Movies',
+  'top_list_tab_tv': 'Shows',
+  'top_list_add': 'Add',
+  'top_list_add_movie': 'Add a movie',
+  'top_list_add_tv': 'Add a show',
+  'top_list_full': 'List full (20/20) — remove one to add another.',
+  'top_list_empty_title': 'Build your pantheon',
+  'top_list_empty_desc':
+      'Rank your all-time favorites — let the one at the top be your #1.',
+  'top_list_empty_cta': 'Create Top 20',
+  'top_list_reorder_hint': 'Hold & drag to reorder',
+  'top_list_search_hint': 'Search to add',
+  'top_list_remove': 'Remove',
+  'top_list_added': 'Added {} to your Top 20.',
 };

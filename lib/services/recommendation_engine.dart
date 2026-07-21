@@ -232,6 +232,53 @@ class RecommendationEngine {
           vec[kid] = (vec[kid] ?? 0.0) + w;
         }
       }
+
+      // Favoriler: kalıcı ÇEKİRDEK zevk. Oylar kısa vadeli mod katar; Top 20
+      // ise "hayatımın yapımları" — decaysiz, rank-ağırlıklı olarak keyword
+      // vektörüne eklenir. Tema/keyword benzerliği "seni tanıyorum" hissinin asıl
+      // taşıyıcısı olduğundan (bkz. similarityScore), favorilerin buraya girmesi
+      // ince re-rank'ı gerçekten kişiselleştirir.
+      try {
+        final db = DatabaseHelper();
+        final favMovies = await db
+            .getFavorites(false)
+            .catchError((_) => <Movie>[]);
+        final favShows = await db
+            .getFavorites(true)
+            .catchError((_) => <Movie>[]);
+        final favEntries = <({int id, bool isTV, double w})>[];
+        void collect(List<Movie> favs) {
+          for (var i = 0; i < favs.length; i++) {
+            // getFavorites rank sırasında döner → liste indeksi = sıra.
+            favEntries.add((
+              id: favs[i].id,
+              isTV: favs[i].isTV,
+              w: 1.5 * PrefsService.favoriteRankWeight(i),
+            ));
+          }
+        }
+
+        collect(favMovies);
+        collect(favShows);
+        favEntries.sort((a, b) => b.w.compareTo(a.w));
+        final topFav = favEntries.take(10).toList();
+        if (topFav.isNotEmpty) {
+          final favKwLists = await Future.wait(
+            topFav.map(
+              (f) => _service
+                  .getKeywordIds(f.id, isTV: f.isTV)
+                  .catchError((_) => <int>[]),
+            ),
+          );
+          for (var i = 0; i < topFav.length; i++) {
+            for (final kid in favKwLists[i]) {
+              vec[kid] = (vec[kid] ?? 0.0) + topFav[i].w;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("Favorite keyword seeding failed: $e");
+      }
     } catch (e, st) {
       debugPrint("Error calculating keyword vector: $e\n$st");
       // Hata → boş vektör; keyword fazı sessizce atlanır (cold-start gibi).
@@ -241,7 +288,19 @@ class RecommendationEngine {
     return vec;
   }
 
-  /// Son [seedCount] tohum yapımı (öncelik sırasıyla Harika(3) -> İyi(2) -> Favoriler -> Watchlist)
+  /// İki rank-sıralı listeyi harmanlar: a[0], b[0], a[1], b[1], … Böylece film ve
+  /// dizi favorilerinin üst sıraları öne geçer (tek tür tohum havuzunu ele geçirmez).
+  static List<Movie> _interleaveByRank(List<Movie> a, List<Movie> b) {
+    final out = <Movie>[];
+    final n = max(a.length, b.length);
+    for (var i = 0; i < n; i++) {
+      if (i < a.length) out.add(a[i]);
+      if (i < b.length) out.add(b[i]);
+    }
+    return out;
+  }
+
+  /// Son [seedCount] tohum yapımı (öncelik sırasıyla Favoriler + Harika(3) -> İyi(2) -> Watchlist)
   /// tohum yapıp TMDB recommendations + similar uçlarından aday toplar.
   /// Her adaya gerekçe olarak tohumun adı yazılır ("X'i beğendiğin için").
   /// Tohum adedi, telemetri verilerine göre dinamik olarak genişletilip daraltılır (Adaptive).
@@ -314,24 +373,35 @@ class RecommendationEngine {
 
       final seedItems = <({int id, bool isTV, String title})>[];
 
+      // Favoriler (Top 20) rank sırasıyla, film/dizi harmanlı — cold-start yedeği
+      // DEĞİL, birinci sınıf tohum. En sevdiklerin keşif havuzunu her zaman besler
+      // ("X'i favorine aldığın için" gerekçesiyle).
+      final favMovies = await db.getFavorites(false).catchError((_) => <Movie>[]);
+      final favShows = await db.getFavorites(true).catchError((_) => <Movie>[]);
+      final rankedFavs = _interleaveByRank(favMovies, favShows);
+
+      // finalSeedCount'un ~1/3'ü üst-sıra favorilere ayrılır; hiç oy yoksa hepsi.
+      final favReserve = ratingSeeds.isEmpty
+          ? finalSeedCount
+          : max(1, (finalSeedCount / 3).round());
+      for (final m in rankedFavs.take(favReserve)) {
+        if (seedItems.length >= finalSeedCount) break;
+        seedItems.add((id: m.id, isTV: m.isTV, title: m.title));
+      }
+
+      // 1. Kalan slotlar: en son beğenilen (Harika/İyi) oylar.
       for (final r in ratingSeeds) {
         if (seedItems.length >= finalSeedCount) break;
         final movie = r['movie'] as Movie?;
-        if (movie != null) {
+        if (movie != null &&
+            !seedItems.any((s) => s.id == movie.id && s.isTV == movie.isTV)) {
           seedItems.add((id: movie.id, isTV: movie.isTV, title: movie.title));
         }
       }
 
-      // 2. Eksik kalırsa Favorilerden tohum ekle
+      // 2. Hâlâ eksikse kalan favorilerle doldur.
       if (seedItems.length < finalSeedCount) {
-        final favMovies = await db
-            .getFavorites(false)
-            .catchError((_) => <Movie>[]);
-        final favShows = await db
-            .getFavorites(true)
-            .catchError((_) => <Movie>[]);
-        final allFavs = [...favMovies, ...favShows];
-        for (final m in allFavs) {
+        for (final m in rankedFavs) {
           if (seedItems.length >= finalSeedCount) break;
           if (seedItems.any((s) => s.id == m.id && s.isTV == m.isTV)) continue;
           seedItems.add((id: m.id, isTV: m.isTV, title: m.title));
