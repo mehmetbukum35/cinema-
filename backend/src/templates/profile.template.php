@@ -522,13 +522,14 @@ $renderSplitShelf = static function (
             if ($heroDesktop) {
                 $safeDesktop = $cssSafeHeroUrl($heroDesktop);
                 if ($safeDesktop !== '') {
-                    $vars[] = '--hero-desktop:url("' . $safeDesktop . '")';
+                    // Single-quoted CSS url() so it survives inside style="..."
+                    $vars[] = "--hero-desktop:url('" . $safeDesktop . "')";
                 }
             }
             if ($heroMobile) {
                 $safeMobile = $cssSafeHeroUrl($heroMobile);
                 if ($safeMobile !== '') {
-                    $vars[] = '--hero-mobile:url("' . $safeMobile . '")';
+                    $vars[] = "--hero-mobile:url('" . $safeMobile . "')";
                 }
             }
             if ($vars !== []) {
