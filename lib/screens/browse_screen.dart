@@ -832,7 +832,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         AppLocalizations.of(
           context,
         )?.get(isTV ? 'popular_top_tv_title' : 'popular_top_movies_title') ??
-        (isTV ? 'Popüler Top 20 Dizi' : 'Popüler Top 20 Film');
+        (isTV ? 'Cinema+ Top 20 Dizi' : 'Cinema+ Top 20 Film');
     return SliverToBoxAdapter(
       child: EntranceFade(
         child: Column(

@@ -801,9 +801,9 @@ const Map<String, String> kEnStrings = {
   'username_prompt_later': 'Later',
   'username_invalid_format':
       'Username must be 3-30 characters and contain only letters, numbers, or underscores.',
-  // ─── Community Popular Top 20 ──────────────────────────────────────────────
-  'popular_top_movies_title': 'Popular Top 20 Movies',
-  'popular_top_tv_title': 'Popular Top 20 Shows',
+  // ─── Community Cinema+ Top 20 ──────────────────────────────────────────────
+  'popular_top_movies_title': 'Cinema+ Top 20 Movies',
+  'popular_top_tv_title': 'Cinema+ Top 20 Shows',
   'popular_votes_label': '{} favorites',
   // ─── Top 20 (personal pantheon) ────────────────────────────────────────────
   'top_list_section': 'My Top 20',
