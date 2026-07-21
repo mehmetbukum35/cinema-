@@ -815,7 +815,7 @@ const Map<String, String> kTrStrings = {
   'top_list_empty_desc':
       'En sevdiğin yapımları sırala; en tepedeki #1 senin başyapıtın olsun.',
   'top_list_empty_cta': 'Top 20 oluştur',
-  'top_list_reorder_hint': 'Sürükleyip sıranı değiştir',
+  'top_list_reorder_hint': 'Basılı tutup sürükle',
   'top_list_search_hint': 'Eklemek için ara',
   'top_list_remove': 'Çıkar',
   'top_list_added': "{}, Top 20'ne eklendi.",

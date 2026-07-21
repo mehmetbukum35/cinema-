@@ -81,7 +81,9 @@ class _TopListEditScreenState extends ConsumerState<TopListEditScreen>
                 child: TabBar(
                   controller: _tab,
                   indicator: BoxDecoration(
-                    color: c.isLight ? c.gold.withValues(alpha: 0.15) : c.cardHi,
+                    color: c.isLight
+                        ? c.gold.withValues(alpha: 0.15)
+                        : c.cardHi,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
@@ -98,7 +100,10 @@ class _TopListEditScreenState extends ConsumerState<TopListEditScreen>
                   ),
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
                   tabs: [
-                    Tab(height: 38, text: tr?.get('top_list_tab_movies') ?? 'Film'),
+                    Tab(
+                      height: 38,
+                      text: tr?.get('top_list_tab_movies') ?? 'Film',
+                    ),
                     Tab(height: 38, text: tr?.get('top_list_tab_tv') ?? 'Dizi'),
                   ],
                 ),
@@ -108,10 +113,7 @@ class _TopListEditScreenState extends ConsumerState<TopListEditScreen>
         ),
         body: TabBarView(
           controller: _tab,
-          children: const [
-            _TopListTab(isTV: false),
-            _TopListTab(isTV: true),
-          ],
+          children: const [_TopListTab(isTV: false), _TopListTab(isTV: true)],
         ),
       ),
     );
@@ -133,8 +135,8 @@ class _TopListTab extends ConsumerWidget {
   }
 
   Future<void> _openAddSheet(BuildContext context, WidgetRef ref) async {
-    final full = (ref.read(topListProvider(isTV)).value ?? const <Movie>[])
-            .length >=
+    final full =
+        (ref.read(topListProvider(isTV)).value ?? const <Movie>[]).length >=
         TopListNotifier.cap;
     if (full) {
       HapticFeedback.mediumImpact();
@@ -203,9 +205,7 @@ class _TopListTab extends ConsumerWidget {
                     color: canAdd ? c.red.withValues(alpha: 0.14) : c.surface,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: canAdd
-                          ? c.red.withValues(alpha: 0.5)
-                          : c.border,
+                      color: canAdd ? c.red.withValues(alpha: 0.5) : c.border,
                       width: 1,
                     ),
                   ),
@@ -278,9 +278,7 @@ class _TopListTab extends ConsumerWidget {
                         onTap: () => _openDetail(context, ref, m),
                         onRemove: () {
                           HapticFeedback.lightImpact();
-                          ref
-                              .read(topListProvider(isTV).notifier)
-                              .remove(m.id);
+                          ref.read(topListProvider(isTV).notifier).remove(m.id);
                         },
                       );
                     },
@@ -307,11 +305,7 @@ class _TopListTab extends ConsumerWidget {
                 shape: BoxShape.circle,
                 color: c.gold.withValues(alpha: 0.1),
               ),
-              child: Icon(
-                Icons.emoji_events_rounded,
-                color: c.gold,
-                size: 34,
-              ),
+              child: Icon(Icons.emoji_events_rounded, color: c.gold, size: 34),
             ),
             const SizedBox(height: 20),
             Text(
@@ -345,7 +339,11 @@ class _TopListTab extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                    const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       tr?.get('top_list_empty_cta') ?? 'Top 20 oluştur',
@@ -386,79 +384,89 @@ class _EditRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c.border, width: 1),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                TopRankBadge(rank: rank, size: 28),
-                const SizedBox(width: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AppCachedNetworkImage(
-                    imageUrl: movie.posterUrl,
-                    width: 42,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    preset: AppImageCachePreset.avatar,
-                    placeholder: (ctx, url) => ColoredBox(color: c.card),
-                    errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        movie.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.ink,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (movie.year.isNotEmpty)
-                        Text(
-                          movie.year,
-                          style: TextStyle(color: c.dim, fontSize: 11.5),
-                        ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.close_rounded, color: c.dim, size: 20),
-                  tooltip:
-                      AppLocalizations.of(context)?.get('top_list_remove') ??
-                      'Çıkar',
-                  onPressed: onRemove,
-                ),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 2, right: 4),
-                    child: Icon(
-                      Icons.drag_indicator_rounded,
-                      color: c.dim,
-                      size: 22,
+    // Tüm satır: basılı tut → sürükle (herhangi bir yerden). Sağdaki tutamak ise
+    // anında sürükler; kısa dokunuş yapımın detayını açar.
+    return ReorderableDelayedDragStartListener(
+      index: index,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.border, width: 1),
+              ),
+              padding: const EdgeInsets.fromLTRB(8, 8, 4, 8),
+              child: Row(
+                children: [
+                  TopRankBadge(rank: rank, size: 28),
+                  const SizedBox(width: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: AppCachedNetworkImage(
+                      imageUrl: movie.posterUrl,
+                      width: 42,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.avatar,
+                      placeholder: (ctx, url) => ColoredBox(color: c.card),
+                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          movie.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (movie.year.isNotEmpty)
+                          Text(
+                            movie.year,
+                            style: TextStyle(color: c.dim, fontSize: 11.5),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: c.dim, size: 20),
+                    tooltip:
+                        AppLocalizations.of(context)?.get('top_list_remove') ??
+                        'Çıkar',
+                    onPressed: onRemove,
+                  ),
+                  // Anında sürükleme tutamağı — geniş dokunma alanı.
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Container(
+                      color: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 14,
+                      ),
+                      child: Icon(
+                        Icons.drag_indicator_rounded,
+                        color: c.dim,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -538,10 +546,9 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
     if (added) {
       showAppToast(
         context,
-        AppLocalizations.of(context)?.get('top_list_added').replaceAll(
-              '{}',
-              m.title,
-            ) ??
+        AppLocalizations.of(
+              context,
+            )?.get('top_list_added').replaceAll('{}', m.title) ??
             '${m.title} eklendi.',
       );
     } else {
@@ -557,10 +564,10 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
   Widget build(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    final selectedIds = (ref.watch(topListProvider(widget.isTV)).value ??
-            const <Movie>[])
-        .map((m) => m.id)
-        .toSet();
+    final selectedIds =
+        (ref.watch(topListProvider(widget.isTV)).value ?? const <Movie>[])
+            .map((m) => m.id)
+            .toSet();
     final full = selectedIds.length >= TopListNotifier.cap;
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
 

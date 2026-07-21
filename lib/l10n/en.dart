@@ -821,7 +821,7 @@ const Map<String, String> kEnStrings = {
   'top_list_empty_desc':
       'Rank your all-time favorites — let the one at the top be your #1.',
   'top_list_empty_cta': 'Create Top 20',
-  'top_list_reorder_hint': 'Drag to reorder',
+  'top_list_reorder_hint': 'Hold & drag to reorder',
   'top_list_search_hint': 'Search to add',
   'top_list_remove': 'Remove',
   'top_list_added': 'Added {} to your Top 20.',
