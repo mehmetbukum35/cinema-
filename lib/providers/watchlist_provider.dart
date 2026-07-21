@@ -54,11 +54,12 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     try {
       await PrefsService.addToWatchlist(movie);
       if (mounted) {
-        state.whenData((list) {
-          if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {
-            state = AsyncValue.data([movie, ...list]);
-          }
-        });
+        final list = state.value ?? await PrefsService.getWatchlist();
+        if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {
+          state = AsyncValue.data([movie, ...list]);
+        } else {
+          state = AsyncValue.data(list);
+        }
       }
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
@@ -84,11 +85,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     try {
       await PrefsService.removeFromWatchlist(id, isTV);
       if (mounted) {
-        state.whenData((list) {
-          state = AsyncValue.data(
-            list.where((m) => !(m.id == id && m.isTV == isTV)).toList(),
-          );
-        });
+        final list = state.value ?? await PrefsService.getWatchlist();
+        state = AsyncValue.data(
+          list.where((m) => !(m.id == id && m.isTV == isTV)).toList(),
+        );
       }
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)

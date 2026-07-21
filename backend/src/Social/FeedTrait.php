@@ -51,7 +51,9 @@ trait SocialFeedTrait
             ]);
         }
 
-        $sql .= ' AND (r.rating >= 2 OR (r.comment IS NOT NULL AND r.comment <> \'\'))
+        // Gizli + düşük puanlı yorum satırı boş aktivite üretmesin; rating>=2
+        // gizlense bile puan aktivitesi (yorum metni NULL) kalır.
+        $sql .= ' AND (r.rating >= 2 OR (r.is_hidden = 0 AND r.comment IS NOT NULL AND r.comment <> \'\'))
                   AND r.deleted = 0
                 ORDER BY r.updated_at DESC, f.friend_id DESC, r.movie_id DESC, r.is_tv DESC
                 LIMIT ' . ($limit + 1);

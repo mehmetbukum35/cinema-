@@ -184,9 +184,38 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
                   : ListView.builder(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: friendActivities.length,
-                      itemBuilder: (ctx, i) =>
-                          ActivityCard(act: friendActivities[i]),
+                      itemCount:
+                          friendActivities.length +
+                          (socialState.friendActivityHasMore &&
+                                  socialState.friendActivityFriendId ==
+                                      widget.friendId
+                              ? 1
+                              : 0),
+                      itemBuilder: (ctx, i) {
+                        if (i >= friendActivities.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Center(
+                              child: socialState.friendActivityLoadingMore
+                                  ? CircularProgressIndicator(color: c.gold)
+                                  : TextButton(
+                                      onPressed: () => ref
+                                          .read(socialProvider.notifier)
+                                          .loadMoreFriendActivity(
+                                            widget.friendId,
+                                          ),
+                                      child: Text(
+                                        AppLocalizations.of(
+                                              context,
+                                            )?.get('load_more') ??
+                                            'Load more',
+                                      ),
+                                    ),
+                            ),
+                          );
+                        }
+                        return ActivityCard(act: friendActivities[i]);
+                      },
                     ),
             ),
           ],

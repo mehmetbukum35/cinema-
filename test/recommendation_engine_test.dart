@@ -96,6 +96,14 @@ void main() {
       expect(a.movie.recoReason, 'Ayşe');
       expect(a.movie.recoReasonType, 'friend');
       expect(a.movie.recoSource, 'friend');
+      // UI % friend boost sonrası skorla hizalanmalı (rank pipeline'da yeniden yazılır).
+      a.movie.personalizedMatchScore = RecommendationEngine.toDisplayScore(
+        a.score,
+      );
+      expect(
+        a.movie.personalizedMatchScore,
+        RecommendationEngine.toDisplayScore(0.5 + 0.06 * 2),
+      );
       expect(b.score, 0.5);
       expect(b.movie.recoReason, isNull);
     });

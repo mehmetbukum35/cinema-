@@ -33,7 +33,14 @@ class UserHeaderCard extends ConsumerWidget {
   ) async {
     try {
       final result = await signIn();
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        if (result.status == AuthStatus.conflict) {
+          await ref
+              .read(authProvider.notifier)
+              .cancelPendingLogin(result.tokens);
+        }
+        return;
+      }
 
       if (result.status == AuthStatus.success) {
         ref.invalidate(watchlistProvider);
@@ -51,8 +58,7 @@ class UserHeaderCard extends ConsumerWidget {
           ref.invalidate(watchlistProvider);
           ref.invalidate(statsProvider);
         } else {
-          // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
-          // sunucuda iptal et ki yetim refresh token kalmasın.
+          // İptal / unmount: yetim refresh token kalmasın.
           await ref
               .read(authProvider.notifier)
               .cancelPendingLogin(result.tokens);

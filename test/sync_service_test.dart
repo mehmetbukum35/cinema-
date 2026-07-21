@@ -537,12 +537,13 @@ void main() {
       expect(mockApi.pushedPayload, isNotNull);
       expect(mockApi.pushedPayload!['ratings'], hasLength(1));
 
-      // Verify that lastSync is the future server time, but lastPush is device time (near 'now')
+      // Verify that lastSync is the future server time, but lastPush tracks
+      // the max pushed updated_at (not wall clock / not server_time).
       final lastSync = await PrefsService.getLastSyncTime();
       final lastPush = await PrefsService.getLastPushTime();
       expect(lastSync, serverTimeFarAhead - 1);
       expect(lastPush, isNot(serverTimeFarAhead));
-      expect(lastPush, greaterThan(t1));
+      expect(lastPush, t1);
 
       // 3. Create another local rating at current device time (which is > lastPush, but < serverTimeFarAhead)
       final t2 = DateTime.now().millisecondsSinceEpoch + 1000;
@@ -560,9 +561,28 @@ void main() {
       // 4. Act: Second Sync
       await syncService.sync();
 
-      // Verify that the second local rating at t2 was pushed because its updated_at (t2) > lastPush (approx now)
+      // Verify that the second local rating at t2 was pushed because its updated_at (t2) > lastPush (t1)
       expect(mockApi.pushedPayload!['ratings'], hasLength(1));
       expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
+    });
+
+    test('empty push does not advance lastPush via wall clock', () async {
+      await PrefsService.setLastSyncTime(0);
+      await PrefsService.setLastPushTime(42);
+
+      mockApi.pullResponse = {
+        'server_time': 9999,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      expect(await PrefsService.getLastPushTime(), 42);
+      expect(mockApi.pushedPayload!['ratings'], isEmpty);
     });
 
     test('should preserve unpushed local data when device expired', () async {

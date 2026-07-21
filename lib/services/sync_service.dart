@@ -35,6 +35,29 @@ List<dynamic> _decodeJsonList(Object? value) {
 /// sonraki turda sessizce atlanmasını önler. Push/pull upsert'leri idempotenttir.
 int _overlappingCursor(int value) => value > 0 ? value - 1 : 0;
 
+/// Push imlecini cihaz duvar saatine değil, gerçekten gönderilen satırların
+/// max(updated_at) değerine bağlar. Boş push'ta 0 → imleç ilerlemeZ (saat
+/// ileri kayıp sonra düzeltilince sessiz veri kaybını önler).
+int _maxUpdatedAtInPayload(Map<String, dynamic> payload) {
+  var maxTs = 0;
+  for (final key in const [
+    'ratings',
+    'watchlist',
+    'favorites',
+    'watched_seasons',
+    'search_history',
+  ]) {
+    final rows = payload[key];
+    if (rows is! List) continue;
+    for (final row in rows) {
+      if (row is! Map) continue;
+      final ts = _asInt(row['updated_at']);
+      if (ts > maxTs) maxTs = ts;
+    }
+  }
+  return maxTs;
+}
+
 class SyncService {
   static const int _pushBatchSize = 500;
   final ApiService _apiService;
@@ -212,9 +235,6 @@ class SyncService {
     // edilmez (sessiz veri kaybı).
     final lastPull = await PrefsService.getLastSyncTime();
     final lastPush = await PrefsService.getLastPushTime();
-    // Watermark, SELECT'ten ÖNCE alınır: sync sürerken yazılan kayıtlar bir
-    // sonraki turda yeniden seçilir (upsert idempotent olduğundan zararsız).
-    final pushWatermark = DateTime.now().millisecondsSinceEpoch;
     final db = await DatabaseHelper().database;
     if (db == null) {
       // Web / FLUTTER_TEST mock storage: no SQLite, but cloud handshake still runs.
@@ -226,7 +246,7 @@ class SyncService {
         if (_declareLocalReset) 'local_reset': true,
       });
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
-      await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
+      // Mock DB'de gönderilecek satır yok — duvar saatiyle imleç ilerletme.
       final pullResult = await _apiService.pull(
         lastPull,
         localReset: _declareLocalReset,
@@ -236,7 +256,7 @@ class SyncService {
       PrefsService.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
       debugPrint(
-        "Sync complete (mock DB). pull cursor: $serverTime, push cursor: $pushWatermark",
+        "Sync complete (mock DB). pull cursor: $serverTime, push cursor: $lastPush",
       );
       if (_declareLocalReset) {
         _declareLocalReset = false;
@@ -374,10 +394,14 @@ class SyncService {
     final applied = await _pushPayloadInChunks(payload);
     debugPrint("Push complete. Applied changes: $applied");
 
-    // Push sunucuda başarıyla commit edildiyse cihaz imlecini hemen ilerlet.
-    // Ardından gelen pull geçici olarak başarısız olduğunda aynı değişikliklerin
-    // bir sonraki denemede gereksiz yere tekrar gönderilmesini önler.
-    await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
+    // Push imlecini gönderilen satırların max(updated_at)'ine bağla — duvar
+    // saati değil. Boş push'ta ilerleme yok (saat geri alınca veri kaybı olmaz).
+    // Inclusive: `updated_at > lastPush` bir sonraki turda aynı satırı
+    // yeniden seçmez; sync sırasında yazılan daha yeni satırlar yakalanır.
+    final pushedMax = _maxUpdatedAtInPayload(payload);
+    if (pushedMax > lastPush) {
+      await PrefsService.setLastPushTime(pushedMax);
+    }
 
     // 2. PULL remote changes
     final pullResult = await _apiService.pull(
@@ -584,7 +608,7 @@ class SyncService {
     }
 
     debugPrint(
-      "Sync complete. pull cursor: $serverTime, push cursor: $pushWatermark",
+      "Sync complete. pull cursor: $serverTime, push cursor: ${pushedMax > lastPush ? pushedMax : lastPush}",
     );
     if (_declareLocalReset) {
       _declareLocalReset = false;

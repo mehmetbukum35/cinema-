@@ -78,7 +78,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     AuthResult result, {
     bool verificationCodeSent = false,
   }) async {
-    if (!mounted) return;
+    if (!mounted) {
+      // Ekran kapanmış olsa bile conflict token'ı yetim bırakma.
+      if (result.status == AuthStatus.conflict) {
+        await ref.read(authProvider.notifier).cancelPendingLogin(result.tokens);
+      }
+      return;
+    }
     if (result.status == AuthStatus.pendingVerification) {
       // E-posta doğrulanmadan oturum açılmaz: kod giriş ekranını aç. Ekran
       // doğrulama sonucunu (başarı/çakışma) AuthResult olarak geri verir.
@@ -95,6 +101,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       if (verifyResult != null && mounted) {
         await _handleAuthResult(verifyResult);
+      } else if (verifyResult != null &&
+          verifyResult.status == AuthStatus.conflict) {
+        await ref
+            .read(authProvider.notifier)
+            .cancelPendingLogin(verifyResult.tokens);
       }
     } else if (result.status == AuthStatus.success) {
       if (mounted) Navigator.of(context).pop();
@@ -110,8 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             );
         if (mounted) Navigator.of(context).pop();
       } else {
-        // İptal: sunucunun çoktan verdiği token çifti kullanılmayacak →
-        // sunucuda iptal et ki yetim refresh token kalmasın.
+        // İptal / unmount: sunucunun verdiği token çifti kullanılmayacak.
         await ref.read(authProvider.notifier).cancelPendingLogin(result.tokens);
       }
     }

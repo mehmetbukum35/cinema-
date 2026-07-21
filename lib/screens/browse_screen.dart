@@ -67,6 +67,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   List<Movie> _airingToday = [];
   List<Movie> _onTheAir = [];
   bool _loading = true;
+  bool _phase2Pending = false;
   Object? _error;
   bool _showOnboardingBanner = false;
 
@@ -351,6 +352,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         _trending = trendingList;
         _showOnboardingBanner = showBanner;
         _loading = false;
+        _phase2Pending = true;
+        _error = null;
       });
 
       // Phase 2: Load secondary lists in the background
@@ -373,10 +376,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               _nowPlaying = List<Movie>.from(phase2Results[4])..shuffle(_rng);
               _airingToday = List<Movie>.from(phase2Results[5])..shuffle(_rng);
               _onTheAir = List<Movie>.from(phase2Results[6])..shuffle(_rng);
+              _phase2Pending = false;
             });
           })
           .catchError((e, st) {
             debugPrint("Error loading secondary browse lists: $e\n$st");
+            if (!mounted || loadGeneration != _loadGeneration) return;
+            setState(() => _phase2Pending = false);
           });
     } catch (e) {
       if (!mounted || loadGeneration != _loadGeneration) return;
@@ -396,6 +402,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         _showOnboardingBanner = false;
         _error = e.toString();
         _loading = false;
+        _phase2Pending = false;
       });
     }
   }
@@ -521,6 +528,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final socialState = ref.watch(socialProvider);
     final isAuthenticated = ref.watch(authProvider).isAuthenticated;
     if (_personal.isEmpty && _trending.isEmpty && _movies.isEmpty) {
+      // Phase 2 henüz doluyorsa boş vitrin = hata değil (iskelet/bekleme).
+      if (_phase2Pending && _error == null) {
+        return const BrowseSkeleton();
+      }
       return BrowseErrorView(error: _error, onRetry: _load);
     }
 

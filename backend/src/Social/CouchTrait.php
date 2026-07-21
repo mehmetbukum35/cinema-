@@ -59,28 +59,38 @@ trait SocialCouchTrait
         $t = now_ms();
         // Tek aktif oturum kuralı: her iki katılımcının da açık oturumları
         // kapatılır — eski bir davet yenisinin önüne geçmesin.
-        $close = $this->db->prepare(
-            "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
-              WHERE (host_id IN (?, ?) OR guest_id IN (?, ?))
-                AND status IN ('pending', 'active')"
-        );
-        $close->execute([$t, $uid, $friendId, $uid, $friendId]);
+        // Transaction: eşzamanlı create'lerde çift pending/active satırı oluşmasın.
+        $this->db->beginTransaction();
+        try {
+            $close = $this->db->prepare(
+                "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+                  WHERE (host_id IN (?, ?) OR guest_id IN (?, ?))
+                    AND status IN ('pending', 'active')"
+            );
+            $close->execute([$t, $uid, $friendId, $uid, $friendId]);
 
-        $ins = $this->db->prepare(
-            'INSERT INTO couch_sessions
-               (host_id, guest_id, status, deck, host_votes, guest_votes, created_at, updated_at)
-             VALUES (?, ?, \'pending\', ?, ?, ?, ?, ?)'
-        );
-        $ins->execute([
-            $uid,
-            $friendId,
-            json_encode($deck, JSON_UNESCAPED_UNICODE),
-            '{}',
-            '{}',
-            $t,
-            $t,
-        ]);
-        $sessionId = (int) $this->db->lastInsertId();
+            $ins = $this->db->prepare(
+                'INSERT INTO couch_sessions
+                   (host_id, guest_id, status, deck, host_votes, guest_votes, created_at, updated_at)
+                 VALUES (?, ?, \'pending\', ?, ?, ?, ?, ?)'
+            );
+            $ins->execute([
+                $uid,
+                $friendId,
+                json_encode($deck, JSON_UNESCAPED_UNICODE),
+                '{}',
+                '{}',
+                $t,
+                $t,
+            ]);
+            $sessionId = (int) $this->db->lastInsertId();
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
 
         $this->notify($friendId, $uid, 'couch_invite', ['session_id' => $sessionId]);
         json_out(200, ['session' => $this->couchPayload($this->loadCouchSession($sessionId), $uid)]);

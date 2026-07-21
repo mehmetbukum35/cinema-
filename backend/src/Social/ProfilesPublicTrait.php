@@ -67,7 +67,8 @@ trait SocialProfilesPublicTrait
                     (SELECT COUNT(*) FROM profile_likes pl
                       WHERE pl.owner_id = u.id) AS like_count,
                     (SELECT COUNT(*) FROM ratings r
-                      WHERE r.user_id = u.id AND r.rating >= 2 AND r.deleted = 0) AS liked_titles
+                      WHERE r.user_id = u.id AND r.rating >= 2 AND r.deleted = 0
+                        AND r.is_private = 0) AS liked_titles
              FROM users u
              WHERE u.is_public = 1 AND u.username IS NOT NULL
              ORDER BY like_count DESC, liked_titles DESC, u.id ASC

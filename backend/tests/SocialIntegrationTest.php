@@ -379,6 +379,26 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame(1, TestHelperRegistry::$lastBody['unseen']); // tekrar unseen oldu
     }
 
+    public function testBlockedSenderHiddenFromRecommendationsInbox(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $this->social->recommend(1, [
+            'friend_id' => 2,
+            'movie_id' => 604,
+            'is_tv' => 0,
+            'title' => 'Blocked Rec',
+            'note' => 'görünmemeli',
+        ]);
+
+        TestHelperRegistry::reset();
+        $this->social->blockUser(2, ['user_id' => 1]);
+
+        TestHelperRegistry::reset();
+        $this->social->getRecommendations(2);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['recommendations']);
+        $this->assertSame(0, TestHelperRegistry::$lastBody['unseen']);
+    }
+
     public function testRecommendRejectsNonFriends(): void
     {
         $this->expectException(TestExitException::class);
@@ -725,6 +745,21 @@ class SocialIntegrationTest extends TestCase
         $feed = TestHelperRegistry::$lastBody['activity'];
         $this->assertCount(1, $feed);
         $this->assertNull($feed[0]['comment']);
+    }
+
+    public function testHiddenLowRatingCommentExcludedFromActivity(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $now = now_ms();
+        $st = $this->db->prepare(
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, genre_ids, updated_at, deleted, comment, is_hidden)
+             VALUES (2, 601, 0, 1, \'Spam Hidden\', \'[]\', ?, 0, \'spam yorum\', 1)'
+        );
+        $st->execute([$now]);
+
+        $this->social->getActivityFeed(1);
+        $feed = TestHelperRegistry::$lastBody['activity'];
+        $this->assertCount(0, $feed);
     }
 
     public function testBlockUserRemovesFriendshipAndFiltersReviews(): void

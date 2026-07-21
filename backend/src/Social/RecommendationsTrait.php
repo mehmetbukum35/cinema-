@@ -64,10 +64,12 @@ trait SocialRecommendationsTrait
              FROM recommendations r
              JOIN users u ON u.id = r.from_user_id
              WHERE r.to_user_id = ?
+               AND r.from_user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
+               AND r.from_user_id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)
              ORDER BY r.created_at DESC
              LIMIT 50'
         );
-        $st->execute([$uid]);
+        $st->execute([$uid, $uid, $uid]);
         $items = $st->fetchAll();
 
         $unseen = 0;

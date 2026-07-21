@@ -32,6 +32,12 @@ class SocialState {
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
   final Map<int, List<ActivityItem>> friendActivities;
 
+  /// Arkadaş aktivitesi sayfalama (tek aktif arkadaş ekranı için).
+  final String? friendActivityCursor;
+  final bool friendActivityHasMore;
+  final bool friendActivityLoadingMore;
+  final int? friendActivityFriendId;
+
   /// "Popüler Listeler": en çok beğeni alan üyeler (sunucudan sıralı gelir).
   final List<TopProfile> topProfiles;
   final bool topProfilesLoading;
@@ -55,6 +61,10 @@ class SocialState {
     this.sentRecommendations = const [],
     this.receivedRecommendations = const [],
     this.friendActivities = const {},
+    this.friendActivityCursor,
+    this.friendActivityHasMore = false,
+    this.friendActivityLoadingMore = false,
+    this.friendActivityFriendId,
     this.topProfiles = const [],
     this.topProfilesLoading = false,
     this.activityCursor,
@@ -77,6 +87,10 @@ class SocialState {
     List<SentRecommendationItem>? sentRecommendations,
     List<ReceivedRecommendationItem>? receivedRecommendations,
     Map<int, List<ActivityItem>>? friendActivities,
+    String? Function()? friendActivityCursor,
+    bool? friendActivityHasMore,
+    bool? friendActivityLoadingMore,
+    int? Function()? friendActivityFriendId,
     List<TopProfile>? topProfiles,
     bool? topProfilesLoading,
     String? Function()? activityCursor,
@@ -100,6 +114,16 @@ class SocialState {
       receivedRecommendations:
           receivedRecommendations ?? this.receivedRecommendations,
       friendActivities: friendActivities ?? this.friendActivities,
+      friendActivityCursor: friendActivityCursor != null
+          ? friendActivityCursor()
+          : this.friendActivityCursor,
+      friendActivityHasMore:
+          friendActivityHasMore ?? this.friendActivityHasMore,
+      friendActivityLoadingMore:
+          friendActivityLoadingMore ?? this.friendActivityLoadingMore,
+      friendActivityFriendId: friendActivityFriendId != null
+          ? friendActivityFriendId()
+          : this.friendActivityFriendId,
       topProfiles: topProfiles ?? this.topProfiles,
       topProfilesLoading: topProfilesLoading ?? this.topProfilesLoading,
       activityCursor: activityCursor != null
@@ -233,21 +257,75 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   Future<void> loadFriendActivity(int friendId) async {
-    state = state.copyWith(loading: true, error: () => null);
+    state = state.copyWith(
+      loading: true,
+      error: () => null,
+      friendActivityFriendId: () => friendId,
+      friendActivityCursor: () => null,
+      friendActivityHasMore: false,
+      friendActivityLoadingMore: false,
+    );
     try {
-      final feed = await _apiService.getActivityFeed(friendId: friendId);
-      final feedList =
-          (feed as List<dynamic>?)
-              ?.map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const [];
+      final page = await _apiService.getActivityFeedPage(friendId: friendId);
+      if (!mounted) return;
+      final feedList = page.items
+          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .toList();
       final map = Map<int, List<ActivityItem>>.from(state.friendActivities);
       map[friendId] = feedList;
-      state = state.copyWith(friendActivities: map, loading: false);
+      state = state.copyWith(
+        friendActivities: map,
+        friendActivityCursor: () => page.nextCursor,
+        friendActivityHasMore: page.hasMore,
+        loading: false,
+      );
     } on ApiException catch (e) {
+      if (!mounted) return;
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(loading: false, error: () => e.toString());
+    }
+  }
+
+  Future<void> loadMoreFriendActivity(int friendId) async {
+    if (state.friendActivityLoadingMore || !state.friendActivityHasMore) {
+      return;
+    }
+    if (state.friendActivityFriendId != friendId) return;
+    final cursor = state.friendActivityCursor;
+    if (cursor == null) return;
+    state = state.copyWith(friendActivityLoadingMore: true);
+    try {
+      final page = await _apiService.getActivityFeedPage(
+        friendId: friendId,
+        cursor: cursor,
+      );
+      if (!mounted) return;
+      final incoming = page.items
+          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .toList();
+      final existing = state.friendActivities[friendId] ?? const [];
+      final map = Map<int, List<ActivityItem>>.from(state.friendActivities);
+      map[friendId] = [...existing, ...incoming];
+      state = state.copyWith(
+        friendActivities: map,
+        friendActivityCursor: () => page.nextCursor,
+        friendActivityHasMore: page.hasMore,
+        friendActivityLoadingMore: false,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(
+        friendActivityLoadingMore: false,
+        error: () => e.message,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(
+        friendActivityLoadingMore: false,
+        error: () => e.toString(),
+      );
     }
   }
 

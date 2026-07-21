@@ -333,15 +333,21 @@ switch (true) {
         break;
 
     case $route === 'POST /social/friends/request':
-        $social->sendFriendRequest($auth->requireUser(), read_json());
+        $uid = $auth->requireUser();
+        rate_limit('friends_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->sendFriendRequest($uid, read_json());
         break;
 
     case $route === 'POST /social/friends/accept':
-        $social->acceptFriendRequest($auth->requireUser(), read_json());
+        $uid = $auth->requireUser();
+        rate_limit('friends_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->acceptFriendRequest($uid, read_json());
         break;
 
     case $route === 'POST /social/friends/reject':
-        $social->rejectFriendRequest($auth->requireUser(), read_json());
+        $uid = $auth->requireUser();
+        rate_limit('friends_u' . $uid, (int) $cfg['rate_limit_per_min'], true);
+        $social->rejectFriendRequest($uid, read_json());
         break;
 
     case $route === 'GET /social/friends/activity':

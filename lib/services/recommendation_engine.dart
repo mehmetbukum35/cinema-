@@ -704,6 +704,11 @@ class RecommendationEngine {
 
     // Sosyal kanıt: arkadaş sinyali olan adayları yükselt + gerekçele.
     applyFriendSignals(scored, friendSignals);
+    // Görünen uyum %, sıralama skorunun friend-boost sonrası haliyle uyumlu olsun
+    // (jitter keşif gürültüsüdür — %'ye yansıtılmaz).
+    for (final s in scored) {
+      s.movie.personalizedMatchScore = toDisplayScore(s.score);
+    }
 
     // Keşif için jitter (gürültü) ekle (yalnızca swipe kuyruğunda kullanılabilir)
     if (jitter > 0.0) {

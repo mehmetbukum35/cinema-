@@ -153,6 +153,14 @@ trait SocialReviewsTrait
         );
         $del->execute([$uid, $blockedId, $blockedId, $uid]);
 
+        // Engellenen kişinin önceki önerileri inbox'ta kalmasın.
+        $purge = $this->db->prepare(
+            'DELETE FROM recommendations
+              WHERE (to_user_id = ? AND from_user_id = ?)
+                 OR (to_user_id = ? AND from_user_id = ?)'
+        );
+        $purge->execute([$uid, $blockedId, $blockedId, $uid]);
+
         json_out(200, ['ok' => true]);
     }
 
