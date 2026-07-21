@@ -186,19 +186,73 @@ $renderSplitShelf = static function (
             overflow: hidden;
             isolation: isolate;
         }
-        /* Soft cinematic ambience — gold / crimson washes that drift slowly. */
-        .hero-stage::before {
-            content: '';
+        /* Visible cinematic aurora — gold & crimson orbs that travel across the hero. */
+        .hero-ambience {
             position: absolute;
-            inset: -12%;
+            inset: 0;
             z-index: 1;
             pointer-events: none;
-            background:
-                radial-gradient(ellipse 55% 45% at 18% 28%, rgba(255, 194, 75, .16), transparent 62%),
-                radial-gradient(ellipse 50% 48% at 82% 18%, rgba(239, 61, 69, .18), transparent 58%),
-                radial-gradient(ellipse 70% 42% at 48% 92%, rgba(255, 214, 140, .08), transparent 55%);
-            mix-blend-mode: soft-light;
-            animation: ambienceDrift 24s ease-in-out infinite alternate;
+            overflow: hidden;
+        }
+        .ambience-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(48px);
+            will-change: transform, opacity;
+        }
+        .ambience-orb--gold {
+            width: min(70vw, 720px);
+            height: min(70vw, 720px);
+            top: -18%;
+            left: -12%;
+            background: radial-gradient(
+                circle,
+                rgba(255, 210, 110, .72) 0%,
+                rgba(255, 194, 75, .38) 32%,
+                rgba(255, 194, 75, .08) 58%,
+                transparent 72%
+            );
+            animation: orbGold 11s ease-in-out infinite alternate;
+        }
+        .ambience-orb--crimson {
+            width: min(65vw, 680px);
+            height: min(65vw, 680px);
+            top: 8%;
+            right: -18%;
+            background: radial-gradient(
+                circle,
+                rgba(255, 70, 78, .62) 0%,
+                rgba(239, 61, 69, .34) 36%,
+                rgba(160, 20, 30, .1) 60%,
+                transparent 74%
+            );
+            animation: orbCrimson 14s ease-in-out infinite alternate;
+        }
+        .ambience-orb--warm {
+            width: min(55vw, 560px);
+            height: min(55vw, 560px);
+            bottom: -22%;
+            left: 28%;
+            background: radial-gradient(
+                circle,
+                rgba(255, 180, 90, .4) 0%,
+                rgba(200, 80, 50, .18) 45%,
+                transparent 70%
+            );
+            animation: orbWarm 16s ease-in-out infinite alternate;
+        }
+        .ambience-ribbon {
+            position: absolute;
+            inset: -30%;
+            background: linear-gradient(
+                118deg,
+                transparent 28%,
+                rgba(255, 214, 140, .22) 44%,
+                rgba(255, 90, 90, .18) 52%,
+                transparent 68%
+            );
+            mix-blend-mode: screen;
+            animation: ribbonSweep 9s ease-in-out infinite;
         }
         .hero-bg {
             position: absolute;
@@ -217,9 +271,8 @@ $renderSplitShelf = static function (
             position: absolute;
             inset: 0;
             background:
-                linear-gradient(180deg, rgba(8, 9, 12, .55) 0%, rgba(8, 9, 12, .35) 35%, rgba(8, 9, 12, .92) 78%, var(--bg) 100%),
-                linear-gradient(90deg, rgba(8, 9, 12, .75) 0%, rgba(8, 9, 12, .25) 55%, rgba(8, 9, 12, .55) 100%),
-                radial-gradient(ellipse at 70% 20%, rgba(239, 61, 69, .18), transparent 45%);
+                linear-gradient(180deg, rgba(8, 9, 12, .42) 0%, rgba(8, 9, 12, .22) 35%, rgba(8, 9, 12, .88) 78%, var(--bg) 100%),
+                linear-gradient(90deg, rgba(8, 9, 12, .55) 0%, rgba(8, 9, 12, .12) 55%, rgba(8, 9, 12, .4) 100%);
         }
         .hero-topbar {
             position: relative;
@@ -506,9 +559,22 @@ $renderSplitShelf = static function (
             from { transform: scale(1.06) translate3d(0, 0, 0); }
             to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
         }
-        @keyframes ambienceDrift {
-            from { transform: translate3d(0, 0, 0) scale(1); opacity: .85; }
-            to { transform: translate3d(3%, -2%, 0) scale(1.08); opacity: 1; }
+        @keyframes orbGold {
+            from { transform: translate3d(0, 0, 0) scale(1); opacity: .75; }
+            to { transform: translate3d(28%, 18%, 0) scale(1.25); opacity: 1; }
+        }
+        @keyframes orbCrimson {
+            from { transform: translate3d(0, 8%, 0) scale(1.05); opacity: .7; }
+            to { transform: translate3d(-32%, -12%, 0) scale(1.3); opacity: 1; }
+        }
+        @keyframes orbWarm {
+            from { transform: translate3d(-8%, 0, 0) scale(1); opacity: .55; }
+            to { transform: translate3d(18%, -16%, 0) scale(1.2); opacity: .95; }
+        }
+        @keyframes ribbonSweep {
+            0% { transform: translate3d(-12%, 4%, 0) rotate(0deg); opacity: .35; }
+            50% { transform: translate3d(8%, -6%, 0) rotate(2deg); opacity: .7; }
+            100% { transform: translate3d(18%, 2%, 0) rotate(-1deg); opacity: .4; }
         }
         @keyframes goldSheen {
             0%, 100% { background-position: 0% 50%; }
@@ -538,15 +604,15 @@ $renderSplitShelf = static function (
                 transform: none;
                 animation: none;
             }
-            .hero-stage::before {
-                animation-duration: 30s;
-                opacity: .9;
+            .hero-ambience .ambience-orb {
+                filter: blur(36px);
             }
+            .ambience-orb--gold { opacity: .9; }
+            .ambience-orb--crimson { opacity: .85; }
             .hero-bg::after {
                 background:
-                    linear-gradient(180deg, rgba(8, 9, 12, .42) 0%, rgba(8, 9, 12, .28) 40%, rgba(8, 9, 12, .88) 72%, var(--bg) 100%),
-                    linear-gradient(90deg, rgba(8, 9, 12, .35) 0%, transparent 40%, rgba(8, 9, 12, .35) 100%),
-                    radial-gradient(ellipse at 50% 18%, rgba(239, 61, 69, .16), transparent 50%);
+                    linear-gradient(180deg, rgba(8, 9, 12, .38) 0%, rgba(8, 9, 12, .2) 40%, rgba(8, 9, 12, .86) 72%, var(--bg) 100%),
+                    linear-gradient(90deg, rgba(8, 9, 12, .28) 0%, transparent 42%, rgba(8, 9, 12, .28) 100%);
             }
             .hero-topbar, .hero-content, .shell { width: min(100% - 24px, 1180px); }
             .hero-topbar { padding-top: 16px; }
@@ -566,6 +632,8 @@ $renderSplitShelf = static function (
             }
             .reveal { opacity: 1; transform: none; }
             .hero-bg { transform: none; }
+            .hero-ambience { opacity: .45; }
+            .ambience-orb, .ambience-ribbon { filter: none; }
             .eyebrow {
                 color: var(--gold);
                 background: none;
@@ -598,6 +666,12 @@ $renderSplitShelf = static function (
             }
         }
     ?> aria-hidden="true"></div>
+    <div class="hero-ambience" aria-hidden="true">
+        <span class="ambience-orb ambience-orb--gold"></span>
+        <span class="ambience-orb ambience-orb--crimson"></span>
+        <span class="ambience-orb ambience-orb--warm"></span>
+        <span class="ambience-ribbon"></span>
+    </div>
     <nav class="hero-topbar" aria-label="Cinema+">
         <a class="brand" href="https://cinema.mbkm.com.tr">cinema<b>+</b></a>
         <a class="lang" href="?lang=<?= ($lang ?? 'tr') === 'tr' ? 'en' : 'tr' ?>" hreflang="<?= ($lang ?? 'tr') === 'tr' ? 'en' : 'tr' ?>"><?= ($lang ?? 'tr') === 'tr' ? 'EN' : 'TR' ?></a>
