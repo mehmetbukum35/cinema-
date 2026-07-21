@@ -190,14 +190,16 @@ class TasteDnaWebText
 
         $genres = [];
         foreach ((array) ($dna['top_genres'] ?? []) as $g) {
-            $genres[] = self::genreName((int) $g, $lang);
+            if (is_numeric($g)) {
+                $genres[] = self::genreName((int) $g, $lang);
+            }
         }
 
         $signals = [];
 
         $era = isset($dna['era']) && $dna['era'] !== null ? (string) $dna['era'] : null;
         if ($era !== null) {
-            $modernShare = (float) ($dna['modern_share'] ?? 0);
+            $modernShare = is_numeric($dna['modern_share'] ?? null) ? (float) $dna['modern_share'] : 0.0;
             $signals[] = match ($era) {
                 'modern' => $en
                     ? 'A modern soul — ' . self::pctPossessive($modernShare, $lang) . ' of your loves are post-2015.'
@@ -228,7 +230,7 @@ class TasteDnaWebText
 
         $critic = isset($dna['critic']) && $dna['critic'] !== null ? (string) $dna['critic'] : null;
         if ($critic !== null) {
-            $harikaShare = (float) ($dna['harika_share'] ?? 0);
+            $harikaShare = is_numeric($dna['harika_share'] ?? null) ? (float) $dna['harika_share'] : 0.0;
             $signals[] = match ($critic) {
                 'tough' => $en
                     ? 'A tough critic — only ' . self::pctPossessive($harikaShare, $lang) . ' of your ratings are "Great".'
@@ -242,14 +244,14 @@ class TasteDnaWebText
             };
         }
 
-        if (isset($dna['blind_spot']) && $dna['blind_spot'] !== null) {
+        if (isset($dna['blind_spot']) && $dna['blind_spot'] !== null && is_numeric($dna['blind_spot'])) {
             $genre = self::genreName((int) $dna['blind_spot'], $lang);
             $signals[] = $en
                 ? 'Your blind spot: ' . $genre . ' — it just doesn\'t reach you.'
                 : 'Kör noktası: ' . $genre . ' — pek hitap etmiyor.';
         }
 
-        if (isset($dna['shift_from'], $dna['shift_to']) && $dna['shift_from'] !== null && $dna['shift_to'] !== null) {
+        if (isset($dna['shift_from'], $dna['shift_to']) && $dna['shift_from'] !== null && $dna['shift_to'] !== null && is_numeric($dna['shift_from']) && is_numeric($dna['shift_to'])) {
             $from = self::genreName((int) $dna['shift_from'], $lang);
             $to = self::genreName((int) $dna['shift_to'], $lang);
             $signals[] = $en
@@ -258,7 +260,7 @@ class TasteDnaWebText
         }
 
         $accuracy = null;
-        if (isset($dna['accuracy']) && $dna['accuracy'] !== null && (float)$dna['accuracy'] >= 0.40) {
+        if (isset($dna['accuracy']) && $dna['accuracy'] !== null && is_numeric($dna['accuracy']) && (float)$dna['accuracy'] >= 0.40) {
             $sample = (int) ($dna['accuracy_sample'] ?? 0);
             $accuracy = $en
                 ? 'Taste match rate in recent recommendations: ' . self::pct((float) $dna['accuracy'], $lang)

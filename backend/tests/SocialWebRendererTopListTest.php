@@ -51,4 +51,21 @@ final class SocialWebRendererTopListTest extends TestCase
         $this->assertSame([1, 3], array_map('intval', array_column($movies, 'movie_id')));
         $this->assertSame([2], array_map('intval', array_column($shows, 'movie_id')));
     }
+
+    public function testSocialDelegatesToWebRenderer(): void
+    {
+        $db = new PDO('sqlite::memory:');
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, display_name TEXT, username TEXT, is_public INTEGER, taste_dna TEXT)');
+
+        $db->exec("INSERT INTO users (id, display_name, username, is_public) VALUES (1, 'Mehmet', 'mehmetbukum', 1)");
+
+        $social = new Social($db);
+        $this->assertTrue(method_exists($social, 'renderPublicWebProfile'));
+
+        $method = (new ReflectionClass($social))->getMethod('webRenderer');
+        $method->setAccessible(true);
+        $renderer = $method->invoke($social);
+        $this->assertInstanceOf(SocialWebRenderer::class, $renderer);
+    }
 }

@@ -33,4 +33,9 @@ class Social
         private ?SocialWebRenderer $webRenderer = null,
         private ?Fcm $fcm = null
     ) {}
+
+    public function webRenderer(): SocialWebRenderer
+    {
+        return $this->webRenderer ??= new SocialWebRenderer($this->db);
+    }
 }

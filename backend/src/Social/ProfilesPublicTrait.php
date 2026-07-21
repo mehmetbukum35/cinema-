@@ -194,4 +194,9 @@ trait SocialProfilesPublicTrait
     {
         $this->webRenderer()->renderDownloadPage();
     }
+
+    private function webRenderer(): SocialWebRenderer
+    {
+        return $this->webRenderer ??= new SocialWebRenderer($this->db);
+    }
 }

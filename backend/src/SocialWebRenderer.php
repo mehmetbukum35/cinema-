@@ -14,100 +14,112 @@ class SocialWebRenderer
         $lang = self::resolveWebProfileLang();
         $t = self::webStrings($lang);
 
-        // Kullanıcıyı bul
-        $st = $this->db->prepare('SELECT id, display_name, username, is_public, taste_dna FROM users WHERE username = ?');
-        $st->execute([$username]);
-        $user = $st->fetch();
+        try {
+            // Kullanıcıyı bul
+            $st = $this->db->prepare('SELECT id, display_name, username, is_public, taste_dna FROM users WHERE username = ?');
+            $st->execute([$username]);
+            $user = $st->fetch();
 
-        if (!$user) {
-            $this->renderWebError($t['not_found_title'], $t['not_found_desc']);
-            return;
-        }
+            if (!$user) {
+                $this->renderWebError($t['not_found_title'], $t['not_found_desc']);
+                return;
+            }
 
-        if ((int) $user['is_public'] !== 1) {
-            $this->renderWebError($t['private_title'], $t['private_desc']);
-            return;
-        }
+            if ((int) $user['is_public'] !== 1) {
+                $this->renderWebError($t['private_title'], $t['private_desc']);
+                return;
+            }
 
-        $userId = (int) $user['id'];
+            $userId = (int) $user['id'];
 
-        // Beğendikleri (Rating = 3 "Harika")
-        $stRatings = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
-                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                    COALESCE(t.release_date, tf.release_date) AS release_date
-             FROM ratings r
-             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
-             LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
-             WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
-             ORDER BY r.updated_at DESC
-             LIMIT 24'
-        );
-        $stRatings->execute([$lang, $userId]);
-        $ratings = $stRatings->fetchAll();
+            // Beğendikleri (Rating = 3 "Harika")
+            $stRatings = $this->db->prepare(
+                'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
+                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                        COALESCE(t.release_date, tf.release_date) AS release_date
+                 FROM ratings r
+                 LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+                 LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
+                 WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
+                 ORDER BY r.updated_at DESC
+                 LIMIT 24'
+            );
+            $stRatings->execute([$lang, $userId]);
+            $ratings = $stRatings->fetchAll();
 
-        // İyi Buldukları (Rating = 2 "İyi")
-        $stGoodRatings = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
-                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                    COALESCE(t.release_date, tf.release_date) AS release_date
-             FROM ratings r
-             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
-             LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
-             WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
-             ORDER BY r.updated_at DESC
-             LIMIT 24'
-        );
-        $stGoodRatings->execute([$lang, $userId]);
-        $goodRatings = $stGoodRatings->fetchAll();
+            // İyi Buldukları (Rating = 2 "İyi")
+            $stGoodRatings = $this->db->prepare(
+                'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
+                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                        COALESCE(t.release_date, tf.release_date) AS release_date
+                 FROM ratings r
+                 LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+                 LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
+                 WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
+                 ORDER BY r.updated_at DESC
+                 LIMIT 24'
+            );
+            $stGoodRatings->execute([$lang, $userId]);
+            $goodRatings = $stGoodRatings->fetchAll();
 
-        // Watchlist
-        $stWatch = $this->db->prepare(
-            'SELECT w.id as movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
-                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                    COALESCE(t.release_date, tf.release_date) AS release_date
-             FROM watchlist w
-             LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv AND t.locale = ?
-             LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
-             WHERE w.user_id = ? AND w.deleted = 0
-             ORDER BY w.created_at DESC
-             LIMIT 24'
-        );
-        $stWatch->execute([$lang, $userId]);
-        $watchlist = $stWatch->fetchAll();
+            // Watchlist
+            $stWatch = $this->db->prepare(
+                'SELECT w.id as movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
+                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                        COALESCE(t.release_date, tf.release_date) AS release_date
+                 FROM watchlist w
+                 LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv AND t.locale = ?
+                 LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
+                 WHERE w.user_id = ? AND w.deleted = 0
+                 ORDER BY w.created_at DESC
+                 LIMIT 24'
+            );
+            $stWatch->execute([$lang, $userId]);
+            $watchlist = $stWatch->fetchAll();
 
-        // Kişisel Top 20: favorites.created_at bir zaman damgası değil, kullanıcının
-        // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
-        $topMovies = $this->loadTopList($userId, false, $lang);
-        $topShows = $this->loadTopList($userId, true, $lang);
+            // Kişisel Top 20: favorites.created_at bir zaman damgası değil, kullanıcının
+            // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
+            $topMovies = $this->loadTopList($userId, false, $lang);
+            $topShows = $this->loadTopList($userId, true, $lang);
 
-        $greatMovies = $this->partitionByMedia($ratings, false);
-        $greatShows = $this->partitionByMedia($ratings, true);
-        $goodMovies = $this->partitionByMedia($goodRatings, false);
-        $goodShows = $this->partitionByMedia($goodRatings, true);
-        $watchMovies = $this->partitionByMedia($watchlist, false);
-        $watchShows = $this->partitionByMedia($watchlist, true);
+            $greatMovies = $this->partitionByMedia($ratings, false);
+            $greatShows = $this->partitionByMedia($ratings, true);
+            $goodMovies = $this->partitionByMedia($goodRatings, false);
+            $goodShows = $this->partitionByMedia($goodRatings, true);
+            $watchMovies = $this->partitionByMedia($watchlist, false);
+            $watchShows = $this->partitionByMedia($watchlist, true);
 
-        $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
-        $userHandle = htmlspecialchars($user['username']);
+            $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
+            $userHandle = htmlspecialchars($user['username']);
 
-        // Sinema DNA (snapshot varsa ve hazırsa gösterim dizisi; yoksa null)
-        $dna = null;
-        if (!empty($user['taste_dna'])) {
-            $decoded = json_decode((string) $user['taste_dna'], true);
-            $dna = TasteDnaWebText::build(is_array($decoded) ? $decoded : null, $lang);
-        }
+            // Sinema DNA (snapshot varsa ve hazırsa gösterim dizisi; yoksa null)
+            $dna = null;
+            if (!empty($user['taste_dna'])) {
+                $decoded = json_decode((string) $user['taste_dna'], true);
+                $dna = TasteDnaWebText::build(is_array($decoded) ? $decoded : null, $lang);
+            }
 
-        $templatePath = __DIR__ . '/templates/profile.template.php';
-        if (is_file($templatePath)) {
-            require $templatePath;
-        } else {
+            $templatePath = __DIR__ . '/templates/profile.template.php';
+            if (is_file($templatePath)) {
+                require $templatePath;
+            } else {
+                $this->renderWebError($t['tmpl_error_title'], $t['tmpl_error_desc']);
+            }
+        } catch (Throwable $ex) {
+            if (function_exists('cinema_log')) {
+                cinema_log('critical', 'Error rendering public profile: ' . $ex->getMessage(), [
+                    'exception' => get_class($ex),
+                    'file' => $ex->getFile(),
+                    'line' => $ex->getLine(),
+                    'username' => $username,
+                ]);
+            }
             $this->renderWebError($t['tmpl_error_title'], $t['tmpl_error_desc']);
         }
         exit;
