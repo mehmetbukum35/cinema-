@@ -378,6 +378,13 @@ switch (true) {
         $social->getTopProfiles($auth->requireUser());
         break;
 
+    // ── Topluluk "Popüler Top 20" (başlık listeleri) ───────────────────────
+    // Cron ile önhesaplanır (popular_titles); herkese açık, misafirler de görür.
+    case $route === 'GET /titles/popular':
+        rate_limit('popular_titles', (int) ($cfg['tmdb_rate_limit_per_min'] ?? 120), false);
+        $social->getPopularTitles(($_GET['type'] ?? 'movie') === 'tv' ? 'tv' : 'movie');
+        break;
+
     case $route === 'POST /social/profile/like':
         $uid = $auth->requireUser();
         rate_limit('profile_like', (int) $cfg['rate_limit_per_min'], true);

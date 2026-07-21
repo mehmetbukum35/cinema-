@@ -133,6 +133,56 @@ final class MaintenanceTest extends TestCase
         self::assertNotNull($this->db->query('SELECT invalidated_at FROM sync_devices')->fetchColumn());
     }
 
+    public function testRecomputePopularTitlesRanksByDistinctUserVotes(): void
+    {
+        $n = $this->now;
+        $this->db->exec(
+            "INSERT INTO favorites VALUES
+             (1, 100, 0, $n, 0), (2, 100, 0, $n, 0), (3, 100, 0, $n, 0),
+             (1, 200, 0, $n, 0), (2, 200, 0, $n, 0),
+             (1, 300, 0, $n, 1),
+             (1, 900, 1, $n, 0), (2, 900, 1, $n, 0),
+             (1, 901, 1, $n, 0)"
+        );
+
+        $result = (new Maintenance($this->db))->run($n);
+
+        self::assertSame(4, $result['popular_titles_written']);
+
+        $movies = $this->db->query(
+            'SELECT tmdb_id, `rank`, votes FROM popular_titles WHERE is_tv = 0 ORDER BY `rank`'
+        )->fetchAll();
+        self::assertSame([100, 200], array_map(fn ($r) => (int) $r['tmdb_id'], $movies));
+        self::assertSame([1, 2], array_map(fn ($r) => (int) $r['rank'], $movies));
+        self::assertSame(3, (int) $movies[0]['votes']);
+
+        $tv = $this->db->query(
+            'SELECT tmdb_id FROM popular_titles WHERE is_tv = 1 ORDER BY `rank`'
+        )->fetchAll();
+        self::assertSame([900, 901], array_map(fn ($r) => (int) $r['tmdb_id'], $tv));
+    }
+
+    public function testRecomputePopularTitlesHonorsMinVotesAndReplaces(): void
+    {
+        $n = $this->now;
+        $this->db->exec(
+            "INSERT INTO favorites VALUES
+             (1, 100, 0, $n, 0), (2, 100, 0, $n, 0),
+             (1, 200, 0, $n, 0)"
+        );
+
+        (new Maintenance($this->db, ['popular_min_votes' => 2]))->run($n);
+        $rows = $this->db->query('SELECT tmdb_id FROM popular_titles WHERE is_tv = 0')->fetchAll();
+        self::assertSame([100], array_map(fn ($r) => (int) $r['tmdb_id'], $rows));
+
+        // Re-run replaces rather than appending (no PK conflict, no duplicates).
+        (new Maintenance($this->db, ['popular_min_votes' => 2]))->run($n + 1000);
+        self::assertSame(
+            1,
+            (int) $this->db->query('SELECT COUNT(*) FROM popular_titles WHERE is_tv = 0')->fetchColumn()
+        );
+    }
+
     private function createSchema(): void
     {
         $this->db->exec('CREATE TABLE search_history (user_id INTEGER, query TEXT, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, query))');
@@ -140,6 +190,7 @@ final class MaintenanceTest extends TestCase
         foreach (['watchlist', 'favorites'] as $table) {
             $this->db->exec("CREATE TABLE $table (user_id INTEGER, id INTEGER, is_tv INTEGER, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, id, is_tv))");
         }
+        $this->db->exec('CREATE TABLE popular_titles (is_tv INTEGER, `rank` INTEGER, tmdb_id INTEGER, votes INTEGER, computed_at INTEGER, PRIMARY KEY (is_tv, `rank`))');
         $this->db->exec('CREATE TABLE watched_seasons (user_id INTEGER, tv_id INTEGER, season_number INTEGER, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, tv_id, season_number))');
         $this->db->exec('CREATE TABLE sync_devices (user_id INTEGER, device_id TEXT, last_ack_cursor INTEGER, last_seen_at INTEGER, created_at INTEGER, invalidated_at INTEGER, PRIMARY KEY (user_id, device_id))');
         $this->db->exec('CREATE TABLE sync_gc_state (user_id INTEGER PRIMARY KEY, gc_cursor INTEGER, updated_at INTEGER)');

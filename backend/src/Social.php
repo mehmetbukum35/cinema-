@@ -11,6 +11,7 @@ require_once __DIR__ . '/Social/MatchTrait.php';
 require_once __DIR__ . '/Social/RecommendationsTrait.php';
 require_once __DIR__ . '/Social/ReviewsTrait.php';
 require_once __DIR__ . '/Social/ProfilesPublicTrait.php';
+require_once __DIR__ . '/Social/TitlesPublicTrait.php';
 require_once __DIR__ . '/Social/CouchTrait.php';
 
 class Social
@@ -24,6 +25,7 @@ class Social
     use SocialRecommendationsTrait;
     use SocialReviewsTrait;
     use SocialProfilesPublicTrait;
+    use SocialTitlesPublicTrait;
     use SocialCouchTrait;
 
     public function __construct(

@@ -137,6 +137,26 @@ mixin RecommendationApi on ApiClient {
     }
   }
 
+  /// Topluluk "Popüler Top 20" (film ya da dizi). Kimlik doğrulaması gerekmez —
+  /// misafirler de görebilir. Sunucu cron ile önhesaplar; bu çağrı hafiftir.
+  Future<List<dynamic>> getPopularTitles(bool isTV) async {
+    final type = isTV ? 'tv' : 'movie';
+    final response = await _request(
+      'GET',
+      '/titles/popular?type=$type',
+      requireAuth: false,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) {
+      return data['titles'] as List<dynamic>? ?? const [];
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Popüler liste yüklenemedi.',
+      code: data['code'] as String?,
+    );
+  }
+
   Future<Map<String, dynamic>> getTitleScore(String type, int id) async {
     final response = await _request(
       'GET',

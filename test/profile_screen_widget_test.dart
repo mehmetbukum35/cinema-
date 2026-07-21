@@ -127,16 +127,17 @@ void main() {
 
       expect(find.text('Google'), findsOneWidget);
 
-      final scrollFinder = find.byType(CustomScrollView);
-      await tester.drag(scrollFinder, const Offset(0, -600));
-      await tester.pump();
-
       final googleUnlinkText = find.byWidgetPredicate(
         (w) =>
             w is Text &&
             w.data != null &&
             (w.data!.contains('Google Bağlantısını Kaldır') ||
                 w.data!.contains('Unlink Google Account')),
+      );
+      await tester.scrollUntilVisible(
+        googleUnlinkText,
+        300,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(googleUnlinkText, findsWidgets);
 
@@ -183,16 +184,17 @@ void main() {
 
       expect(find.text('Apple'), findsOneWidget);
 
-      final scrollFinder = find.byType(CustomScrollView);
-      await tester.drag(scrollFinder, const Offset(0, -600));
-      await tester.pump();
-
       final appleUnlinkText = find.byWidgetPredicate(
         (w) =>
             w is Text &&
             w.data != null &&
             (w.data!.contains('Apple Bağlantısını Kaldır') ||
                 w.data!.contains('Unlink Apple Account')),
+      );
+      await tester.scrollUntilVisible(
+        appleUnlinkText,
+        300,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(appleUnlinkText, findsWidgets);
 

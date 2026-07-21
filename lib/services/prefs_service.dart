@@ -231,6 +231,14 @@ class PrefsService {
 
   // ─── Favourite movies / shows ────────────────────────────────────────────────
 
+  static Future<List<Movie>> getFavoriteMovies() =>
+      DatabaseHelper().getFavorites(false);
+
+  static Future<List<Movie>> getFavoriteTvShows() =>
+      DatabaseHelper().getFavorites(true);
+
+  /// Favori listesinin tamamını (sıra dahil) yeniden yazar. Top 20 düzenleme
+  /// ekranı ve sıralama işlemleri buradan geçer — liste otoritedir.
   static Future<void> saveFavoriteMovies(List<Movie> movies) async {
     await DatabaseHelper().saveFavorites(
       movies,
@@ -244,6 +252,36 @@ class PrefsService {
     await DatabaseHelper().saveFavorites(
       shows,
       true,
+      metadataLocale: activeLanguageCode,
+    );
+    invalidateGenreWeights();
+  }
+
+  /// Yeni seçimleri mevcut favorilerin ÜSTÜNE YAZMADAN birleştirir: var olan
+  /// sıra korunur, listede olmayan yeni öğeler sona eklenir (20 sınırı). Onboarding
+  /// buradan geçer — böylece "Zevk Analizini Yeniden Başlat" kullanıcının Top 20'sini
+  /// 3'e düşürmez (bkz. TOP20_PLANI.md, Faz 1 clobber düzeltmesi).
+  static const favoritesCap = 20;
+
+  static Future<void> mergeFavoriteMovies(List<Movie> picks) =>
+      _mergeFavorites(picks, false);
+
+  static Future<void> mergeFavoriteTvShows(List<Movie> picks) =>
+      _mergeFavorites(picks, true);
+
+  static Future<void> _mergeFavorites(List<Movie> picks, bool isTV) async {
+    final existing = await DatabaseHelper().getFavorites(isTV);
+    final merged = <Movie>[...existing];
+    for (final pick in picks) {
+      if (merged.length >= favoritesCap) break;
+      if (merged.any((m) => m.id == pick.id)) continue;
+      merged.add(pick);
+    }
+    // Değişiklik yoksa gereksiz yazma/sıra bozulması olmasın.
+    if (merged.length == existing.length) return;
+    await DatabaseHelper().saveFavorites(
+      merged,
+      isTV,
       metadataLocale: activeLanguageCode,
     );
     invalidateGenreWeights();

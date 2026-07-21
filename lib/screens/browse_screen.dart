@@ -13,7 +13,9 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
+import '../widgets/app_cached_image.dart';
 import '../widgets/tonight_pick_card.dart';
+import 'top_list/top_rank_badge.dart';
 import 'browse/browse_skeleton.dart';
 import 'browse/browse_card.dart';
 import 'browse/browse_error_view.dart';
@@ -25,6 +27,7 @@ import 'browse/onboarding_banner.dart';
 import 'movie_detail_sheet.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/popular_titles_provider.dart';
 
 /// Keşfet orkestratörü: öneri motoru kablolaması (günlük tohumlu seçki,
 /// vitrin havuzu, keşif dilimi) ve ray düzeni burada; kartlar ve yardımcı
@@ -532,7 +535,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     return RefreshIndicator(
       color: c.gold,
       backgroundColor: c.surface,
-      onRefresh: () => _load(background: true),
+      onRefresh: () {
+        // Topluluk listeleri oturum boyu önbellekli; elle yenilemede tazele.
+        ref.invalidate(popularTitlesProvider(false));
+        ref.invalidate(popularTitlesProvider(true));
+        return _load(background: true);
+      },
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(
@@ -629,6 +637,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           // ── Popüler Üyeler ─────────────────────────────────────────────────────────
           if (isAuthenticated && socialState.topProfiles.isNotEmpty)
             _topProfilesSection(socialState.topProfiles),
+
+          // ── Topluluğun Favorileri: Popüler Top 20 (Film + Dizi) ───────────────
+          // Tüm kullanıcıların Top 20'lerinden türeyen küresel liste (cron ile
+          // önhesaplı). Veri yoksa bölüm gizlenir.
+          _popularCommunitySection(false),
+          _popularCommunitySection(true),
 
           // ── Bu Hafta Trend ────────────────────────────────────────────────────
           if (_trending.isNotEmpty)
@@ -804,6 +818,46 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     );
   }
 
+  /// Topluluk "Popüler Top 20" rayı (Film ya da Dizi). Veri yoksa/hata varsa
+  /// görünmez — cron henüz koşmamış veya boşsa Keşfet'i kirletmez.
+  Widget _popularCommunitySection(bool isTV) {
+    final items =
+        ref.watch(popularTitlesProvider(isTV)).value ??
+        const <PopularTitle>[];
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final title =
+        AppLocalizations.of(context)?.get(
+          isTV ? 'popular_top_tv_title' : 'popular_top_movies_title',
+        ) ??
+        (isTV ? 'Popüler Top 20 Dizi' : 'Popüler Top 20 Film');
+    return SliverToBoxAdapter(
+      child: EntranceFade(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BrowseSectionHeader(title: title, gradient: CinemaGradients.gold),
+            SizedBox(
+              height: 250,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: items.length,
+                itemBuilder: (ctx, i) => _PopularRankCard(
+                  entry: items[i],
+                  onTap: () => _openDetail(items[i].movie),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openDetail(Movie movie) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -811,6 +865,84 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => MovieDetailSheet(movie: movie, service: _service),
+    );
+  }
+}
+
+/// Topluluk popüler rayı kartı: poster + sıra rozeti + oy sayısı.
+class _PopularRankCard extends StatelessWidget {
+  final PopularTitle entry;
+  final VoidCallback onTap;
+
+  const _PopularRankCard({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final m = entry.movie;
+    final votesLabel =
+        AppLocalizations.of(
+          context,
+        )?.get('popular_votes_label').replaceAll('{}', '${entry.votes}') ??
+        '${entry.votes}';
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 130,
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AppCachedNetworkImage(
+                      imageUrl: m.posterUrl,
+                      fit: BoxFit.cover,
+                      preset: AppImageCachePreset.poster,
+                      placeholder: (ctx, url) => ColoredBox(color: c.card),
+                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
+                    ),
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: TopRankBadge(rank: entry.rank, size: 28),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              m.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: c.ink,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Row(
+              children: [
+                Icon(Icons.favorite_rounded, color: c.red, size: 11),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    votesLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: c.dim, fontSize: 11.5),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

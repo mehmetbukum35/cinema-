@@ -57,6 +57,18 @@ CREATE TABLE `titles` (
 
 -- --------------------------------------------------------
 
+-- Cron ile önhesaplanan topluluk "Popüler Top 20" listeleri (bkz. migration 022).
+CREATE TABLE `popular_titles` (
+  `is_tv` tinyint(1) NOT NULL,
+  `rank` smallint(6) NOT NULL,
+  `tmdb_id` int(11) NOT NULL,
+  `votes` int(11) NOT NULL,
+  `computed_at` bigint(20) NOT NULL,
+  PRIMARY KEY (`is_tv`,`rank`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
 --
 -- Tablo için tablo yapısı `friends`
 --

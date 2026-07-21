@@ -120,11 +120,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (!mounted) return;
       setState(() => _step = 2);
     } else if (_step == 2) {
-      await PrefsService.saveFavoriteMovies(_favMovies);
+      // Birleştir, üzerine yazma: kullanıcının mevcut Top 20'si (varsa) korunur.
+      await PrefsService.mergeFavoriteMovies(_favMovies);
       if (!mounted) return;
       setState(() => _step = 3);
     } else if (_step == 3) {
-      await PrefsService.saveFavoriteTvShows(_favTvShows);
+      await PrefsService.mergeFavoriteTvShows(_favTvShows);
       if (!mounted) return;
       setState(() {
         _step = 4;
