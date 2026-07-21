@@ -79,6 +79,11 @@ class SocialWebRenderer
         $stWatch->execute([$lang, $userId]);
         $watchlist = $stWatch->fetchAll();
 
+        // Kişisel Top 20: favorites.created_at bir zaman damgası değil, kullanıcının
+        // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
+        $topMovies = $this->loadTopList($userId, false, $lang);
+        $topShows = $this->loadTopList($userId, true, $lang);
+
         $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
         $userHandle = htmlspecialchars($user['username']);
 
@@ -141,6 +146,17 @@ class SocialWebRenderer
                 'og_dna_title'    => "%s's Cinema DNA: %s",
                 'og_dna_desc'     => 'Archetype: %s - %s',
                 'cta'             => 'Match & Watch with %s',
+                'brand_kicker'    => 'PUBLIC CINEMA PROFILE',
+                'hero_desc'       => 'A personal map of taste, favorites and what comes next.',
+                'top_title'       => 'The Definitive Top 20',
+                'top_desc'        => 'Hand-picked and ranked — not an algorithmic list.',
+                'top_movies'      => 'Movies',
+                'top_shows'       => 'TV Shows',
+                'top_empty_movies' => 'No favorite movies ranked yet.',
+                'top_empty_shows' => 'No favorite TV shows ranked yet.',
+                'dna_kicker'      => 'CINEMA DNA',
+                'dna_themes'      => 'Recurring themes',
+                'more_title'      => 'More from this profile',
                 'show_all_themes' => 'Tap to See All',
                 'sec_great'       => '🍿 Rated Great',
                 'sec_good'        => '👍 Rated Good',
@@ -166,6 +182,17 @@ class SocialWebRenderer
             'og_dna_title'    => "%s Sinema DNA'sı: %s",
             'og_dna_desc'     => 'Arketip: %s - %s',
             'cta'             => '%s ile Eşleş ve İzle',
+            'brand_kicker'    => 'HERKESE AÇIK SİNEMA PROFİLİ',
+            'hero_desc'       => 'Zevkinin, favorilerinin ve sıradaki keşiflerinin kişisel haritası.',
+            'top_title'       => 'Kesin Top 20',
+            'top_desc'        => 'Algoritma değil; özenle seçilmiş ve bizzat sıralanmış favoriler.',
+            'top_movies'      => 'Filmler',
+            'top_shows'       => 'Diziler',
+            'top_empty_movies' => 'Henüz sıralanmış favori film yok.',
+            'top_empty_shows' => 'Henüz sıralanmış favori dizi yok.',
+            'dna_kicker'      => 'SİNEMA DNA’SI',
+            'dna_themes'      => 'Tekrar eden temalar',
+            'more_title'      => 'Profilin devamı',
             'show_all_themes' => 'Tümünü Görmek İçin Dokunun',
             'sec_great'       => '🍿 Harika Buldukları',
             'sec_good'        => '👍 İyi Buldukları',
@@ -178,6 +205,31 @@ class SocialWebRenderer
             'sub_movies'      => '🎬 Filmler',
             'sub_tv'          => '📺 Diziler',
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function loadTopList(int $userId, bool $isTv, string $lang): array
+    {
+        $st = $this->db->prepare(
+            'SELECT f.id AS movie_id, f.is_tv,
+                    COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
+             FROM favorites f
+             LEFT JOIN titles t ON t.tmdb_id = f.id AND t.is_tv = f.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = f.id AND tf.is_tv = f.is_tv AND tf.locale = \'und\'
+             WHERE f.user_id = ? AND f.is_tv = ? AND f.deleted = 0
+             ORDER BY f.created_at ASC, f.id ASC
+             LIMIT 20'
+        );
+        $st->execute([$lang, $userId, $isTv ? 1 : 0]);
+        $rows = $st->fetchAll();
+        foreach ($rows as $index => &$row) {
+            $row['rank'] = $index + 1;
+        }
+        unset($row);
+        return $rows;
     }
 
     // Yardımcı: Şık Hata Sayfası oluşturucu (Web için)

@@ -161,7 +161,13 @@ class TasteDnaWebText
                 $raw = self::cleanRawKeyword($key);
             } else {
                 $themesTr = self::getThemesTr();
-                $raw = $themesTr[$key] ?? self::cleanRawKeyword($key);
+                // TMDB anahtarları İngilizcedir. Türkçe profilde sözlük dışı
+                // anahtarı ham göstermek iki dili karıştırıyordu; kontrollü
+                // taksonominin dışında kalanları sessizce atla.
+                if (!isset($themesTr[$key])) {
+                    continue;
+                }
+                $raw = $themesTr[$key];
             }
             if ($raw === '') {
                 continue;

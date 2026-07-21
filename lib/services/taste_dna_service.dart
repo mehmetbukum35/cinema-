@@ -64,6 +64,19 @@ class TasteDnaService {
     'live action',
     'sequel',
     'remake',
+    // Kişi/rol belirten genel anahtarlar zevki açıklayan bir tema değildir.
+    'man',
+    'woman',
+    'boy',
+    'girl',
+    'father',
+    'mother',
+    'son',
+    'daughter',
+    'king',
+    'queen',
+    'male protagonist',
+    'female protagonist',
   };
 
   /// Saf çekirdek: girdilerden DNA üretir. [themes] önceden çözülmüş keyword

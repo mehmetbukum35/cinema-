@@ -134,7 +134,7 @@ void main() {
         null,
         _dna(themes: ['revenge', 'dystopia', 'obscurekeyword']),
       );
-      expect(p.themeChips, ['İntikam', 'Distopya', 'Obscurekeyword']);
+      expect(p.themeChips, ['İntikam', 'Distopya']);
     });
 
     test('EN etiket sözlüğünden Title Case gösterir', () {

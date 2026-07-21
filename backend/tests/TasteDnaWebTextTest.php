@@ -35,14 +35,14 @@ class TasteDnaWebTextTest extends TestCase
         $this->assertSame(['Korku', 'Gerilim'], $view['genres']);
     }
 
-    public function testUnknownThemeStaysEnglishCapitalized(): void
+    public function testUnknownThemeIsHiddenOnTurkishProfile(): void
     {
         $view = TasteDnaWebText::build([
             'archetype' => 'genre_nomad',
             'total_rated' => 20,
             'themes' => ['obscurekeyword'],
         ]);
-        $this->assertSame(['Obscurekeyword'], $view['themes']);
+        $this->assertSame([], $view['themes']);
     }
 
     public function testEmbedsPercentagesInSignals(): void
@@ -127,10 +127,8 @@ class TasteDnaWebTextTest extends TestCase
         ]);
         
         $this->assertNotNull($view);
-        // "teheran (tehran), iran" -> "Teheran"
-        // "tokyo, japan" -> "Tokyo"
-        // "family" -> "Aile" (translated)
-        $this->assertSame(['Teheran', 'Tokyo', 'Aile'], $view['themes']);
+        // Sözlük dışı yer anahtarları Türkçe profilde ham İngilizce gösterilmez.
+        $this->assertSame(['Aile'], $view['themes']);
     }
 
     public function testHandlesSecondaryArchetype(): void

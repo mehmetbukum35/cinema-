@@ -241,16 +241,23 @@ class TasteDnaPresenter {
     return out;
   }
 
-  // ── Tema çipleri: TR sözlük / EN etiket; yoksa ham anahtar (baş harf büyük).
-  List<String> get themeChips => dna.themes.map((t) {
-    final key = t.toLowerCase().trim();
-    final raw = _isEn ? (themeEn[key] ?? t) : (themeTr[key] ?? t);
-    if (raw.isEmpty) return raw;
-    // Dart toUpperCase() İngilizce kural uygular ('i'→'I'); Türkçe kelimede
-    // baş harf 'i' → 'İ' olmalı (intikam → İntikam).
-    final first = !_isEn && raw[0] == 'i' ? 'İ' : raw[0].toUpperCase();
-    return '$first${raw.substring(1)}';
-  }).toList();
+  // ── Tema çipleri: yalnızca kontrollü sözlükteki kavramlar gösterilir.
+  // Böylece Türkçe arayüzde ham İngilizce TMDB anahtarları görünmez.
+  List<String> get themeChips => dna.themes
+      .where((t) {
+        final key = t.toLowerCase().trim();
+        return (_isEn ? themeEn : themeTr).containsKey(key);
+      })
+      .map((t) {
+        final key = t.toLowerCase().trim();
+        final raw = (_isEn ? themeEn : themeTr)[key]!;
+        if (raw.isEmpty) return raw;
+        // Dart toUpperCase() İngilizce kural uygular ('i'→'I'); Türkçe kelimede
+        // baş harf 'i' → 'İ' olmalı (intikam → İntikam).
+        final first = !_isEn && raw[0] == 'i' ? 'İ' : raw[0].toUpperCase();
+        return '$first${raw.substring(1)}';
+      })
+      .toList();
 
   // ── Tür çipleri ──
   List<String> get genreChips =>

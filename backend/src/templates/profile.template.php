@@ -1,700 +1,144 @@
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars($lang ?? 'tr'); ?>">
+<?php
+declare(strict_types=1);
+
+$e = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$posterUrl = static fn(?string $path, string $size = 'w500'): string =>
+    $path ? 'https://image.tmdb.org/t/p/' . $size . $path : '';
+$initial = mb_strtoupper(mb_substr(html_entity_decode($displayName), 0, 1, 'UTF-8'), 'UTF-8');
+$ogTitle = sprintf($t['og_title'], html_entity_decode($displayName));
+$ogDesc = sprintf($t['og_desc'], html_entity_decode($userHandle));
+if (!empty($dna)) {
+    $ogTitle = sprintf($t['og_dna_title'], html_entity_decode($displayName), $dna['archetype']);
+    $ogDesc = sprintf($t['og_dna_desc'], $dna['archetype'], $dna['essence']);
+}
+$ogCandidate = $topMovies[0] ?? $topShows[0] ?? $ratings[0] ?? $goodRatings[0] ?? $watchlist[0] ?? null;
+$ogImage = $posterUrl($ogCandidate['poster_path'] ?? null);
+
+$renderTopCards = static function (array $items) use ($e, $posterUrl, $t): void {
+    foreach ($items as $item) {
+        $title = trim((string) ($item['title'] ?? '')) ?: (($item['is_tv'] ?? false) ? $t['tv'] : $t['movie']);
+        $poster = $posterUrl($item['poster_path'] ?? null, 'w342');
+        $year = !empty($item['release_date']) ? substr((string) $item['release_date'], 0, 4) : '';
+        ?>
+        <article class="rank-card">
+            <span class="rank-number" aria-label="#<?= $e($item['rank']) ?>">#<?= $e($item['rank']) ?></span>
+            <div class="rank-poster">
+                <?php if ($poster): ?>
+                    <img src="<?= $e($poster) ?>" alt="<?= $e($title) ?>" loading="lazy" width="228" height="342">
+                <?php else: ?>
+                    <span class="poster-fallback" aria-hidden="true">C+</span>
+                <?php endif; ?>
+            </div>
+            <h3><?= $e($title) ?></h3>
+            <?php if ($year): ?><p><?= $e($year) ?></p><?php endif; ?>
+        </article>
+        <?php
+    }
+};
+
+$renderLibrary = static function (array $items, string $empty) use ($e, $posterUrl, $t): void {
+    if (!$items) {
+        echo '<p class="empty">' . $e($empty) . '</p>';
+        return;
+    }
+    echo '<div class="library-grid">';
+    foreach ($items as $item) {
+        $title = trim((string) ($item['title'] ?? '')) ?: (($item['is_tv'] ?? false) ? $t['tv'] : $t['movie']);
+        $poster = $posterUrl($item['poster_path'] ?? null, 'w342');
+        $year = !empty($item['release_date']) ? substr((string) $item['release_date'], 0, 4) : '';
+        echo '<article class="library-card"><div class="library-poster">';
+        if ($poster) {
+            echo '<img src="' . $e($poster) . '" alt="' . $e($title) . '" loading="lazy" width="228" height="342">';
+        } else {
+            echo '<span class="poster-fallback" aria-hidden="true">C+</span>';
+        }
+        echo '</div><div><h3>' . $e($title) . '</h3><p>' . $e($year) . '</p></div></article>';
+    }
+    echo '</div>';
+};
+?>
+<!doctype html>
+<html lang="<?= $e($lang ?? 'tr') ?>">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <?php
-        $ogTitle = sprintf($t['og_title'], $displayName);
-        $ogDesc = sprintf($t['og_desc'], $userHandle);
-        if (!empty($dna)) {
-            $ogTitle = sprintf($t['og_dna_title'], $displayName, $dna['archetype']);
-            $ogDesc = sprintf($t['og_dna_desc'], $dna['archetype'], $dna['essence']);
-        }
-        
-        $ogImage = '';
-        if (!empty($ratings) && !empty($ratings[0]['poster_path'])) {
-            $ogImage = "https://image.tmdb.org/t/p/w500" . $ratings[0]['poster_path'];
-        } elseif (!empty($goodRatings) && !empty($goodRatings[0]['poster_path'])) {
-            $ogImage = "https://image.tmdb.org/t/p/w500" . $goodRatings[0]['poster_path'];
-        } elseif (!empty($watchlist) && !empty($watchlist[0]['poster_path'])) {
-            $ogImage = "https://image.tmdb.org/t/p/w500" . $watchlist[0]['poster_path'];
-        }
-    ?>
-    <title><?php echo htmlspecialchars($ogTitle); ?></title>
-    <meta property="og:title" content="<?php echo htmlspecialchars($ogTitle); ?>">
-    <meta property="og:description" content="<?php echo htmlspecialchars($ogDesc); ?>">
-    <?php if (!empty($ogImage)): ?>
-        <meta property="og:image" content="<?php echo htmlspecialchars($ogImage); ?>">
-    <?php endif; ?>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#08090c">
+    <title><?= $e($ogTitle) ?></title>
+    <meta name="description" content="<?= $e($ogDesc) ?>">
+    <meta property="og:title" content="<?= $e($ogTitle) ?>">
+    <meta property="og:description" content="<?= $e($ogDesc) ?>">
     <meta property="og:type" content="profile">
+    <?php if ($ogImage): ?><meta property="og:image" content="<?= $e($ogImage) ?>"><?php endif; ?>
     <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #0B0F19;
-            --surface: #151D30;
-            --red: #E50914;
-            --gold: #FFB300;
-            --ink: #FFFFFF;
-            --dim: #94A3B8;
-            --border: rgba(255, 255, 255, 0.08);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--ink);
-            font-family: 'Outfit', sans-serif;
-            line-height: 1.6;
-            padding-bottom: 80px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ── Sinematik arkaplan ─────────────────────────────────────────
-           Yalnızca transform anime edilir (GPU dostu); içerik .container
-           z-index:1 ile üstte kalır, grain katmanı pointer-events almaz. */
-        .bg-cinema {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .bg-cinema .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            will-change: transform;
-        }
-
-        .orb-red {
-            width: 55vmax;
-            height: 55vmax;
-            top: -22vmax;
-            left: -18vmax;
-            background: radial-gradient(circle, rgba(229, 9, 20, 0.32), transparent 70%);
-            animation: orb-drift-a 26s ease-in-out infinite alternate;
-        }
-
-        .orb-gold {
-            width: 45vmax;
-            height: 45vmax;
-            bottom: -18vmax;
-            right: -14vmax;
-            background: radial-gradient(circle, rgba(255, 179, 0, 0.22), transparent 70%);
-            animation: orb-drift-b 34s ease-in-out infinite alternate;
-        }
-
-        .orb-blue {
-            width: 50vmax;
-            height: 50vmax;
-            top: 30%;
-            left: 55%;
-            background: radial-gradient(circle, rgba(46, 84, 175, 0.28), transparent 70%);
-            animation: orb-drift-c 30s ease-in-out infinite alternate;
-        }
-
-        /* Projeksiyon ışığı: çapraz süpüren çok soluk bant */
-        .beam {
-            position: absolute;
-            top: -60%;
-            left: -40%;
-            width: 45vmax;
-            height: 220%;
-            background: linear-gradient(90deg, transparent, rgba(255, 236, 200, 0.05), transparent);
-            transform: rotate(18deg);
-            animation: beam-sweep 19s ease-in-out infinite;
-        }
-
-        @keyframes orb-drift-a {
-            to { transform: translate(10vmax, 8vmax) scale(1.12); }
-        }
-
-        @keyframes orb-drift-b {
-            to { transform: translate(-9vmax, -7vmax) scale(1.18); }
-        }
-
-        @keyframes orb-drift-c {
-            to { transform: translate(-12vmax, 6vmax) scale(0.9); }
-        }
-
-        @keyframes beam-sweep {
-            0%, 100% { transform: translateX(0) rotate(18deg); }
-            50% { transform: translateX(120vmax) rotate(18deg); }
-        }
-
-        /* Film greni: tüm sayfanın üzerinde çok soluk kumlanma */
-        body::after {
-            content: '';
-            position: fixed;
-            inset: -100px;
-            z-index: 2;
-            pointer-events: none;
-            opacity: 0.05;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            animation: grain-shift 1.2s steps(6) infinite;
-        }
-
-        @keyframes grain-shift {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(60px, -40px); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .bg-cinema .orb,
-            .beam,
-            body::after {
-                animation: none;
-            }
-        }
-
-        /* Header / Profile Card */
-        header {
-            margin-top: 40px;
-            margin-bottom: 40px;
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, rgba(21, 29, 48, 0.6) 0%, rgba(11, 15, 25, 0.8) 100%);
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .avatar {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--red), var(--gold));
-            margin: 0 auto 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 36px;
-            font-weight: 800;
-            color: white;
-            box-shadow: 0 8px 24px rgba(229, 9, 20, 0.3);
-        }
-
-        h1 {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-        }
-
-        .handle {
-            color: var(--gold);
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 24px;
-            display: inline-block;
-        }
-
-        .cta-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--red);
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            padding: 14px 28px;
-            border-radius: 12px;
-            font-size: 15px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 10px 20px rgba(229, 9, 20, 0.25);
-        }
-
-        .cta-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px rgba(229, 9, 20, 0.4);
-        }
-
-        /* Sinema DNA kartı */
-        .dna {
-            background: linear-gradient(135deg, rgba(255, 179, 0, 0.14) 0%, rgba(229, 9, 20, 0.12) 100%);
-            border: 1px solid rgba(255, 179, 0, 0.35);
-            border-radius: 24px;
-            padding: 32px 24px;
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .dna-emoji { font-size: 48px; line-height: 1; }
-        .dna-label {
-            color: var(--gold);
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            margin-top: 12px;
-            /* lang="tr" sayesinde i→İ doğru; PHP'de uppercase entity bozar. */
-            text-transform: uppercase;
-        }
-        .dna-name {
-            font-size: 30px;
-            font-weight: 800;
-            margin: 6px 0 10px;
-        }
-        .dna-essence { color: var(--dim); font-size: 15px; }
-        .dna-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-top: 18px;
-        }
-        .dna-chip {
-            padding: 7px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            background: rgba(255, 179, 0, 0.12);
-            color: var(--gold);
-            border: 1px solid rgba(255, 179, 0, 0.4);
-        }
-        .dna-chip.genre {
-            background: var(--surface);
-            color: var(--ink);
-            border-color: var(--border);
-        }
-        .dna-themes-evidence {
-            margin-top: 24px;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .dna-theme-row {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .dna-theme-row .theme-name {
-            align-self: flex-start;
-        }
-        .dna-theme-posters {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-        .dna-theme-poster-wrapper {
-            display: block;
-            text-decoration: none;
-            position: relative;
-            width: 50px;
-            height: 75px;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            flex-shrink: 0;
-            background-color: var(--surface);
-        }
-        .dna-theme-poster {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .dna-theme-poster.empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            color: var(--dim);
-        }
-        .dna-signals {
-            text-align: left;
-            margin-top: 22px;
-            display: grid;
-            gap: 10px;
-        }
-        .dna-signal {
-            color: var(--ink);
-            font-size: 14px;
-            line-height: 1.4;
-            padding-left: 18px;
-            position: relative;
-        }
-        .dna-signal::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 8px;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--gold);
-        }
-        .dna-accuracy {
-            margin-top: 18px;
-            padding: 12px 16px;
-            border-radius: 14px;
-            background: rgba(52, 199, 89, 0.12);
-            border: 1px solid rgba(52, 199, 89, 0.4);
-            color: #E8FFF0;
-            font-size: 13.5px;
-            font-weight: 600;
-        }
-
-        /* Sections */
-        section {
-            margin-bottom: 48px;
-        }
-
-        h2 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            border-left: 4px solid var(--gold);
-            padding-left: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* Bölüm içi Film / Dizi alt başlıkları */
-        .type-heading {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            color: var(--dim);
-            text-transform: uppercase;
-            margin: 22px 0 14px;
-        }
-
-        .type-heading::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-
-        .type-group + .type-group {
-            margin-top: 28px;
-        }
-
-        /* Grid Layout */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background-color: var(--surface);
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .poster-wrap {
-            display: block;
-            text-decoration: none;
-            aspect-ratio: 2/3;
-            width: 100%;
-            background-color: #0d121f;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .poster {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .poster-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: var(--dim);
-            text-align: center;
-            padding: 10px;
-            background-color: #0e1422;
-        }
-
-        .card-info {
-            padding: 12px;
-        }
-
-        .card-title {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 4px;
-        }
-
-        .card-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--dim);
-        }
-
-        .rating-badge {
-            display: inline-flex;
-            align-items: center;
-            background-color: rgba(255, 179, 0, 0.15);
-            color: var(--gold);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 700;
-        }
-
-        .empty-text {
-            color: var(--dim);
-            font-size: 14px;
-            padding: 20px 0;
-        }
-
-        @media (max-width: 480px) {
-            .grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-            }
-            .card-info {
-                display: none; /* Mobilde sadece afişleri göstererek temiz görünüm */
-            }
-            header {
-                padding: 30px 15px;
-            }
-            h1 {
-                font-size: 24px;
-            }
-        }
-
-        .dna-theme-row-collapsed {
-            display: none !important;
-        }
-
-        .toggle-themes-btn {
-            background: rgba(255, 179, 0, 0.1);
-            color: var(--gold);
-            border: 1px dashed rgba(255, 179, 0, 0.4);
-            border-radius: 12px;
-            padding: 10px;
-            font-size: 13.5px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            text-align: center;
-            margin-top: 8px;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .toggle-themes-btn:hover {
-            background: rgba(255, 179, 0, 0.2);
-            border-color: var(--gold);
-        }
+        :root{--bg:#08090c;--panel:#111319;--panel2:#171a21;--ink:#f7f5ef;--muted:#9b9da6;--gold:#ffc24b;--red:#ef3d45;--line:rgba(255,255,255,.1);--radius:24px}
+        *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Outfit,system-ui,sans-serif;line-height:1.5;overflow-x:hidden}button,a{font:inherit}img{display:block;width:100%;height:100%;object-fit:cover}.shell{width:min(1180px,calc(100% - 40px));margin:auto;padding:28px 0 80px}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.brand{font-size:1.35rem;font-weight:800;letter-spacing:-.04em}.brand b{color:var(--red)}.lang{color:var(--muted);font-size:.85rem;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:10px 14px}.lang:hover{color:var(--ink);border-color:#ffffff55}
+        .hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr minmax(260px,350px);gap:22px;align-items:center;padding:30px;border:1px solid var(--line);border-radius:var(--radius);background:radial-gradient(circle at 90% 0,rgba(239,61,69,.22),transparent 36%),linear-gradient(135deg,#17191f,#0e1015)}.avatar{display:grid;place-items:center;width:88px;height:88px;border-radius:28px;background:linear-gradient(145deg,var(--red),#8e1520);font-size:2.2rem;font-weight:800;box-shadow:0 12px 30px #0008}.eyebrow{margin:0 0 6px;color:var(--gold);font-size:.72rem;font-weight:700;letter-spacing:.16em}.hero h1{margin:0;font-size:clamp(2rem,5vw,3.5rem);line-height:1;letter-spacing:-.055em}.handle{margin:6px 0 0;color:var(--muted)}.hero-copy{max-width:350px;color:#d0d0d4;margin:0}.hero .cta{grid-column:3;justify-self:start}.cta{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:14px;background:var(--ink);color:#08090c;text-decoration:none;font-weight:700}.cta:hover{background:var(--gold)}
+        section{margin-top:56px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:20px}.section-head h2{margin:3px 0 0;font-size:clamp(1.7rem,4vw,2.6rem);line-height:1.05;letter-spacing:-.045em}.section-head p{margin:0;color:var(--muted)}.tabs{display:flex;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.tab{min-height:42px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;font-weight:600}.tab[aria-selected=true]{background:var(--ink);color:#090a0d}.tab:focus-visible,.cta:focus-visible,.lang:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+        .rank-track{display:grid;grid-auto-flow:column;grid-auto-columns:158px;gap:16px;overflow-x:auto;padding:4px 4px 18px;scroll-snap-type:x proximity;scrollbar-color:#444 transparent}.rank-panel[hidden]{display:none}.rank-card{position:relative;scroll-snap-align:start;min-width:0}.rank-poster{aspect-ratio:2/3;overflow:hidden;border-radius:16px;background:var(--panel2);border:1px solid var(--line)}.rank-card:first-child .rank-poster{box-shadow:0 0 0 2px var(--gold),0 20px 50px #000}.rank-number{position:absolute;z-index:2;top:-8px;left:-7px;display:grid;place-items:center;min-width:38px;height:38px;padding:0 7px;border-radius:12px;background:var(--gold);color:#15100a;font-size:.9rem;font-weight:800;box-shadow:0 7px 20px #0009}.rank-card h3{margin:11px 0 0;font-size:.96rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank-card p,.library-card p{margin:2px 0 0;color:var(--muted);font-size:.82rem}.poster-fallback{display:grid;place-items:center;width:100%;height:100%;color:#5a5c65;font-weight:800;font-size:1.5rem;background:linear-gradient(145deg,#20232b,#111319)}.empty{padding:40px;border:1px dashed var(--line);border-radius:18px;text-align:center;color:var(--muted)}
+        .dna-card{display:grid;grid-template-columns:minmax(260px,.85fr) 1.15fr;gap:32px;padding:32px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,#171a20,#0f1116)}.identity{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:start}.dna-emoji{display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:#ffffff0b;font-size:2rem}.identity h2{margin:0;font-size:clamp(1.6rem,4vw,2.35rem);line-height:1.05;letter-spacing:-.04em}.identity .essence{grid-column:1/-1;margin:4px 0 0;color:#cbccd1;font-size:1.03rem}.dna-detail{display:grid;gap:22px}.dna-detail h3{margin:0 0 10px;color:var(--muted);font-size:.75rem;letter-spacing:.13em;text-transform:uppercase}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:8px 12px;border:1px solid #ffc24b44;border-radius:999px;background:#ffc24b0d;color:#ffe0a0;font-size:.88rem}.signals{display:grid;gap:8px;margin:0;padding:0;list-style:none}.signals li{padding-left:16px;border-left:2px solid var(--red);color:#d5d5d8;font-size:.91rem}.accuracy{margin:0;padding:12px 14px;border-radius:12px;background:#ffffff08;color:#ddd;font-size:.88rem}
+        .more>h2{font-size:clamp(1.7rem,4vw,2.5rem);letter-spacing:-.04em}.collection{border-top:1px solid var(--line)}.collection:last-child{border-bottom:1px solid var(--line)}summary{display:flex;align-items:center;justify-content:space-between;min-height:66px;cursor:pointer;font-size:1.08rem;font-weight:700;list-style:none}summary::-webkit-details-marker{display:none}summary:after{content:'+';color:var(--gold);font-size:1.5rem;font-weight:400}details[open] summary:after{content:'−'}.collection-body{padding:2px 0 26px}.library-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.library-poster{aspect-ratio:2/3;border-radius:12px;overflow:hidden;background:var(--panel2)}.library-card h3{margin:9px 0 0;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem}
+        @media(max-width:760px){.shell{width:min(100% - 24px,1180px);padding-top:16px}.topbar{margin-bottom:12px}.hero{grid-template-columns:64px 1fr;padding:20px;gap:14px}.avatar{width:64px;height:64px;border-radius:20px;font-size:1.7rem}.hero-copy{grid-column:1/-1}.hero .cta{grid-column:1/-1}.section-head{align-items:start;flex-direction:column}.tabs{width:100%}.tab{flex:1}.rank-track{grid-auto-columns:136px;margin-right:-12px}.dna-card{grid-template-columns:1fr;padding:22px;gap:28px}.library-grid{grid-template-columns:repeat(3,minmax(0,1fr))}section{margin-top:42px}footer{flex-direction:column;gap:6px}}
+        @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
     </style>
 </head>
 <body>
-    <div class="bg-cinema" aria-hidden="true">
-        <div class="orb orb-red"></div>
-        <div class="orb orb-gold"></div>
-        <div class="orb orb-blue"></div>
-        <div class="beam"></div>
-    </div>
-    <div class="container">
-        <header>
-            <div class="avatar"><?php echo mb_substr($displayName, 0, 1, 'UTF-8'); ?></div>
-            <h1><?php echo $displayName; ?></h1>
-            <span class="handle">@<?php echo $userHandle; ?></span>
-            <div>
-                <a href="https://cinema.mbkm.com.tr/download" class="cta-btn">
-                    <?php echo sprintf($t['cta'], $displayName); ?>
-                </a>
+<main class="shell">
+    <nav class="topbar" aria-label="Cinema+">
+        <span class="brand">cinema<b>+</b></span>
+        <a class="lang" href="?lang=<?= ($lang ?? 'tr') === 'tr' ? 'en' : 'tr' ?>" hreflang="<?= ($lang ?? 'tr') === 'tr' ? 'en' : 'tr' ?>"><?= ($lang ?? 'tr') === 'tr' ? 'EN' : 'TR' ?></a>
+    </nav>
+
+    <header class="hero">
+        <div class="avatar" aria-hidden="true"><?= $e($initial) ?></div>
+        <div><p class="eyebrow"><?= $e($t['brand_kicker']) ?></p><h1><?= $displayName ?></h1><p class="handle">@<?= $userHandle ?></p></div>
+        <p class="hero-copy"><?= $e($t['hero_desc']) ?></p>
+        <a class="cta" href="https://cinema.mbkm.com.tr" rel="noopener"><?= $e(sprintf($t['cta'], html_entity_decode($displayName))) ?></a>
+    </header>
+
+    <section aria-labelledby="top-heading">
+        <div class="section-head">
+            <div><p class="eyebrow">TOP 20</p><h2 id="top-heading"><?= $e($t['top_title']) ?></h2><p><?= $e($t['top_desc']) ?></p></div>
+            <div class="tabs" role="tablist" aria-label="<?= $e($t['top_title']) ?>">
+                <button class="tab" id="movies-tab" role="tab" aria-selected="true" aria-controls="movies-panel"><?= $e($t['top_movies']) ?></button>
+                <button class="tab" id="shows-tab" role="tab" aria-selected="false" aria-controls="shows-panel" tabindex="-1"><?= $e($t['top_shows']) ?></button>
             </div>
-        </header>
+        </div>
+        <div class="rank-panel" id="movies-panel" role="tabpanel" aria-labelledby="movies-tab">
+            <?php if ($topMovies): ?><div class="rank-track"><?php $renderTopCards($topMovies); ?></div><?php else: ?><p class="empty"><?= $e($t['top_empty_movies']) ?></p><?php endif; ?>
+        </div>
+        <div class="rank-panel" id="shows-panel" role="tabpanel" aria-labelledby="shows-tab" hidden>
+            <?php if ($topShows): ?><div class="rank-track"><?php $renderTopCards($topShows); ?></div><?php else: ?><p class="empty"><?= $e($t['top_empty_shows']) ?></p><?php endif; ?>
+        </div>
+    </section>
 
-        <!-- Sinema DNA -->
-        <?php if (!empty($dna)): ?>
-            <div class="dna">
-                <div class="dna-emoji"><?php echo $dna['emoji']; ?></div>
-                <div class="dna-label"><?php echo $displayName; ?></div>
-                <div class="dna-name"><?php echo htmlspecialchars($dna['archetype']); ?></div>
-                <div class="dna-essence"><?php echo htmlspecialchars($dna['essence']); ?></div>
-
-                <?php if (!empty($dna['themes_with_evidence'])): ?>
-                    <div class="dna-themes-evidence" id="dna-themes-container">
-                        <?php foreach ($dna['themes_with_evidence'] as $idx => $item): ?>
-                            <div class="dna-theme-row<?php echo $idx >= 3 ? ' dna-theme-row-collapsed' : ''; ?>">
-                                <span class="dna-chip theme-name"><?php echo htmlspecialchars($item['name']); ?></span>
-                                <div class="dna-theme-posters">
-                                    <?php foreach ($item['movies'] as $m): ?>
-                                        <?php 
-                                            $tmdbUrl = 'https://www.themoviedb.org/' . ($m['is_tv'] ? 'tv' : 'movie') . '/' . (int)$m['id'];
-                                        ?>
-                                        <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="dna-theme-poster-wrapper" title="<?php echo htmlspecialchars($m['title']); ?>">
-                                            <?php if (!empty($m['poster_path'])): ?>
-                                                <img class="dna-theme-poster" src="https://image.tmdb.org/t/p/w92<?php echo htmlspecialchars($m['poster_path']); ?>" alt="<?php echo htmlspecialchars($m['title']); ?>">
-                                            <?php else: ?>
-                                                <div class="dna-theme-poster empty">🎬</div>
-                                            <?php endif; ?>
-                                        </a>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if (count($dna['themes_with_evidence']) > 3): ?>
-                            <button id="toggle-themes-btn" class="toggle-themes-btn"><?php echo htmlspecialchars($t['show_all_themes']); ?></button>
-                        <?php endif; ?>
-                    </div>
-                <?php elseif (!empty($dna['themes'])): ?>
-                    <div class="dna-chips">
-                        <?php /* $t çeviri dizisi; döngü değişkeni onu ezmemeli */ ?>
-                        <?php foreach ($dna['themes'] as $themeName): ?>
-                            <span class="dna-chip"><?php echo htmlspecialchars($themeName); ?></span>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($dna['genres'])): ?>
-                    <div class="dna-chips">
-                        <?php foreach ($dna['genres'] as $g): ?>
-                            <span class="dna-chip genre"><?php echo htmlspecialchars($g); ?></span>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($dna['signals'])): ?>
-                    <div class="dna-signals">
-                        <?php foreach ($dna['signals'] as $s): ?>
-                            <div class="dna-signal"><?php echo htmlspecialchars($s); ?></div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($dna['accuracy'])): ?>
-                    <div class="dna-accuracy">✓ <?php echo htmlspecialchars($dna['accuracy']); ?></div>
-                <?php endif; ?>
+    <?php if ($dna): ?>
+    <section aria-labelledby="dna-heading">
+        <div class="dna-card">
+            <div class="identity"><div class="dna-emoji" aria-hidden="true"><?= $e($dna['emoji']) ?></div><div><p class="eyebrow"><?= $e($t['dna_kicker']) ?></p><h2 id="dna-heading"><?= $e($dna['archetype']) ?></h2></div><p class="essence"><?= $e($dna['essence']) ?></p></div>
+            <div class="dna-detail">
+                <?php if (!empty($dna['themes'])): ?><div><h3><?= $e($t['dna_themes']) ?></h3><div class="chips"><?php foreach ($dna['themes'] as $theme): ?><span class="chip"><?= $e($theme) ?></span><?php endforeach; ?></div></div><?php endif; ?>
+                <?php if (!empty($dna['genres'])): ?><div><h3><?= ($lang ?? 'tr') === 'tr' ? 'Baskın türler' : 'Dominant genres' ?></h3><div class="chips"><?php foreach ($dna['genres'] as $genre): ?><span class="chip"><?= $e($genre) ?></span><?php endforeach; ?></div></div><?php endif; ?>
+                <?php if (!empty($dna['signals'])): ?><ul class="signals"><?php foreach (array_slice($dna['signals'], 0, 3) as $signal): ?><li><?= $e($signal) ?></li><?php endforeach; ?></ul><?php endif; ?>
+                <?php if (!empty($dna['accuracy'])): ?><p class="accuracy"><?= $e($dna['accuracy']) ?></p><?php endif; ?>
             </div>
-        <?php endif; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
-        <?php
-            // Kart gridini basar. Alt başlık (Filmler/Diziler) gruplandığı için
-            // kart metasında tür yerine yıl gösterilir; yıl yoksa tür etiketi.
-            $renderGrid = function (array $items) use ($t): void {
-                ?>
-                <div class="grid">
-                    <?php foreach ($items as $r): ?>
-                        <div class="card">
-                            <?php
-                                $tmdbUrl = 'https://www.themoviedb.org/' . ($r['is_tv'] ? 'tv' : 'movie') . '/' . (int)$r['movie_id'];
-                                $year = substr((string)($r['release_date'] ?? ''), 0, 4);
-                                $metaLabel = ctype_digit($year) && strlen($year) === 4
-                                    ? $year
-                                    : ($r['is_tv'] ? $t['tv'] : $t['movie']);
-                            ?>
-                            <a href="<?php echo htmlspecialchars($tmdbUrl); ?>" target="_blank" rel="noopener" class="poster-wrap">
-                                <?php if (!empty($r['poster_path'])): ?>
-                                    <img src="https://image.tmdb.org/t/p/w300<?php echo htmlspecialchars($r['poster_path']); ?>" alt="<?php echo htmlspecialchars($r['title']); ?>" class="poster" loading="lazy">
-                                <?php else: ?>
-                                    <div class="poster-placeholder"><?php echo htmlspecialchars($r['title']); ?></div>
-                                <?php endif; ?>
-                            </a>
-                            <div class="card-info">
-                                <div class="card-title"><?php echo htmlspecialchars($r['title']); ?></div>
-                                <div class="card-meta">
-                                    <span><?php echo htmlspecialchars($metaLabel); ?></span>
-                                    <?php if (!empty($r['vote_average'])): ?>
-                                        <span class="rating-badge">★ <?php echo round((float) $r['vote_average'], 1); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php
-            };
-
-            // Bölüm içeriği: filmler ve diziler ayrı alt başlıklar altında.
-            $renderSection = function (array $items, string $emptyText) use ($t, $renderGrid): void {
-                if (empty($items)) {
-                    echo '<p class="empty-text">' . htmlspecialchars($emptyText) . '</p>';
-                    return;
-                }
-                $movies = array_values(array_filter($items, fn ($x) => empty($x['is_tv'])));
-                $shows  = array_values(array_filter($items, fn ($x) => !empty($x['is_tv'])));
-                if (!empty($movies)) {
-                    echo '<div class="type-group"><h3 class="type-heading">' . htmlspecialchars($t['sub_movies']) . '</h3>';
-                    $renderGrid($movies);
-                    echo '</div>';
-                }
-                if (!empty($shows)) {
-                    echo '<div class="type-group"><h3 class="type-heading">' . htmlspecialchars($t['sub_tv']) . '</h3>';
-                    $renderGrid($shows);
-                    echo '</div>';
-                }
-            };
-        ?>
-
-        <!-- Harika Buldukları (Favorites / Top Rated) -->
-        <section>
-            <h2><?php echo htmlspecialchars($t['sec_great']); ?></h2>
-            <?php $renderSection($ratings, $t['empty_great']); ?>
-        </section>
-
-        <!-- İyi Buldukları (Liked / Good) -->
-        <section>
-            <h2><?php echo htmlspecialchars($t['sec_good']); ?></h2>
-            <?php $renderSection($goodRatings, $t['empty_good']); ?>
-        </section>
-
-        <!-- İzleme Listesi (Watchlist) -->
-        <section>
-            <h2><?php echo htmlspecialchars($t['sec_watchlist']); ?></h2>
-            <?php $renderSection($watchlist, $t['empty_watchlist']); ?>
-        </section>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var toggleBtn = document.getElementById('toggle-themes-btn');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function() {
-                    var collapsedRows = document.querySelectorAll('.dna-theme-row-collapsed');
-                    collapsedRows.forEach(function(row) {
-                        row.classList.remove('dna-theme-row-collapsed');
-                    });
-                    toggleBtn.style.display = 'none';
-                });
-            }
-        });
-    </script>
+    <section class="more" aria-labelledby="more-heading"><h2 id="more-heading"><?= $e($t['more_title']) ?></h2>
+        <details class="collection" open><summary><?= $e(preg_replace('/^[^\p{L}\p{N}]+/u', '', $t['sec_great'])) ?></summary><div class="collection-body"><?php $renderLibrary($ratings, $t['empty_great']); ?></div></details>
+        <details class="collection"><summary><?= $e(preg_replace('/^[^\p{L}\p{N}]+/u', '', $t['sec_good'])) ?></summary><div class="collection-body"><?php $renderLibrary($goodRatings, $t['empty_good']); ?></div></details>
+        <details class="collection"><summary><?= $e(preg_replace('/^[^\p{L}\p{N}]+/u', '', $t['sec_watchlist'])) ?></summary><div class="collection-body"><?php $renderLibrary($watchlist, $t['empty_watchlist']); ?></div></details>
+    </section>
+    <footer><span>cinema+</span><span>@<?= $userHandle ?> · <?= date('Y') ?></span></footer>
+</main>
+<script>
+(() => { const tabs=[...document.querySelectorAll('[role=tab]')]; tabs.forEach((tab,i)=>{ tab.addEventListener('click',()=>activate(tab)); tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const next=tabs[(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];activate(next);next.focus()}) }); function activate(active){tabs.forEach(tab=>{const on=tab===active;tab.setAttribute('aria-selected',String(on));tab.tabIndex=on?0:-1;document.getElementById(tab.getAttribute('aria-controls')).hidden=!on})} })();
+</script>
 </body>
 </html>
