@@ -39,6 +39,7 @@ trait SocialTitlesPublicTrait
         $st->execute([$locale, $isTV]);
 
         $titles = [];
+        $displayRank = 1;
         foreach ($st->fetchAll() as $row) {
             // Metadata henüz `titles`'a düşmemiş başlıkları atla — istemci poster
             // olmadan boş kart gösteremez.
@@ -46,7 +47,7 @@ trait SocialTitlesPublicTrait
                 continue;
             }
             $titles[] = [
-                'rank'          => (int) $row['rank'],
+                'rank'          => $displayRank++,
                 'tmdb_id'       => (int) $row['tmdb_id'],
                 'is_tv'         => (int) $row['is_tv'] === 1,
                 'votes'         => (int) $row['votes'],

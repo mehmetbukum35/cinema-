@@ -32,68 +32,24 @@ class SocialWebRenderer
 
             $userId = (int) $user['id'];
 
-            // Beğendikleri (Rating = 3 "Harika")
-            $stRatings = $this->db->prepare(
-                'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
-                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                        COALESCE(t.release_date, tf.release_date) AS release_date
-                 FROM ratings r
-                 LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
-                 LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
-                 WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
-                 ORDER BY r.updated_at DESC
-                 LIMIT 24'
-            );
-            $stRatings->execute([$lang, $userId]);
-            $ratings = $stRatings->fetchAll();
+            // Harika / İyi / Watchlist: film ve dizi ayrı LIMIT — karışık LIMIT
+            // sonra partition bir medyayı sıfırlayabiliyordu.
+            $greatMovies = $this->loadRatedShelf($userId, 3, false, $lang);
+            $greatShows = $this->loadRatedShelf($userId, 3, true, $lang);
+            $goodMovies = $this->loadRatedShelf($userId, 2, false, $lang);
+            $goodShows = $this->loadRatedShelf($userId, 2, true, $lang);
+            $watchMovies = $this->loadWatchlistShelf($userId, false, $lang);
+            $watchShows = $this->loadWatchlistShelf($userId, true, $lang);
 
-            // İyi Buldukları (Rating = 2 "İyi")
-            $stGoodRatings = $this->db->prepare(
-                'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
-                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                        COALESCE(t.release_date, tf.release_date) AS release_date
-                 FROM ratings r
-                 LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
-                 LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
-                 WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
-                 ORDER BY r.updated_at DESC
-                 LIMIT 24'
-            );
-            $stGoodRatings->execute([$lang, $userId]);
-            $goodRatings = $stGoodRatings->fetchAll();
-
-            // Watchlist
-            $stWatch = $this->db->prepare(
-                'SELECT w.id as movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
-                        COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                        COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                        COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                        COALESCE(t.release_date, tf.release_date) AS release_date
-                 FROM watchlist w
-                 LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv AND t.locale = ?
-                 LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
-                 WHERE w.user_id = ? AND w.deleted = 0
-                 ORDER BY w.created_at DESC
-                 LIMIT 24'
-            );
-            $stWatch->execute([$lang, $userId]);
-            $watchlist = $stWatch->fetchAll();
+            // Hero / OG aday havuzu (görselli fallthrough template'te).
+            $ratings = array_merge($greatMovies, $greatShows);
+            $goodRatings = array_merge($goodMovies, $goodShows);
+            $watchlist = array_merge($watchMovies, $watchShows);
 
             // Kişisel Top 20: favorites.created_at bir zaman damgası değil, kullanıcının
             // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
             $topMovies = $this->loadTopList($userId, false, $lang);
             $topShows = $this->loadTopList($userId, true, $lang);
-
-            $greatMovies = $this->partitionByMedia($ratings, false);
-            $greatShows = $this->partitionByMedia($ratings, true);
-            $goodMovies = $this->partitionByMedia($goodRatings, false);
-            $goodShows = $this->partitionByMedia($goodRatings, true);
-            $watchMovies = $this->partitionByMedia($watchlist, false);
-            $watchShows = $this->partitionByMedia($watchlist, true);
 
             $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
             $userHandle = htmlspecialchars($user['username']);
@@ -167,6 +123,64 @@ class SocialWebRenderer
             }
         }
         return $out;
+    }
+
+    /**
+     * Public library shelf for a single rating + media type.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadRatedShelf(
+        int $userId,
+        int $rating,
+        bool $isTv,
+        string $lang,
+        int $limit = 12,
+    ): array {
+        $st = $this->db->prepare(
+            'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
+             FROM ratings r
+             LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
+             WHERE r.user_id = ? AND r.rating = ? AND r.is_tv = ?
+               AND r.deleted = 0 AND r.is_private = 0
+             ORDER BY r.updated_at DESC
+             LIMIT ' . max(1, min(50, $limit))
+        );
+        $st->execute([$lang, $userId, $rating, $isTv ? 1 : 0]);
+        return $st->fetchAll();
+    }
+
+    /**
+     * Public watchlist shelf for a single media type.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadWatchlistShelf(
+        int $userId,
+        bool $isTv,
+        string $lang,
+        int $limit = 12,
+    ): array {
+        $st = $this->db->prepare(
+            'SELECT w.id AS movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
+                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
+                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
+                    COALESCE(t.release_date, tf.release_date) AS release_date
+             FROM watchlist w
+             LEFT JOIN titles t ON t.tmdb_id = w.id AND t.is_tv = w.is_tv AND t.locale = ?
+             LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
+             WHERE w.user_id = ? AND w.is_tv = ? AND w.deleted = 0
+             ORDER BY w.created_at DESC
+             LIMIT ' . max(1, min(50, $limit))
+        );
+        $st->execute([$lang, $userId, $isTv ? 1 : 0]);
+        return $st->fetchAll();
     }
 
     /// Web profil sayfasının arayüz metinleri.

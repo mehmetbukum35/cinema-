@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
+import '../services/sync_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/top_list_provider.dart';
 import '../theme/app_theme.dart';
 import 'main_shell.dart';
 import 'onboarding/genre_step.dart';
@@ -47,14 +51,14 @@ const _tvGenres = [
 ];
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   // 0=film türleri, 1=dizi türleri, 2=fav filmler, 3=fav diziler, 4=değerlendirme
   int _step = 0;
@@ -122,10 +126,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else if (_step == 2) {
       // Birleştir, üzerine yazma: kullanıcının mevcut Top 20'si (varsa) korunur.
       await PrefsService.mergeFavoriteMovies(_favMovies);
+      ref.invalidate(topListProvider);
       if (!mounted) return;
       setState(() => _step = 3);
     } else if (_step == 3) {
       await PrefsService.mergeFavoriteTvShows(_favTvShows);
+      ref.invalidate(topListProvider);
+      final auth = ref.read(authProvider);
+      if (auth.isLoggedIn) {
+        unawaited(ref.read(syncProvider.notifier).performSync());
+      }
       if (!mounted) return;
       setState(() {
         _step = 4;

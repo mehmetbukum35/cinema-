@@ -18,14 +18,14 @@ class TasteDnaWebText
     ];
 
     private const ARCHETYPES_EN = [
-        'dark_chronicler' => ['🕯️', 'The Dark Chronicler', 'You are drawn to shadows, tension and moral grey.'],
-        'emotion_seeker' => ['🎭', 'The Emotion Seeker', 'You chase stories that touch the heart and reveal people.'],
-        'world_builder' => ['🌌', 'The World Explorer', 'New universes and impossible worlds call to you.'],
-        'adrenaline_junkie' => ['⚡', 'The Adrenaline Seeker', 'Pace, action and adventure are your fuel.'],
-        'joy_chaser' => ['✨', 'The Joy Chaser', 'Laughter and lightness are your refuge.'],
-        'truth_seeker' => ['🔍', 'The Truth Seeker', 'True stories and the lessons of the past intrigue you.'],
-        'eternal_child' => ['🎈', 'The Eternal Child', 'The child in you never grew up — and that rules.'],
-        'genre_nomad' => ['🧭', 'The Genre Nomad', "You don't fit one genre; you taste every color."],
+        'dark_chronicler' => ['🕯️', 'The Dark Chronicler', 'Drawn to shadows, tension and moral grey.'],
+        'emotion_seeker' => ['🎭', 'The Emotion Seeker', 'Chasing stories that touch the heart and reveal people.'],
+        'world_builder' => ['🌌', 'The World Explorer', 'New universes and impossible worlds call.'],
+        'adrenaline_junkie' => ['⚡', 'The Adrenaline Seeker', 'Pace, action and adventure are the fuel.'],
+        'joy_chaser' => ['✨', 'The Joy Chaser', 'Laughter and lightness are the refuge.'],
+        'truth_seeker' => ['🔍', 'The Truth Seeker', 'True stories and the lessons of the past intrigue.'],
+        'eternal_child' => ['🎈', 'The Eternal Child', 'The inner child never grew up — and that rules.'],
+        'genre_nomad' => ['🧭', 'The Genre Nomad', "Doesn't fit one genre; tastes every color."],
     ];
 
     private const GENRES_TR = [
@@ -202,13 +202,13 @@ class TasteDnaWebText
             $modernShare = is_numeric($dna['modern_share'] ?? null) ? (float) $dna['modern_share'] : 0.0;
             $signals[] = match ($era) {
                 'modern' => $en
-                    ? 'A modern soul — ' . self::pctPossessive($modernShare, $lang) . ' of your loves are post-2015.'
+                    ? 'A modern soul — ' . self::pctPossessive($modernShare, $lang) . ' of favorites are post-2015.'
                     : 'Modern çağ çocuğu — beğenilerinin ' . self::pctPossessive($modernShare, $lang) . ' 2015 sonrası.',
                 'classic_soul' => $en
-                    ? 'A classic soul — you chase the magic of old cinema.'
+                    ? 'A classic soul — chasing the magic of old cinema.'
                     : 'Klasik ruh — eski sinemanın büyüsünü kovalıyor.',
                 default => $en
-                    ? 'A time traveler — you feel at home in every era.'
+                    ? 'A time traveler — at home in every era.'
                     : 'Zaman gezgini — her dönemde kendini evinde hissediyor.',
             };
         }
@@ -217,13 +217,13 @@ class TasteDnaWebText
         if ($depth !== null) {
             $signals[] = match ($depth) {
                 'deep_digger' => $en
-                    ? 'A deep-cut hunter — you find the gems the crowd skips.'
+                    ? 'A deep-cut hunter — finds the gems the crowd skips.'
                     : 'Derin keşif avcısı — kalabalığın atladığı mücevherleri buluyor.',
                 'zeitgeist' => $en
-                    ? 'A zeitgeist rider — you keep your finger on the pulse.'
+                    ? 'A zeitgeist rider — keeps a finger on the pulse.'
                     : 'Zeitgeist takipçisi — anın nabzını tutuyor.',
                 default => $en
-                    ? 'A balanced explorer — you love both blockbusters and hidden gems.'
+                    ? 'A balanced explorer — loves both blockbusters and hidden gems.'
                     : 'Dengeli keşifçi — hem gişeyi hem gizli kalanı seviyor.',
             };
         }
@@ -233,13 +233,13 @@ class TasteDnaWebText
             $harikaShare = is_numeric($dna['harika_share'] ?? null) ? (float) $dna['harika_share'] : 0.0;
             $signals[] = match ($critic) {
                 'tough' => $en
-                    ? 'A tough critic — only ' . self::pctPossessive($harikaShare, $lang) . ' of your ratings are "Great".'
+                    ? 'A tough critic — only ' . self::pctPossessive($harikaShare, $lang) . ' of ratings are "Great".'
                     : 'Sert eleştirmen — puanlarının yalnızca ' . self::pctPossessive($harikaShare, $lang) . ' "Harika".',
                 'generous' => $en
-                    ? 'A generous heart — you\'re never afraid to call it "Great".'
+                    ? 'A generous heart — never afraid to call a good story "Great".'
                     : 'Cömert kalp — iyi bir hikâyeye "Harika" demekten çekinmiyor.',
                 default => $en
-                    ? 'A measured critic — your praise and your criticism both land.'
+                    ? 'A measured critic — praise and criticism both land.'
                     : 'Ölçülü eleştirmen — övgüsü de eleştirisi de yerini biliyor.',
             };
         }
@@ -247,7 +247,7 @@ class TasteDnaWebText
         if (isset($dna['blind_spot']) && $dna['blind_spot'] !== null && is_numeric($dna['blind_spot'])) {
             $genre = self::genreName((int) $dna['blind_spot'], $lang);
             $signals[] = $en
-                ? 'Your blind spot: ' . $genre . ' — it just doesn\'t reach you.'
+                ? 'Blind spot: ' . $genre . ' — it just doesn\'t land.'
                 : 'Kör noktası: ' . $genre . ' — pek hitap etmiyor.';
         }
 
@@ -255,7 +255,7 @@ class TasteDnaWebText
             $from = self::genreName((int) $dna['shift_from'], $lang);
             $to = self::genreName((int) $dna['shift_to'], $lang);
             $signals[] = $en
-                ? 'Your taste has drifted from ' . $from . ' to ' . $to . '.'
+                ? 'Taste has drifted from ' . $from . ' to ' . $to . '.'
                 : 'Zevkinin rotası: ' . $from . ' → ' . $to . '.';
         }
 
@@ -300,14 +300,14 @@ class TasteDnaWebText
     {
         if (self::isEn($lang)) {
             return match ($key) {
-                'dark_chronicler' => 'Shadows, suspense and moral ambiguity also feed your taste.',
-                'emotion_seeker' => 'Emotional depth and human stories also captivate you.',
-                'world_builder' => 'Extraordinary universes and highly imaginative worlds also draw your interest.',
-                'adrenaline_junkie' => 'Pace, action and adventure are also sources of excitement for you.',
-                'joy_chaser' => 'Lightness, joy and comedy are also among your safe havens.',
-                'truth_seeker' => 'True stories and real-life experiences are also on your radar.',
-                'eternal_child' => 'The child in you that never grows up also finds its place in stories.',
-                default => 'Colors of different genres also show themselves in your taste.',
+                'dark_chronicler' => 'Shadows, suspense and moral ambiguity also feed this taste.',
+                'emotion_seeker' => 'Emotional depth and human stories also captivate.',
+                'world_builder' => 'Extraordinary universes and highly imaginative worlds also draw interest.',
+                'adrenaline_junkie' => 'Pace, action and adventure are also sources of excitement.',
+                'joy_chaser' => 'Lightness, joy and comedy are also among the safe havens.',
+                'truth_seeker' => 'True stories and real-life experiences are also on the radar.',
+                'eternal_child' => 'The inner child that never grows up also finds its place in stories.',
+                default => 'Colors of different genres also show themselves in this taste.',
             };
         }
         return match ($key) {

@@ -532,6 +532,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
   Future<void> _postAuthSessionRestore() async {
     _ref.invalidate(socialProvider);
+    // Logout path Top 20'yi invalidate eder; login da etmeli — aksi halde
+    // misafir listesi / hardClear sonrası hayalet Top 20 kalır.
+    _ref.invalidate(topListProvider);
     await Future.wait([
       _ref.read(watchlistProvider.notifier).load(),
       _ref.read(statsProvider.notifier).load(),

@@ -1084,6 +1084,7 @@ class DatabaseHelper {
                   (a['created_at'] as int).compareTo(b['created_at'] as int),
             );
       return filtered
+          .take(20)
           .map(
             (m) => Movie.fromStorage({
               'id': m['id'] as int,
@@ -1104,9 +1105,10 @@ class DatabaseHelper {
       'favorites',
       where: 'is_tv = ? AND deleted = 0',
       whereArgs: [isTV ? 1 : 0],
-      orderBy: 'created_at ASC',
+      orderBy: 'created_at ASC, id ASC',
     );
     return maps
+        .take(20)
         .map(
           (m) => Movie.fromStorage({
             'id': m['id'] as int,
@@ -1121,6 +1123,77 @@ class DatabaseHelper {
           }),
         )
         .toList();
+  }
+
+  /// Sync birleşiminden sonra film/dizi başına en fazla [cap] aktif favori bırakır
+  /// ve `created_at` sıra indekslerini 0..n-1 yeniden yazar.
+  /// Dönüş: silinen (cap üstü) satır sayısı.
+  Future<int> normalizeFavoritesCap({int cap = 20}) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    var trimmed = 0;
+
+    if (db == null) {
+      for (final isTv in [0, 1]) {
+        final active = _mockFavorites
+            .where((e) => e['is_tv'] == isTv && e['deleted'] != 1)
+            .toList()
+          ..sort((a, b) {
+            final rank = ((a['created_at'] as int?) ?? 0).compareTo(
+              (b['created_at'] as int?) ?? 0,
+            );
+            if (rank != 0) return rank;
+            return ((a['id'] as int?) ?? 0).compareTo((b['id'] as int?) ?? 0);
+          });
+        for (var i = 0; i < active.length; i++) {
+          if (i < cap) {
+            if (active[i]['created_at'] != i) {
+              active[i]['created_at'] = i;
+              active[i]['updated_at'] = now;
+            }
+          } else {
+            active[i]['deleted'] = 1;
+            active[i]['updated_at'] = now;
+            trimmed++;
+          }
+        }
+      }
+      return trimmed;
+    }
+
+    await db.transaction((txn) async {
+      for (final isTv in [0, 1]) {
+        final rows = await txn.query(
+          'favorites',
+          where: 'is_tv = ? AND deleted = 0',
+          whereArgs: [isTv],
+          orderBy: 'created_at ASC, id ASC',
+        );
+        for (var i = 0; i < rows.length; i++) {
+          final id = rows[i]['id'] as int;
+          if (i < cap) {
+            final currentRank = (rows[i]['created_at'] as int?) ?? -1;
+            if (currentRank != i) {
+              await txn.update(
+                'favorites',
+                {'created_at': i, 'updated_at': now},
+                where: 'id = ? AND is_tv = ?',
+                whereArgs: [id, isTv],
+              );
+            }
+          } else {
+            await txn.update(
+              'favorites',
+              {'deleted': 1, 'updated_at': now},
+              where: 'id = ? AND is_tv = ?',
+              whereArgs: [id, isTv],
+            );
+            trimmed++;
+          }
+        }
+      }
+    });
+    return trimmed;
   }
 
   Future<List<Map<String, dynamic>>> getFavoritesRaw() async {

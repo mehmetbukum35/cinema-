@@ -525,6 +525,15 @@ class SyncService {
       }
     });
 
+    // Birleşik pull sonrası Top 20 tavanını ve sıra indekslerini toparla.
+    final trimmedFavorites = await DatabaseHelper().normalizeFavoritesCap();
+    if (trimmedFavorites > 0) {
+      appliedCount += trimmedFavorites;
+      debugPrint(
+        'Sync trimmed $trimmedFavorites favorites over Top 20 cap.',
+      );
+    }
+
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
     PrefsService.invalidateGenreWeights();

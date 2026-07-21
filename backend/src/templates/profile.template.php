@@ -20,7 +20,14 @@ if (!empty($dna)) {
     $ogDesc = sprintf($t['og_dna_desc'], $dna['archetype'], $dna['essence']);
 }
 
-$heroCandidate = $topMovies[0] ?? $topShows[0] ?? $ratings[0] ?? $goodRatings[0] ?? $watchlist[0] ?? null;
+$heroPools = array_merge($topMovies, $topShows, $ratings, $goodRatings, $watchlist);
+$heroCandidate = null;
+foreach ($heroPools as $item) {
+    if (!empty($item['backdrop_path']) || !empty($item['poster_path'])) {
+        $heroCandidate = $item;
+        break;
+    }
+}
 // Desktop: wide cinematic backdrop. Mobile: portrait poster so the art fits phone width.
 $heroDesktop = $posterUrl($heroCandidate['backdrop_path'] ?? null, 'w1280');
 $heroMobile = $posterUrl($heroCandidate['poster_path'] ?? null, 'w780');
@@ -584,6 +591,7 @@ $renderSplitShelf = static function (
         <div class="section-head">
             <p class="eyebrow">TOP 20</p>
             <h2 id="top-shows-heading"><?= $e($t['top_shows']) ?></h2>
+            <?php if (!$topMovies): ?><p><?= $e($t['top_desc']) ?></p><?php endif; ?>
         </div>
         <div class="rank-track"><?php $renderTopCards($topShows); ?></div>
     </section>

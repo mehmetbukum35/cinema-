@@ -41,7 +41,22 @@ class TopListRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    final list = ref.watch(topListProvider(isTV)).value ?? const <Movie>[];
+    final asyncList = ref.watch(topListProvider(isTV));
+    final list = asyncList.value;
+    // Invalidate sonrası loading'de boş CTA flaşını önle.
+    if (list == null && asyncList.isLoading) {
+      return SizedBox(
+        height: 225,
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2, color: c.gold),
+          ),
+        ),
+      );
+    }
+    final items = list ?? const <Movie>[];
     final label =
         (isTV
             ? tr?.get('top_list_tv_short')
@@ -67,9 +82,9 @@ class TopListRail extends ConsumerWidget {
               ),
               Flexible(
                 child: Text(
-                  list.isEmpty
+                  items.isEmpty
                       ? label
-                      : '$label · ${list.length}/${TopListNotifier.cap}',
+                      : '$label · ${items.length}/${TopListNotifier.cap}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -118,7 +133,7 @@ class TopListRail extends ConsumerWidget {
             ],
           ),
         ),
-        if (list.isEmpty)
+        if (items.isEmpty)
           _emptyCard(context, tr)
         else
           SizedBox(
@@ -127,11 +142,11 @@ class TopListRail extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: list.length,
+              itemCount: items.length,
               itemBuilder: (ctx, i) => _RankedPosterCard(
                 rank: i + 1,
-                movie: list[i],
-                onTap: () => _openDetail(context, ref, list[i]),
+                movie: items[i],
+                onTap: () => _openDetail(context, ref, items[i]),
               ),
             ),
           ),

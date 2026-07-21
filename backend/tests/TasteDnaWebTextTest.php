@@ -237,8 +237,8 @@ class TasteDnaWebTextTest extends TestCase
         ], 'en');
 
         $joined = implode(' | ', $view['signals']);
-        $this->assertStringContainsString('75% of your loves', $joined);
-        $this->assertStringContainsString('10% of your ratings', $joined);
+        $this->assertStringContainsString('75% of favorites', $joined);
+        $this->assertStringContainsString('10% of ratings', $joined);
         $this->assertStringNotContainsString("%75", $joined);
     }
 
