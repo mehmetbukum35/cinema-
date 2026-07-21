@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/mbkmcomt/etc/src
+    - /bin/cp -R backend/src/* $DEPLOYPATH/
