@@ -13,6 +13,7 @@ import '../services/localization_service.dart';
 import '../screens/login_screen.dart';
 import '../widgets/app_toast.dart';
 import 'watchlist_provider.dart';
+import 'top_list_provider.dart';
 import 'swipe_provider.dart';
 import 'social_provider.dart';
 import '../services/providers.dart';
@@ -552,6 +553,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _invalidateGuestProviders() async {
     _ref.invalidate(watchlistProvider);
     _ref.invalidate(statsProvider);
+    _ref.invalidate(topListProvider);
     _ref.invalidate(swipeProvider);
     _ref.invalidate(socialProvider);
     await _ref.read(recommendationEngineProvider).invalidateCache();
