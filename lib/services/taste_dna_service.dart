@@ -74,6 +74,7 @@ class TasteDnaService {
     Map<String, List<DnaMovieRef>> themeEvidence = const {},
     required double? accuracy,
     required int accuracySample,
+    List<({List<int> genreIds, double weight})> favorites = const [],
     int? nowMs,
   }) {
     final now = nowMs ?? DateTime.now().millisecondsSinceEpoch;
@@ -98,6 +99,16 @@ class TasteDnaService {
         }
       }
     }
+
+    // Favoriler (Top 20): kalıcı, rank-ağırlıklı tür katkısı — arketip ve top
+    // türleri "hayatımın yapımları" da şekillendirir. Kör nokta bilerek rating
+    // tabanlı kalır (favori = pozitif beyan, "karşılaşıp beğenmedim" değil).
+    for (final f in favorites) {
+      for (final g in f.genreIds) {
+        genreWeight[g] = (genreWeight[g] ?? 0) + f.weight;
+      }
+    }
+
     final topGenres =
         (genreWeight.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
@@ -243,6 +254,18 @@ class TasteDnaService {
     );
   }
 
+  /// İki rank-sıralı favori listesini harmanlar (film[0], dizi[0], film[1]…) →
+  /// tema tohumlarında iki türün üst sıraları adil temsil edilir.
+  static List<Movie> _interleave(List<Movie> a, List<Movie> b) {
+    final out = <Movie>[];
+    final n = a.length > b.length ? a.length : b.length;
+    for (var i = 0; i < n; i++) {
+      if (i < a.length) out.add(a[i]);
+      if (i < b.length) out.add(b[i]);
+    }
+    return out;
+  }
+
   static int? _dominantGenre(List<DnaRating> rows) {
     final counts = <int, int>{};
     for (final r in rows) {
@@ -258,7 +281,30 @@ class TasteDnaService {
 
   /// Veriyi toplar (puanlamalar + keyword isimleri + telemetri) ve DNA üretir.
   Future<TasteDna> generate({String? userId}) async {
-    final raw = await DatabaseHelper().getRatings();
+    final db = DatabaseHelper();
+    final raw = await db.getRatings();
+
+    // Favoriler (Top 20), rank sırasında. compute'a tür katkısı, temalara tohum
+    // olarak girerler; ayrıca hash'e katılır ki Top 20 değişince DNA yenilensin.
+    final favMovies = await db.getFavorites(false).catchError((_) => <Movie>[]);
+    final favShows = await db.getFavorites(true).catchError((_) => <Movie>[]);
+    final favGenres = <({List<int> genreIds, double weight})>[];
+    void addFavGenres(List<Movie> favs) {
+      for (var i = 0; i < favs.length; i++) {
+        favGenres.add((
+          genreIds: favs[i].genreIds,
+          weight: 2.0 * PrefsService.favoriteRankWeight(i),
+        ));
+      }
+    }
+
+    addFavGenres(favMovies);
+    addFavGenres(favShows);
+    final favSeeds = _interleave(favMovies, favShows);
+    final favSig = [
+      for (final m in favMovies) 'm${m.id}',
+      for (final m in favShows) 't${m.id}',
+    ].join(',');
 
     final telemetry = await PrefsService.getRecoTelemetry();
     var shown = 0;
@@ -278,7 +324,8 @@ class TasteDnaService {
         (r['updated_at'] as int? ?? r['created_at'] as int? ?? 0),
       ),
     );
-    final inputHash = "$ratingCount|$maxUpdatedAt|${userId ?? ''}|$shown";
+    final inputHash =
+        "$ratingCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig";
 
     final cachedData = await PrefsService.getCachedDna();
     if (cachedData != null && cachedData['hash'] == inputHash) {
@@ -321,7 +368,7 @@ class TasteDnaService {
       ));
     }
 
-    final themeResult = await _aggregateThemes(raw);
+    final themeResult = await _aggregateThemes(raw, favSeeds);
 
     final dna = compute(
       ratings: ratings,
@@ -329,6 +376,7 @@ class TasteDnaService {
       themeEvidence: themeResult.evidence,
       accuracy: accuracy,
       accuracySample: shown,
+      favorites: favGenres,
     );
 
     // Cache the result
@@ -344,7 +392,10 @@ class TasteDnaService {
   /// En yeni beğenilerin keyword isimlerini frekansa göre toplar; gürültü
   /// keyword'leri elenir, en güçlü 5 tema döner. Keyword uçları cache'li.
   Future<({List<String> themes, Map<String, List<DnaMovieRef>> evidence})>
-  _aggregateThemes(List<Map<String, dynamic>> rawRatings) async {
+  _aggregateThemes(
+    List<Map<String, dynamic>> rawRatings,
+    List<Movie> favorites,
+  ) async {
     try {
       final liked =
           rawRatings
@@ -364,7 +415,8 @@ class TasteDnaService {
           ? 8
           : (liked.length >= 20 ? 20 : liked.length);
       final seeds = liked.take(seedCount).toList();
-      if (seeds.isEmpty) {
+      final favSeeds = favorites.take(8).toList();
+      if (seeds.isEmpty && favSeeds.isEmpty) {
         return (
           themes: const <String>[],
           evidence: const <String, List<DnaMovieRef>>{},
@@ -418,6 +470,36 @@ class TasteDnaService {
           final list = themeToMovies[name] ??= [];
           if (!list.any((m) => m.id == ref.id && m.isTV == ref.isTV)) {
             list.add(ref);
+          }
+        }
+      }
+
+      // Favori tohumları: kalıcı kimlik teması — oydan güçlü sayılır (+2) ve
+      // kanıta eklenir. Top 20 böylece DNA temalarını doğrudan şekillendirir.
+      if (favSeeds.isNotEmpty) {
+        final favLists = await Future.wait(
+          favSeeds.map(
+            (m) => _service
+                .getKeywords(m.id, isTV: m.isTV)
+                .catchError((_) => <String>[]),
+          ),
+        );
+        for (var i = 0; i < favSeeds.length; i++) {
+          final m = favSeeds[i];
+          final ref = DnaMovieRef(
+            id: m.id,
+            title: m.title,
+            posterPath: m.posterPath,
+            isTV: m.isTV,
+          );
+          for (final raw in favLists[i]) {
+            final name = raw.toLowerCase().trim();
+            if (name.isEmpty || _themeStoplist.contains(name)) continue;
+            counts[name] = (counts[name] ?? 0) + 2;
+            final list = themeToMovies[name] ??= [];
+            if (!list.any((x) => x.id == ref.id && x.isTV == ref.isTV)) {
+              list.add(ref);
+            }
           }
         }
       }

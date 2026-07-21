@@ -35,8 +35,22 @@ kendini sınırlar; favori = yavaş/sönmeyen çıpa, oy = hızlı sönen mod (a
 Testler: rank-ağırlıklı tür katkısı + `favoriteRankWeight` uçları
 (`prefs_service_test`).
 
-**Sonraki (opsiyonel):** Taste DNA / Wrapped'e Top 20'yi katmak; film↔dizi tür id
-köprüsünü favori sinyaline de uygulamak.
+**Taste DNA entegrasyonu (uygulandı):** Top 20 artık "Sinema Kimliğin"i besliyor.
+- `compute`'a opsiyonel `favorites` (rank-ağırlıklı tür katkısı): arketip + top
+  türleri favoriler de şekillendirir. Kör nokta bilerek rating-tabanlı kalır
+  (favori = pozitif beyan).
+- `_aggregateThemes`: en üst ~8 favorinin keyword'leri temalara +2 ağırlıkla
+  girer (oydan güçlü) → DNA temaları "hayatımın yapımları"nı yansıtır. Oy yokken
+  bile favorilerden tema/arketip üretilir.
+- DNA hash'ine favori imzası eklendi → Top 20 değişince DNA yeniden üretilir ve
+  otomatik yayınlanır. Testler: favori-arketip + sadece-favori (`taste_dna_test`).
+
+**Bilinçli erteleme — film↔dizi tür id köprüsü:** Tür id uzayları farklı (film 28
+Aksiyon ≠ dizi 10759 Aksiyon&Macera), bu yüzden bir türden favori diğer türdeki
+adayla eşleşmiyor. Ancak köprü, her yerde kullanılan çekirdek tür-ağırlık
+vektörünü kökten değiştiriyor ve mevcut ayarlı sıralamayı bozuyor (ör.
+`prefs_service_test`'te 878→10765 köprüsü tür 53'ü top-3'ten dışarı itiyor). Kendi
+ayar + doğrulama turunu hak eden ayrı bir iş — "cila" olarak eklenmedi.
 
 ## Kararlar (kesin)
 
