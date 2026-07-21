@@ -186,6 +186,20 @@ $renderSplitShelf = static function (
             overflow: hidden;
             isolation: isolate;
         }
+        /* Soft cinematic ambience — gold / crimson washes that drift slowly. */
+        .hero-stage::before {
+            content: '';
+            position: absolute;
+            inset: -12%;
+            z-index: 1;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 55% 45% at 18% 28%, rgba(255, 194, 75, .16), transparent 62%),
+                radial-gradient(ellipse 50% 48% at 82% 18%, rgba(239, 61, 69, .18), transparent 58%),
+                radial-gradient(ellipse 70% 42% at 48% 92%, rgba(255, 214, 140, .08), transparent 55%);
+            mix-blend-mode: soft-light;
+            animation: ambienceDrift 24s ease-in-out infinite alternate;
+        }
         .hero-bg {
             position: absolute;
             inset: 0;
@@ -228,8 +242,9 @@ $renderSplitShelf = static function (
             padding: 10px 14px;
             backdrop-filter: blur(8px);
             background: rgba(8, 9, 12, .35);
+            transition: color .25s ease, border-color .25s ease, background .25s ease;
         }
-        .lang:hover { color: var(--ink); border-color: #ffffff55; }
+        .lang:hover { color: var(--ink); border-color: #ffffff55; background: rgba(8, 9, 12, .5); }
 
         .hero-content {
             position: relative;
@@ -246,6 +261,12 @@ $renderSplitShelf = static function (
             font-weight: 700;
             letter-spacing: .18em;
             text-transform: uppercase;
+            background: linear-gradient(100deg, #c9a04a 0%, #ffc24b 35%, #fff1c8 50%, #ffc24b 65%, #c9a04a 100%);
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: goldSheen 7s ease-in-out infinite;
         }
         .hero-archetype {
             margin: 0;
@@ -255,6 +276,7 @@ $renderSplitShelf = static function (
             letter-spacing: -.055em;
             font-weight: 800;
             text-wrap: balance;
+            text-shadow: 0 12px 40px rgba(0, 0, 0, .45);
         }
         .hero-essence {
             margin: 18px 0 0;
@@ -283,13 +305,18 @@ $renderSplitShelf = static function (
             min-height: 48px;
             padding: 0 20px;
             border-radius: 14px;
-            background: var(--ink);
+            background: linear-gradient(135deg, #f7f5ef 0%, #e8e2d4 100%);
             color: #08090c;
             text-decoration: none;
             font-weight: 700;
-            transition: background .2s ease, transform .2s ease;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+            transition: background .3s ease, transform .25s ease, box-shadow .3s ease;
         }
-        .cta:hover { background: var(--gold); transform: translateY(-1px); }
+        .cta:hover {
+            background: linear-gradient(135deg, #ffc24b 0%, #f0a820 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(255, 194, 75, .28);
+        }
         .cta:focus-visible, .lang:focus-visible, .poster-link:focus-visible {
             outline: 3px solid var(--gold);
             outline-offset: 3px;
@@ -384,13 +411,33 @@ $renderSplitShelf = static function (
         }
 
         .dna-card {
+            position: relative;
             display: grid;
             grid-template-columns: 1fr;
             gap: 22px;
             padding: 28px 32px;
-            border: 1px solid var(--line);
+            border: 1px solid transparent;
             border-radius: var(--radius);
-            background: linear-gradient(145deg, #171a20, #0f1116);
+            background:
+                linear-gradient(145deg, #171a20, #0f1116) padding-box,
+                linear-gradient(135deg, rgba(255, 194, 75, .35), rgba(255, 255, 255, .06) 40%, rgba(239, 61, 69, .28) 70%, rgba(255, 194, 75, .2)) border-box;
+            background-size: 100% 100%, 220% 220%;
+            animation: borderLuxe 16s ease-in-out infinite alternate;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .28);
+        }
+        .chip {
+            padding: 8px 12px;
+            border: 1px solid #ffc24b44;
+            border-radius: 999px;
+            background: #ffc24b0d;
+            color: #ffe0a0;
+            font-size: .88rem;
+            transition: border-color .25s ease, background .25s ease, transform .2s ease;
+        }
+        .chip:hover {
+            border-color: #ffc24b88;
+            background: #ffc24b18;
+            transform: translateY(-1px);
         }
         .dna-detail { display: grid; gap: 22px; }
         .dna-detail h3 {
@@ -401,14 +448,6 @@ $renderSplitShelf = static function (
             text-transform: uppercase;
         }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-        .chip {
-            padding: 8px 12px;
-            border: 1px solid #ffc24b44;
-            border-radius: 999px;
-            background: #ffc24b0d;
-            color: #ffe0a0;
-            font-size: .88rem;
-        }
         .signals { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
         .signals li {
             padding-left: 16px;
@@ -467,6 +506,18 @@ $renderSplitShelf = static function (
             from { transform: scale(1.06) translate3d(0, 0, 0); }
             to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
         }
+        @keyframes ambienceDrift {
+            from { transform: translate3d(0, 0, 0) scale(1); opacity: .85; }
+            to { transform: translate3d(3%, -2%, 0) scale(1.08); opacity: 1; }
+        }
+        @keyframes goldSheen {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        @keyframes borderLuxe {
+            from { background-position: 0% 0%, 0% 40%; }
+            to { background-position: 0% 0%, 100% 60%; }
+        }
         @keyframes rise {
             to { opacity: 1; transform: none; }
         }
@@ -486,6 +537,10 @@ $renderSplitShelf = static function (
                 background-size: cover;
                 transform: none;
                 animation: none;
+            }
+            .hero-stage::before {
+                animation-duration: 30s;
+                opacity: .9;
             }
             .hero-bg::after {
                 background:
@@ -511,6 +566,12 @@ $renderSplitShelf = static function (
             }
             .reveal { opacity: 1; transform: none; }
             .hero-bg { transform: none; }
+            .eyebrow {
+                color: var(--gold);
+                background: none;
+                -webkit-background-clip: unset;
+                background-clip: unset;
+            }
         }
     </style>
 </head>
