@@ -9,6 +9,7 @@ import 'api_service.dart';
 import 'providers.dart';
 import '../providers/auth_provider.dart';
 import '../providers/watchlist_provider.dart';
+import '../providers/top_list_provider.dart';
 import '../providers/swipe_provider.dart';
 import '../providers/social_provider.dart';
 
@@ -119,6 +120,9 @@ class SyncService {
     await _ref?.read(recommendationEngineProvider).invalidateCache();
     _ref?.invalidate(watchlistProvider);
     _ref?.invalidate(statsProvider);
+    // Top 20 (favoriler) de tazelensin — aksi halde giriş/sıfırlama sonrası
+    // sunucudan çekilen favoriler bayat provider yüzünden ekrana gelmiyordu.
+    _ref?.invalidate(topListProvider);
     _ref?.invalidate(swipeProvider);
     _ref?.invalidate(socialProvider);
   }
@@ -470,6 +474,9 @@ class SyncService {
       );
       _ref?.invalidate(watchlistProvider);
       _ref?.invalidate(statsProvider);
+      // Buluttan gelen favoriler Top 20 raylarına da yansısın (aksi halde
+      // provider bayat kalıp giriş sonrası boş görünüyordu).
+      _ref?.invalidate(topListProvider);
       _ref?.invalidate(swipeProvider);
       _ref?.invalidate(socialProvider);
       // Buluttan gelen puanlar "Sana Özel" / Tonight seçkisini değiştirir.
