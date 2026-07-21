@@ -160,7 +160,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                       AppLocalizations.of(
                             context,
                           )?.get('you_are_offline_your_changes_w') ??
-                          'You are offline — Your changes will be synced',
+                          'Offline Mode — Your data will be synced at the first opportunity',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,

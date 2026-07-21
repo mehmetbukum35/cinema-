@@ -581,7 +581,7 @@ const Map<String, String> kTrStrings = {
   'complete_the_2minute_survey_fo':
       'Sana en uygun film ve dizileri bulmamız için 2 dakikalık analizi tamamla!',
   'you_are_offline_your_changes_w':
-      'Çevrimdışısınız — Değişiklikleriniz senkronize edilecek',
+      'Offline Moddasınız — İlk fırsatta verileriniz sunucuya gönderilecektir',
   'no_common_genres': 'Ortak Tür Bulunamadı',
   'you_have_no_common_genres_sele':
       'İkinizin de seçtiği ortak bir tür bulunmuyor. Ortak bir tavsiye üretebilmemiz için lütfen en az bir ortak tür seçin.',

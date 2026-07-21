@@ -587,7 +587,7 @@ const Map<String, String> kEnStrings = {
   'complete_the_2minute_survey_fo':
       'Complete the 2-minute survey for the best matching movies and shows!',
   'you_are_offline_your_changes_w':
-      'You are offline — Your changes will be synced',
+      'Offline Mode — Your data will be synced at the first opportunity',
   'no_common_genres': 'No Common Genres',
   'you_have_no_common_genres_sele':
       'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
