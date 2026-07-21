@@ -27,14 +27,18 @@ if (!empty($dna)) {
     $ogDesc = sprintf($t['og_dna_desc'], $dna['archetype'], $dna['essence']);
 }
 
-$heroPools = array_merge($topMovies, $topShows, $ratings, $goodRatings, $watchlist);
-$heroCandidate = null;
-foreach ($heroPools as $item) {
-    if (!empty($item['backdrop_path']) || !empty($item['poster_path'])) {
-        $heroCandidate = $item;
-        break;
-    }
+// Hero rotasyonu: her ziyarette Top 20'den rastgele bir görsel — profil canlı
+// kalır. Top 20'de görselli aday yoksa diğer havuzlara düşülür.
+$hasArt = static fn(array $item): bool =>
+    !empty($item['backdrop_path']) || !empty($item['poster_path']);
+$heroPool = array_values(array_filter(array_merge($topMovies, $topShows), $hasArt));
+if ($heroPool === []) {
+    $heroPool = array_values(array_filter(
+        array_merge($ratings, $goodRatings, $watchlist),
+        $hasArt
+    ));
 }
+$heroCandidate = $heroPool !== [] ? $heroPool[array_rand($heroPool)] : null;
 // Desktop: wide cinematic backdrop. Mobile: portrait poster so the art fits phone width.
 $heroDesktop = $posterUrl($heroCandidate['backdrop_path'] ?? null, 'w1280');
 $heroMobile = $posterUrl($heroCandidate['poster_path'] ?? null, 'w780');
@@ -46,6 +50,12 @@ if ($heroMobile === '') {
 }
 $ogImage = $posterUrl($heroCandidate['poster_path'] ?? null)
     ?: $posterUrl($heroCandidate['backdrop_path'] ?? null, 'w780');
+// Hero kredisi: ziyaretçinin "bu hangi film?" merakını giderir, TMDB'ye köprü.
+$heroCreditTitle = trim((string) ($heroCandidate['title'] ?? ''));
+$heroCreditYear = !empty($heroCandidate['release_date'])
+    ? substr((string) $heroCandidate['release_date'], 0, 4)
+    : '';
+$heroCreditHref = $heroCandidate !== null ? $tmdbHref($heroCandidate) : '';
 
 $renderTopCards = static function (array $items) use ($e, $posterUrl, $tmdbHref, $t): void {
     $i = 0;
@@ -152,6 +162,10 @@ $renderSplitShelf = static function (
     <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org">
+    <?php // Hero LCP: background-image tarayıcı taramasında geç keşfedilir; preload öne çeker. ?>
+    <?php if ($heroDesktop): ?><link rel="preload" as="image" href="<?= $e($heroDesktop) ?>" media="(min-width: 761px)"><?php endif; ?>
+    <?php if ($heroMobile): ?><link rel="preload" as="image" href="<?= $e($heroMobile) ?>" media="(max-width: 760px)"><?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -277,8 +291,8 @@ $renderSplitShelf = static function (
             background-position: center center;
             background-size: cover;
             background-repeat: no-repeat;
-            transform: scale(1.06);
-            animation: heroDrift 28s ease-in-out infinite alternate;
+            transform: scale(1.08);
+            animation: heroDrift 16s ease-in-out infinite alternate;
         }
         .hero-bg::after {
             content: '';
@@ -312,6 +326,29 @@ $renderSplitShelf = static function (
             transition: color .25s ease, border-color .25s ease, background .25s ease;
         }
         .lang:hover { color: var(--ink); border-color: #ffffff55; background: rgba(8, 9, 12, .5); }
+
+        /* Hero görsel kredisi: "bu hangi film?" — köşede küçük, TMDB'ye köprü. */
+        .hero-credit {
+            position: absolute;
+            right: max(20px, calc((100% - 1180px) / 2));
+            bottom: 20px;
+            z-index: 3;
+            padding: 8px 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(8, 9, 12, .45);
+            backdrop-filter: blur(8px);
+            color: var(--muted);
+            font-size: .8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color .25s ease, border-color .25s ease, background .25s ease;
+        }
+        a.hero-credit:hover {
+            color: var(--ink);
+            border-color: #ffc24b66;
+            background: rgba(8, 9, 12, .65);
+        }
 
         .hero-content {
             position: relative;
@@ -570,8 +607,9 @@ $renderSplitShelf = static function (
             to { opacity: 1; transform: none; }
         }
         @keyframes heroDrift {
-            from { transform: scale(1.06) translate3d(0, 0, 0); }
-            to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+            0% { transform: scale(1.08) translate3d(0, 0, 0); }
+            50% { transform: scale(1.16) translate3d(-2.5%, -1.5%, 0); }
+            100% { transform: scale(1.12) translate3d(2%, 1%, 0); }
         }
         @keyframes orbGold {
             from { transform: translate3d(0, 0, 0) scale(1); opacity: .85; }
@@ -634,6 +672,14 @@ $renderSplitShelf = static function (
             }
             .hero-topbar, .hero-content, .shell { width: min(100% - 24px, 1180px); }
             .hero-topbar { padding-top: 16px; }
+            /* Mobilde CTA hero'nun altında — kredi üst köşeye alınır, çakışmaz. */
+            .hero-credit {
+                right: 12px;
+                bottom: auto;
+                top: 68px;
+                font-size: .74rem;
+                padding: 7px 11px;
+            }
             .hero-content { padding: 28px 0 48px; margin-top: auto; }
             .hero-archetype { max-width: none; }
             .rank-track { grid-auto-columns: 136px; margin-right: -12px; }
@@ -714,6 +760,14 @@ $renderSplitShelf = static function (
             <a class="cta" href="https://cinema.mbkm.com.tr" rel="noopener"><?= $e(sprintf($t['cta'], html_entity_decode($displayName))) ?></a>
         </div>
     </div>
+    <?php if ($heroCreditTitle !== ''): ?>
+        <?php $heroCreditLabel = '🎬 ' . $heroCreditTitle . ($heroCreditYear !== '' ? ' (' . $heroCreditYear . ')' : ''); ?>
+        <?php if ($heroCreditHref !== ''): ?>
+            <a class="hero-credit" href="<?= $e($heroCreditHref) ?>" target="_blank" rel="noopener"><?= $e($heroCreditLabel) ?></a>
+        <?php else: ?>
+            <span class="hero-credit"><?= $e($heroCreditLabel) ?></span>
+        <?php endif; ?>
+    <?php endif; ?>
 </header>
 
 <main class="shell">
