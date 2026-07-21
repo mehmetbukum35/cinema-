@@ -806,6 +806,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(loading: true, error: null);
     try {
       await _apiService.resetPassword(email, code, newPassword);
+      await PrefsService.clearAuthData();
       state = AuthState(); // reset to default logged-out state
       return true;
     } on ApiException catch (e) {

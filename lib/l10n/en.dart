@@ -735,6 +735,9 @@ const Map<String, String> kEnStrings = {
       'Follow me on What to Watch! Check out my watchlist and favorites here: {}',
   'profile_share_no_username':
       'Set a username in your profile to share your web profile.',
+  'profile_share_failed': 'Could not open share sheet. Please try again.',
+  'share': 'Share',
+  'error': 'Error',
   'taste_score_match': '{}% match',
   'remove_friend_confirm_msg':
       'Are you sure you want to remove {} from friends?',

@@ -293,7 +293,8 @@ switch (true) {
             $_GET['locale'] ?? null,
             $_GET['device_id'] ?? null,
             (int) ($_GET['ack_cursor'] ?? 0),
-            true
+            true,
+            !empty($_GET['local_reset'])
         );
         break;
 

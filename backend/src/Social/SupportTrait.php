@@ -76,7 +76,7 @@ trait SocialSupportTrait
              FROM ratings r
              LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = ?
              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
-             WHERE r.user_id = ? AND r.deleted = 0 AND r.rating BETWEEN 0 AND 3'
+             WHERE r.user_id = ? AND r.deleted = 0 AND r.is_private = 0 AND r.rating BETWEEN 0 AND 3'
         );
         $st->execute([$locale, $uid]);
         $map = [];

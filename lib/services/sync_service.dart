@@ -40,6 +40,9 @@ class SyncService {
   final ApiService _apiService;
   final Ref? _ref;
   Future<void>? _syncFuture;
+  /// After a local wipe for sync_reset_required, declare local_reset until
+  /// one successful sync clears the server-side invalidation.
+  bool _declareLocalReset = false;
 
   SyncService(this._apiService, [this._ref]);
 
@@ -63,6 +66,9 @@ class SyncService {
       final chunk = <String, dynamic>{
         'metadata_locale': payload['metadata_locale'],
       };
+      if (payload['local_reset'] == true) {
+        chunk['local_reset'] = true;
+      }
       for (final table in tables) {
         final items = payload[table] as List? ?? const [];
         if (start < items.length) {
@@ -92,15 +98,21 @@ class SyncService {
       if (e.code != 'sync_reset_required') rethrow;
       debugPrint('Sync device expired; performing a safe full resync.');
       final pendingLocalChanges = await _resetLocalSyncState();
-      _syncFuture = _performSync();
-      await _syncFuture;
-      await _restorePendingLocalChanges(pendingLocalChanges);
-      if (pendingLocalChanges.values.any((rows) => rows.isNotEmpty)) {
-        // The full pull advances both cursors. Rewind only the push cursor so
-        // the preserved offline edits are uploaded on a second pass.
-        await PrefsService.setLastPushTime(0);
+      _declareLocalReset = true;
+      try {
         _syncFuture = _performSync();
         await _syncFuture;
+        await _restorePendingLocalChanges(pendingLocalChanges);
+        if (pendingLocalChanges.values.any((rows) => rows.isNotEmpty)) {
+          // The full pull advances both cursors. Rewind only the push cursor so
+          // the preserved offline edits are uploaded on a second pass.
+          await PrefsService.setLastPushTime(0);
+          _syncFuture = _performSync();
+          await _syncFuture;
+        }
+      } catch (e) {
+        await _restorePendingLocalChanges(pendingLocalChanges);
+        rethrow;
       }
     } finally {
       _syncFuture = null;
@@ -211,10 +223,14 @@ class SyncService {
       );
       final pushResult = await _apiService.push(<String, dynamic>{
         'metadata_locale': PrefsService.activeLanguageCode,
+        if (_declareLocalReset) 'local_reset': true,
       });
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
       await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
-      final pullResult = await _apiService.pull(lastPull);
+      final pullResult = await _apiService.pull(
+        lastPull,
+        localReset: _declareLocalReset,
+      );
       final serverTime = _asInt(pullResult['server_time']);
       await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
       PrefsService.invalidateGenreWeights();
@@ -222,6 +238,9 @@ class SyncService {
       debugPrint(
         "Sync complete (mock DB). pull cursor: $serverTime, push cursor: $pushWatermark",
       );
+      if (_declareLocalReset) {
+        _declareLocalReset = false;
+      }
       _autoPublishDnaBackground();
       return;
     }
@@ -231,6 +250,7 @@ class SyncService {
     // 1. Build and PUSH local changes
     final payload = <String, dynamic>{
       'metadata_locale': PrefsService.activeLanguageCode,
+      if (_declareLocalReset) 'local_reset': true,
     };
 
     // Ratings
@@ -360,7 +380,10 @@ class SyncService {
     await PrefsService.setLastPushTime(_overlappingCursor(pushWatermark));
 
     // 2. PULL remote changes
-    final pullResult = await _apiService.pull(lastPull);
+    final pullResult = await _apiService.pull(
+      lastPull,
+      localReset: _declareLocalReset,
+    );
     final serverTime = _asInt(pullResult['server_time']);
 
     // Sunucudan gelen satır, yereldeki karşılığından ESKİYSE uygulanmaz.
@@ -406,7 +429,7 @@ class SyncService {
           'metadata_locale':
               r['metadata_locale'] ?? PrefsService.activeLanguageCode,
           'rating': r['rating'],
-          'genre_ids': jsonEncode(r['genre_ids']),
+          'genre_ids': jsonEncode(_decodeJsonList(r['genre_ids'])),
           'title': r['title'],
           'poster_path': r['poster_path'],
           'backdrop_path': r['backdrop_path'],
@@ -447,7 +470,7 @@ class SyncService {
           'overview': w['overview'],
           'vote_average': w['vote_average'],
           'release_date': w['release_date'],
-          'genre_ids': jsonEncode(w['genre_ids']),
+          'genre_ids': jsonEncode(_decodeJsonList(w['genre_ids'])),
           'created_at': w['created_at'],
           'updated_at': w['updated_at'],
           'deleted': w['deleted'] ? 1 : 0,
@@ -476,7 +499,7 @@ class SyncService {
           'overview': f['overview'],
           'vote_average': f['vote_average'],
           'release_date': f['release_date'],
-          'genre_ids': jsonEncode(f['genre_ids']),
+          'genre_ids': jsonEncode(_decodeJsonList(f['genre_ids'])),
           'created_at': f['created_at'],
           'updated_at': f['updated_at'],
           'deleted': f['deleted'] ? 1 : 0,
@@ -526,6 +549,9 @@ class SyncService {
     });
 
     // Birleşik pull sonrası Top 20 tavanını ve sıra indekslerini toparla.
+    // Trim/remap updated_at stamps happen AFTER the main push, so push those
+    // favorites in the same sync turn (tombstones + remapped ranks).
+    final normalizeStartMs = DateTime.now().millisecondsSinceEpoch;
     final trimmedFavorites = await DatabaseHelper().normalizeFavoritesCap();
     if (trimmedFavorites > 0) {
       appliedCount += trimmedFavorites;
@@ -533,6 +559,7 @@ class SyncService {
         'Sync trimmed $trimmedFavorites favorites over Top 20 cap.',
       );
     }
+    await _pushFavoritesTouchedSince(normalizeStartMs);
 
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
@@ -559,6 +586,9 @@ class SyncService {
     debugPrint(
       "Sync complete. pull cursor: $serverTime, push cursor: $pushWatermark",
     );
+    if (_declareLocalReset) {
+      _declareLocalReset = false;
+    }
     _autoPublishDnaBackground();
   }
 
@@ -572,15 +602,14 @@ class SyncService {
     Future.microtask(() async {
       try {
         final userId = auth.user?['id']?.toString();
-        final dna = await ref
+        final generated = await ref
             .read(tasteDnaServiceProvider)
             .generate(userId: userId);
-
-        final cachedData = await PrefsService.getCachedDna();
-        final currentHash = cachedData?['hash'];
+        final dna = generated.dna;
+        final currentHash = generated.hash;
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
-        if (currentHash != null && currentHash != lastPublishedHash) {
+        if (currentHash != lastPublishedHash) {
           await _apiService.publishTasteDna(dna.toJson());
           await PrefsService.setLastPublishedDnaHash(currentHash);
           debugPrint("Sync auto-publish DNA succeeded!");
@@ -591,6 +620,49 @@ class SyncService {
         debugPrint("Sync auto-publish DNA failed: $e");
       }
     });
+  }
+
+  /// Push favorites rows touched at/after [sinceMs] (cap trim tombstones +
+  /// remapped ranks) so they leave in the same sync turn as normalize.
+  Future<void> _pushFavoritesTouchedSince(int sinceMs) async {
+    final db = await DatabaseHelper().database;
+    if (db == null) return;
+
+    final rows = await db.query(
+      'favorites',
+      where: 'updated_at >= ?',
+      whereArgs: [sinceMs],
+    );
+    if (rows.isEmpty) return;
+
+    final payload = <String, dynamic>{
+      'metadata_locale': PrefsService.activeLanguageCode,
+      'favorites': rows
+          .map(
+            (f) => {
+              'id': f['id'],
+              'is_tv': f['is_tv'],
+              'metadata_locale': f['metadata_locale'],
+              'title': f['title'],
+              'poster_path': f['poster_path'],
+              'backdrop_path': f['backdrop_path'],
+              'overview': f['overview'],
+              'vote_average': f['vote_average'],
+              'release_date': f['release_date'],
+              'genre_ids': _decodeJsonList(f['genre_ids']),
+              'created_at': f['created_at'],
+              'updated_at': f['updated_at'],
+              'deleted': f['deleted'] == 1,
+            },
+          )
+          .toList(),
+    };
+
+    final applied = await _pushPayloadInChunks(payload);
+    debugPrint(
+      'Sync pushed ${rows.length} favorites after cap normalize '
+      '(applied=$applied).',
+    );
   }
 }
 

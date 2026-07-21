@@ -156,15 +156,18 @@ class _MainShellState extends ConsumerState<MainShell> {
                       size: 14,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      AppLocalizations.of(
-                            context,
-                          )?.get('you_are_offline_your_changes_w') ??
-                          'Offline Mode — Your data will be synced at the first opportunity',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(
+                              context,
+                            )?.get('you_are_offline_your_changes_w') ??
+                            'Offline Mode — Your data will be synced at the first opportunity',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

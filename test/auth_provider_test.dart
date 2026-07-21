@@ -133,7 +133,10 @@ class MockApiService implements ApiService {
   };
 
   @override
-  Future<Map<String, dynamic>> pull(int since) async => {
+  Future<Map<String, dynamic>> pull(
+    int since, {
+    bool localReset = false,
+  }) async => {
     'changes': [],
     'server_time': DateTime.now().millisecondsSinceEpoch,
   };

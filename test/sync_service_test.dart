@@ -39,7 +39,10 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> pull(int since) async {
+  Future<Map<String, dynamic>> pull(
+    int since, {
+    bool localReset = false,
+  }) async {
     pullCount++;
     pulledSince = since;
     if (delay != null) await Future.delayed(delay!);
@@ -439,17 +442,19 @@ void main() {
         // 2. Act
         await syncService.sync();
 
-        // 3. Assert Pushed data
-        expect(mockApi.pushedPayload, isNotNull);
-        final favsPushed = mockApi.pushedPayload!['favorites'] as List;
+        // 3. Assert Pushed data (first push = local outbound; a follow-up may
+        // push remapped favorites ranks after normalizeFavoritesCap).
+        expect(mockApi.pushedPayloads, isNotEmpty);
+        final firstPush = mockApi.pushedPayloads.first;
+        final favsPushed = firstPush['favorites'] as List;
         expect(favsPushed, hasLength(1));
         expect(favsPushed[0]['id'], 111);
 
-        final seasonsPushed = mockApi.pushedPayload!['watched_seasons'] as List;
+        final seasonsPushed = firstPush['watched_seasons'] as List;
         expect(seasonsPushed, hasLength(1));
         expect(seasonsPushed[0]['tv_id'], 222);
 
-        final searchPushed = mockApi.pushedPayload!['search_history'] as List;
+        final searchPushed = firstPush['search_history'] as List;
         expect(searchPushed, hasLength(1));
         expect(searchPushed[0]['query'], 'inception');
 

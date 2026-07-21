@@ -110,7 +110,25 @@ class TmdbService {
 
   // ─── Popular ────────────────────────────────────────────────────────────────
 
-  Future<List<Movie>> getPopular({bool isTV = false, int page = 1}) {
+  /// List endpoints (`/popular`, `/top_rated`, …) do **not** accept TMDB
+  /// certification filters. When Family Mode is on we route through Discover
+  /// (which does) so PG-13 / TV-14 caps apply. Trending / airing lists have no
+  /// Discover equivalent with certs — those fall back to client `adult` filter
+  /// in [_sanitizeList].
+  Future<List<Movie>> getPopular({bool isTV = false, int page = 1}) async {
+    final isFamily = await PrefsService.isFamilyMode();
+    if (isFamily) {
+      return _fetchList(isTV ? '/3/discover/tv' : '/3/discover/movie', {
+        'api_key': _apiKey,
+        'language': _language,
+        'region': _region,
+        'sort_by': 'popularity.desc',
+        'include_adult': 'false',
+        'page': page.toString(),
+        'certification_country': 'US',
+        'certification.lte': isTV ? 'TV-14' : 'PG-13',
+      }, isTV: isTV);
+    }
     final path = isTV ? '/3/tv/popular' : '/3/movie/popular';
     return _fetchList(path, {
       'api_key': _apiKey,
@@ -120,7 +138,20 @@ class TmdbService {
     }, isTV: isTV);
   }
 
-  Future<List<Movie>> getTopRated({bool isTV = false}) {
+  Future<List<Movie>> getTopRated({bool isTV = false}) async {
+    final isFamily = await PrefsService.isFamilyMode();
+    if (isFamily) {
+      return _fetchList(isTV ? '/3/discover/tv' : '/3/discover/movie', {
+        'api_key': _apiKey,
+        'language': _language,
+        'region': _region,
+        'sort_by': 'vote_average.desc',
+        'include_adult': 'false',
+        'vote_count.gte': isTV ? '50' : '100',
+        'certification_country': 'US',
+        'certification.lte': isTV ? 'TV-14' : 'PG-13',
+      }, isTV: isTV);
+    }
     final path = isTV ? '/3/tv/top_rated' : '/3/movie/top_rated';
     return _fetchList(path, {
       'api_key': _apiKey,
@@ -588,6 +619,8 @@ class TmdbService {
   // ─── Trending ────────────────────────────────────────────────────────────────
 
   Future<List<Movie>> getTrending() {
+    // Trending has no certification query params; Family Mode relies on
+    // client-side adult filtering in _sanitizeList.
     return _fetchListMixed('/3/trending/all/week', {
       'api_key': _apiKey,
       'language': _language,
@@ -605,7 +638,21 @@ class TmdbService {
 
   // ─── Upcoming movies ─────────────────────────────────────────────────────────
 
-  Future<List<Movie>> getUpcoming() {
+  Future<List<Movie>> getUpcoming() async {
+    final isFamily = await PrefsService.isFamilyMode();
+    if (isFamily) {
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      return _fetchList('/3/discover/movie', {
+        'api_key': _apiKey,
+        'language': _language,
+        'region': _region,
+        'sort_by': 'popularity.desc',
+        'include_adult': 'false',
+        'primary_release_date.gte': today,
+        'certification_country': 'US',
+        'certification.lte': 'PG-13',
+      }, isTV: false);
+    }
     return _fetchList('/3/movie/upcoming', {
       'api_key': _apiKey,
       'language': _language,
@@ -653,7 +700,26 @@ class TmdbService {
 
   // ─── Now playing / Airing ────────────────────────────────────────────────────
 
-  Future<List<Movie>> getNowPlaying() {
+  Future<List<Movie>> getNowPlaying() async {
+    final isFamily = await PrefsService.isFamilyMode();
+    if (isFamily) {
+      // Theatrical now-playing window via Discover so certification applies.
+      final now = DateTime.now();
+      final gte = now.subtract(const Duration(days: 40)).toIso8601String().substring(0, 10);
+      final lte = now.add(const Duration(days: 7)).toIso8601String().substring(0, 10);
+      return _fetchList('/3/discover/movie', {
+        'api_key': _apiKey,
+        'language': _language,
+        'region': _region,
+        'sort_by': 'popularity.desc',
+        'include_adult': 'false',
+        'primary_release_date.gte': gte,
+        'primary_release_date.lte': lte,
+        'with_release_type': '2|3',
+        'certification_country': 'US',
+        'certification.lte': 'PG-13',
+      }, isTV: false);
+    }
     return _fetchList('/3/movie/now_playing', {
       'api_key': _apiKey,
       'language': _language,
@@ -661,14 +727,16 @@ class TmdbService {
     }, isTV: false);
   }
 
-  Future<List<Movie>> getAiringToday() {
+  Future<List<Movie>> getAiringToday() async {
+    // /tv/airing_today has no certification params; adult filtered in _sanitizeList.
     return _fetchList('/3/tv/airing_today', {
       'api_key': _apiKey,
       'language': _language,
     }, isTV: true);
   }
 
-  Future<List<Movie>> getOnTheAir() {
+  Future<List<Movie>> getOnTheAir() async {
+    // /tv/on_the_air has no certification params; adult filtered in _sanitizeList.
     return _fetchList('/3/tv/on_the_air', {
       'api_key': _apiKey,
       'language': _language,
@@ -1224,6 +1292,13 @@ class TmdbService {
       debugPrint(
         "Error loading blocked movies from SharedPreferences: $e\n$st",
       );
+    }
+
+    // Family Mode: drop explicit-adult titles on endpoints that cannot take
+    // certification query params (trending, airing_today, on_the_air, etc.).
+    final isFamily = await PrefsService.isFamilyMode();
+    if (isFamily) {
+      list = list.where((m) => !m.adult).toList();
     }
 
     const int kMinVoteCountDefault = 15;

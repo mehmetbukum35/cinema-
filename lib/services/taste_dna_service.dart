@@ -293,7 +293,10 @@ class TasteDnaService {
   }
 
   /// Veriyi toplar (puanlamalar + keyword isimleri + telemetri) ve DNA üretir.
-  Future<TasteDna> generate({String? userId}) async {
+  /// Returns the DNA snapshot together with the input hash used for caching /
+  /// publish dedupe — callers must publish and record THAT hash (do not
+  /// re-read [PrefsService.getCachedDna], which can race with another generate).
+  Future<({TasteDna dna, String hash})> generate({String? userId}) async {
     final db = DatabaseHelper();
     final raw = await db.getRatings();
 
@@ -314,9 +317,10 @@ class TasteDnaService {
     addFavGenres(favMovies);
     addFavGenres(favShows);
     final favSeeds = _interleave(favMovies, favShows);
+    // Rank index in sig so Top 20 reorder invalidates DNA cache.
     final favSig = [
-      for (final m in favMovies) 'm${m.id}',
-      for (final m in favShows) 't${m.id}',
+      for (var i = 0; i < favMovies.length; i++) 'm${favMovies[i].id}#$i',
+      for (var i = 0; i < favShows.length; i++) 't${favShows[i].id}#$i',
     ].join(',');
 
     final telemetry = await PrefsService.getRecoTelemetry();
@@ -328,8 +332,12 @@ class TasteDnaService {
     }
     final accuracy = shown > 0 ? likedCount / shown : null;
 
-    // Hash check
+    // Hash check — privateCount so toggling private invalidates DNA cache
+    // even when ratingCount/maxUpdatedAt are unchanged.
     final ratingCount = raw.length;
+    final privateCount = raw
+        .where((r) => (r['is_private'] as int? ?? 0) == 1)
+        .length;
     final maxUpdatedAt = raw.fold<int>(
       0,
       (maxVal, r) => max(
@@ -338,7 +346,7 @@ class TasteDnaService {
       ),
     );
     final inputHash =
-        "$ratingCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig";
+        "$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig";
 
     final cachedData = await PrefsService.getCachedDna();
     if (cachedData != null && cachedData['hash'] == inputHash) {
@@ -346,7 +354,7 @@ class TasteDnaService {
         final decoded = jsonDecode(cachedData['json']!);
         if (decoded is Map<String, dynamic>) {
           debugPrint("DNA cache hit! Skipping generation.");
-          return TasteDna.fromJson(decoded);
+          return (dna: TasteDna.fromJson(decoded), hash: inputHash);
         }
       } catch (e) {
         debugPrint("Failed to parse cached DNA JSON: $e");
@@ -355,6 +363,8 @@ class TasteDnaService {
 
     final ratings = <DnaRating>[];
     for (final r in raw) {
+      // Private ratings must not shape archetype / critic / era signals.
+      if ((r['is_private'] as int? ?? 0) == 1) continue;
       final movie = r['movie'];
       int? year;
       double pop = 0.0;
@@ -399,7 +409,7 @@ class TasteDnaService {
       debugPrint("Failed to save DNA to cache: $e");
     }
 
-    return dna;
+    return (dna: dna, hash: inputHash);
   }
 
   /// En yeni beğenilerin keyword isimlerini frekansa göre toplar; gürültü

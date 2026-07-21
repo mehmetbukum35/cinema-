@@ -43,7 +43,8 @@ class Sync
         int $uid,
         ?string $deviceId,
         int $ackCursor,
-        bool $required
+        bool $required,
+        bool $localReset = false
     ): void {
         $deviceId = trim((string) $deviceId);
         if ($deviceId === '' && !$required) return;
@@ -62,7 +63,8 @@ class Sync
 
         if ($device !== false) {
             $wasInvalidated = $device['invalidated_at'] !== null;
-            if ($wasInvalidated && $ackCursor > 0) {
+            // Invalidated devices always require an explicit local wipe + local_reset.
+            if ($wasInvalidated && !$localReset) {
                 fail(409, 'Bu cihaz tam yeniden senkronizasyon gerektiriyor.', 'sync_reset_required');
             }
             $nextAck = $wasInvalidated
@@ -112,10 +114,11 @@ class Sync
         ?string $locale = null,
         ?string $deviceId = null,
         int $ackCursor = 0,
-        bool $requireDevice = false
+        bool $requireDevice = false,
+        bool $localReset = false
     ): void
     {
-        $this->acknowledgeDevice($uid, $deviceId, $ackCursor, $requireDevice);
+        $this->acknowledgeDevice($uid, $deviceId, $ackCursor, $requireDevice, $localReset);
         $locale = cinema_content_locale($locale);
         $out = ['server_time' => now_ms()];
         foreach (self::TABLES as $table => $def) {
@@ -148,7 +151,7 @@ class Sync
                 foreach (array_unique(array_merge($def['json'], isset($def['title_key']) ? ['genre_ids'] : [])) as $jc) {
                     if (isset($r[$jc])) $r[$jc] = json_decode($r[$jc], true);
                 }
-                $r['deleted'] = (bool) $r['deleted'];
+                $r['deleted'] = ((int) $r['deleted']) !== 0;
                 $rows[] = $r;
             }
             $out[$table] = $rows;
@@ -169,7 +172,8 @@ class Sync
             $uid,
             isset($in['device_id']) ? (string) $in['device_id'] : null,
             (int) ($in['ack_cursor'] ?? 0),
-            $requireDevice
+            $requireDevice,
+            !empty($in['local_reset'])
         );
         $locale = self::metadataLocale($in['metadata_locale'] ?? null);
         // Sınır kontrolü transaction'a girmeden yapılır.
@@ -356,6 +360,17 @@ class Sync
         $tmdbId = (int) ($item[$idKey] ?? 0);
         if ($tmdbId <= 0) return;
         $isTv = !empty($item['is_tv']) ? 1 : 0;
+
+        // TMDB image paths must be root-relative and charset-safe (no URL injection).
+        foreach (['poster_path', 'backdrop_path'] as $pathField) {
+            if (!array_key_exists($pathField, $item)) continue;
+            $path = $item[$pathField];
+            if ($path === null || $path === '') continue;
+            if (!is_string($path) || !preg_match('#^/[A-Za-z0-9._/-]+$#', $path)) {
+                $item[$pathField] = null;
+            }
+        }
+
         $fields = [
             'title', 'poster_path', 'backdrop_path', 'overview', 'vote_average',
             'release_date', 'popularity', 'genre_ids',

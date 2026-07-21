@@ -84,7 +84,8 @@ trait SocialReviewsTrait
         $st = $this->db->prepare(
             'SELECT 1 FROM ratings
               WHERE user_id = ? AND movie_id = ? AND is_tv = ?
-                AND deleted = 0 AND comment IS NOT NULL AND comment <> \'\''
+                AND deleted = 0 AND is_private = 0 AND is_hidden = 0
+                AND comment IS NOT NULL AND comment <> \'\''
         );
         $st->execute([$reportedId, $movieId, $isTV]);
         if (!$st->fetch()) fail(404, 'Şikayet edilecek yorum bulunamadı.');
@@ -111,8 +112,10 @@ trait SocialReviewsTrait
         $cnt->execute([$reportedId, $movieId, $isTV]);
         $hidden = false;
         if ((int) $cnt->fetchColumn() >= self::AUTO_HIDE_THRESHOLD) {
+            // Only auto-hide public comments; private ratings stay private.
             $up = $this->db->prepare(
-                'UPDATE ratings SET is_hidden = 1 WHERE user_id = ? AND movie_id = ? AND is_tv = ?'
+                'UPDATE ratings SET is_hidden = 1
+                  WHERE user_id = ? AND movie_id = ? AND is_tv = ? AND is_private = 0'
             );
             $up->execute([$reportedId, $movieId, $isTV]);
             $hidden = true;

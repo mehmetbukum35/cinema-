@@ -26,6 +26,7 @@ import '../models/review.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
+import '../providers/swipe_provider.dart';
 import '../services/providers.dart';
 import 'trailer_player_screen.dart';
 import '../widgets/app_toast.dart';
@@ -408,9 +409,11 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       if (_commentController.text.trim().isNotEmpty) {
         final confirmed = await confirmRatingDelete(context);
         if (!confirmed) return;
+        if (!mounted) return;
       }
       final oldRating = _currentRating;
       await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+      if (!mounted) return;
 
       final recoSource = widget.movie.recoSource;
       if (recoSource != null && oldRating != null) {
@@ -439,6 +442,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         isSpoiler: _isSpoiler ? 1 : 0,
         isPrivate: _isPrivate ? 1 : 0,
       );
+      if (!mounted) return;
       ref
           .read(recommendationEngineProvider)
           .invalidateCache(isNegativeChange: rating <= 1)
@@ -470,8 +474,32 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         );
       }
     }
+    if (!mounted) return;
     ref.invalidate(statsProvider);
+    if (ref.exists(swipeProvider)) {
+      ref.read(swipeProvider.notifier).refreshRatedIds().catchError((_) => {});
+    }
     ref.read(syncServiceProvider).sync();
+  }
+
+  /// Spoiler/private bayraklarını hemen kaydet (Save butonunu bekleme).
+  Future<void> _persistRatingFlags({
+    required bool isSpoiler,
+    required bool isPrivate,
+  }) async {
+    if (_currentRating == null) return;
+    final commentText = _commentController.text.trim();
+    await PrefsService.saveRating(
+      movie: widget.movie,
+      rating: _currentRating!,
+      comment: commentText.isEmpty ? null : commentText,
+      isSpoiler: isSpoiler ? 1 : 0,
+      isPrivate: isPrivate ? 1 : 0,
+    );
+    if (!mounted) return;
+    if (ref.read(authProvider).isLoggedIn) {
+      ref.read(syncServiceProvider).sync().catchError((_) => {});
+    }
   }
 
   /// Yorumu (mevcut puanla birlikte) kaydeder; başarıda 2 sn "kaydedildi"
@@ -585,10 +613,22 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
                   isSpoiler: _isSpoiler,
                   isPrivate: _isPrivate,
                   justSaved: _justSavedComment,
-                  onToggleSpoiler: () =>
-                      setState(() => _isSpoiler = !_isSpoiler),
-                  onTogglePrivate: () =>
-                      setState(() => _isPrivate = !_isPrivate),
+                  onToggleSpoiler: () {
+                    final next = !_isSpoiler;
+                    setState(() => _isSpoiler = next);
+                    _persistRatingFlags(
+                      isSpoiler: next,
+                      isPrivate: _isPrivate,
+                    );
+                  },
+                  onTogglePrivate: () {
+                    final next = !_isPrivate;
+                    setState(() => _isPrivate = next);
+                    _persistRatingFlags(
+                      isSpoiler: _isSpoiler,
+                      isPrivate: next,
+                    );
+                  },
                   onSave: _saveComment,
                 ),
               FriendsReviewsSection(

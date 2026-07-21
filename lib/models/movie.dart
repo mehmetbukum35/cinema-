@@ -10,6 +10,7 @@ class Movie {
   final List<int> genreIds;
   final double popularity;
   final int voteCount;
+  final bool adult;
 
   Movie({
     required this.id,
@@ -23,6 +24,7 @@ class Movie {
     this.genreIds = const [],
     this.popularity = 0,
     this.voteCount = 0,
+    this.adult = false,
   });
 
   factory Movie.fromJson(Map<String, dynamic> json, {bool isTV = false}) {
@@ -60,6 +62,7 @@ class Movie {
           const [],
       popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0.0,
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
+      adult: json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
     );
   }
 
@@ -102,6 +105,7 @@ class Movie {
     'genre_ids': genreIds,
     'popularity': popularity,
     'vote_count': voteCount,
+    'adult': adult,
   };
 
   factory Movie.fromStorage(Map<String, dynamic> json) => Movie(
@@ -118,6 +122,7 @@ class Movie {
         const [],
     popularity: ((json['popularity'] as num?) ?? 0).toDouble(),
     voteCount: json['vote_count'] as int? ?? 0,
+    adult: json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
   );
 
   Movie clone() {
@@ -133,6 +138,7 @@ class Movie {
       genreIds: List<int>.from(genreIds),
       popularity: popularity,
       voteCount: voteCount,
+      adult: adult,
     );
     m.personalizedMatchScore = personalizedMatchScore;
     m.recoReason = recoReason;

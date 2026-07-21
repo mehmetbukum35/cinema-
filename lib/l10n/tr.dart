@@ -730,6 +730,9 @@ const Map<String, String> kTrStrings = {
       'Beni Ne İzlesem uygulamasında takip et! İzleme listeme ve favorilerime buradan bakabilirsin: {}',
   'profile_share_no_username':
       'Profilinizi paylaşmak için profil ayarlarından kullanıcı adı belirleyin.',
+  'profile_share_failed': 'Paylaşım açılamadı. Lütfen tekrar deneyin.',
+  'share': 'Paylaş',
+  'error': 'Hata',
   'taste_score_match': '%{} uyum',
   'remove_friend_confirm_msg':
       '{} arkadaş listenizden çıkarılacak. Emin misiniz?',

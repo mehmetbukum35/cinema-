@@ -385,10 +385,24 @@ class SyncIntegrationTest extends TestCase
         }
         $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM ratings')->fetchColumn());
 
+        // ack_cursor=0 without local_reset still requires an explicit wipe.
+        TestHelperRegistry::reset();
+        try {
+            $this->sync->push(1, [
+                'device_id' => 'device-expired-0001',
+                'ack_cursor' => 0,
+            ], true);
+            $this->fail('Expired device push without local_reset should require a reset.');
+        } catch (TestExitException $e) {
+            $this->assertSame(409, $e->getCode());
+            $this->assertSame('sync_reset_required', TestHelperRegistry::$lastBody['code']);
+        }
+
         TestHelperRegistry::reset();
         $this->sync->push(1, [
             'device_id' => 'device-expired-0001',
             'ack_cursor' => 0,
+            'local_reset' => true,
         ], true);
         $row = $this->db->query(
             "SELECT last_ack_cursor, invalidated_at FROM sync_devices

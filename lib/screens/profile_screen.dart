@@ -218,13 +218,12 @@ class ProfileScreen extends ConsumerWidget {
     final apiService = ref.read(apiServiceProvider);
     Future.microtask(() async {
       try {
-        final dna = await dnaService.generate(userId: userId);
-
-        final cachedData = await PrefsService.getCachedDna();
-        final currentHash = cachedData?['hash'];
+        final generated = await dnaService.generate(userId: userId);
+        final dna = generated.dna;
+        final currentHash = generated.hash;
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
-        if (currentHash != null && currentHash != lastPublishedHash) {
+        if (currentHash != lastPublishedHash) {
           await apiService.publishTasteDna(dna.toJson());
           await PrefsService.setLastPublishedDnaHash(currentHash);
           debugPrint("Background DNA auto-publish succeeded!");

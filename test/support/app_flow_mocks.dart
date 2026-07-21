@@ -81,7 +81,10 @@ class MockIntegrationApiService implements ApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> pull(int since) async {
+  Future<Map<String, dynamic>> pull(
+    int since, {
+    bool localReset = false,
+  }) async {
     pullCalled = true;
     return pullResponse;
   }

@@ -4,6 +4,13 @@ declare(strict_types=1);
 $e = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $posterUrl = static fn(?string $path, string $size = 'w500'): string =>
     $path ? 'https://image.tmdb.org/t/p/' . $size . $path : '';
+/** Only emit CSS url() values that are known-safe TMDB CDN image URLs. */
+$cssSafeHeroUrl = static function (string $url): string {
+    if ($url === '' || !preg_match('#^https://image\.tmdb\.org/t/p/[A-Za-z0-9_]+/[A-Za-z0-9._/-]+$#', $url)) {
+        return '';
+    }
+    return $url;
+};
 $tmdbHref = static function (array $item): string {
     $id = (int) ($item['movie_id'] ?? 0);
     if ($id <= 0) {
@@ -513,12 +520,20 @@ $renderSplitShelf = static function (
         if ($heroDesktop || $heroMobile) {
             $vars = [];
             if ($heroDesktop) {
-                $vars[] = '--hero-desktop:url(' . $e($heroDesktop) . ')';
+                $safeDesktop = $cssSafeHeroUrl($heroDesktop);
+                if ($safeDesktop !== '') {
+                    $vars[] = '--hero-desktop:url("' . $safeDesktop . '")';
+                }
             }
             if ($heroMobile) {
-                $vars[] = '--hero-mobile:url(' . $e($heroMobile) . ')';
+                $safeMobile = $cssSafeHeroUrl($heroMobile);
+                if ($safeMobile !== '') {
+                    $vars[] = '--hero-mobile:url("' . $safeMobile . '")';
+                }
             }
-            echo ' style="' . implode(';', $vars) . '"';
+            if ($vars !== []) {
+                echo ' style="' . implode(';', $vars) . '"';
+            }
         }
     ?> aria-hidden="true"></div>
     <nav class="hero-topbar" aria-label="Cinema+">

@@ -335,6 +335,18 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       onRated?.call();
     }
   }
+
+  /// Reload ratedIds from DB (e.g. after rating from movie detail sheet).
+  Future<void> refreshRatedIds() async {
+    try {
+      final rated = await PrefsService.getRatedIds();
+      if (mounted) {
+        state = state.copyWith(ratedIds: rated);
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh swipe ratedIds: $e');
+    }
+  }
 }
 
 final swipeProvider =

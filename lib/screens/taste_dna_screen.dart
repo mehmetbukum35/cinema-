@@ -48,15 +48,16 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       final isAuthenticated = ref.read(authProvider).isAuthenticated;
       final dnaService = ref.read(tasteDnaServiceProvider);
       final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
-      final dna = await dnaService.generate(userId: userId);
+      final generated = await dnaService.generate(userId: userId);
+      final dna = generated.dna;
       // Snapshot'ı arka planda backend'e yayınla (public web kartı için).
       // Best-effort: başarısızsa ekran yine de görünür.
+      // Publish the same hash generate() just computed — do not re-read cache.
       if (isAuthenticated) {
-        final cachedData = await PrefsService.getCachedDna();
-        final currentHash = cachedData?['hash'];
+        final currentHash = generated.hash;
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
-        if (currentHash != null && currentHash != lastPublishedHash) {
+        if (currentHash != lastPublishedHash) {
           apiService!
               .publishTasteDna(dna.toJson())
               .then((_) => PrefsService.setLastPublishedDnaHash(currentHash))
