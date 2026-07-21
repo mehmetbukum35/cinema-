@@ -35,6 +35,7 @@ class SocialWebRenderer
         $stRatings = $this->db->prepare(
             'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
                     COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
                     COALESCE(t.vote_average, tf.vote_average) AS vote_average,
                     COALESCE(t.release_date, tf.release_date) AS release_date
              FROM ratings r
@@ -42,7 +43,7 @@ class SocialWebRenderer
              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
              WHERE r.user_id = ? AND r.rating = 3 AND r.deleted = 0 AND r.is_private = 0
              ORDER BY r.updated_at DESC
-             LIMIT 12'
+             LIMIT 24'
         );
         $stRatings->execute([$lang, $userId]);
         $ratings = $stRatings->fetchAll();
@@ -51,6 +52,7 @@ class SocialWebRenderer
         $stGoodRatings = $this->db->prepare(
             'SELECT r.movie_id, r.is_tv, COALESCE(t.title, tf.title) AS title,
                     COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
                     COALESCE(t.vote_average, tf.vote_average) AS vote_average,
                     COALESCE(t.release_date, tf.release_date) AS release_date
              FROM ratings r
@@ -58,7 +60,7 @@ class SocialWebRenderer
              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = \'und\'
              WHERE r.user_id = ? AND r.rating = 2 AND r.deleted = 0 AND r.is_private = 0
              ORDER BY r.updated_at DESC
-             LIMIT 12'
+             LIMIT 24'
         );
         $stGoodRatings->execute([$lang, $userId]);
         $goodRatings = $stGoodRatings->fetchAll();
@@ -67,6 +69,7 @@ class SocialWebRenderer
         $stWatch = $this->db->prepare(
             'SELECT w.id as movie_id, w.is_tv, COALESCE(t.title, tf.title) AS title,
                     COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
                     COALESCE(t.vote_average, tf.vote_average) AS vote_average,
                     COALESCE(t.release_date, tf.release_date) AS release_date
              FROM watchlist w
@@ -74,7 +77,7 @@ class SocialWebRenderer
              LEFT JOIN titles tf ON tf.tmdb_id = w.id AND tf.is_tv = w.is_tv AND tf.locale = \'und\'
              WHERE w.user_id = ? AND w.deleted = 0
              ORDER BY w.created_at DESC
-             LIMIT 12'
+             LIMIT 24'
         );
         $stWatch->execute([$lang, $userId]);
         $watchlist = $stWatch->fetchAll();
@@ -83,6 +86,13 @@ class SocialWebRenderer
         // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
         $topMovies = $this->loadTopList($userId, false, $lang);
         $topShows = $this->loadTopList($userId, true, $lang);
+
+        $greatMovies = $this->partitionByMedia($ratings, false);
+        $greatShows = $this->partitionByMedia($ratings, true);
+        $goodMovies = $this->partitionByMedia($goodRatings, false);
+        $goodShows = $this->partitionByMedia($goodRatings, true);
+        $watchMovies = $this->partitionByMedia($watchlist, false);
+        $watchShows = $this->partitionByMedia($watchlist, true);
 
         $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
         $userHandle = htmlspecialchars($user['username']);
@@ -130,6 +140,23 @@ class SocialWebRenderer
         return 'en';
     }
 
+    /**
+     * Split a mixed title list into movies or TV rows.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function partitionByMedia(array $items, bool $isTv): array
+    {
+        $out = [];
+        foreach ($items as $item) {
+            if (((int) ($item['is_tv'] ?? 0) === 1) === $isTv) {
+                $out[] = $item;
+            }
+        }
+        return $out;
+    }
+
     /// Web profil sayfasının arayüz metinleri.
     private static function webStrings(string $lang): array
     {
@@ -150,24 +177,29 @@ class SocialWebRenderer
                 'hero_desc'       => 'A personal map of taste, favorites and what comes next.',
                 'top_title'       => 'The Definitive Top 20',
                 'top_desc'        => 'Hand-picked and ranked — not an algorithmic list.',
-                'top_movies'      => 'Movies',
-                'top_shows'       => 'TV Shows',
+                'top_movies'      => 'Top 20 Movies',
+                'top_shows'       => 'Top 20 TV Shows',
                 'top_empty_movies' => 'No favorite movies ranked yet.',
                 'top_empty_shows' => 'No favorite TV shows ranked yet.',
                 'dna_kicker'      => 'CINEMA DNA',
                 'dna_themes'      => 'Recurring themes',
-                'more_title'      => 'More from this profile',
-                'show_all_themes' => 'Tap to See All',
-                'sec_great'       => '🍿 Rated Great',
-                'sec_good'        => '👍 Rated Good',
-                'sec_watchlist'   => '📝 Watchlist',
+                'dna_genres'      => 'Dominant genres',
+                'sec_great'       => 'Rated Great',
+                'sec_good'        => 'Rated Good',
+                'sec_watchlist'   => 'Watchlist',
                 'empty_great'     => 'No titles rated "Great" yet.',
                 'empty_good'      => 'No titles rated "Good" yet.',
                 'empty_watchlist' => 'Nothing in the watchlist yet.',
+                'empty_great_movies' => 'No movies rated "Great" yet.',
+                'empty_great_shows'  => 'No TV shows rated "Great" yet.',
+                'empty_good_movies'  => 'No movies rated "Good" yet.',
+                'empty_good_shows'   => 'No TV shows rated "Good" yet.',
+                'empty_watch_movies' => 'No movies in the watchlist yet.',
+                'empty_watch_shows'  => 'No TV shows in the watchlist yet.',
                 'tv'              => 'TV Show',
                 'movie'           => 'Movie',
-                'sub_movies'      => '🎬 Movies',
-                'sub_tv'          => '📺 TV Shows',
+                'sub_movies'      => 'Movies',
+                'sub_tv'          => 'TV Shows',
             ];
         }
         return [
@@ -186,24 +218,29 @@ class SocialWebRenderer
             'hero_desc'       => 'Zevkinin, favorilerinin ve sıradaki keşiflerinin kişisel haritası.',
             'top_title'       => 'Kesin Top 20',
             'top_desc'        => 'Algoritma değil; özenle seçilmiş ve bizzat sıralanmış favoriler.',
-            'top_movies'      => 'Filmler',
-            'top_shows'       => 'Diziler',
+            'top_movies'      => 'Top 20 Filmler',
+            'top_shows'       => 'Top 20 Diziler',
             'top_empty_movies' => 'Henüz sıralanmış favori film yok.',
             'top_empty_shows' => 'Henüz sıralanmış favori dizi yok.',
             'dna_kicker'      => 'SİNEMA DNA’SI',
             'dna_themes'      => 'Tekrar eden temalar',
-            'more_title'      => 'Profilin devamı',
-            'show_all_themes' => 'Tümünü Görmek İçin Dokunun',
-            'sec_great'       => '🍿 Harika Buldukları',
-            'sec_good'        => '👍 İyi Buldukları',
-            'sec_watchlist'   => '📝 İzleme Listesi',
+            'dna_genres'      => 'Baskın türler',
+            'sec_great'       => 'Harika Buldukları',
+            'sec_good'        => 'İyi Buldukları',
+            'sec_watchlist'   => 'İzleme Listesi',
             'empty_great'     => 'Henüz "Harika" olarak puanlanmış bir film veya dizi yok.',
             'empty_good'      => 'Henüz "İyi" olarak puanlanmış bir film veya dizi yok.',
             'empty_watchlist' => 'İzleme listesinde henüz bir şey yok.',
+            'empty_great_movies' => 'Henüz "Harika" film yok.',
+            'empty_great_shows'  => 'Henüz "Harika" dizi yok.',
+            'empty_good_movies'  => 'Henüz "İyi" film yok.',
+            'empty_good_shows'   => 'Henüz "İyi" dizi yok.',
+            'empty_watch_movies' => 'İzleme listesinde henüz film yok.',
+            'empty_watch_shows'  => 'İzleme listesinde henüz dizi yok.',
             'tv'              => 'Dizi',
             'movie'           => 'Film',
-            'sub_movies'      => '🎬 Filmler',
-            'sub_tv'          => '📺 Diziler',
+            'sub_movies'      => 'Filmler',
+            'sub_tv'          => 'Diziler',
         ];
     }
 
@@ -214,6 +251,7 @@ class SocialWebRenderer
             'SELECT f.id AS movie_id, f.is_tv,
                     COALESCE(t.title, tf.title) AS title,
                     COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
                     COALESCE(t.vote_average, tf.vote_average) AS vote_average,
                     COALESCE(t.release_date, tf.release_date) AS release_date
              FROM favorites f
