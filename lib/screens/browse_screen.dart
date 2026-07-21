@@ -44,6 +44,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   final _rng = Random();
   final ScrollController _scrollController = ScrollController();
   Timer? _authSyncRefreshDebounce;
+  int _loadGeneration = 0;
 
   Movie? _tonight;
 
@@ -141,6 +142,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   // background=true: pull-to-refresh. İskelete geçmeden mevcut içeriği koru;
   // RefreshIndicator spinner'ı içerik üstünde döner (profil davranışıyla aynı).
   Future<void> _load({bool background = false}) async {
+    final loadGeneration = ++_loadGeneration;
     setState(() {
       if (!background) _loading = true;
       _error = null;
@@ -212,7 +214,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   .catchError((_) => <Movie>[]),
       ]).timeout(const Duration(seconds: 12));
 
-      if (!mounted) return;
+      if (!mounted || loadGeneration != _loadGeneration) return;
 
       final List<Movie> page1 = List<Movie>.from(phase1Results[0]);
       final List<Movie> page2 = List<Movie>.from(phase1Results[1]);
@@ -223,7 +225,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final seedCandidates = await engine.fetchSeedCandidates(
         rng: Random(daySeed + _reloadNonce * 101 + 7),
       );
-      if (!mounted) return;
+      if (!mounted || loadGeneration != _loadGeneration) return;
 
       Map<String, List<String>> friendSignals = const {};
       if (isAuthenticated) {
@@ -340,7 +342,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final showBanner =
           ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
 
-      if (!mounted) return;
+      if (!mounted || loadGeneration != _loadGeneration) return;
       setState(() {
         _tonight = tonightPick;
         _tonightPool = pool;
@@ -362,7 +364,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             _service.getOnTheAir(),
           ])
           .then((phase2Results) {
-            if (!mounted) return;
+            if (!mounted || loadGeneration != _loadGeneration) return;
             setState(() {
               _movies = List<Movie>.from(phase2Results[0])..shuffle(_rng);
               _shows = List<Movie>.from(phase2Results[1])..shuffle(_rng);
@@ -377,7 +379,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             debugPrint("Error loading secondary browse lists: $e\n$st");
           });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || loadGeneration != _loadGeneration) return;
       setState(() {
         _tonight = null;
         _tonightPool = [];
@@ -822,15 +824,14 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   /// görünmez — cron henüz koşmamış veya boşsa Keşfet'i kirletmez.
   Widget _popularCommunitySection(bool isTV) {
     final items =
-        ref.watch(popularTitlesProvider(isTV)).value ??
-        const <PopularTitle>[];
+        ref.watch(popularTitlesProvider(isTV)).value ?? const <PopularTitle>[];
     if (items.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     final title =
-        AppLocalizations.of(context)?.get(
-          isTV ? 'popular_top_tv_title' : 'popular_top_movies_title',
-        ) ??
+        AppLocalizations.of(
+          context,
+        )?.get(isTV ? 'popular_top_tv_title' : 'popular_top_movies_title') ??
         (isTV ? 'Popüler Top 20 Dizi' : 'Popüler Top 20 Film');
     return SliverToBoxAdapter(
       child: EntranceFade(

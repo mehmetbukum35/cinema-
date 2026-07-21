@@ -40,7 +40,8 @@ class ApiClient {
   final Duration transientRetryDelay;
   void Function()? onSessionExpired;
   Future<RefreshOutcome>? _refreshFuture;
-  final Map<String, Future<http.Response>> _inFlightGets = {};
+  final Map<(String, String?, String), Future<http.Response>> _inFlightGets =
+      {};
   ApiClient({
     http.Client? client,
     this.onSessionExpired,
@@ -128,7 +129,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool requireAuth = true,
-  }) {
+  }) async {
     if (method != 'GET') {
       return _performRequest(
         method,
@@ -138,7 +139,11 @@ class ApiClient {
       );
     }
 
-    final key = '${requireAuth ? 1 : 0}:$path';
+    // A path alone is not an identity. Account switches and locale changes can
+    // happen while an older request is still in flight; never hand that
+    // response to the new session/language.
+    final authToken = requireAuth ? await PrefsService.getAccessToken() : null;
+    final key = (PrefsService.activeLanguageCode, authToken, path);
     final existing = _inFlightGets[key];
     if (existing != null) {
       debugPrint('Coalescing duplicate GET $path');

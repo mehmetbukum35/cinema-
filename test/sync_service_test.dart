@@ -560,48 +560,46 @@ void main() {
       expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
     });
 
-    test(
-      'should clear stale local data and retry when device expired',
-      () async {
-        await testDb.insert('ratings', {
-          'movie_id': 10,
-          'is_tv': 0,
-          'rating': 3,
-          'genre_ids': '[]',
-          'created_at': 1001,
-          'updated_at': 1002,
-          'deleted': 0,
-        });
-        mockApi.resetRequiredOnFirstPush = true;
-        mockApi.pullResponse = {
-          'server_time': 5000,
-          'ratings': [
-            {
-              'movie_id': 20,
-              'is_tv': 0,
-              'metadata_locale': 'tr',
-              'rating': 4,
-              'genre_ids': <int>[],
-              'title': 'Cloud Movie',
-              'created_at': 4000,
-              'updated_at': 4000,
-              'deleted': false,
-            },
-          ],
-          'watchlist': [],
-          'favorites': [],
-          'watched_seasons': [],
-          'search_history': [],
-        };
+    test('should preserve unpushed local data when device expired', () async {
+      await testDb.insert('ratings', {
+        'movie_id': 10,
+        'is_tv': 0,
+        'rating': 3,
+        'genre_ids': '[]',
+        'created_at': 1001,
+        'updated_at': 1002,
+        'deleted': 0,
+      });
+      mockApi.resetRequiredOnFirstPush = true;
+      mockApi.pullResponse = {
+        'server_time': 5000,
+        'ratings': [
+          {
+            'movie_id': 20,
+            'is_tv': 0,
+            'metadata_locale': 'tr',
+            'rating': 4,
+            'genre_ids': <int>[],
+            'title': 'Cloud Movie',
+            'created_at': 4000,
+            'updated_at': 4000,
+            'deleted': false,
+          },
+        ],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
 
-        await syncService.sync();
+      await syncService.sync();
 
-        expect(mockApi.pushCount, 2);
-        expect(mockApi.pushedPayloads[1]['ratings'], isEmpty);
-        final rows = await testDb.query('ratings');
-        expect(rows, hasLength(1));
-        expect(rows.single['movie_id'], 20);
-      },
-    );
+      expect(mockApi.pushCount, 3);
+      expect(mockApi.pushedPayloads[1]['ratings'], isEmpty);
+      expect(mockApi.pushedPayloads[2]['ratings'], hasLength(2));
+      final rows = await testDb.query('ratings');
+      expect(rows, hasLength(2));
+      expect(rows.map((row) => row['movie_id']), containsAll([10, 20]));
+    });
   });
 }

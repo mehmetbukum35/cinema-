@@ -26,21 +26,37 @@ class _PersonScreenState extends State<PersonScreen> {
   Map<String, dynamic>? _personDetails;
   List<Movie> _movies = [];
   bool _loading = true;
+  bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
-    Future.wait([
-      widget.service.getPersonMovies(widget.personId),
-      widget.service.getPersonDetails(widget.personId),
-    ]).then((results) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    try {
+      final results = await Future.wait([
+        widget.service.getPersonMovies(widget.personId),
+        widget.service.getPersonDetails(widget.personId),
+      ]);
       if (!mounted) return;
       setState(() {
         _movies = results[0] as List<Movie>;
         _personDetails = results[1] as Map<String, dynamic>?;
         _loading = false;
       });
-    });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
   }
 
   Widget _bioSection() {
@@ -146,6 +162,30 @@ class _PersonScreenState extends State<PersonScreen> {
                 width: 28,
                 height: 28,
                 child: CircularProgressIndicator(strokeWidth: 2, color: c.dim),
+              ),
+            )
+          : _loadFailed
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_off_outlined, color: c.dim, size: 34),
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocalizations.of(context)?.get('browse_conn_error') ??
+                        'Bağlantınızı kontrol edip tekrar deneyin.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: c.dim, fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.tonal(
+                    onPressed: _load,
+                    child: Text(
+                      AppLocalizations.of(context)?.get('retry') ??
+                          'Tekrar dene',
+                    ),
+                  ),
+                ],
               ),
             )
           : CustomScrollView(

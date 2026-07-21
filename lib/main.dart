@@ -140,9 +140,6 @@ class NeIzlesemApp extends ConsumerWidget {
         surface: AppColors.surface,
         surfaceTint: Colors.transparent,
       ),
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      splashFactory: NoSplash.splashFactory,
     );
     final darkTheme = darkBase.copyWith(
       textTheme: CinemaText.theme(darkBase.textTheme),
@@ -174,9 +171,6 @@ class NeIzlesemApp extends ConsumerWidget {
         onSurface: AppColorsLight.ink,
         surfaceTint: Colors.transparent,
       ),
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      splashFactory: NoSplash.splashFactory,
     );
     final lightTheme = lightBase.copyWith(
       textTheme: CinemaText.lightTheme(lightBase.textTheme),
@@ -210,18 +204,6 @@ class NeIzlesemApp extends ConsumerWidget {
           return const Locale('tr', 'TR');
         }
         return const Locale('en', 'US');
-      },
-      builder: (context, child) {
-        final mediaQueryData = MediaQuery.of(context);
-        return MediaQuery(
-          data: mediaQueryData.copyWith(
-            textScaler: mediaQueryData.textScaler.clamp(
-              minScaleFactor: 1.0,
-              maxScaleFactor: 1.3,
-            ),
-          ),
-          child: child!,
-        );
       },
       home: SplashScreen(
         next: showOnboarding ? const OnboardingScreen() : const MainShell(),

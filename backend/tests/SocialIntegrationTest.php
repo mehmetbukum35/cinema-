@@ -1172,6 +1172,20 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('ended', TestHelperRegistry::$lastBody['status']);
     }
 
+    public function testCouchParticipantVotesAccumulateWithoutOverwriting(): void
+    {
+        $id = $this->createCouch();
+
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 102, 'is_tv' => 0, 'liked' => false]);
+
+        $st = $this->db->prepare('SELECT host_votes FROM couch_sessions WHERE id = ?');
+        $st->execute([$id]);
+        $votes = json_decode((string) $st->fetchColumn(), true);
+        $this->assertSame(true, $votes['movie_101']);
+        $this->assertSame(false, $votes['movie_102']);
+    }
+
     public function testCouchDislikesDoNotMatchAndDeckExhaustionEnds(): void
     {
         $id = $this->createCouch();

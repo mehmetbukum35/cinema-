@@ -206,8 +206,9 @@ class NotificationService {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (kDebugMode) {
+        final tokenPreview = token?.substring(0, token.length.clamp(0, 20));
         debugPrint(
-          'FCM registerToken: ${token == null ? "NULL (APNs/Firebase yapılandırmasını kontrol edin)" : "${token.substring(0, 20)}..."}',
+          'FCM registerToken: ${token == null ? "NULL (APNs/Firebase yapılandırmasını kontrol edin)" : "$tokenPreview..."}',
         );
       }
       if (token != null) await _sendToken(token);

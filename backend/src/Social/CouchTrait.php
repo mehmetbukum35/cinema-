@@ -128,37 +128,46 @@ trait SocialCouchTrait
         $isTv = !empty($in['is_tv']) ? 1 : 0;
         $liked = !empty($in['liked']);
 
-        $row = $this->requireCouchParticipant($uid, $sessionId);
-        if ($row['status'] === 'cancelled' || $row['status'] === 'ended') {
-            fail(409, 'Oturum sona erdi.');
+        $this->db->beginTransaction();
+        try {
+            // Lock the JSON vote row before read-modify-write. Otherwise two
+            // devices belonging to the same participant can overwrite each
+            // other's vote.
+            $row = $this->loadCouchSession($sessionId, true);
+            if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
+                fail(403, 'Bu oturuma erişim yetkin yok.');
+            }
+            if ($row['status'] === 'cancelled' || $row['status'] === 'ended') {
+                fail(409, 'Oturum sona erdi.');
+            }
+            if ($row['status'] !== 'matched') {
+                $row = $this->activateIfGuestArrived($row, $uid);
+
+                $key = ($isTv ? 'tv_' : 'movie_') . $movieId;
+                $deckKeys = array_map(
+                    fn (array $d) => ($d['is_tv'] ? 'tv_' : 'movie_') . $d['movie_id'],
+                    json_decode((string) $row['deck'], true) ?: []
+                );
+                if (!in_array($key, $deckKeys, true)) {
+                    fail(422, 'Bu yapım destede yok.');
+                }
+
+                $isHost = ((int) $row['host_id']) === $uid;
+                $col = $isHost ? 'host_votes' : 'guest_votes';
+                $votes = json_decode((string) $row[$col], true) ?: [];
+                $votes[$key] = $liked;
+
+                $up = $this->db->prepare(
+                    "UPDATE couch_sessions SET `$col` = ?, updated_at = ? WHERE id = ?"
+                );
+                $up->execute([json_encode($votes), now_ms(), $sessionId]);
+                $row = $this->resolveCouchOutcome($this->loadCouchSession($sessionId));
+            }
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
         }
-        if ($row['status'] === 'matched') {
-            json_out(200, ['session' => $this->couchPayload($row, $uid)]);
-        }
-        $row = $this->activateIfGuestArrived($row, $uid);
-
-        $key = ($isTv ? 'tv_' : 'movie_') . $movieId;
-        $deckKeys = array_map(
-            fn (array $d) => ($d['is_tv'] ? 'tv_' : 'movie_') . $d['movie_id'],
-            json_decode((string) $row['deck'], true) ?: []
-        );
-        if (!in_array($key, $deckKeys, true)) {
-            fail(422, 'Bu yapım destede yok.');
-        }
-
-        $isHost = ((int) $row['host_id']) === $uid;
-        $col = $isHost ? 'host_votes' : 'guest_votes';
-        $votes = json_decode((string) $row[$col], true) ?: [];
-        $votes[$key] = $liked;
-
-        $up = $this->db->prepare(
-            "UPDATE couch_sessions SET `$col` = ?, updated_at = ? WHERE id = ?"
-        );
-        $up->execute([json_encode($votes), now_ms(), $sessionId]);
-
-        // Yazdıktan SONRA taze okuyup sonucu çöz: eşzamanlı iki oydan geç
-        // yazan taraf eşleşmeyi mutlaka görür.
-        $row = $this->resolveCouchOutcome($this->loadCouchSession($sessionId));
         json_out(200, ['session' => $this->couchPayload($row, $uid)]);
     }
 
@@ -181,9 +190,11 @@ trait SocialCouchTrait
 
     // ─── Yardımcılar ────────────────────────────────────────────────────────
 
-    private function loadCouchSession(int $sessionId): array
+    private function loadCouchSession(int $sessionId, bool $forUpdate = false): array
     {
-        $st = $this->db->prepare('SELECT * FROM couch_sessions WHERE id = ?');
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $lock = $forUpdate && $driver !== 'sqlite' ? ' FOR UPDATE' : '';
+        $st = $this->db->prepare('SELECT * FROM couch_sessions WHERE id = ?' . $lock);
         $st->execute([$sessionId]);
         $row = $st->fetch();
         if (!$row) fail(404, 'Oturum bulunamadı.');

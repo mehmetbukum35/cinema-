@@ -91,17 +91,27 @@ class SyncService {
     } on ApiException catch (e) {
       if (e.code != 'sync_reset_required') rethrow;
       debugPrint('Sync device expired; performing a safe full resync.');
-      await _resetLocalSyncState();
+      final pendingLocalChanges = await _resetLocalSyncState();
       _syncFuture = _performSync();
       await _syncFuture;
+      await _restorePendingLocalChanges(pendingLocalChanges);
+      if (pendingLocalChanges.values.any((rows) => rows.isNotEmpty)) {
+        // The full pull advances both cursors. Rewind only the push cursor so
+        // the preserved offline edits are uploaded on a second pass.
+        await PrefsService.setLastPushTime(0);
+        _syncFuture = _performSync();
+        await _syncFuture;
+      }
     } finally {
       _syncFuture = null;
     }
   }
 
-  Future<void> _resetLocalSyncState() async {
+  Future<Map<String, List<Map<String, Object?>>>> _resetLocalSyncState() async {
+    final pending = <String, List<Map<String, Object?>>>{};
     final db = await DatabaseHelper().database;
     if (db != null) {
+      final lastPush = await PrefsService.getLastPushTime();
       await db.transaction((txn) async {
         for (final table in const [
           'ratings',
@@ -110,6 +120,11 @@ class SyncService {
           'watched_seasons',
           'search_history',
         ]) {
+          pending[table] = await txn.query(
+            table,
+            where: 'updated_at > ?',
+            whereArgs: [lastPush],
+          );
           await txn.delete(table);
         }
       });
@@ -125,6 +140,55 @@ class SyncService {
     _ref?.invalidate(topListProvider);
     _ref?.invalidate(swipeProvider);
     _ref?.invalidate(socialProvider);
+    return pending;
+  }
+
+  Future<void> _restorePendingLocalChanges(
+    Map<String, List<Map<String, Object?>>> pending,
+  ) async {
+    if (!pending.values.any((rows) => rows.isNotEmpty)) return;
+    final db = await DatabaseHelper().database;
+    if (db == null) return;
+
+    await db.transaction((txn) async {
+      for (final entry in pending.entries) {
+        for (final row in entry.value) {
+          final (where, args) = switch (entry.key) {
+            'ratings' => (
+              'movie_id = ? AND is_tv = ?',
+              <Object?>[row['movie_id'], row['is_tv']],
+            ),
+            'watchlist' || 'favorites' => (
+              'id = ? AND is_tv = ?',
+              <Object?>[row['id'], row['is_tv']],
+            ),
+            'watched_seasons' => (
+              'tv_id = ? AND season_number = ?',
+              <Object?>[row['tv_id'], row['season_number']],
+            ),
+            'search_history' => ('query = ?', <Object?>[row['query']]),
+            _ => throw StateError('Unknown sync table: ${entry.key}'),
+          };
+          final existing = await txn.query(
+            entry.key,
+            columns: const ['updated_at'],
+            where: where,
+            whereArgs: args,
+            limit: 1,
+          );
+          if (existing.isNotEmpty &&
+              _asInt(existing.first['updated_at']) >
+                  _asInt(row['updated_at'])) {
+            continue;
+          }
+          await txn.insert(
+            entry.key,
+            row,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
   }
 
   Future<void> _performSync() async {

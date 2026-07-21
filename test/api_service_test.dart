@@ -385,6 +385,51 @@ void main() {
       expect(requestCount, 1);
     });
 
+    test(
+      'GET requests from different sessions must not share a flight',
+      () async {
+        final firstStarted = Completer<void>();
+        final releaseFirst = Completer<void>();
+        final seenTokens = <String?>[];
+        final mockClient = MockClient((request) async {
+          final token = request.headers['Authorization'];
+          seenTokens.add(token);
+          if (token == 'Bearer initial_access') {
+            firstStarted.complete();
+            await releaseFirst.future;
+          }
+          return http.Response(
+            jsonEncode({
+              'friends': [],
+              'pending_received': [],
+              'pending_sent': [],
+            }),
+            200,
+          );
+        });
+        final apiService = ApiService(client: mockClient);
+
+        final first = apiService.getFriends();
+        await firstStarted.future;
+        await PrefsService.saveTokens(
+          accessToken: 'second_access',
+          refreshToken: 'second_refresh',
+        );
+        final second = apiService.getFriends();
+        releaseFirst.complete();
+        await Future.wait([first, second]);
+
+        expect(
+          seenTokens,
+          containsAll(<String?>[
+            'Bearer initial_access',
+            'Bearer second_access',
+          ]),
+        );
+        expect(seenTokens, hasLength(2));
+      },
+    );
+
     test('getTasteMatch should call taste endpoint and parse score', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
