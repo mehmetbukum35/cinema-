@@ -96,6 +96,11 @@ void main() {
               (w.data?.toUpperCase().contains('KIMLI') ?? false) ||
               (w.data?.toUpperCase().contains('KİMLİ') ?? false)),
     );
+    await tester.scrollUntilVisible(
+      identity,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(identity, findsWidgets);
   });
 
