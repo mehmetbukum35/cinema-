@@ -830,6 +830,11 @@ const Map<String, String> kEnStrings = {
   'top_list_empty_cta': 'Create Top 20',
   'top_list_reorder_hint': 'Hold & drag to reorder',
   'top_list_search_hint': 'Search to add',
+  'top_list_search_movie_hint': 'Movie title + year (e.g. Dune 1984)',
+  'top_list_search_tv_hint': 'Show title + year (e.g. Fargo 2014)',
+  'top_list_search_year_tip':
+      'Add the release year to find titles with the same name more easily.',
+  'top_list_search_prompt': 'Search for a title you want to add.',
   'top_list_remove': 'Remove',
   'top_list_added': 'Added {} to your Top 20.',
 };

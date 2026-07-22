@@ -597,51 +597,89 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: c.border),
-                  ),
-                  child: TextField(
-                    controller: _ctrl,
-                    autofocus: true,
-                    onChanged: _onSearch,
-                    style: TextStyle(color: c.ink, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText:
-                          tr?.get('top_list_search_hint') ?? 'Eklemek için ara',
-                      hintStyle: TextStyle(color: c.dim),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: c.dim,
-                        size: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: c.border),
                       ),
-                      suffixIcon: _ctrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.close_rounded,
-                                color: c.dim,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                _ctrl.clear();
-                                setState(() {
-                                  _reqId++;
-                                  _results = [];
-                                  _searching = false;
-                                  _failed = false;
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 14,
+                      child: TextField(
+                        controller: _ctrl,
+                        autofocus: true,
+                        onChanged: _onSearch,
+                        style: TextStyle(color: c.ink, fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText:
+                              (widget.isTV
+                                  ? tr?.get('top_list_search_tv_hint')
+                                  : tr?.get('top_list_search_movie_hint')) ??
+                              (widget.isTV
+                                  ? 'Dizi adı + yıl (mesela: Fargo 2014)'
+                                  : 'Film adı + yıl (mesela: Dune 1984)'),
+                          hintStyle: TextStyle(color: c.dim),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: c.dim,
+                            size: 20,
+                          ),
+                          suffixIcon: _ctrl.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    color: c.dim,
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    _ctrl.clear();
+                                    setState(() {
+                                      _reqId++;
+                                      _results = [];
+                                      _searching = false;
+                                      _failed = false;
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 7),
+                    Semantics(
+                      label:
+                          tr?.get('top_list_search_year_tip') ??
+                          'Aynı adlı yapımları daha kolay bulmak için adın yanına yılı da yazabilirsiniz.',
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 15,
+                            color: c.dim,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              tr?.get('top_list_search_year_tip') ??
+                                  'Aynı adlı yapımları daha kolay bulmak için adın yanına yılı da yazabilirsiniz.',
+                              style: TextStyle(
+                                color: c.dim,
+                                fontSize: 12,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (full)
@@ -677,8 +715,8 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
                                 ? (tr?.get('onboarding_search_error') ??
                                       'Arama başarısız. Tekrar deneyin.')
                                 : _ctrl.text.isEmpty
-                                ? (tr?.get('top_list_search_hint') ??
-                                      'Eklemek için ara')
+                                ? (tr?.get('top_list_search_prompt') ??
+                                      'Eklemek istediğiniz yapımı arayın.')
                                 : (tr?.get('search_no_results') ?? ''),
                             textAlign: TextAlign.center,
                             style: TextStyle(

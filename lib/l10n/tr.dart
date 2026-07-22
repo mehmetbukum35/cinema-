@@ -824,6 +824,11 @@ const Map<String, String> kTrStrings = {
   'top_list_empty_cta': 'Top 20 oluştur',
   'top_list_reorder_hint': 'Basılı tutup sürükle',
   'top_list_search_hint': 'Eklemek için ara',
+  'top_list_search_movie_hint': 'Film adı + yıl (örn. Dune 1984)',
+  'top_list_search_tv_hint': 'Dizi adı + yıl (örn. Fargo 2014)',
+  'top_list_search_year_tip':
+      'Aynı adlı yapımları daha kolay bulmak için adın yanına yayın yılını da yazabilirsiniz.',
+  'top_list_search_prompt': 'Eklemek istediğiniz yapımı arayın.',
   'top_list_remove': 'Çıkar',
   'top_list_added': "{}, Top 20'ne eklendi.",
 };
