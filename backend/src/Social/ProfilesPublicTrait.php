@@ -160,9 +160,7 @@ trait SocialProfilesPublicTrait
 
     private function invalidateTopProfilesCache(): void
     {
-        foreach (['tr', 'en', 'und'] as $cacheLocale) {
-            @unlink($this->topProfilesCacheFile($cacheLocale));
-        }
+        invalidate_top_profiles_cache();
     }
 
     private function readTopProfilesCache(string $locale): ?array

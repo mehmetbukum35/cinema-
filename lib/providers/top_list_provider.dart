@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -14,33 +16,53 @@ import '../services/sync_service.dart';
 class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final Ref ref;
   final bool isTV;
+  final Future<List<Movie>> Function() _readList;
+  int _loadGeneration = 0;
 
   /// Panteon sınırı: liste en fazla 20 öğe tutar.
   static const cap = PrefsService.favoritesCap;
 
-  TopListNotifier(this.ref, this.isTV) : super(const AsyncValue.loading()) {
-    Future.microtask(load);
+  TopListNotifier(
+    this.ref,
+    this.isTV, {
+    Future<List<Movie>> Function()? readList,
+    bool autoLoad = true,
+  }) : _readList =
+           readList ??
+           (isTV
+               ? PrefsService.getFavoriteTvShows
+               : PrefsService.getFavoriteMovies),
+       super(const AsyncValue.loading()) {
+    if (autoLoad) unawaited(load());
   }
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     try {
       // Offline-first: yerel liste sync beklenmeden gösterilir, sonra tazelenir
       // (bkz. WatchlistNotifier.load).
       var list = await _read();
-      if (mounted) state = AsyncValue.data(list);
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.data(list);
+      }
+      if (!mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
           list = await _read();
-          if (mounted) state = AsyncValue.data(list);
+          if (mounted && generation == _loadGeneration) {
+            state = AsyncValue.data(list);
+          }
         } catch (_) {
           // SyncNotifier hata durumunu global olarak yakalar.
         }
       }
     } catch (e, st) {
-      if (mounted) state = AsyncValue.error(e, st);
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
@@ -72,11 +94,10 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     await _persist(current);
   }
 
-  Future<List<Movie>> _read() => isTV
-      ? PrefsService.getFavoriteTvShows()
-      : PrefsService.getFavoriteMovies();
+  Future<List<Movie>> _read() => _readList();
 
   Future<void> _persist(List<Movie> list) async {
+    ++_loadGeneration;
     if (mounted) state = AsyncValue.data(list);
     if (isTV) {
       await PrefsService.saveFavoriteTvShows(list);

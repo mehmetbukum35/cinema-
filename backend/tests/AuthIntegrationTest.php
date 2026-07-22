@@ -97,6 +97,19 @@ class AuthIntegrationTest extends TestCase
                  ->execute([password_hash($code, PASSWORD_BCRYPT), $email]);
     }
 
+    public function testDeleteAccountInvalidatesTopProfilesCache(): void
+    {
+        $uid = $this->seedUser('delete-cache@example.com');
+        $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_top_profiles_tr.json';
+        file_put_contents($cacheFile, '[{"id":' . $uid . '}]');
+
+        $this->auth->deleteAccount($uid);
+
+        $this->assertFileDoesNotExist($cacheFile);
+        $remaining = $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn();
+        $this->assertSame(0, (int) $remaining);
+    }
+
     // ── Kayıt + e-posta doğrulama akışı ─────────────────────────────────────
 
     public function testRegisterCreatesUnverifiedUserWithCodeAndNoTokens(): void

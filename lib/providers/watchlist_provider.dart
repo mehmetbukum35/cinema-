@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -9,19 +11,29 @@ import '../services/sync_service.dart';
 
 class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final Ref ref;
-  WatchlistNotifier(this.ref) : super(const AsyncValue.loading()) {
-    Future.microtask(() => load());
+  final Future<List<Movie>> Function() _readWatchlist;
+  int _loadGeneration = 0;
+
+  WatchlistNotifier(
+    this.ref, {
+    Future<List<Movie>> Function()? readWatchlist,
+    bool autoLoad = true,
+  }) : _readWatchlist = readWatchlist ?? PrefsService.getWatchlist,
+       super(const AsyncValue.loading()) {
+    if (autoLoad) unawaited(load());
   }
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     try {
       // Offline-first: yerel liste sync beklenmeden gösterilir — yavaş ağda
       // kullanıcı cihazında hazır duran veriye 20 sn spinner arkasından
       // bakmasın. Sync bittiğinde liste yeniden okunup tazelenir.
-      var list = await PrefsService.getWatchlist();
-      if (mounted) {
+      var list = await _readWatchlist();
+      if (mounted && generation == _loadGeneration) {
         state = AsyncValue.data(list);
       }
+      if (!mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
@@ -29,14 +41,15 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           await ref.read(syncProvider.notifier).performSync();
           // Not: recommendation cache'i sync'in kendisi zaten invalidate
           // ediyor; buradaki ikinci çağrı kaldırıldı.
-          list = await PrefsService.getWatchlist();
-          if (mounted) {
+          list = await _readWatchlist();
+          if (mounted && generation == _loadGeneration) {
             state = AsyncValue.data(list);
           }
         } catch (e) {
           // SyncNotifier captures the error state globally
         }
       }
+      if (!mounted || generation != _loadGeneration) return;
 
       // Çıkış hatırlatıcılarını listeyle hizala (başka cihazdan sync ile
       // gelen ekleme/çıkarmalar dahil). Best-effort; akışı bloklamaz.
@@ -44,13 +57,14 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           .syncReleaseReminders(list)
           .catchError((_) {});
     } catch (e, st) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         state = AsyncValue.error(e, st);
       }
     }
   }
 
   Future<bool> add(Movie movie) async {
+    ++_loadGeneration;
     try {
       await PrefsService.addToWatchlist(movie);
       if (mounted) {
@@ -82,6 +96,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   }
 
   Future<bool> remove(int id, bool isTV) async {
+    ++_loadGeneration;
     try {
       await PrefsService.removeFromWatchlist(id, isTV);
       if (mounted) {

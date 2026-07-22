@@ -6,6 +6,21 @@ if (!function_exists('now_ms')) {
     function now_ms(): int { return (int) round(microtime(true) * 1000); }
 }
 
+if (!function_exists('invalidate_top_profiles_cache')) {
+    function invalidate_top_profiles_cache(): void
+    {
+        foreach (['tr', 'en', 'und'] as $locale) {
+            @unlink(
+                sys_get_temp_dir()
+                . DIRECTORY_SEPARATOR
+                . 'cinema_top_profiles_'
+                . $locale
+                . '.json'
+            );
+        }
+    }
+}
+
 if (!function_exists('json_out')) {
     function json_out(int $status, array $body): void
     {

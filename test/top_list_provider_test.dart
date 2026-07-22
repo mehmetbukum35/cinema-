@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -101,6 +103,32 @@ void main() {
       // 21st rejected — list full.
       expect(container.read(topListProvider(false)).value, hasLength(20));
       expect(await notifier.add(_movie(99)), isFalse);
+    });
+
+    test('stale load cannot overwrite a concurrent list edit', () async {
+      final staleRead = Completer<List<Movie>>();
+      container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          syncServiceProvider.overrideWithValue(mockSync),
+          topListProvider(false).overrideWith(
+            (ref) => TopListNotifier(
+              ref,
+              false,
+              readList: () => staleRead.future,
+              autoLoad: false,
+            ),
+          ),
+        ],
+      );
+      final notifier = container.read(topListProvider(false).notifier);
+      final pendingLoad = notifier.load();
+
+      await notifier.add(_movie(42));
+      staleRead.complete(const []);
+      await pendingLoad;
+
+      expect(container.read(topListProvider(false)).value?.single.id, 42);
     });
 
     test('remove drops the item', () async {

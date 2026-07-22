@@ -683,6 +683,7 @@ class Auth
     {
         // FK ON DELETE CASCADE sayesinde tüm kullanıcı verisi de silinir.
         $this->db->prepare('DELETE FROM users WHERE id = ?')->execute([$uid]);
+        invalidate_top_profiles_cache();
         json_out(200, ['ok' => true]);
     }
 

@@ -228,5 +228,39 @@ void main() {
         expect(mockSync.syncCalled, isTrue);
       },
     );
+
+    test(
+      'stale load cannot overwrite an item added while it is pending',
+      () async {
+        final staleRead = Completer<List<Movie>>();
+        container = ProviderContainer(
+          overrides: [
+            authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+            syncServiceProvider.overrideWithValue(mockSync),
+            watchlistProvider.overrideWith(
+              (ref) => WatchlistNotifier(
+                ref,
+                readWatchlist: () => staleRead.future,
+                autoLoad: false,
+              ),
+            ),
+          ],
+        );
+        final notifier = container.read(watchlistProvider.notifier);
+        final pendingLoad = notifier.load();
+        final movie = Movie(
+          id: 105,
+          title: 'Concurrent Movie',
+          overview: '',
+          voteAverage: 7,
+        );
+
+        await notifier.add(movie);
+        staleRead.complete(const []);
+        await pendingLoad;
+
+        expect(container.read(watchlistProvider).value?.single.id, 105);
+      },
+    );
   });
 }
