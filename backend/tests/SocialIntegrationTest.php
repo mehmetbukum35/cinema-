@@ -905,6 +905,34 @@ class SocialIntegrationTest extends TestCase
         $this->assertCount(1, TestHelperRegistry::$lastBody['community']);
     }
 
+    public function testBlockUserRollsBackAllChangesWhenCleanupFails(): void
+    {
+        $couchId = $this->createCouch();
+        $this->db->exec(
+            "INSERT INTO recommendations
+                (from_user_id, to_user_id, movie_id, is_tv, title, created_at)
+             VALUES (2, 1, 700, 0, 'Atomic Block', 1000)"
+        );
+        $this->db->exec(
+            "CREATE TRIGGER fail_recommendation_cleanup BEFORE DELETE ON recommendations
+             BEGIN SELECT RAISE(ABORT, 'forced recommendation cleanup failure'); END"
+        );
+
+        try {
+            $this->social->blockUser(1, ['user_id' => 2]);
+            $this->fail('Temizlik başarısızken engelleme tamamlanmamalıydı.');
+        } catch (PDOException $e) {
+            $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM user_blocks')->fetchColumn());
+            $this->assertSame('accepted', $this->friendStatus(1, 2));
+            $this->assertSame('accepted', $this->friendStatus(2, 1));
+            $status = $this->db->query(
+                "SELECT status FROM couch_sessions WHERE id = $couchId"
+            )->fetchColumn();
+            $this->assertSame('pending', $status);
+            $this->assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM recommendations')->fetchColumn());
+        }
+    }
+
     public function testActivityFeedFiltersBlockedUsers(): void
     {
         $this->acceptFriendship(1, 2);

@@ -136,40 +136,47 @@ trait SocialReviewsTrait
         $st->execute([$blockedId]);
         if (!$st->fetch()) fail(404, 'Kullanıcı bulunamadı.');
 
-        $chk = $this->db->prepare(
-            'SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?'
-        );
-        $chk->execute([$uid, $blockedId]);
-        if (!$chk->fetch()) {
-            $ins = $this->db->prepare(
-                'INSERT INTO user_blocks (user_id, blocked_user_id, created_at) VALUES (?, ?, ?)'
+        $this->db->beginTransaction();
+        try {
+            $chk = $this->db->prepare(
+                'SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?'
             );
-            $ins->execute([$uid, $blockedId, now_ms()]);
+            $chk->execute([$uid, $blockedId]);
+            if (!$chk->fetch()) {
+                $ins = $this->db->prepare(
+                    'INSERT INTO user_blocks (user_id, blocked_user_id, created_at) VALUES (?, ?, ?)'
+                );
+                $ins->execute([$uid, $blockedId, now_ms()]);
+            }
+
+            $del = $this->db->prepare(
+                'DELETE FROM friends
+                  WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)'
+            );
+            $del->execute([$uid, $blockedId, $blockedId, $uid]);
+            $this->cancelCouchSessionsBetween($uid, $blockedId);
+
+            // Engellenen kişinin önceki önerileri inbox'ta kalmasın.
+            $purge = $this->db->prepare(
+                'DELETE FROM recommendations
+                  WHERE (to_user_id = ? AND from_user_id = ?)
+                     OR (to_user_id = ? AND from_user_id = ?)'
+            );
+            $purge->execute([$uid, $blockedId, $blockedId, $uid]);
+
+            // Engellenen hesaplar birbirlerinin profil beğenilerine de katkıda
+            // bulunmamalı; iki yöndeki eski oyları temizle.
+            $purgeLikes = $this->db->prepare(
+                'DELETE FROM profile_likes
+                  WHERE (voter_id = ? AND owner_id = ?)
+                     OR (voter_id = ? AND owner_id = ?)'
+            );
+            $purgeLikes->execute([$uid, $blockedId, $blockedId, $uid]);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
         }
-
-        $del = $this->db->prepare(
-            'DELETE FROM friends
-              WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)'
-        );
-        $del->execute([$uid, $blockedId, $blockedId, $uid]);
-        $this->cancelCouchSessionsBetween($uid, $blockedId);
-
-        // Engellenen kişinin önceki önerileri inbox'ta kalmasın.
-        $purge = $this->db->prepare(
-            'DELETE FROM recommendations
-              WHERE (to_user_id = ? AND from_user_id = ?)
-                 OR (to_user_id = ? AND from_user_id = ?)'
-        );
-        $purge->execute([$uid, $blockedId, $blockedId, $uid]);
-
-        // Engellenen hesaplar birbirlerinin profil beğenilerine de katkıda
-        // bulunmamalı; iki yöndeki eski oyları temizle.
-        $purgeLikes = $this->db->prepare(
-            'DELETE FROM profile_likes
-              WHERE (voter_id = ? AND owner_id = ?)
-                 OR (voter_id = ? AND owner_id = ?)'
-        );
-        $purgeLikes->execute([$uid, $blockedId, $blockedId, $uid]);
         $this->invalidateTopProfilesCache();
 
         json_out(200, ['ok' => true]);
