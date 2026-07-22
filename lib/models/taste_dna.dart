@@ -130,38 +130,54 @@ class TasteDna {
     'generated_at': generatedAt,
   };
 
-  factory TasteDna.fromJson(Map<String, dynamic> json) => TasteDna(
-    archetypeKey: json['archetype'] as String? ?? 'genre_nomad',
-    secondaryArchetypeKey: json['secondary_archetype'] as String?,
-    topGenres:
-        (json['top_genres'] as List<dynamic>?)
-            ?.map((e) => (e as num).toInt())
-            .toList() ??
-        const [],
-    blindSpotGenre: (json['blind_spot'] as num?)?.toInt(),
-    themes:
-        (json['themes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-        const [],
-    themeEvidence:
-        (json['theme_evidence'] as Map<String, dynamic>?)?.map(
-          (k, v) => MapEntry(
-            k,
-            (v as List<dynamic>)
-                .map((e) => DnaMovieRef.fromJson(e as Map<String, dynamic>))
-                .toList(),
-          ),
-        ) ??
-        const {},
-    eraKey: json['era'] as String?,
-    modernShare: (json['modern_share'] as num?)?.toDouble() ?? 0.0,
-    depthKey: json['depth'] as String?,
-    criticKey: json['critic'] as String?,
-    harikaShare: (json['harika_share'] as num?)?.toDouble() ?? 0.0,
-    shiftFromGenre: (json['shift_from'] as num?)?.toInt(),
-    shiftToGenre: (json['shift_to'] as num?)?.toInt(),
-    accuracy: (json['accuracy'] as num?)?.toDouble(),
-    accuracySample: (json['accuracy_sample'] as num?)?.toInt() ?? 0,
-    totalRated: (json['total_rated'] as num?)?.toInt() ?? 0,
-    generatedAt: (json['generated_at'] as num?)?.toInt() ?? 0,
-  );
+  factory TasteDna.fromJson(Map<String, dynamic> json) {
+    int? asInt(Object? value) =>
+        value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+    double? asDouble(Object? value) => value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '');
+    final rawEvidence = json['theme_evidence'];
+    return TasteDna(
+      archetypeKey: json['archetype'] as String? ?? 'genre_nomad',
+      secondaryArchetypeKey: json['secondary_archetype'] as String?,
+      topGenres:
+          (json['top_genres'] as List<dynamic>?)
+              ?.map(asInt)
+              .whereType<int>()
+              .toList() ??
+          const [],
+      blindSpotGenre: asInt(json['blind_spot']),
+      themes:
+          (json['themes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      themeEvidence:
+          (rawEvidence is Map ? Map<String, dynamic>.from(rawEvidence) : null)
+              ?.map(
+                (k, v) => MapEntry(
+                  k,
+                  (v is List ? v : const [])
+                      .whereType<Map>()
+                      .map(
+                        (e) =>
+                            DnaMovieRef.fromJson(Map<String, dynamic>.from(e)),
+                      )
+                      .toList(),
+                ),
+              ) ??
+          const {},
+      eraKey: json['era'] as String?,
+      modernShare: asDouble(json['modern_share']) ?? 0.0,
+      depthKey: json['depth'] as String?,
+      criticKey: json['critic'] as String?,
+      harikaShare: asDouble(json['harika_share']) ?? 0.0,
+      shiftFromGenre: asInt(json['shift_from']),
+      shiftToGenre: asInt(json['shift_to']),
+      accuracy: asDouble(json['accuracy']),
+      accuracySample: asInt(json['accuracy_sample']) ?? 0,
+      totalRated: asInt(json['total_rated']) ?? 0,
+      generatedAt: asInt(json['generated_at']) ?? 0,
+    );
+  }
 }

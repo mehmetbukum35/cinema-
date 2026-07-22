@@ -2,6 +2,15 @@ part of '../api_service.dart';
 
 /// Live couch session backend operations.
 mixin CouchApi on ApiClient {
+  Map<String, dynamic> _requiredCouchSession(
+    Map<String, dynamic> data,
+    String message,
+  ) {
+    final raw = data['session'];
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    throw ApiException(statusCode: 502, message: message);
+  }
+
   Future<Map<String, dynamic>> createCouchSession({
     required int friendId,
     required List<Map<String, dynamic>> deck,
@@ -14,7 +23,10 @@ mixin CouchApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
+      return _requiredCouchSession(
+        data,
+        'Sunucu geçersiz oturum verisi döndürdü.',
+      );
     }
     throw ApiException(
       statusCode: response.statusCode,
@@ -31,7 +43,13 @@ mixin CouchApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>?;
+      final raw = data['session'];
+      if (raw == null) return null;
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      throw ApiException(
+        statusCode: 502,
+        message: 'Sunucu geçersiz oturum verisi döndürdü.',
+      );
     }
     throw ApiException(
       statusCode: response.statusCode,
@@ -48,7 +66,10 @@ mixin CouchApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
+      return _requiredCouchSession(
+        data,
+        'Sunucu geçersiz oturum verisi döndürdü.',
+      );
     }
     throw ApiException(
       statusCode: response.statusCode,
@@ -71,7 +92,10 @@ mixin CouchApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['session'] as Map<String, dynamic>;
+      return _requiredCouchSession(
+        data,
+        'Sunucu geçersiz oturum verisi döndürdü.',
+      );
     }
     throw ApiException(
       statusCode: response.statusCode,

@@ -489,9 +489,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
       if (!mounted || generation != _tasteScoresLoadGeneration) return;
       for (final item in list) {
         if (item is! Map<String, dynamic>) continue;
-        final id = (item['friend_id'] as num?)?.toInt() ?? 0;
+        final id = int.tryParse(item['friend_id']?.toString() ?? '') ?? 0;
         if (id == 0 || item['has_data'] != true) continue;
-        scores[id] = ((item['score'] as num?) ?? 0).toInt();
+        scores[id] = int.tryParse(item['score']?.toString() ?? '') ?? 0;
       }
       if (mounted && generation == _tasteScoresLoadGeneration) {
         state = state.copyWith(tasteScores: scores);
@@ -543,7 +543,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
           const [];
       state = state.copyWith(
         recommendations: recList,
-        unseenRecommendations: (res['unseen'] as num?)?.toInt() ?? 0,
+        unseenRecommendations:
+            int.tryParse(res['unseen']?.toString() ?? '') ?? 0,
       );
     } catch (e, st) {
       // Sessiz: öneri kutusu boş görünür, akış bozulmaz.

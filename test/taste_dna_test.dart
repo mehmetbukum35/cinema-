@@ -22,6 +22,31 @@ DnaRating _r({
 }
 
 void main() {
+  test('TasteDna.fromJson accepts numeric strings and malformed evidence', () {
+    final dna = TasteDna.fromJson({
+      'archetype': 'genre_nomad',
+      'top_genres': ['18', 80, 'bad'],
+      'blind_spot': '35',
+      'modern_share': '0.75',
+      'harika_share': '0.4',
+      'shift_from': '18',
+      'shift_to': '28',
+      'accuracy': '0.9',
+      'accuracy_sample': '12',
+      'total_rated': '20',
+      'generated_at': '123456',
+      'theme_evidence': {'crime': 'not-a-list', 'valid': <dynamic>[]},
+    });
+
+    expect(dna.topGenres, [18, 80]);
+    expect(dna.blindSpotGenre, 35);
+    expect(dna.modernShare, 0.75);
+    expect(dna.accuracy, 0.9);
+    expect(dna.accuracySample, 12);
+    expect(dna.totalRated, 20);
+    expect(dna.themeEvidence['crime'], isEmpty);
+  });
+
   group('TasteDnaService.compute — arketip', () {
     test('baskın karanlık tür → dark_chronicler', () {
       final dna = TasteDnaService.compute(

@@ -110,19 +110,22 @@ class Movie {
   };
 
   factory Movie.fromStorage(Map<String, dynamic> json) => Movie(
-    id: json['id'] as int,
+    id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
     title: json['title'] as String? ?? '',
     posterPath: json['poster_path'] as String?,
     backdropPath: json['backdrop_path'] as String?,
     overview: json['overview'] as String? ?? '',
-    voteAverage: ((json['vote_average'] as num?) ?? 0).toDouble(),
+    voteAverage: double.tryParse(json['vote_average']?.toString() ?? '') ?? 0,
     releaseDate: json['release_date'] as String?,
-    isTV: json['isTV'] as bool? ?? false,
+    isTV: json['isTV'] == true || json['isTV'] == 1 || json['isTV'] == '1',
     genreIds:
-        (json['genre_ids'] as List<dynamic>?)?.map((e) => e as int).toList() ??
+        (json['genre_ids'] as List<dynamic>?)
+            ?.map((e) => int.tryParse(e.toString()))
+            .whereType<int>()
+            .toList() ??
         const [],
-    popularity: ((json['popularity'] as num?) ?? 0).toDouble(),
-    voteCount: json['vote_count'] as int? ?? 0,
+    popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0,
+    voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
     adult: json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
   );
 

@@ -7,9 +7,10 @@ class FriendSignals {
   factory FriendSignals.fromJson(Map<String, dynamic> json) {
     return FriendSignals({
       for (final entry in json.entries)
-        entry.key: (entry.value as List<dynamic>)
-            .map((name) => name.toString())
-            .toList(),
+        if (entry.value is List)
+          entry.key: (entry.value as List)
+              .map((name) => name.toString())
+              .toList(),
     });
   }
 

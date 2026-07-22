@@ -37,12 +37,18 @@ class CouchSession {
   });
 
   factory CouchSession.fromJson(Map<String, dynamic> json) {
+    int asInt(Object? value) => value is num
+        ? value.toInt()
+        : int.tryParse(value?.toString() ?? '') ?? 0;
+    double asDouble(Object? value) => value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '') ?? 0;
     Movie deckMovie(Map<String, dynamic> d) => Movie(
-      id: (d['movie_id'] as num?)?.toInt() ?? 0,
+      id: asInt(d['movie_id']),
       title: d['title'] as String? ?? '',
       posterPath: d['poster_path'] as String?,
       overview: '',
-      voteAverage: ((d['vote_average'] as num?) ?? 0).toDouble(),
+      voteAverage: asDouble(d['vote_average']),
       isTV: d['is_tv'] == 1 || d['is_tv'] == true || d['is_tv'] == '1',
     );
 
@@ -60,10 +66,10 @@ class CouchSession {
 
     final rawMatched = json['matched'];
     return CouchSession(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: asInt(json['id']),
       status: json['status'] as String? ?? 'cancelled',
       isHost: json['is_host'] == true,
-      friendId: (friend['id'] as num?)?.toInt() ?? 0,
+      friendId: asInt(friend['id']),
       friendName: friendName,
       deck: [
         for (final d in (json['deck'] as List<dynamic>? ?? const []))
@@ -72,7 +78,7 @@ class CouchSession {
       myVotes: {
         for (final e in asMap(json['my_votes']).entries) e.key: e.value == true,
       },
-      theirProgress: (json['their_progress'] as num?)?.toInt() ?? 0,
+      theirProgress: asInt(json['their_progress']),
       matched: rawMatched is Map
           ? deckMovie(Map<String, dynamic>.from(rawMatched))
           : null,

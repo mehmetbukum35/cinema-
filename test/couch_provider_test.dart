@@ -206,6 +206,24 @@ void main() {
         isFalse,
       );
     });
+
+    test('fromJson accepts numeric strings from PDO payloads', () {
+      final raw = sessionJson();
+      raw['id'] = '7';
+      raw['their_progress'] = '2';
+      raw['friend'] = {'id': '2', 'display_name': 'Ayşe', 'username': 'ayse'};
+      final deck = raw['deck'] as List<dynamic>;
+      final firstCard = deck[0] as Map<String, Object>;
+      firstCard['movie_id'] = '101';
+      firstCard['vote_average'] = '7.5';
+
+      final session = CouchSession.fromJson(raw);
+      expect(session.id, 7);
+      expect(session.friendId, 2);
+      expect(session.theirProgress, 2);
+      expect(session.deck.first.id, 101);
+      expect(session.deck.first.voteAverage, 7.5);
+    });
   });
 
   group('CouchNotifier', () {

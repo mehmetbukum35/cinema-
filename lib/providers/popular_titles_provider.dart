@@ -13,6 +13,44 @@ class PopularTitle {
     required this.votes,
     required this.rank,
   });
+
+  factory PopularTitle.fromJson(Map<String, dynamic> m) {
+    int asInt(Object? value) => value is num
+        ? value.toInt()
+        : int.tryParse(value?.toString() ?? '') ?? 0;
+    double asDouble(Object? value) => value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '') ?? 0;
+    List<int> genres = const [];
+    final rawGenres = m['genre_ids'];
+    try {
+      final decoded = rawGenres is String && rawGenres.isNotEmpty
+          ? jsonDecode(rawGenres)
+          : rawGenres;
+      if (decoded is List) {
+        genres = decoded
+            .map((value) => int.tryParse(value.toString()))
+            .whereType<int>()
+            .toList();
+      }
+    } catch (_) {}
+    return PopularTitle(
+      rank: asInt(m['rank']),
+      votes: asInt(m['votes']),
+      movie: Movie(
+        id: asInt(m['tmdb_id']),
+        title: (m['title'] as String?) ?? '',
+        posterPath: m['poster_path'] as String?,
+        backdropPath: m['backdrop_path'] as String?,
+        overview: (m['overview'] as String?) ?? '',
+        voteAverage: asDouble(m['vote_average']),
+        releaseDate: m['release_date'] as String?,
+        isTV: m['is_tv'] == true || m['is_tv'] == 1 || m['is_tv'] == '1',
+        genreIds: genres,
+        popularity: asDouble(m['popularity']),
+      ),
+    );
+  }
 }
 
 /// `isTV` ile parametreli topluluk popüler listesi. Sunucu cron ile önhesaplar;
@@ -26,34 +64,6 @@ final popularTitlesProvider = FutureProvider.family<List<PopularTitle>, bool>((
   final raw = await api.getPopularTitles(isTV);
   return raw
       .whereType<Map<String, dynamic>>()
-      .map(_fromJson)
+      .map(PopularTitle.fromJson)
       .toList(growable: false);
 });
-
-PopularTitle _fromJson(Map<String, dynamic> m) {
-  List<int> genres = const [];
-  final g = m['genre_ids'];
-  if (g is String && g.isNotEmpty) {
-    try {
-      genres = (jsonDecode(g) as List<dynamic>).map((e) => e as int).toList();
-    } catch (_) {}
-  } else if (g is List) {
-    genres = g.map((e) => e as int).toList();
-  }
-  return PopularTitle(
-    rank: (m['rank'] as num?)?.toInt() ?? 0,
-    votes: (m['votes'] as num?)?.toInt() ?? 0,
-    movie: Movie(
-      id: (m['tmdb_id'] as num).toInt(),
-      title: (m['title'] as String?) ?? '',
-      posterPath: m['poster_path'] as String?,
-      backdropPath: m['backdrop_path'] as String?,
-      overview: (m['overview'] as String?) ?? '',
-      voteAverage: (m['vote_average'] as num?)?.toDouble() ?? 0.0,
-      releaseDate: m['release_date'] as String?,
-      isTV: m['is_tv'] == true,
-      genreIds: genres,
-      popularity: (m['popularity'] as num?)?.toDouble() ?? 0.0,
-    ),
-  );
-}

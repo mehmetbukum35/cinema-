@@ -137,5 +137,24 @@ void main() {
       expect(restored.popularity, 88.8);
       expect(restored.voteCount, 500);
     });
+
+    test('fromStorage accepts numeric strings from legacy caches', () {
+      final movie = Movie.fromStorage({
+        'id': '42',
+        'title': 'Legacy',
+        'vote_average': '8.5',
+        'isTV': '1',
+        'genre_ids': ['18', 80, 'bad'],
+        'popularity': '99.25',
+        'vote_count': '700',
+      });
+
+      expect(movie.id, 42);
+      expect(movie.voteAverage, 8.5);
+      expect(movie.isTV, isTrue);
+      expect(movie.genreIds, [18, 80]);
+      expect(movie.popularity, 99.25);
+      expect(movie.voteCount, 700);
+    });
   });
 }

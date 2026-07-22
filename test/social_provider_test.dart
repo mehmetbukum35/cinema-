@@ -356,6 +356,16 @@ void main() {
   });
 
   group('SocialProvider Tests', () {
+    test('FriendSignals ignores malformed non-list entries', () {
+      final signals = FriendSignals.fromJson({
+        'movie_1': ['Alice'],
+        'movie_2': 'invalid',
+      });
+      expect(signals.byTitleKey, {
+        'movie_1': ['Alice'],
+      });
+    });
+
     test('loadFriends should update friends list state', () async {
       final notifier = container.read(socialProvider.notifier);
 
@@ -532,6 +542,12 @@ void main() {
       expect(state.recommendations, hasLength(1));
       expect(state.recommendations[0].title, 'The Matrix');
       expect(state.unseenRecommendations, 1);
+    });
+
+    test('loadRecommendations accepts a string unseen count', () async {
+      mockApi.recommendationsResponse['unseen'] = '4';
+      await container.read(socialProvider.notifier).loadRecommendations();
+      expect(container.read(socialProvider).unseenRecommendations, 4);
     });
 
     test(
@@ -989,7 +1005,7 @@ void main() {
       final oldLoad = notifier.loadTasteScores();
       final newLoad = notifier.loadTasteScores();
       fresh.complete([
-        {'friend_id': 20, 'score': 90, 'has_data': true},
+        {'friend_id': '20', 'score': '90', 'has_data': true},
       ]);
       await newLoad;
       stale.complete([

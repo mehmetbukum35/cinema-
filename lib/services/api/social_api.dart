@@ -175,7 +175,8 @@ mixin SocialApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['watchlist'] as List<dynamic>;
+      final watchlist = data['watchlist'];
+      return watchlist is List ? List<dynamic>.from(watchlist) : const [];
     } else {
       throw ApiException(
         statusCode: response.statusCode,

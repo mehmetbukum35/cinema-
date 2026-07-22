@@ -661,5 +661,34 @@ void main() {
         ),
       );
     });
+
+    test('malformed couch session becomes an ApiException', () async {
+      final apiService = ApiService(
+        client: MockClient(
+          (_) async => http.Response(jsonEncode({'session': []}), 200),
+        ),
+      );
+
+      await expectLater(
+        apiService.getCouchSession(7),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error.statusCode,
+            'statusCode',
+            502,
+          ),
+        ),
+      );
+    });
+
+    test('missing watchlist intersection is treated as empty', () async {
+      final apiService = ApiService(
+        client: MockClient(
+          (_) async => http.Response(jsonEncode({'watchlist': null}), 200),
+        ),
+      );
+
+      expect(await apiService.getWatchlistIntersection(2), isEmpty);
+    });
   });
 }
