@@ -51,8 +51,9 @@ const Map<String, String> kEnStrings = {
   'together_friend_match_desc': 'See shared likes and recommendations',
   'together_couch_title': 'Couch Mode',
   'together_couch_desc': 'On one phone',
-  'together_similar_title': 'Find Similar',
-  'together_similar_desc': 'Discover titles similar to one you love',
+  'together_similar_title': 'Find Similar Titles',
+  'together_similar_desc':
+      'Discover titles similar to a movie or show you love',
   'tab_search': 'Search',
   'tab_profile': 'Profile',
 
@@ -375,7 +376,9 @@ const Map<String, String> kEnStrings = {
 
   // Search
   'search_title': 'Search',
-  'search_hint': 'Search movies or TV shows...',
+  'search_hint': 'Movie or show title + year (e.g. Dune 1984)',
+  'search_year_tip':
+      'Add the release year to find titles with the same name more easily.',
   'search_empty': 'Search history is empty.',
   'search_history': 'Search History',
   'search_clear': 'Clear',
@@ -591,10 +594,10 @@ const Map<String, String> kEnStrings = {
   'no_common_genres': 'No Common Genres',
   'you_have_no_common_genres_sele':
       'You have no common genres selected. Please select at least one genre in common to find a joint recommendation.',
-  'movie_match': 'Movie Match',
-  'movie_match_alt': 'Movie Match',
+  'movie_match': 'Similar Titles',
+  'movie_match_alt': 'Movie or Show Based',
   'with_friend': 'With Friend',
-  'movie_matcher': 'Movie Matcher',
+  'movie_matcher': 'Find Similar Titles',
   'search_for_a_movie_or_tv_show_':
       'Search for a movie or TV show you like, we\'ll analyze its similarities to recommend matching titles.',
   'couch_mode_matcher': 'Couch Mode Matcher',

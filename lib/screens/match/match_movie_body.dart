@@ -5,6 +5,7 @@ import '../../models/movie.dart';
 import '../../services/localization_service.dart';
 import '../../services/tmdb_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/search_year_hint.dart';
 import 'match_widgets.dart';
 import 'similar_card.dart';
 
@@ -57,41 +58,58 @@ class MatchMovieBody extends StatelessWidget {
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: c.isLight ? Border.all(color: c.border, width: 1) : null,
-            ),
-            child: TextField(
-              controller: searchController,
-              onChanged: onSearch,
-              style: TextStyle(color: c.ink, fontSize: 15),
-              decoration: InputDecoration(
-                hintText:
-                    AppLocalizations.of(context)?.get('search_hint') ??
-                    'Film veya dizi ara...',
-                hintStyle: TextStyle(color: c.dim, fontSize: 15),
-                prefixIcon: Icon(Icons.search_rounded, color: c.dim, size: 20),
-                suffixIcon: searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.close_rounded, color: c.dim, size: 18),
-                        tooltip:
-                            AppLocalizations.of(
-                              context,
-                            )?.get('semantics_close') ??
-                            'Close',
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          onClear();
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: c.isLight
+                      ? Border.all(color: c.border, width: 1)
+                      : null,
+                ),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: onSearch,
+                  style: TextStyle(color: c.ink, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText:
+                        AppLocalizations.of(context)?.get('search_hint') ??
+                        'Film veya dizi adı + yıl',
+                    hintStyle: TextStyle(color: c.dim, fontSize: 15),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: c.dim,
+                      size: 20,
+                    ),
+                    suffixIcon: searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: c.dim,
+                              size: 18,
+                            ),
+                            tooltip:
+                                AppLocalizations.of(
+                                  context,
+                                )?.get('semantics_close') ??
+                                'Close',
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              onClear();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 7),
+              const SearchYearHint(),
+            ],
           ),
         ),
         Expanded(child: _buildContent(context)),

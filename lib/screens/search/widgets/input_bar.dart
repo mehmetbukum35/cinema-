@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/search_year_hint.dart';
 
 /// Arama başlığı, metin alanı ve filtre düğmesi.
 class SearchInputBar extends StatelessWidget {
@@ -130,6 +131,8 @@ class SearchInputBar extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 7),
+          const SearchYearHint(),
         ],
       ),
     );

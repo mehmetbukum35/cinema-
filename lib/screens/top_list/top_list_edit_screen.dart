@@ -9,6 +9,7 @@ import '../../services/tmdb_service.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
+import '../../widgets/search_year_hint.dart';
 import '../../widgets/app_toast.dart';
 import '../../widgets/cinematic_background.dart';
 import '../movie_detail_sheet.dart';
@@ -652,33 +653,7 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
                       ),
                     ),
                     const SizedBox(height: 7),
-                    Semantics(
-                      label:
-                          tr?.get('top_list_search_year_tip') ??
-                          'Aynı adlı yapımları daha kolay bulmak için adın yanına yılı da yazabilirsiniz.',
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            size: 15,
-                            color: c.dim,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              tr?.get('top_list_search_year_tip') ??
-                                  'Aynı adlı yapımları daha kolay bulmak için adın yanına yılı da yazabilirsiniz.',
-                              style: TextStyle(
-                                color: c.dim,
-                                fontSize: 12,
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    const SearchYearHint(),
                   ],
                 ),
               ),

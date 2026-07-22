@@ -71,6 +71,36 @@ void main() {
     });
 
     test(
+      'searchMulti should apply a year to both movie and TV searches',
+      () async {
+        final requests = <Uri>[];
+        final client = MockClient((request) async {
+          requests.add(request.url);
+          return http.Response(
+            jsonEncode({'results': <dynamic>[]}),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        });
+        final service = TmdbService(client: client);
+
+        await service.searchMulti('Dune 1984');
+
+        expect(requests, hasLength(2));
+        final movieRequest = requests.singleWhere(
+          (uri) => uri.path.endsWith('/3/search/movie'),
+        );
+        final tvRequest = requests.singleWhere(
+          (uri) => uri.path.endsWith('/3/search/tv'),
+        );
+        expect(movieRequest.queryParameters['query'], 'Dune');
+        expect(movieRequest.queryParameters['primary_release_year'], '1984');
+        expect(tvRequest.queryParameters['query'], 'Dune');
+        expect(tvRequest.queryParameters['first_air_date_year'], '1984');
+      },
+    );
+
+    test(
       'searchMulti should throw TmdbApiException on HTTP non-200 status code',
       () async {
         final client = MockClient((request) async {

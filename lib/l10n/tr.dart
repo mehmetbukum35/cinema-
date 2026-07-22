@@ -51,8 +51,8 @@ const Map<String, String> kTrStrings = {
   'together_friend_match_desc': 'Ortak beğeniler ve öneriler',
   'together_couch_title': 'Aynı Cihazda',
   'together_couch_desc': 'Tek telefonda',
-  'together_similar_title': 'Benzer Film Bul',
-  'together_similar_desc': 'Sevdiğin bir filme benzer yapımları keşfet',
+  'together_similar_title': 'Benzer Yapım Bul',
+  'together_similar_desc': 'Sevdiğin film veya diziye benzer yapımları keşfet',
   'tab_search': 'Ara',
   'tab_profile': 'Profil',
 
@@ -512,7 +512,9 @@ const Map<String, String> kTrStrings = {
   'mood_funny': 'Güldür beni',
   'swipe_left_desc': 'Geçmek için sola kaydır',
   'onboarding_search_hint_movie': 'Film ara...',
-  'search_hint': 'Film veya dizi ara...',
+  'search_hint': 'Film veya dizi adı + yıl (örn. Dune 1984)',
+  'search_year_tip':
+      'Aynı adlı yapımları daha kolay bulmak için adın yanına yayın yılını da yazabilirsiniz.',
   'browse_title': 'Keşfet',
   'detail_episodes_count': 'bölüm',
   'swipe_ratings_count': '{} değerlendirme',
@@ -585,10 +587,10 @@ const Map<String, String> kTrStrings = {
   'no_common_genres': 'Ortak Tür Bulunamadı',
   'you_have_no_common_genres_sele':
       'İkinizin de seçtiği ortak bir tür bulunmuyor. Ortak bir tavsiye üretebilmemiz için lütfen en az bir ortak tür seçin.',
-  'movie_match': 'Film Eşleştir',
-  'movie_match_alt': 'Film Tabanlı',
+  'movie_match': 'Benzer Yapımlar',
+  'movie_match_alt': 'Film veya Dizi Tabanlı',
   'with_friend': 'Arkadaşımla',
-  'movie_matcher': 'Film Tabanlı Eşleştirme',
+  'movie_matcher': 'Benzer Yapım Bul',
   'search_for_a_movie_or_tv_show_':
       'Sevdiğiniz bir filmi veya diziyi aratın, o içeriğin benzerlerini ve tür eşleşmelerini analiz edip zevkinize uygun yapımları listeleyelim.',
   'couch_mode_matcher': 'Aynı Cihazda Eşleştirme (Koltuk Modu)',
