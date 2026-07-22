@@ -255,6 +255,33 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(700, (int) $out['ratings'][0]['movie_id']);
     }
 
+    // ─── Regresyon: pull server saatine göre filtreler, cihaz saatine değil ───
+    // Cihaz saati geride bir istemci düşük updated_at ile push edebilir. Pull
+    // `since`'i cihaz-saatli updated_at'e bakarsa, bu satır başka cihazların
+    // (sunucu-saatli) cursor'unun altında kalıp KALICI olarak atlanır. Fix:
+    // pull, her yazımda sunucu saatiyle damgalanan server_updated_at'e bakar.
+    public function testPullFiltersByServerTimeNotDeviceClock(): void
+    {
+        // Cihaz saati çok geride: updated_at = 500. Sunucu bunu ŞİMDİ aldı
+        // (upsert server_updated_at = now_ms() yazar → ~10^12).
+        $this->sync->push(1, [
+            'ratings' => [
+                ['movie_id' => 42, 'is_tv' => 0, 'rating' => 3,
+                 'title' => 'Behind Clock', 'updated_at' => 500],
+            ],
+        ]);
+
+        // Başka bir cihazın cursor'u 500'ün ÜSTÜNDE ama sunucunun şu anki
+        // saatinin altında. Fix'siz (updated_at > 1000): 500 > 1000 değil →
+        // satır kaybolurdu. Fix'li (server_updated_at > 1000): satır gelir.
+        TestHelperRegistry::reset();
+        $this->sync->pull(1, 1000);
+        $out = TestHelperRegistry::$lastBody;
+
+        $this->assertCount(1, $out['ratings']);
+        $this->assertSame(42, (int) $out['ratings'][0]['movie_id']);
+    }
+
     // ───────────────────────── yardımcılar ──────────────────────────────────
 
     /** Tek tabloyu push edip applied sayısını döndürür. */
@@ -430,10 +457,12 @@ class SyncIntegrationTest extends TestCase
     private function seedRating(int $uid, int $movieId, int $isTv, int $rating, string $title, int $updatedAt): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, created_at, updated_at, deleted)
-             VALUES (?, ?, ?, ?, ?, ?, 0)'
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, created_at, updated_at, server_updated_at, deleted)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
         );
-        $stmt->execute([$uid, $movieId, $isTv, $rating, $updatedAt, $updatedAt]);
+        // server_updated_at = updated_at: doğrudan seed edilen satır, sunucunun o
+        // damgayla aldığını simüle eder (server-zamanlı cursor testleri için).
+        $stmt->execute([$uid, $movieId, $isTv, $rating, $updatedAt, $updatedAt, $updatedAt]);
         $stmt = $this->db->prepare(
             'INSERT INTO titles (tmdb_id, is_tv, locale, title, metadata_updated_at) VALUES (?, ?, \'und\', ?, ?)
              ON CONFLICT(tmdb_id, is_tv, locale) DO UPDATE SET
@@ -502,6 +531,7 @@ class SyncIntegrationTest extends TestCase
                 rating INTEGER,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
+                server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 comment TEXT,
                 is_spoiler INTEGER NOT NULL DEFAULT 0,
@@ -517,6 +547,7 @@ class SyncIntegrationTest extends TestCase
                 is_tv INTEGER NOT NULL,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
+                server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, id, is_tv)
             )'
@@ -528,6 +559,7 @@ class SyncIntegrationTest extends TestCase
                 is_tv INTEGER NOT NULL,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
+                server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, id, is_tv)
             )'
@@ -538,6 +570,7 @@ class SyncIntegrationTest extends TestCase
                 tv_id INTEGER NOT NULL,
                 season_number INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
+                server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, tv_id, season_number)
             )'
@@ -548,6 +581,7 @@ class SyncIntegrationTest extends TestCase
                 query TEXT NOT NULL,
                 created_at INTEGER,
                 updated_at INTEGER NOT NULL,
+                server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, query)
             )'

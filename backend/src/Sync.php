@@ -139,15 +139,19 @@ class Sync
                           LEFT JOIN titles tf ON tf.tmdb_id = d.`{$def['title_key']}`
                           AND tf.is_tv = d.is_tv AND tf.locale = 'und'";
             }
+            // Pull imleci (`since`) SUNUCU saatiyle ilerler; bu yüzden filtre de
+            // sunucu-otoriter `server_updated_at` kolonuna bakar. Cihaz saatli
+            // `updated_at` ile filtrelenirse, saati geride bir cihazın yazdıkları
+            // başka cihazların cursor'unun altında kalıp kalıcı olarak atlanırdı.
             $st = $this->db->prepare(
                 "$select FROM `$table` d$join
-                 WHERE d.user_id = ? AND d.updated_at > ? ORDER BY d.updated_at ASC"
+                 WHERE d.user_id = ? AND d.server_updated_at > ? ORDER BY d.updated_at ASC"
             );
             $params = isset($def['title_key']) ? [$locale, $uid, $since] : [$uid, $since];
             $st->execute($params);
             $rows = [];
             foreach ($st->fetchAll() as $r) {
-                unset($r['user_id']);
+                unset($r['user_id'], $r['server_updated_at']);
                 foreach (array_unique(array_merge($def['json'], isset($def['title_key']) ? ['genre_ids'] : [])) as $jc) {
                     if (isset($r[$jc])) $r[$jc] = json_decode($r[$jc], true);
                 }
@@ -331,6 +335,12 @@ class Sync
         }
         $values = array_merge($values, $extraCols);
 
+        // Sunucu-otoriter senkron imleci: cihaz saatinden bağımsız, her yazımda
+        // sunucu saatiyle damgalanır. Pull `since` bunu kullanır (bkz. pull()).
+        // Çakışma çözümü (hangi satır kazanır) yine client `updated_at`'iyle yapılır.
+        $serverNow = now_ms();
+        $values['server_updated_at'] = $serverNow;
+
         if ($existing === false) {
             // Yeni kayıt → INSERT
             $colNames = array_keys($values);
@@ -349,6 +359,8 @@ class Sync
             $setParts[] = "`$c` = ?";
             $setVals[]  = $values[$c];
         }
+        $setParts[] = '`server_updated_at` = ?';
+        $setVals[]  = $serverNow;
         $this->db->prepare("UPDATE `$table` SET " . implode(', ', $setParts) . " WHERE $whereSql")
                  ->execute(array_merge($setVals, $whereVals));
         return true;
