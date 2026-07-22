@@ -9,6 +9,8 @@ import 'package:ne_izlesem/services/api_service.dart';
 class MockApiService implements ApiService {
   final List<Completer<Map<String, dynamic>>> friendsRequests = [];
   final List<Completer<Map<String, dynamic>>> sentRecommendationRequests = [];
+  final List<Completer<ActivityFeedPage>> friendActivityRequests = [];
+  final List<Completer<List<dynamic>>> intersectionRequests = [];
   Map<String, dynamic> friendsResponse = {
     'friends': [
       {'id': 10, 'username': 'testfriend'},
@@ -131,6 +133,9 @@ class MockApiService implements ApiService {
     int limit = 50,
   }) async {
     loadedActivityFriendId = friendId;
+    if (friendId != null && friendActivityRequests.isNotEmpty) {
+      return friendActivityRequests.removeAt(0).future;
+    }
     if (paginateActivity && cursor == 'page-2') {
       final second = Map<String, dynamic>.from(
         activityResponse.single as Map<String, dynamic>,
@@ -147,6 +152,9 @@ class MockApiService implements ApiService {
   @override
   Future<List<dynamic>> getWatchlistIntersection(int friendId) async {
     loadedIntersectionFriendId = friendId;
+    if (intersectionRequests.isNotEmpty) {
+      return intersectionRequests.removeAt(0).future;
+    }
     return intersectionResponse;
   }
 
@@ -645,5 +653,60 @@ void main() {
         expect(state.friendActivities[10]![0].friendUsername, 'testfriend');
       },
     );
+
+    test(
+      'older friend activity cannot overwrite a newer friend view',
+      () async {
+        final stale = Completer<ActivityFeedPage>();
+        final fresh = Completer<ActivityFeedPage>();
+        mockApi.friendActivityRequests.addAll([stale, fresh]);
+        final notifier = container.read(socialProvider.notifier);
+
+        final first = notifier.loadFriendActivity(10);
+        final second = notifier.loadFriendActivity(20);
+        fresh.complete(
+          const ActivityFeedPage(
+            items: [],
+            nextCursor: 'friend-20',
+            hasMore: true,
+          ),
+        );
+        await second;
+        stale.complete(
+          const ActivityFeedPage(
+            items: [],
+            nextCursor: 'friend-10',
+            hasMore: true,
+          ),
+        );
+        await first;
+
+        final state = container.read(socialProvider);
+        expect(state.friendActivityFriendId, 20);
+        expect(state.friendActivityCursor, 'friend-20');
+        expect(state.friendActivities.containsKey(10), isFalse);
+      },
+    );
+
+    test('older intersection cannot overwrite a newer friend view', () async {
+      final stale = Completer<List<dynamic>>();
+      final fresh = Completer<List<dynamic>>();
+      mockApi.intersectionRequests.addAll([stale, fresh]);
+      final notifier = container.read(socialProvider.notifier);
+      final newerMovie = Map<String, dynamic>.from(
+        mockApi.intersectionResponse.single as Map<String, dynamic>,
+      )..['id'] = 202;
+
+      final first = notifier.loadWatchlistIntersection(10);
+      final second = notifier.loadWatchlistIntersection(20);
+      fresh.complete([newerMovie]);
+      await second;
+      stale.complete(mockApi.intersectionResponse);
+      await first;
+
+      final state = container.read(socialProvider);
+      expect(state.intersection.single.id, 202);
+      expect(state.loading, isFalse);
+    });
   });
 }

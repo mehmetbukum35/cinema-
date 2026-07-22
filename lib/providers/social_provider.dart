@@ -183,6 +183,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
   int _receivedRecommendationsLoadGeneration = 0;
   int _sentRecommendationsLoadGeneration = 0;
   int _topProfilesLoadGeneration = 0;
+  int _friendActivityLoadGeneration = 0;
+  int _intersectionLoadGeneration = 0;
 
   Future<void> loadFriendSignals() async {
     try {
@@ -308,6 +310,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   Future<void> loadFriendActivity(int friendId) async {
+    final generation = ++_friendActivityLoadGeneration;
     state = state.copyWith(
       loading: true,
       error: () => null,
@@ -318,7 +321,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
     );
     try {
       final page = await _apiService.getActivityFeedPage(friendId: friendId);
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _friendActivityLoadGeneration ||
+          state.friendActivityFriendId != friendId) {
+        return;
+      }
       final feedList = page.items
           .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
           .toList();
@@ -331,10 +338,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
         loading: false,
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.toString());
     }
   }
@@ -346,13 +353,18 @@ class SocialNotifier extends StateNotifier<SocialState> {
     if (state.friendActivityFriendId != friendId) return;
     final cursor = state.friendActivityCursor;
     if (cursor == null) return;
+    final generation = _friendActivityLoadGeneration;
     state = state.copyWith(friendActivityLoadingMore: true);
     try {
       final page = await _apiService.getActivityFeedPage(
         friendId: friendId,
         cursor: cursor,
       );
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _friendActivityLoadGeneration ||
+          state.friendActivityFriendId != friendId) {
+        return;
+      }
       final incoming = page.items
           .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
           .toList();
@@ -366,13 +378,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
         friendActivityLoadingMore: false,
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(
         friendActivityLoadingMore: false,
         error: () => e.message,
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(
         friendActivityLoadingMore: false,
         error: () => e.toString(),
@@ -776,16 +788,20 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   Future<void> loadWatchlistIntersection(int friendId) async {
+    final generation = ++_intersectionLoadGeneration;
     state = state.copyWith(loading: true, error: () => null, intersection: []);
     try {
       final list = await _apiService.getWatchlistIntersection(friendId);
+      if (!mounted || generation != _intersectionLoadGeneration) return;
       final movies = list
           .map((e) => Movie.fromJson(e as Map<String, dynamic>))
           .toList();
       state = state.copyWith(intersection: movies, loading: false);
     } on ApiException catch (e) {
+      if (!mounted || generation != _intersectionLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
+      if (!mounted || generation != _intersectionLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.toString());
     }
   }
