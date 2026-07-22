@@ -81,20 +81,32 @@ class Auth
             fail(422, 'E-posta ve doğrulama kodu gereklidir.');
         }
 
+        // Hatalı kod denemesi transaction dışında kalmalı; aksi halde fail()
+        // deneme sayacını da geri alır. Doğru kodu transaction içinde kilitleyip
+        // yeniden doğrulayarak hesap, kod ve token değişikliklerini atomik tut.
         $this->consumeCodeOrFail('email_verifications', $email, $code);
+        $this->db->beginTransaction();
+        try {
+            $this->consumeCodeOrFail('email_verifications', $email, $code, true);
 
-        $st = $this->db->prepare(
-            'SELECT id, display_name, username, google_sub FROM users WHERE email = ?'
-        );
-        $st->execute([$email]);
-        $u = $st->fetch();
-        if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            $st = $this->db->prepare(
+                'SELECT id, display_name, username, google_sub FROM users WHERE email = ?'
+            );
+            $st->execute([$email]);
+            $u = $st->fetch();
+            if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
 
-        $up = $this->db->prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?');
-        $up->execute([now_ms(), (int) $u['id']]);
-        $this->db->prepare('DELETE FROM email_verifications WHERE email = ?')->execute([$email]);
+            $uid = (int) $u['id'];
+            $up = $this->db->prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?');
+            $up->execute([now_ms(), $uid]);
+            $this->db->prepare('DELETE FROM email_verifications WHERE email = ?')->execute([$email]);
+            $tokens = $this->issueTokens($uid);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
 
-        $uid = (int) $u['id'];
         json_out(200, [
             'user' => [
                 'id' => $uid,
@@ -103,7 +115,7 @@ class Auth
                 'username' => $u['username'],
                 'google_sub' => $u['google_sub'],
             ],
-            'tokens' => $this->issueTokens($uid),
+            'tokens' => $tokens,
         ]);
     }
 
@@ -572,25 +584,35 @@ class Auth
         if ($rt === '') fail(422, 'refresh_token gerekli.');
 
         $hash = hash('sha256', $rt);
-        $st = $this->db->prepare('SELECT user_id, expires_at FROM refresh_tokens WHERE token_hash = ?');
-        $st->execute([$hash]);
-        $row = $st->fetch();
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $lock = $driver !== 'sqlite' ? ' FOR UPDATE' : '';
+        $this->db->beginTransaction();
+        try {
+            $st = $this->db->prepare(
+                "SELECT user_id, expires_at FROM refresh_tokens WHERE token_hash = ?$lock"
+            );
+            $st->execute([$hash]);
+            $row = $st->fetch();
 
-        if (!$row || (int) $row['expires_at'] < time()) {
-            fail(401, 'Geçersiz veya süresi dolmuş yenileme anahtarı.');
+            if (!$row || (int) $row['expires_at'] < time()) {
+                fail(401, 'Geçersiz veya süresi dolmuş yenileme anahtarı.');
+            }
+            $uid = (int) $row['user_id'];
+
+            // Rotasyon + grace penceresi: eski refresh HEMEN silinmez; ömrü 60
+            // saniyeye kısaltılır. Yeni token üretilemezse transaction eski
+            // tokenın kalan ömrünü korur.
+            $graceExpires = min((int) $row['expires_at'], time() + 60);
+            $up = $this->db->prepare('UPDATE refresh_tokens SET expires_at = ? WHERE token_hash = ?');
+            $up->execute([$graceExpires, $hash]);
+            $tokens = $this->issueTokens($uid);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
         }
-        $uid = (int) $row['user_id'];
 
-        // Rotasyon + grace penceresi: eski refresh HEMEN silinmez; ömrü 60
-        // saniyeye kısaltılır. Yanıt istemciye ulaşamadan uygulama kapanırsa
-        // (mobilde olağan) eski token'la bir kez daha yenileme yapılabilir;
-        // aksi halde oturum kalıcı düşerdi. 60 sn sonra token kendiliğinden
-        // geçersizleşir (yukarıdaki expires_at kontrolü).
-        $graceExpires = min((int) $row['expires_at'], time() + 60);
-        $up = $this->db->prepare('UPDATE refresh_tokens SET expires_at = ? WHERE token_hash = ?');
-        $up->execute([$graceExpires, $hash]);
-
-        json_out(200, ['tokens' => $this->issueTokens($uid)]);
+        json_out(200, ['tokens' => $tokens]);
     }
 
     // ─── POST /auth/logout ──────────────────────────────────────────────────

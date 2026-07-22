@@ -193,6 +193,35 @@ class AuthIntegrationTest extends TestCase
         $this->assertSame(0, (int) $codes);
     }
 
+    public function testVerifyEmailRollsBackWhenTokenCreationFails(): void
+    {
+        $email = 'atomic-verify@example.com';
+        $this->auth->register([
+            'email' => $email,
+            'password' => 'password123',
+            'display_name' => 'Atomic Verify',
+        ]);
+        $this->forceVerificationCode($email, '123456');
+        $this->db->exec(
+            "CREATE TRIGGER fail_refresh_insert BEFORE INSERT ON refresh_tokens
+             BEGIN SELECT RAISE(ABORT, 'forced token insert failure'); END"
+        );
+
+        try {
+            $this->auth->verifyEmail(['email' => $email, 'code' => '123456']);
+            $this->fail('Token üretilemezken doğrulama uygulanmamalıydı.');
+        } catch (PDOException $e) {
+            $verified = $this->db->query(
+                "SELECT email_verified FROM users WHERE email = '$email'"
+            )->fetchColumn();
+            $this->assertSame(0, (int) $verified);
+            $codeStillExists = $this->db->query(
+                "SELECT COUNT(*) FROM email_verifications WHERE email = '$email'"
+            )->fetchColumn();
+            $this->assertSame(1, (int) $codeStillExists);
+        }
+    }
+
     public function testReRegisterOverwritesUnverifiedAccount(): void
     {
         // Saldırgan kurbanın e-postasıyla kayıt olur (doğrulayamaz).
@@ -375,6 +404,33 @@ class AuthIntegrationTest extends TestCase
             )->fetchColumn();
             $this->assertTrue(password_verify('old-password-123', (string) $hash));
             $this->assertFalse(password_verify('new-password-456', (string) $hash));
+        }
+    }
+
+    public function testRefreshRollsBackGracePeriodWhenTokenCreationFails(): void
+    {
+        $uid = $this->seedUser('atomic-refresh@example.com');
+        $refreshToken = 'known-refresh-token';
+        $originalExpiry = time() + 86400;
+        $this->db->prepare(
+            'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (?, ?, ?, ?)'
+        )->execute([$uid, hash('sha256', $refreshToken), $originalExpiry, time()]);
+        $this->db->exec(
+            "CREATE TRIGGER fail_refresh_rotation BEFORE INSERT ON refresh_tokens
+             BEGIN SELECT RAISE(ABORT, 'forced token insert failure'); END"
+        );
+
+        try {
+            $this->auth->refresh(['refresh_token' => $refreshToken]);
+            $this->fail('Yeni token üretilemezken rotasyon tamamlanmamalıydı.');
+        } catch (PDOException $e) {
+            $expiry = $this->db->query(
+                "SELECT expires_at FROM refresh_tokens WHERE token_hash = '" .
+                hash('sha256', $refreshToken) . "'"
+            )->fetchColumn();
+            $this->assertSame($originalExpiry, (int) $expiry);
+            $this->assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM refresh_tokens')->fetchColumn());
         }
     }
 
