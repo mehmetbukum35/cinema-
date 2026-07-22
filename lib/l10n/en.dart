@@ -56,6 +56,7 @@ const Map<String, String> kEnStrings = {
       'Discover titles similar to a movie or show you love',
   'tab_search': 'Search',
   'tab_profile': 'Profile',
+  'press_back_again_to_exit': 'Press back again to exit',
 
   // Global top bar & menu
   'menu_social': 'Social',

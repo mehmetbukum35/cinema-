@@ -28,6 +28,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   int _tab = 0;
   bool _usernamePromptShown = false;
   int? _handledCouchResumeId;
+  DateTime? _lastBackPress;
 
   static const _items = [
     (Icons.home_rounded, 'tab_browse'),
@@ -132,160 +133,189 @@ class _MainShellState extends ConsumerState<MainShell> {
         social.pendingReceived.length +
         social.unseenRecommendations +
         (couch.hasPendingInvite ? 1 : 0);
-    return Scaffold(
-      backgroundColor: pal.bg,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            if (isOffline)
-              Container(
-                width: double.infinity,
-                color: Colors.orange.shade800,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                  horizontal: 16,
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.cloud_off_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.of(
-                              context,
-                            )?.get('you_are_offline_your_changes_w') ??
-                            'Offline Mode — Your data will be synced at the first opportunity',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_tab != 0) {
+          _onTabChange(0);
+        } else {
+          final now = DateTime.now();
+          if (_lastBackPress == null ||
+              now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+            _lastBackPress = now;
+            showAppSnackBar(
+              context,
+              AppLocalizations.of(context)?.get('press_back_again_to_exit') ??
+                  'Çıkmak için tekrar geri basın',
+              duration: const Duration(seconds: 2),
+            );
+          } else {
+            SystemNavigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: pal.bg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (isOffline)
+                Container(
+                  width: double.infinity,
+                  color: Colors.orange.shade800,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 16,
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.get('you_are_offline_your_changes_w') ??
+                              'Offline Mode — Your data will be synced at the first opportunity',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              // Global üst bar: her sekmede aynı yerde durur (zar + rozetli
+              // avatar menüsü). Keşfet başlığındaki dağınık ikon sırasının yerine.
+              AppTopBar(onOpenProfile: () => _onTabChange(4)),
+              Expanded(
+                child: IndexedStack(
+                  index: _tab,
+                  children: [
+                    // TickerMode: görünmeyen sekmelerin TÜM animasyonlarını (aurora,
+                    // shimmer vb.) dondurur — kapsamlı pil koruması.
+                    TickerMode(enabled: _tab == 0, child: const BrowseScreen()),
+                    TickerMode(enabled: _tab == 1, child: const SwipeScreen()),
+                    TickerMode(
+                      enabled: _tab == 2,
+                      child: const TogetherScreen(),
+                    ),
+                    TickerMode(enabled: _tab == 3, child: const SearchScreen()),
+                    TickerMode(
+                      enabled: _tab == 4,
+                      child: const ProfileScreen(),
                     ),
                   ],
                 ),
               ),
-            // Global üst bar: her sekmede aynı yerde durur (zar + rozetli
-            // avatar menüsü). Keşfet başlığındaki dağınık ikon sırasının yerine.
-            AppTopBar(onOpenProfile: () => _onTabChange(4)),
-            Expanded(
-              child: IndexedStack(
-                index: _tab,
-                children: [
-                  // TickerMode: görünmeyen sekmelerin TÜM animasyonlarını (aurora,
-                  // shimmer vb.) dondurur — kapsamlı pil koruması.
-                  TickerMode(enabled: _tab == 0, child: const BrowseScreen()),
-                  TickerMode(enabled: _tab == 1, child: const SwipeScreen()),
-                  TickerMode(enabled: _tab == 2, child: const TogetherScreen()),
-                  TickerMode(enabled: _tab == 3, child: const SearchScreen()),
-                  TickerMode(enabled: _tab == 4, child: const ProfileScreen()),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: pal.isLight
-                ? [pal.surface, pal.navBg]
-                : const [Color(0xF2121218), AppColors.navBg],
+            ],
           ),
-          border: Border(top: BorderSide(color: pal.borderSoft, width: 1)),
-          boxShadow: [
-            BoxShadow(
-              color: pal.isLight
-                  ? const Color(0x14000000)
-                  : const Color(0x66000000),
-              blurRadius: 20,
-              offset: const Offset(0, -6),
-            ),
-          ],
         ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 64,
-            child: LayoutBuilder(
-              builder: (context, c) {
-                final itemW = c.maxWidth / _items.length;
-                return Stack(
-                  children: [
-                    // Hareketli üst indikatör (akıcı şekilde aktif sekmeye kayar)
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeOutCubic,
-                      left: _tab * itemW,
-                      top: 0,
-                      width: itemW,
-                      child: Center(
-                        child: Container(
-                          width: 26,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            gradient: CinemaGradients.crimson,
-                            borderRadius: BorderRadius.circular(2),
-                            boxShadow: CinemaShadows.glow(
-                              AppColors.red,
-                              strength: 0.6,
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: pal.isLight
+                  ? [pal.surface, pal.navBg]
+                  : const [Color(0xF2121218), AppColors.navBg],
+            ),
+            border: Border(top: BorderSide(color: pal.borderSoft, width: 1)),
+            boxShadow: [
+              BoxShadow(
+                color: pal.isLight
+                    ? const Color(0x14000000)
+                    : const Color(0x66000000),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 64,
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final itemW = c.maxWidth / _items.length;
+                  return Stack(
+                    children: [
+                      // Hareketli üst indikatör (akıcı şekilde aktif sekmeye kayar)
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 320),
+                        curve: Curves.easeOutCubic,
+                        left: _tab * itemW,
+                        top: 0,
+                        width: itemW,
+                        child: Center(
+                          child: Container(
+                            width: 26,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              gradient: CinemaGradients.crimson,
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: CinemaShadows.glow(
+                                AppColors.red,
+                                strength: 0.6,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Aktif sekme arkası yumuşak glow
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeOutCubic,
-                      left: _tab * itemW,
-                      top: 0,
-                      bottom: 0,
-                      width: itemW,
-                      child: Center(
-                        child: Container(
-                          width: 54,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                pal.red.withValues(alpha: 0.16),
-                                Colors.transparent,
-                              ],
+                      // Aktif sekme arkası yumuşak glow
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 320),
+                        curve: Curves.easeOutCubic,
+                        left: _tab * itemW,
+                        top: 0,
+                        bottom: 0,
+                        width: itemW,
+                        child: Center(
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  pal.red.withValues(alpha: 0.16),
+                                  Colors.transparent,
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Row(
-                      children: List.generate(_items.length, (i) {
-                        final (icon, labelKey) = _items[i];
-                        final label =
-                            AppLocalizations.of(context)?.get(labelKey) ??
-                            labelKey;
-                        return _NavItem(
-                          icon: icon,
-                          label: label,
-                          active: _tab == i,
-                          badge: i == 2 ? togetherBadge : 0,
-                          onTap: () => _onTabChange(i),
-                        );
-                      }),
-                    ),
-                  ],
-                );
-              },
+                      Row(
+                        children: List.generate(_items.length, (i) {
+                          final (icon, labelKey) = _items[i];
+                          final label =
+                              AppLocalizations.of(context)?.get(labelKey) ??
+                              labelKey;
+                          return _NavItem(
+                            icon: icon,
+                            label: label,
+                            active: _tab == i,
+                            badge: i == 2 ? togetherBadge : 0,
+                            onTap: () => _onTabChange(i),
+                          );
+                        }),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),

@@ -55,6 +55,7 @@ const Map<String, String> kTrStrings = {
   'together_similar_desc': 'Sevdiğin film veya diziye benzer yapımları keşfet',
   'tab_search': 'Ara',
   'tab_profile': 'Profil',
+  'press_back_again_to_exit': 'Çıkmak için tekrar geri basın',
 
   // Global üst bar & menü
   'menu_social': 'Sosyal',

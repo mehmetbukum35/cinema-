@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ne_izlesem/main.dart';
@@ -86,5 +87,37 @@ void main() {
         await tester.pump();
       },
     );
+
+    testWidgets('Back press on non-home tab should return to home tab', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const ProviderScope(child: NeIzlesemApp(showOnboarding: false)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2600));
+      await tester.pump(const Duration(milliseconds: 380));
+      await tester.pump(const Duration(milliseconds: 420));
+      await tester.pump(const Duration(milliseconds: 480));
+      await tester.pump();
+
+      // Tap on 'Search' tab
+      await tester.tap(find.text('Search'));
+      await tester.pump(const Duration(milliseconds: 320));
+      await tester.pump();
+
+      // Simulate back button press on top route
+      final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
+      await widgetsAppState.didPopRoute();
+      await tester.pump(const Duration(milliseconds: 320));
+
+      // Should not show exit toast yet, but returned to tab 0
+      expect(find.text('Press back again to exit'), findsNothing);
+
+      // Pressing back on home tab should show exit toast
+      await widgetsAppState.didPopRoute();
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(find.text('Press back again to exit'), findsOneWidget);
+    });
   });
 }
