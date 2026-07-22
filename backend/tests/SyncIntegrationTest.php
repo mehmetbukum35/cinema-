@@ -282,6 +282,44 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(42, (int) $out['ratings'][0]['movie_id']);
     }
 
+    // ─── Regresyon: idempotent re-push server_updated_at'i ilerletmemeli ──────
+    // Aynı updated_at'li satırlar 1ms örtüşme (_overlappingCursor) yüzünden her
+    // sync'te yeniden push edilir. Her re-push server_updated_at'i "now"a çekseydi,
+    // satır gönderen cihaza geri pull'lanıp SONSUZ sync döngüsü kurardı.
+    public function testIdempotentRepushDoesNotBumpServerCursor(): void
+    {
+        $this->sync->push(1, [
+            'ratings' => [['movie_id' => 77, 'is_tv' => 0, 'rating' => 3,
+                'title' => 'Same Stamp', 'updated_at' => 1000]],
+        ]);
+        // server_updated_at'i bilinen düşük bir değere sabitle (zaten senkron,
+        // eski satır senaryosu). Fix'li re-push bunu KORUMALI.
+        $this->db->exec('UPDATE ratings SET server_updated_at = 5 WHERE movie_id = 77');
+
+        // Aynı updated_at ile idempotent re-push.
+        $this->sync->push(1, [
+            'ratings' => [['movie_id' => 77, 'is_tv' => 0, 'rating' => 3,
+                'title' => 'Same Stamp', 'updated_at' => 1000]],
+        ]);
+        $after = (int) $this->db->query(
+            'SELECT server_updated_at FROM ratings WHERE movie_id = 77'
+        )->fetchColumn();
+        // Fix'li: 5 kalır. Fix'siz: now_ms() (~10^12) ile ezilir → döngü.
+        $this->assertSame(5, $after,
+            'Idempotent re-push server_updated_at ilerletmemeli (yoksa sonsuz döngü)');
+
+        // Kontrol: kesinlikle daha yeni updated_at bump ETMELİ.
+        $this->sync->push(1, [
+            'ratings' => [['movie_id' => 77, 'is_tv' => 0, 'rating' => 2,
+                'title' => 'Same Stamp', 'updated_at' => 2000]],
+        ]);
+        $bumped = (int) $this->db->query(
+            'SELECT server_updated_at FROM ratings WHERE movie_id = 77'
+        )->fetchColumn();
+        $this->assertGreaterThan(5, $bumped,
+            'Daha yeni updated_at server_updated_at bumplamalı');
+    }
+
     // ───────────────────────── yardımcılar ──────────────────────────────────
 
     /** Tek tabloyu push edip applied sayısını döndürür. */

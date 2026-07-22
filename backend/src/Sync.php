@@ -335,14 +335,21 @@ class Sync
         }
         $values = array_merge($values, $extraCols);
 
-        // Sunucu-otoriter senkron imleci: cihaz saatinden bağımsız, her yazımda
-        // sunucu saatiyle damgalanır. Pull `since` bunu kullanır (bkz. pull()).
-        // Çakışma çözümü (hangi satır kazanır) yine client `updated_at`'iyle yapılır.
+        // Sunucu-otoriter senkron imleci: YALNIZ satır gerçekten ilerlediğinde
+        // (yeni kayıt ya da kesinlikle daha yeni updated_at) sunucu saatiyle
+        // damgalanır. Aynı updated_at'li idempotent bir re-push bunu "now"a
+        // çekseydi, satır gönderen cihaza geri pull'lanır ve SONSUZ sync döngüsü
+        // oluşurdu: aynı updated_at'li satırlar 1ms örtüşme (_overlappingCursor)
+        // yüzünden her turda yeniden push edilir; her push server_updated_at'i
+        // ilerletseydi pull onları sürekli geri döndürürdü. Çakışma çözümü
+        // (hangi satır kazanır) yine client updated_at'iyle yapılır.
         $serverNow = now_ms();
-        $values['server_updated_at'] = $serverNow;
+        $bumpServerCursor =
+            $existing === false || $updatedAt > (int) $existing['updated_at'];
 
         if ($existing === false) {
             // Yeni kayıt → INSERT
+            $values['server_updated_at'] = $serverNow;
             $colNames = array_keys($values);
             $place    = implode(', ', array_fill(0, count($colNames), '?'));
             $colList  = '`' . implode('`, `', $colNames) . '`';
@@ -359,8 +366,10 @@ class Sync
             $setParts[] = "`$c` = ?";
             $setVals[]  = $values[$c];
         }
-        $setParts[] = '`server_updated_at` = ?';
-        $setVals[]  = $serverNow;
+        if ($bumpServerCursor) {
+            $setParts[] = '`server_updated_at` = ?';
+            $setVals[]  = $serverNow;
+        }
         $this->db->prepare("UPDATE `$table` SET " . implode(', ', $setParts) . " WHERE $whereSql")
                  ->execute(array_merge($setVals, $whereVals));
         return true;
