@@ -847,6 +847,13 @@ class Auth
         }
 
         $newHash = password_hash($newPass, PASSWORD_BCRYPT);
+
+        // Hatalı kod denemesi transaction DIŞINDA kalmalı; aksi halde fail()
+        // deneme sayacını da geri alır ve 3-deneme kilidi hiç işlemez
+        // (bkz. verifyEmail'deki aynı desen). Doğru kodu sonra transaction
+        // içinde kilitleyip yeniden doğrulayarak işlemi atomik tut.
+        $this->consumeCodeOrFail('password_resets', $email, $code);
+
         $this->db->beginTransaction();
         try {
             $this->consumeCodeOrFail('password_resets', $email, $code, true);

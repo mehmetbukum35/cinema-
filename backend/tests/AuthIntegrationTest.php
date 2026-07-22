@@ -356,6 +356,38 @@ class AuthIntegrationTest extends TestCase
         $this->assertFalse($rowAfter);
     }
 
+    public function testResetPasswordWrongCodeConsumesAttempt(): void
+    {
+        // Regresyon: resetPassword yanlış kodda deneme sayacını KALICI artırmalı.
+        // Sayaç artışı transaction içinde kalırsa fail()/exit() onu geri alır ve
+        // 3-deneme kilidi bu uçta hiç çalışmaz → 6 haneli kod brute-force edilebilir.
+        $email = 'reset-attempts@example.com';
+        $this->seedUser($email);
+        $this->auth->forgotPassword(['email' => $email]);
+        $this->db->prepare('UPDATE password_resets SET code_hash = ? WHERE email = ?')
+                 ->execute([password_hash('123456', PASSWORD_BCRYPT), $email]);
+
+        try {
+            $this->auth->resetPassword([
+                'email' => $email,
+                'code' => '000000',
+                'new_password' => 'new-password-123',
+            ]);
+            $this->fail('Yanlış kodla reset başarısız olmalı');
+        } catch (TestExitException $e) {
+            $this->assertSame(400, TestHelperRegistry::$lastStatus);
+        }
+
+        $attempts = $this->db->query(
+            "SELECT attempts FROM password_resets WHERE email = '$email'"
+        )->fetchColumn();
+        $this->assertSame(
+            1,
+            (int) $attempts,
+            'resetPassword yanlış kodda deneme sayacını kalıcı artırmalı (txn geri alması olmamalı)'
+        );
+    }
+
     public function testSuccessfulResetCodeChecksDoNotConsumeAttempts(): void
     {
         $email = 'correct-code@example.com';
