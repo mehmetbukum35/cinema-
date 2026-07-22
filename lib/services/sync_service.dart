@@ -134,6 +134,13 @@ class SyncService {
 
   // Core 2-way delta-sync method
   Future<void> sync() async {
+    if (_ref != null) {
+      final authState = _ref.read(authProvider);
+      if (!authState.isAuthenticated) {
+        debugPrint("Skipping sync: user is not authenticated.");
+        return;
+      }
+    }
     if (_syncFuture != null) {
       debugPrint("Sync already in progress, coalescing request.");
       return _syncFuture;
@@ -746,10 +753,18 @@ enum SyncStatus { idle, syncing, success, error }
 
 class SyncNotifier extends StateNotifier<SyncStatus> {
   final SyncService _syncService;
+  final Ref? _ref;
 
-  SyncNotifier(this._syncService) : super(SyncStatus.idle);
+  SyncNotifier(this._syncService, [this._ref]) : super(SyncStatus.idle);
 
   Future<void> performSync() async {
+    if (_ref != null) {
+      final authState = _ref.read(authProvider);
+      if (!authState.isAuthenticated) {
+        state = SyncStatus.idle;
+        return;
+      }
+    }
     state = SyncStatus.syncing;
     try {
       // Eşzamanlı çağrıları birleştirme sorumluluğu SyncService'tedir. İkinci
@@ -757,6 +772,10 @@ class SyncNotifier extends StateNotifier<SyncStatus> {
       await _syncService.sync();
       state = SyncStatus.success;
     } catch (e) {
+      if (_ref != null && !_ref.read(authProvider).isAuthenticated) {
+        state = SyncStatus.idle;
+        return;
+      }
       debugPrint("SyncNotifier: Sync failed: $e");
       state = SyncStatus.error;
       rethrow;
@@ -770,5 +789,5 @@ class SyncNotifier extends StateNotifier<SyncStatus> {
 
 final syncProvider = StateNotifierProvider<SyncNotifier, SyncStatus>((ref) {
   final syncService = ref.watch(syncServiceProvider);
-  return SyncNotifier(syncService);
+  return SyncNotifier(syncService, ref);
 });

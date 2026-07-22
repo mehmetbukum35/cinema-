@@ -127,6 +127,7 @@ const Map<String, String> kTrStrings = {
   'auth_signing_in_google': 'Google hesabınız doğrulanıyor...',
   'auth_signing_in_apple': 'Apple ID ile doğrulama yapılıyor...',
   'auth_signing_in_email': 'Oturum açılıyor...',
+  'auth_syncing_data': 'Verileriniz eşitleniyor...',
   'auth_google_button': 'Google ile devam et',
   'auth_apple_button': 'Apple ile devam et',
   'auth_button_register': 'Kayıt Ol',

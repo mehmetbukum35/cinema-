@@ -126,6 +126,7 @@ const Map<String, String> kEnStrings = {
   'auth_signing_in_google': 'Verifying Google account...',
   'auth_signing_in_apple': 'Verifying Apple ID...',
   'auth_signing_in_email': 'Signing in...',
+  'auth_syncing_data': 'Synchronizing your data...',
   'auth_google_button': 'Continue with Google',
   'auth_apple_button': 'Continue with Apple',
   'auth_button_register': 'Register',

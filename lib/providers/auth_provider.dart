@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../services/app_config.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
+import '../services/sync_service.dart';
 import '../services/notification_service.dart';
 import '../services/localization_service.dart';
 import '../screens/login_screen.dart';
@@ -501,10 +502,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(
       accessToken: tokens['access_token'] as String,
       user: user,
-      loading: false,
+      loading: true,
+      loadingMessageKey: 'auth_syncing_data',
     );
 
-    await _postAuthSessionRestore();
+    try {
+      await _postAuthSessionRestore();
+    } finally {
+      state = state.copyWith(loading: false, loadingMessageKey: null);
+    }
 
     // Giriş sonrası FCM token'ını sunucuya kaydet.
     NotificationService.instance.registerToken();
@@ -566,6 +572,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
   Future<void> _endLocalSession({required bool wipeLocalData}) async {
     state = AuthState();
+    _ref.read(syncProvider.notifier).resetStatus();
     await NotificationService.instance.invalidateLocalToken();
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
@@ -573,6 +580,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await PrefsService.setLastAuthenticatedUserId(null);
     }
     await _invalidateGuestProviders();
+    _ref.read(syncProvider.notifier).resetStatus();
   }
 
   // POST /auth/logout
