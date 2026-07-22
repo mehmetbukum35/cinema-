@@ -566,6 +566,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
   Future<void> _endLocalSession({required bool wipeLocalData}) async {
     state = AuthState();
+    await NotificationService.instance.invalidateLocalToken();
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
       await DatabaseHelper().hardClearAllData();
@@ -607,6 +608,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState();
     if (wasLoggedIn) {
       await NotificationService.instance.unregisterToken();
+      await NotificationService.instance.invalidateLocalToken();
       if (_googleInitialized) {
         try {
           await GoogleSignIn.instance.signOut();

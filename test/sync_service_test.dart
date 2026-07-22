@@ -338,7 +338,7 @@ void main() {
     });
 
     test(
-      'should not resend a committed push when the following pull fails',
+      'replays only the watermark row when the following pull fails',
       () async {
         await testDb.insert('search_history', {
           'query': 'arrival',
@@ -363,7 +363,8 @@ void main() {
         await syncService.sync();
 
         expect(mockApi.pushCount, 2);
-        expect(mockApi.pushedPayload!['search_history'], isEmpty);
+        expect(mockApi.pushedPayload!['search_history'], hasLength(1));
+        expect(mockApi.pushedPayload!['search_history'][0]['query'], 'arrival');
       },
     );
 
@@ -545,7 +546,7 @@ void main() {
         final lastPush = await PrefsService.getLastPushTime();
         expect(lastSync, serverTimeFarAhead - 1);
         expect(lastPush, isNot(serverTimeFarAhead));
-        expect(lastPush, t1);
+        expect(lastPush, t1 - 1);
 
         // 3. Create another local rating at current device time (which is > lastPush, but < serverTimeFarAhead)
         final t2 = DateTime.now().millisecondsSinceEpoch + 1000;
@@ -563,9 +564,12 @@ void main() {
         // 4. Act: Second Sync
         await syncService.sync();
 
-        // Verify that the second local rating at t2 was pushed because its updated_at (t2) > lastPush (t1)
-        expect(mockApi.pushedPayload!['ratings'], hasLength(1));
-        expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 124);
+        // The previous watermark row may be replayed, but the new local row
+        // must be included even while the device clock trails server time.
+        expect(
+          mockApi.pushedPayload!['ratings'].map((row) => row['movie_id']),
+          contains(124),
+        );
       },
     );
 
@@ -587,6 +591,38 @@ void main() {
       expect(await PrefsService.getLastPushTime(), 42);
       expect(mockApi.pushedPayload!['ratings'], isEmpty);
     });
+
+    test(
+      'push cursor overlaps one millisecond to replay equal timestamps',
+      () async {
+        await PrefsService.setLastSyncTime(0);
+        await PrefsService.setLastPushTime(0);
+        await testDb.insert('ratings', {
+          'movie_id': 77,
+          'is_tv': 0,
+          'rating': 3,
+          'genre_ids': '[]',
+          'created_at': 5000,
+          'updated_at': 5000,
+          'deleted': 0,
+        });
+        mockApi.pullResponse = {
+          'server_time': 6000,
+          'ratings': [],
+          'watchlist': [],
+          'favorites': [],
+          'watched_seasons': [],
+          'search_history': [],
+        };
+
+        await syncService.sync();
+        expect(await PrefsService.getLastPushTime(), 4999);
+
+        await syncService.sync();
+        expect(mockApi.pushedPayload!['ratings'], hasLength(1));
+        expect(mockApi.pushedPayload!['ratings'][0]['movie_id'], 77);
+      },
+    );
 
     test('should preserve unpushed local data when device expired', () async {
       await testDb.insert('ratings', {

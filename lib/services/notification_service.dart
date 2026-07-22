@@ -44,6 +44,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _local =
       FlutterLocalNotificationsPlugin();
   ApiService? _api;
+  Future<void> Function()? _deleteTokenOverride;
   bool _ready = false;
   Future<bool>? _tzInit;
 
@@ -173,11 +174,7 @@ class NotificationService {
       // Soğuk başlatma: uygulama bir bildirime tıklanarak açıldıysa
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) {
-        // Navigator'ın hazır olması için kısa bir gecikme
-        Future.delayed(
-          const Duration(milliseconds: 700),
-          () => _routeFromPayload(payloadFromData(initial.data)),
-        );
+        _routeInitialPayloadWhenReady(payloadFromData(initial.data));
       }
 
       // Token yenilenince sunucuya tekrar kaydet
@@ -236,6 +233,31 @@ class NotificationService {
         debugPrint('Failed to unregister FCM token: $e\n$st');
       }
     }
+  }
+
+  /// Invalidates this installation's token when authenticated unregister is
+  /// no longer possible (for example after a refresh token is rejected).
+  Future<void> invalidateLocalToken() async {
+    try {
+      final override = _deleteTokenOverride;
+      if (override != null) {
+        await override();
+      } else {
+        await FirebaseMessaging.instance.deleteToken();
+      }
+    } catch (e, st) {
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to invalidate local FCM token: $e\n$st');
+      }
+    }
+  }
+
+  @visibleForTesting
+  void debugSetDeleteTokenHandler(Future<void> Function()? handler) {
+    _deleteTokenOverride = handler;
   }
 
   Future<void> _sendToken(String token) async {
@@ -418,6 +440,46 @@ class NotificationService {
     };
   }
 
+  @visibleForTesting
+  static ({String language, String region}) notificationContentLocale(
+    String languageCode,
+  ) {
+    return languageCode == 'tr'
+        ? (language: 'tr-TR', region: 'TR')
+        : (language: 'en-US', region: 'US');
+  }
+
+  @visibleForTesting
+  static bool shouldRetryInitialRoute({
+    required bool navigatorReady,
+    required int attempt,
+    int maxAttempts = 120,
+  }) => !navigatorReady && attempt < maxAttempts;
+
+  Future<void> _routeInitialPayloadWhenReady(String? payload) async {
+    if (payload == null || payload.isEmpty) return;
+    const retryDelay = Duration(milliseconds: 250);
+    const maxAttempts = 120;
+    for (var attempt = 0; attempt <= maxAttempts; attempt++) {
+      final ready = navigatorKey.currentState != null;
+      if (ready) {
+        _routeFromPayload(payload);
+        return;
+      }
+      if (!shouldRetryInitialRoute(
+        navigatorReady: ready,
+        attempt: attempt,
+        maxAttempts: maxAttempts,
+      )) {
+        debugPrint(
+          'Initial notification route expired before navigator ready.',
+        );
+        return;
+      }
+      await Future<void>.delayed(retryDelay);
+    }
+  }
+
   /// Bildirim payload'una göre ilgili ekrana yönlendirir.
   void _routeFromPayload(String? payload) {
     if (payload == null || payload.isEmpty) return;
@@ -454,7 +516,11 @@ class NotificationService {
     final context = nav.overlay?.context;
     if (context == null) return;
 
-    final service = TmdbService(language: 'tr-TR', region: 'TR');
+    final locale = notificationContentLocale(PrefsService.activeLanguageCode);
+    final service = TmdbService(
+      language: locale.language,
+      region: locale.region,
+    );
 
     showDialog(
       context: context,

@@ -397,11 +397,14 @@ class SyncService {
 
     // Push imlecini gönderilen satırların max(updated_at)'ine bağla — duvar
     // saati değil. Boş push'ta ilerleme yok (saat geri alınca veri kaybı olmaz).
-    // Inclusive: `updated_at > lastPush` bir sonraki turda aynı satırı
-    // yeniden seçmez; sync sırasında yazılan daha yeni satırlar yakalanır.
+    // Bir milisaniyelik örtüşme, snapshot alındıktan sonra aynı ms damgasıyla
+    // yazılan yerel değişikliklerin sonraki turda kaybolmasını önler.
     final pushedMax = _maxUpdatedAtInPayload(payload);
+    final nextPushCursor = pushedMax > lastPush
+        ? _overlappingCursor(pushedMax)
+        : lastPush;
     if (pushedMax > lastPush) {
-      await PrefsService.setLastPushTime(pushedMax);
+      await PrefsService.setLastPushTime(nextPushCursor);
     }
 
     // 2. PULL remote changes
@@ -607,7 +610,7 @@ class SyncService {
     }
 
     debugPrint(
-      "Sync complete. pull cursor: $serverTime, push cursor: ${pushedMax > lastPush ? pushedMax : lastPush}",
+      "Sync complete. pull cursor: $serverTime, push cursor: $nextPushCursor",
     );
     if (_declareLocalReset) {
       _declareLocalReset = false;

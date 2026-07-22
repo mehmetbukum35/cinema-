@@ -71,4 +71,51 @@ void main() {
       );
     });
   });
+
+  group('notification detail locale', () {
+    test('uses Turkish TMDB locale for Turkish UI', () {
+      final locale = NotificationService.notificationContentLocale('tr');
+      expect(locale.language, 'tr-TR');
+      expect(locale.region, 'TR');
+    });
+
+    test('uses English TMDB locale for English and unknown UI locales', () {
+      final english = NotificationService.notificationContentLocale('en');
+      final fallback = NotificationService.notificationContentLocale('de');
+      expect(english, (language: 'en-US', region: 'US'));
+      expect(fallback, (language: 'en-US', region: 'US'));
+    });
+  });
+
+  group('cold-start notification routing', () {
+    test('retries while the navigator is still starting', () {
+      expect(
+        NotificationService.shouldRetryInitialRoute(
+          navigatorReady: false,
+          attempt: 3,
+          maxAttempts: 10,
+        ),
+        isTrue,
+      );
+    });
+
+    test('stops retrying when ready or when the retry budget expires', () {
+      expect(
+        NotificationService.shouldRetryInitialRoute(
+          navigatorReady: true,
+          attempt: 3,
+          maxAttempts: 10,
+        ),
+        isFalse,
+      );
+      expect(
+        NotificationService.shouldRetryInitialRoute(
+          navigatorReady: false,
+          attempt: 10,
+          maxAttempts: 10,
+        ),
+        isFalse,
+      );
+    });
+  });
 }

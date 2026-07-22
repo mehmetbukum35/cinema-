@@ -5,6 +5,7 @@ import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
+import 'package:ne_izlesem/services/notification_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
 class MockApiService implements ApiService {
@@ -185,6 +186,7 @@ void main() {
   });
 
   tearDown(() async {
+    NotificationService.instance.debugSetDeleteTokenHandler(null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     container.dispose();
@@ -292,6 +294,10 @@ void main() {
       'clearSession should clear auth without requiring logout API',
       () async {
         final notifier = container.read(authProvider.notifier);
+        var localTokenInvalidated = false;
+        NotificationService.instance.debugSetDeleteTokenHandler(() async {
+          localTokenInvalidated = true;
+        });
 
         await notifier.login('test@example.com', 'secret123');
         expect(container.read(authProvider).isAuthenticated, isTrue);
@@ -301,6 +307,7 @@ void main() {
         expect(container.read(authProvider).isAuthenticated, isFalse);
         expect(await PrefsService.getAccessToken(), isNull);
         expect(mockApi.logoutCalled, isFalse);
+        expect(localTokenInvalidated, isTrue);
       },
     );
 
