@@ -667,6 +667,7 @@ class SyncService {
     Future.microtask(() async {
       try {
         final userId = auth.user?['id']?.toString();
+        await _ensureSession(userId);
         final generated = await ref
             .read(tasteDnaServiceProvider)
             .generate(userId: userId);
@@ -675,7 +676,9 @@ class SyncService {
         final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
+          await _ensureSession(userId);
           await _apiService.publishTasteDna(dna.toJson());
+          await _ensureSession(userId);
           await PrefsService.setLastPublishedDnaHash(currentHash);
           debugPrint("Sync auto-publish DNA succeeded!");
         } else {

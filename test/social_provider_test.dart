@@ -11,6 +11,8 @@ class MockApiService implements ApiService {
   final List<Completer<Map<String, dynamic>>> sentRecommendationRequests = [];
   final List<Completer<ActivityFeedPage>> friendActivityRequests = [];
   final List<Completer<List<dynamic>>> intersectionRequests = [];
+  final List<Completer<int>> profileLikeRequests = [];
+  final List<bool> profileLikeValues = [];
   Map<String, dynamic> friendsResponse = {
     'friends': [
       {'id': 10, 'username': 'testfriend'},
@@ -272,6 +274,27 @@ class MockApiService implements ApiService {
     recommendCalled = true;
     recommendedFriendId = friendId;
     recommendedNote = note;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getTopProfiles() async => {
+    'profiles': [
+      {
+        'id': 42,
+        'username': 'popular',
+        'like_count': 0,
+        'me_liked': false,
+        'is_me': false,
+        'liked_titles': 5,
+        'previews': [],
+      },
+    ],
+  };
+
+  @override
+  Future<int> likeProfile(int ownerId, bool liked) async {
+    profileLikeValues.add(liked);
+    return profileLikeRequests.removeAt(0).future;
   }
 
   @override
@@ -707,6 +730,40 @@ void main() {
       final state = container.read(socialProvider);
       expect(state.intersection.single.id, 202);
       expect(state.loading, isFalse);
+    });
+
+    test('rapid profile like toggles are sent and applied in order', () async {
+      final firstResponse = Completer<int>();
+      final secondResponse = Completer<int>();
+      mockApi.profileLikeRequests.addAll([firstResponse, secondResponse]);
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadTopProfiles();
+
+      final initial = container.read(socialProvider).topProfiles.single;
+      final first = notifier.toggleProfileLike(initial);
+      final liked = container.read(socialProvider).topProfiles.single;
+      final second = notifier.toggleProfileLike(liked);
+
+      await Future<void>.delayed(Duration.zero);
+      expect(mockApi.profileLikeValues, [true]);
+      expect(
+        container.read(socialProvider).topProfiles.single.meLiked,
+        isFalse,
+      );
+      firstResponse.complete(1);
+      await Future<void>.delayed(Duration.zero);
+      expect(mockApi.profileLikeValues, [true, false]);
+      expect(
+        container.read(socialProvider).topProfiles.single.meLiked,
+        isFalse,
+      );
+      secondResponse.complete(0);
+
+      expect(await first, isTrue);
+      expect(await second, isTrue);
+      final finalProfile = container.read(socialProvider).topProfiles.single;
+      expect(finalProfile.meLiked, isFalse);
+      expect(finalProfile.likeCount, 0);
     });
   });
 }

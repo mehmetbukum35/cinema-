@@ -185,6 +185,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
   int _topProfilesLoadGeneration = 0;
   int _friendActivityLoadGeneration = 0;
   int _intersectionLoadGeneration = 0;
+  final Map<int, Future<void>> _profileLikeTails = {};
+  final Map<int, int> _profileLikeGenerations = {};
 
   Future<void> loadFriendSignals() async {
     try {
@@ -752,6 +754,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
   /// Sıra numaraları sunucu sıralaması bozulmasın diye yerinde bırakılır.
   Future<bool> toggleProfileLike(TopProfile profile) async {
     final newLiked = !profile.meLiked;
+    final generation = (_profileLikeGenerations[profile.id] ?? 0) + 1;
+    _profileLikeGenerations[profile.id] = generation;
     List<TopProfile> apply(List<TopProfile> list, int likeCount) => [
       for (final p in list)
         if (p.id == profile.id)
@@ -765,26 +769,50 @@ class SocialNotifier extends StateNotifier<SocialState> {
       topProfiles: apply(state.topProfiles, optimisticCount),
     );
 
-    try {
-      final serverCount = await _apiService.likeProfile(profile.id, newLiked);
-      state = state.copyWith(
-        topProfiles: apply(state.topProfiles, serverCount),
-      );
-      return true;
-    } catch (e, st) {
-      debugPrint("Failed to toggle profile like: $e\n$st");
-      // Geri al.
-      state = state.copyWith(
-        topProfiles: apply(state.topProfiles, profile.likeCount),
-      );
-      state = state.copyWith(
-        topProfiles: [
-          for (final p in state.topProfiles)
-            if (p.id == profile.id) p.copyWith(meLiked: profile.meLiked) else p,
-        ],
-      );
-      return false;
-    }
+    final result = Completer<bool>();
+    final previous = _profileLikeTails[profile.id] ?? Future<void>.value();
+    late final Future<void> operation;
+    operation = previous
+        .catchError((_) {})
+        .then((_) async {
+          try {
+            final serverCount = await _apiService.likeProfile(
+              profile.id,
+              newLiked,
+            );
+            if (mounted && _profileLikeGenerations[profile.id] == generation) {
+              state = state.copyWith(
+                topProfiles: apply(state.topProfiles, serverCount),
+              );
+            }
+            result.complete(true);
+          } catch (e, st) {
+            debugPrint("Failed to toggle profile like: $e\n$st");
+            // Daha yeni bir dokunuş varsa onun iyimser durumunu geri alma.
+            if (mounted && _profileLikeGenerations[profile.id] == generation) {
+              state = state.copyWith(
+                topProfiles: apply(state.topProfiles, profile.likeCount),
+              );
+              state = state.copyWith(
+                topProfiles: [
+                  for (final p in state.topProfiles)
+                    if (p.id == profile.id)
+                      p.copyWith(meLiked: profile.meLiked)
+                    else
+                      p,
+                ],
+              );
+            }
+            result.complete(false);
+          }
+        })
+        .whenComplete(() {
+          if (identical(_profileLikeTails[profile.id], operation)) {
+            _profileLikeTails.remove(profile.id);
+          }
+        });
+    _profileLikeTails[profile.id] = operation;
+    return result.future;
   }
 
   Future<void> loadWatchlistIntersection(int friendId) async {
