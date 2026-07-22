@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
+import 'package:ne_izlesem/providers/social_provider.dart';
+import 'package:ne_izlesem/providers/watchlist_provider.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
@@ -42,6 +44,7 @@ class MockApiService implements ApiService {
   bool unlinkGoogleCalled = false;
   bool unlinkAppleCalled = false;
   bool getMeCalled = false;
+  bool resetPasswordCalled = false;
 
   @override
   Future<Map<String, dynamic>> login({
@@ -81,6 +84,15 @@ class MockApiService implements ApiService {
   @override
   Future<void> forgotPassword(String email) async {
     forgotPasswordCalled = true;
+  }
+
+  @override
+  Future<void> resetPassword(
+    String email,
+    String code,
+    String newPassword,
+  ) async {
+    resetPasswordCalled = true;
   }
 
   @override
@@ -334,6 +346,34 @@ void main() {
       expect(success, isTrue);
       expect(mockApi.changePasswordCalled, isTrue);
       expect(container.read(authProvider).isAuthenticated, isFalse);
+    });
+
+    test('resetPassword should fully end the local session', () async {
+      final notifier = container.read(authProvider.notifier);
+      var localTokenInvalidated = false;
+      NotificationService.instance.debugSetDeleteTokenHandler(() async {
+        localTokenInvalidated = true;
+      });
+      await notifier.login('test@example.com', 'secret123');
+      final oldSocial = container.read(socialProvider.notifier);
+      final oldWatchlist = container.read(watchlistProvider.notifier);
+
+      final success = await notifier.resetPassword(
+        'test@example.com',
+        '123456',
+        'new-password-123',
+      );
+
+      expect(success, isTrue);
+      expect(mockApi.resetPasswordCalled, isTrue);
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+      expect(await PrefsService.getAccessToken(), isNull);
+      expect(localTokenInvalidated, isTrue);
+      expect(container.read(socialProvider.notifier), isNot(same(oldSocial)));
+      expect(
+        container.read(watchlistProvider.notifier),
+        isNot(same(oldWatchlist)),
+      );
     });
 
     test('deleteAccount should invoke API and clear session', () async {

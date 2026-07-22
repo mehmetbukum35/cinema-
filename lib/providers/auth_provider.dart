@@ -808,8 +808,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(loading: true, error: null);
     try {
       await _apiService.resetPassword(email, code, newPassword);
-      await PrefsService.clearAuthData();
-      state = AuthState(); // reset to default logged-out state
+      // Reset, sunucudaki tüm refresh token'ları iptal eder. Mevcut access token
+      // hâlâ kısa süre geçerliyken cihaz kaydını kaldır; ardından normal güvenli
+      // oturum kapatma yolu FCM token'ını ve hesaba bağlı provider'ları temizlesin.
+      await NotificationService.instance.unregisterToken();
+      await _endLocalSession(wipeLocalData: false);
       return true;
     } on ApiException catch (e) {
       final mapped = _mapApiError(e);

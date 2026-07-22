@@ -208,9 +208,18 @@ class Auth
      * süre + 3 deneme sınırı + bcrypt karşılaştırması. Hatalıysa fail() ile
      * çıkar; başarılıysa sessizce döner (satırı silmek çağırana aittir).
      */
-    private function consumeCodeOrFail(string $table, string $email, string $code): void
+    private function consumeCodeOrFail(
+        string $table,
+        string $email,
+        string $code,
+        bool $forUpdate = false
+    ): void
     {
-        $st = $this->db->prepare("SELECT code_hash, attempts, expires_at FROM $table WHERE email = ?");
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $lock = $forUpdate && $driver !== 'sqlite' ? ' FOR UPDATE' : '';
+        $st = $this->db->prepare(
+            "SELECT code_hash, attempts, expires_at FROM $table WHERE email = ?$lock"
+        );
         $st->execute([$email]);
         $row = $st->fetch();
 
@@ -224,9 +233,10 @@ class Auth
             fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
 
-        $this->db->prepare("UPDATE $table SET attempts = attempts + 1 WHERE email = ?")->execute([$email]);
-
         if (!password_verify($code, $row['code_hash'])) {
+            $this->db->prepare(
+                "UPDATE $table SET attempts = attempts + 1 WHERE email = ?"
+            )->execute([$email]);
             if ($attempts + 1 >= 3) {
                 $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
             }
@@ -670,11 +680,19 @@ class Auth
         if (!$u || !password_verify($old, $u['password_hash'])) {
             fail(401, 'Mevcut parola hatalı.', 'wrong_password');
         }
-        $up = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?');
-        $up->execute([password_hash($new, PASSWORD_BCRYPT), now_ms(), $uid]);
+        $newHash = password_hash($new, PASSWORD_BCRYPT);
+        $this->db->beginTransaction();
+        try {
+            $up = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?');
+            $up->execute([$newHash, now_ms(), $uid]);
 
-        // Güvenlik: parola değişince tüm refresh token'ları iptal et.
-        $this->db->prepare('DELETE FROM refresh_tokens WHERE user_id = ?')->execute([$uid]);
+            // Güvenlik: parola değişince tüm refresh token'ları iptal et.
+            $this->db->prepare('DELETE FROM refresh_tokens WHERE user_id = ?')->execute([$uid]);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
         json_out(200, ['ok' => true]);
     }
 
@@ -806,21 +824,29 @@ class Auth
             fail(422, 'Yeni parola en az 8 karakter olmalıdır.', 'password_too_short');
         }
 
-        $this->consumeCodeOrFail('password_resets', $email, $code);
+        $newHash = password_hash($newPass, PASSWORD_BCRYPT);
+        $this->db->beginTransaction();
+        try {
+            $this->consumeCodeOrFail('password_resets', $email, $code, true);
 
-        // Kod e-postaya gittiği için sahiplik kanıtlanmıştır: parolayla birlikte
-        // hesap doğrulanmış da işaretlenir (doğrulanmamış hesabın gerçek sahibi
-        // hesabı bu yolla da geri alabilir).
-        $upUser = $this->db->prepare('UPDATE users SET password_hash = ?, email_verified = 1, updated_at = ? WHERE email = ?');
-        $upUser->execute([password_hash($newPass, PASSWORD_BCRYPT), now_ms(), $email]);
+            // Kod e-postaya gittiği için sahiplik kanıtlanmıştır: parolayla birlikte
+            // hesap doğrulanmış da işaretlenir (doğrulanmamış hesabın gerçek sahibi
+            // hesabı bu yolla da geri alabilir).
+            $upUser = $this->db->prepare('UPDATE users SET password_hash = ?, email_verified = 1, updated_at = ? WHERE email = ?');
+            $upUser->execute([$newHash, now_ms(), $email]);
 
-        $delRt = $this->db->prepare(
-            'DELETE FROM refresh_tokens WHERE user_id = (SELECT id FROM users WHERE email = ?)'
-        );
-        $delRt->execute([$email]);
+            $delRt = $this->db->prepare(
+                'DELETE FROM refresh_tokens WHERE user_id = (SELECT id FROM users WHERE email = ?)'
+            );
+            $delRt->execute([$email]);
 
-        $delCode = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
-        $delCode->execute([$email]);
+            $delCode = $this->db->prepare('DELETE FROM password_resets WHERE email = ?');
+            $delCode->execute([$email]);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
 
         json_out(200, ['ok' => true]);
     }

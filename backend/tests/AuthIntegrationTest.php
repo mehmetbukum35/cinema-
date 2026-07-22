@@ -327,6 +327,92 @@ class AuthIntegrationTest extends TestCase
         $this->assertFalse($rowAfter);
     }
 
+    public function testSuccessfulResetCodeChecksDoNotConsumeAttempts(): void
+    {
+        $email = 'correct-code@example.com';
+        $this->seedUser($email);
+        $this->auth->forgotPassword(['email' => $email]);
+        $this->db->prepare('UPDATE password_resets SET code_hash = ? WHERE email = ?')
+                 ->execute([password_hash('123456', PASSWORD_BCRYPT), $email]);
+
+        $this->auth->verifyResetCode(['email' => $email, 'code' => '123456']);
+        $this->auth->verifyResetCode(['email' => $email, 'code' => '123456']);
+
+        $attempts = $this->db->query(
+            "SELECT attempts FROM password_resets WHERE email = '$email'"
+        )->fetchColumn();
+        $this->assertSame(0, (int) $attempts);
+
+        $this->auth->resetPassword([
+            'email' => $email,
+            'code' => '123456',
+            'new_password' => 'new-password-123',
+        ]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+    }
+
+    public function testChangePasswordRollsBackWhenTokenRevocationFails(): void
+    {
+        $uid = $this->seedUser('atomic-change@example.com', 'old-password-123');
+        $this->db->prepare(
+            'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (?, ?, ?, ?)'
+        )->execute([$uid, 'atomic-token', time() + 3600, time()]);
+        $this->db->exec(
+            "CREATE TRIGGER fail_refresh_delete BEFORE DELETE ON refresh_tokens
+             BEGIN SELECT RAISE(ABORT, 'forced token delete failure'); END"
+        );
+
+        try {
+            $this->auth->changePassword($uid, [
+                'old_password' => 'old-password-123',
+                'new_password' => 'new-password-456',
+            ]);
+            $this->fail('Token iptali başarısızken parola değişmemeliydi.');
+        } catch (PDOException $e) {
+            $hash = $this->db->query(
+                "SELECT password_hash FROM users WHERE id = $uid"
+            )->fetchColumn();
+            $this->assertTrue(password_verify('old-password-123', (string) $hash));
+            $this->assertFalse(password_verify('new-password-456', (string) $hash));
+        }
+    }
+
+    public function testResetPasswordRollsBackWhenTokenRevocationFails(): void
+    {
+        $email = 'atomic-reset@example.com';
+        $uid = $this->seedUser($email, 'old-password-123');
+        $this->auth->forgotPassword(['email' => $email]);
+        $this->db->prepare('UPDATE password_resets SET code_hash = ? WHERE email = ?')
+                 ->execute([password_hash('123456', PASSWORD_BCRYPT), $email]);
+        $this->db->prepare(
+            'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (?, ?, ?, ?)'
+        )->execute([$uid, 'atomic-reset-token', time() + 3600, time()]);
+        $this->db->exec(
+            "CREATE TRIGGER fail_refresh_delete BEFORE DELETE ON refresh_tokens
+             BEGIN SELECT RAISE(ABORT, 'forced token delete failure'); END"
+        );
+
+        try {
+            $this->auth->resetPassword([
+                'email' => $email,
+                'code' => '123456',
+                'new_password' => 'new-password-456',
+            ]);
+            $this->fail('Token iptali başarısızken reset uygulanmamalıydı.');
+        } catch (PDOException $e) {
+            $hash = $this->db->query(
+                "SELECT password_hash FROM users WHERE id = $uid"
+            )->fetchColumn();
+            $this->assertTrue(password_verify('old-password-123', (string) $hash));
+            $codeStillExists = $this->db->query(
+                "SELECT COUNT(*) FROM password_resets WHERE email = '$email'"
+            )->fetchColumn();
+            $this->assertSame(1, (int) $codeStillExists);
+        }
+    }
+
     public function testResetPasswordRevokesRefreshTokens(): void
     {
         $email = 'charlie@example.com';
