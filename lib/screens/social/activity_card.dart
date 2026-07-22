@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../utils/avatar_initial.dart';
 import '../../models/social.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
@@ -109,7 +110,7 @@ class ActivityCard extends ConsumerWidget {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            friendName[0].toUpperCase(),
+                            avatarInitial(friendName),
                             style: TextStyle(
                               color: c.ink,
                               fontSize: 12,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/social.dart';
+import '../../utils/avatar_initial.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import 'friend_activity_screen.dart';
@@ -59,7 +60,7 @@ class FriendListTile extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Text(
-                name[0].toUpperCase(),
+                avatarInitial(name),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,

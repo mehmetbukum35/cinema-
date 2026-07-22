@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../utils/avatar_initial.dart';
 import '../../widgets/app_cached_image.dart';
 import '../../models/movie.dart';
 import '../../models/social.dart';
@@ -303,7 +304,7 @@ class _FriendPickerView extends StatelessWidget {
                     leading: CircleAvatar(
                       backgroundColor: palette.border,
                       foregroundColor: palette.ink,
-                      child: Text(name[0].toUpperCase()),
+                      child: Text(avatarInitial(name)),
                     ),
                     title: Text(
                       name,
@@ -370,7 +371,7 @@ class _FriendIntersectionView extends StatelessWidget {
                 backgroundColor: palette.border,
                 foregroundColor: palette.ink,
                 child: Text(
-                  friendName[0].toUpperCase(),
+                  avatarInitial(friendName),
                   style: const TextStyle(fontSize: 12),
                 ),
               ),

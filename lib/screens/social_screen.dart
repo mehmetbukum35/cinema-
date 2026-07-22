@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/share_helper.dart';
+import '../utils/avatar_initial.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
@@ -557,7 +558,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   CircleAvatar(
                     backgroundColor: c.border,
                     foregroundColor: c.ink,
-                    child: Text(name[0].toUpperCase()),
+                    child: Text(avatarInitial(name)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -620,7 +621,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   CircleAvatar(
                     backgroundColor: c.borderSoft,
                     foregroundColor: c.dim,
-                    child: Text(name[0].toUpperCase()),
+                    child: Text(avatarInitial(name)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

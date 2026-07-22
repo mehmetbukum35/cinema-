@@ -28,7 +28,11 @@ class Auth
     {
         $email = strtolower(trim($in['email'] ?? ''));
         $pass  = (string) ($in['password'] ?? '');
+        // Boş/whitespace display_name NULL olarak saklanır (Google/Apple akışıyla
+        // tutarlı): aksi halde istemci "" için `?? username` fallback'ini atlar ve
+        // avatar baş harfi (name[0]) RangeError ile çöker.
         $name  = isset($in['display_name']) ? trim($in['display_name']) : null;
+        if ($name === '') $name = null;
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Geçersiz e-posta.', 'email_invalid');
         if (strlen($pass) < 8) fail(422, 'Parola en az 8 karakter olmalı.', 'password_too_short');
