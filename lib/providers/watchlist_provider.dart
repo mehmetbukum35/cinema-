@@ -133,28 +133,37 @@ final watchlistProvider =
 
 class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   final Ref ref;
-  StatsNotifier(this.ref) : super(const AsyncValue.loading()) {
-    Future.microtask(() => load());
+  final Future<Map<String, dynamic>> Function() _readStats;
+  int _loadGeneration = 0;
+  StatsNotifier(
+    this.ref, {
+    Future<Map<String, dynamic>> Function()? readStats,
+    bool autoLoad = true,
+  }) : _readStats = readStats ?? PrefsService.getStats,
+       super(const AsyncValue.loading()) {
+    if (autoLoad) Future.microtask(() => load());
   }
 
   /// [skipSync] true ise yalnızca yerel istatistikler yenilenir; sunucu sync'i
   /// tetiklenmez. Yüksek frekanslı çağrılarda (ör. her swipe sonrası) kullanılır —
   /// swipe akışı zaten kendi debounce'lu sync'ini planlıyor.
   Future<void> load({bool skipSync = false}) async {
+    final generation = ++_loadGeneration;
     try {
       // Offline-first: yerel istatistikler sync beklenmeden gösterilir;
       // sync bitince yeniden hesaplanıp tazelenir (bkz. WatchlistNotifier.load).
-      var stats = await PrefsService.getStats();
-      if (mounted) {
+      var stats = await _readStats();
+      if (mounted && generation == _loadGeneration) {
         state = AsyncValue.data(stats);
       }
+      if (!mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (!skipSync && auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
-          stats = await PrefsService.getStats();
-          if (mounted) {
+          stats = await _readStats();
+          if (mounted && generation == _loadGeneration) {
             state = AsyncValue.data(stats);
           }
         } catch (e) {
@@ -162,7 +171,7 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
         }
       }
     } catch (e, st) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         state = AsyncValue.error(e, st);
       }
     }

@@ -185,13 +185,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
   int _topProfilesLoadGeneration = 0;
   int _friendActivityLoadGeneration = 0;
   int _intersectionLoadGeneration = 0;
+  int _friendSignalsLoadGeneration = 0;
+  int _tasteScoresLoadGeneration = 0;
   final Map<int, Future<void>> _profileLikeTails = {};
   final Map<int, int> _profileLikeGenerations = {};
 
   Future<void> loadFriendSignals() async {
+    final generation = ++_friendSignalsLoadGeneration;
     try {
       final map = await _apiService.getFriendSignals();
-      if (!mounted) return;
+      if (!mounted || generation != _friendSignalsLoadGeneration) return;
       state = state.copyWith(signals: map);
     } catch (e, st) {
       // Fail silently to keep the swiping UI stable
@@ -479,16 +482,20 @@ class SocialNotifier extends StateNotifier<SocialState> {
   /// arkadaş başına tekil isteğe geri düşülür. Sessizce çalışır: hata tek
   /// bir arkadaşın rozetini eksik bırakır, UI bozulmaz.
   Future<void> loadTasteScores() async {
-    final scores = Map<int, int>.from(state.tasteScores);
+    final generation = ++_tasteScoresLoadGeneration;
+    final scores = <int, int>{};
     try {
       final list = await _apiService.getAllTasteMatches();
+      if (!mounted || generation != _tasteScoresLoadGeneration) return;
       for (final item in list) {
         if (item is! Map<String, dynamic>) continue;
         final id = (item['friend_id'] as num?)?.toInt() ?? 0;
         if (id == 0 || item['has_data'] != true) continue;
         scores[id] = ((item['score'] as num?) ?? 0).toInt();
       }
-      if (mounted) state = state.copyWith(tasteScores: scores);
+      if (mounted && generation == _tasteScoresLoadGeneration) {
+        state = state.copyWith(tasteScores: scores);
+      }
       return;
     } on ApiException catch (e) {
       if (e.statusCode != 404) {
@@ -502,6 +509,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
 
     for (final f in state.friends) {
+      if (!mounted || generation != _tasteScoresLoadGeneration) return;
       final id = f.id;
       if (id == 0) continue;
       try {
@@ -514,7 +522,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
         debugPrint("Failed to load taste match for friend $id: $e\n$st");
       }
     }
-    if (mounted) state = state.copyWith(tasteScores: scores);
+    if (mounted && generation == _tasteScoresLoadGeneration) {
+      state = state.copyWith(tasteScores: scores);
+    }
   }
 
   /// Gelen önerileri yükler.

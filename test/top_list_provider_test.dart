@@ -131,6 +131,49 @@ void main() {
       expect(container.read(topListProvider(false)).value?.single.id, 42);
     });
 
+    test('concurrent additions persist in invocation order', () async {
+      final firstWriteGate = Completer<void>();
+      final writes = <List<int>>[];
+      container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          syncServiceProvider.overrideWithValue(mockSync),
+          topListProvider(false).overrideWith(
+            (ref) => TopListNotifier(
+              ref,
+              false,
+              readList: () async => const [],
+              writeList: (list) async {
+                writes.add(list.map((movie) => movie.id).toList());
+                if (writes.length == 1) await firstWriteGate.future;
+              },
+              autoLoad: false,
+            ),
+          ),
+        ],
+      );
+      final notifier = container.read(topListProvider(false).notifier);
+
+      final first = notifier.add(_movie(1));
+      final second = notifier.add(_movie(2));
+      await Future<void>.delayed(Duration.zero);
+      expect(writes, [
+        [1],
+      ]);
+      firstWriteGate.complete();
+      expect(await first, isTrue);
+      expect(await second, isTrue);
+
+      expect(writes, [
+        [1],
+        [1, 2],
+      ]);
+      expect(container.read(topListProvider(false)).value?.map((m) => m.id), [
+        1,
+        2,
+      ]);
+    });
+
     test('remove drops the item', () async {
       await PrefsService.saveFavoriteMovies([_movie(1), _movie(2), _movie(3)]);
       container = buildContainer();

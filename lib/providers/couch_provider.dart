@@ -121,6 +121,8 @@ class CouchNotifier extends StateNotifier<CouchState> {
   final ApiService _api;
   final Ref _ref;
   Timer? _pollTimer;
+  int _sessionRevision = 0;
+  bool _startInFlight = false;
 
   CouchNotifier(this._api, this._ref) : super(const CouchState());
 
@@ -137,6 +139,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
   void _apply(Map<String, dynamic>? json) {
     if (!mounted) return;
+    _sessionRevision++;
     final prev = state.session;
     final session = json == null ? null : CouchSession.fromJson(json);
     final becameCancelled =
@@ -155,8 +158,10 @@ class CouchNotifier extends StateNotifier<CouchState> {
   /// Katılımcısı olduğum canlı oturumu sorgular (Together açılışı + resume).
   Future<void> checkActive() async {
     if (!_ref.read(authProvider).isAuthenticated) return;
+    final revision = _sessionRevision;
     try {
-      _apply(await _api.getActiveCouchSession());
+      final response = await _api.getActiveCouchSession();
+      if (mounted && revision == _sessionRevision) _apply(response);
     } catch (e) {
       debugPrint('Couch checkActive failed: $e');
     }
@@ -166,6 +171,9 @@ class CouchNotifier extends StateNotifier<CouchState> {
   /// kişisel adayları. Motor host'un zevkini bilir; ortak liste zaten iki
   /// tarafın kesişimi olduğundan misafirin zevki de desteye taşınmış olur.
   Future<bool> start(Friend friend, {int deckSize = 20}) async {
+    if (_startInFlight) return false;
+    _startInFlight = true;
+    final revision = ++_sessionRevision;
     state = state.copyWith(loading: true, error: () => null);
     try {
       final deckMovies = <Movie>[];
@@ -230,10 +238,11 @@ class CouchNotifier extends StateNotifier<CouchState> {
             },
         ],
       );
+      if (!mounted || revision != _sessionRevision) return false;
       _apply(session);
       return true;
     } on ApiException catch (e) {
-      if (mounted) {
+      if (mounted && revision == _sessionRevision) {
         // 404 = sunucu bu ucu tanımıyor (backend deploy + migration 014
         // yapılmamış). Ham "Bilinmeyen uç" yerine yol gösteren mesaj.
         state = state.copyWith(
@@ -245,10 +254,12 @@ class CouchNotifier extends StateNotifier<CouchState> {
       return false;
     } catch (e) {
       debugPrint('Couch start failed: $e');
-      if (mounted) {
+      if (mounted && revision == _sessionRevision) {
         state = state.copyWith(loading: false, error: () => e.toString());
       }
       return false;
+    } finally {
+      _startInFlight = false;
     }
   }
 
@@ -259,6 +270,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
     final card = session?.nextCard;
     if (session == null || card == null || !session.isOpen) return;
     _voteInFlight = true;
+    final revision = _sessionRevision;
     try {
       final updated = await _api.voteCouchSession(
         sessionId: session.id,
@@ -266,7 +278,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
         isTv: card.isTV,
         liked: liked,
       );
-      _apply(updated);
+      if (mounted && revision == _sessionRevision) _apply(updated);
     } on ApiException catch (e) {
       // 409: oturum bu arada bitti/iptal edildi → durumu tazele.
       if (e.statusCode == 409) {
@@ -286,8 +298,14 @@ class CouchNotifier extends StateNotifier<CouchState> {
   Future<void> refresh() async {
     final session = state.session;
     if (session == null) return;
+    final revision = _sessionRevision;
     try {
-      _apply(await _api.getCouchSession(session.id));
+      final response = await _api.getCouchSession(session.id);
+      if (mounted &&
+          revision == _sessionRevision &&
+          state.session?.id == session.id) {
+        _apply(response);
+      }
     } catch (e) {
       debugPrint('Couch refresh failed: $e');
     }
@@ -296,6 +314,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
   /// Açık oturumda iptal; eşleşmiş oturumda kapanış. Yerel durum temizlenir.
   Future<void> leave() async {
     final session = state.session;
+    _apply(null);
     if (session != null) {
       try {
         await _api.cancelCouchSession(session.id);
@@ -303,7 +322,6 @@ class CouchNotifier extends StateNotifier<CouchState> {
         debugPrint('Couch cancel failed (ignored): $e');
       }
     }
-    _apply(null);
   }
 
   /// Oturum ekranı açıkken karşı tarafın ilerlemesi/eşleşme için kısa poll.

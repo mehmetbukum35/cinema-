@@ -17,6 +17,8 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final Ref ref;
   final bool isTV;
   final Future<List<Movie>> Function() _readList;
+  final Future<void> Function(List<Movie>) _writeList;
+  Future<void> _persistTail = Future<void>.value();
   int _loadGeneration = 0;
 
   /// Panteon sınırı: liste en fazla 20 öğe tutar.
@@ -26,12 +28,18 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     this.ref,
     this.isTV, {
     Future<List<Movie>> Function()? readList,
+    Future<void> Function(List<Movie>)? writeList,
     bool autoLoad = true,
   }) : _readList =
            readList ??
            (isTV
                ? PrefsService.getFavoriteTvShows
                : PrefsService.getFavoriteMovies),
+       _writeList =
+           writeList ??
+           (isTV
+               ? PrefsService.saveFavoriteTvShows
+               : PrefsService.saveFavoriteMovies),
        super(const AsyncValue.loading()) {
     if (autoLoad) unawaited(load());
   }
@@ -99,11 +107,10 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<void> _persist(List<Movie> list) async {
     ++_loadGeneration;
     if (mounted) state = AsyncValue.data(list);
-    if (isTV) {
-      await PrefsService.saveFavoriteTvShows(list);
-    } else {
-      await PrefsService.saveFavoriteMovies(list);
-    }
+    final previous = _persistTail;
+    final operation = previous.catchError((_) {}).then((_) => _writeList(list));
+    _persistTail = operation;
+    await operation;
     // Favori değişti → öneri motorunun bellek önbelleğini (keyword vektörü + oy
     // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
     // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)

@@ -744,8 +744,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> refreshUser() async {
     if (!state.isAuthenticated) return;
+    final requestedUserId = state.user?['id']?.toString();
     try {
       final userData = await _apiService.getMe();
+      if (!mounted ||
+          !state.isAuthenticated ||
+          state.user?['id']?.toString() != requestedUserId) {
+        return;
+      }
       final user = Map<String, dynamic>.from(state.user ?? {});
       user.addAll(userData);
       await PrefsService.saveUserData(user);

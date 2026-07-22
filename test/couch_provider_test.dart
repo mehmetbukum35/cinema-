@@ -1,8 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ne_izlesem/providers/couch_provider.dart';
+import 'package:ne_izlesem/providers/auth_provider.dart';
+import 'package:ne_izlesem/models/social.dart';
 import 'package:ne_izlesem/services/api_service.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
+class MockAuthNotifier extends StateNotifier<AuthState>
+    implements AuthNotifier {
+  MockAuthNotifier(super.state);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 Map<String, dynamic> sessionJson({
   int id = 7,
@@ -42,13 +54,21 @@ class MockCouchApi implements ApiService {
   ApiException? voteThrows;
   Map<String, dynamic>? getResponse;
   List<String> usedCouchMoviesResponse = [];
+  Completer<Map<String, dynamic>?>? activeGate;
+  Completer<Map<String, dynamic>>? sessionGate;
+  Completer<Map<String, dynamic>>? voteGate;
+  Completer<void>? cancelGate;
+  Completer<List<dynamic>>? intersectionGate;
+  int createCalls = 0;
+  int intersectionCalls = 0;
 
   @override
-  Future<Map<String, dynamic>?> getActiveCouchSession() async => activeResponse;
+  Future<Map<String, dynamic>?> getActiveCouchSession() async =>
+      activeGate?.future ?? activeResponse;
 
   @override
   Future<Map<String, dynamic>> getCouchSession(int sessionId) async =>
-      getResponse ?? sessionJson();
+      sessionGate?.future ?? getResponse ?? sessionJson();
 
   @override
   Future<Map<String, dynamic>> voteCouchSession({
@@ -61,12 +81,29 @@ class MockCouchApi implements ApiService {
     lastVotedMovieId = movieId;
     lastVotedLiked = liked;
     if (voteThrows != null) throw voteThrows!;
+    if (voteGate != null) return voteGate!.future;
     return voteResponse ?? sessionJson();
   }
 
   @override
   Future<void> cancelCouchSession(int sessionId) async {
     cancelCalled = true;
+    if (cancelGate != null) await cancelGate!.future;
+  }
+
+  @override
+  Future<List<dynamic>> getWatchlistIntersection(int friendId) async {
+    intersectionCalls++;
+    return intersectionGate?.future ?? const [];
+  }
+
+  @override
+  Future<Map<String, dynamic>> createCouchSession({
+    required int friendId,
+    required List<Map<String, dynamic>> deck,
+  }) async {
+    createCalls++;
+    return sessionJson(id: 99);
   }
 
   @override
@@ -85,6 +122,11 @@ void main() {
     mockApi = MockCouchApi();
     container = ProviderContainer(
       overrides: [
+        authProvider.overrideWith(
+          (ref) => MockAuthNotifier(
+            AuthState(accessToken: 'token', user: {'id': 1}),
+          ),
+        ),
         couchProvider.overrideWith((ref) => CouchNotifier(mockApi, ref)),
       ],
     );
@@ -274,6 +316,84 @@ void main() {
       );
       await notifier.vote(true);
       expect(mockApi.voteCalls, 0);
+    });
+
+    test('stale active check cannot overwrite a newer session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      mockApi.activeGate = Completer<Map<String, dynamic>?>();
+      final pending = notifier.checkActive();
+      await Future<void>.delayed(Duration.zero);
+      notifier.debugSetSession(sessionJson(id: 20));
+
+      mockApi.activeGate!.complete(sessionJson(id: 10));
+      await pending;
+
+      expect(container.read(couchProvider).session!.id, 20);
+    });
+
+    test('stale refresh cannot overwrite a switched session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10));
+      mockApi.sessionGate = Completer<Map<String, dynamic>>();
+      final pending = notifier.refresh();
+      notifier.debugSetSession(sessionJson(id: 20));
+
+      mockApi.sessionGate!.complete(sessionJson(id: 10, status: 'matched'));
+      await pending;
+
+      expect(container.read(couchProvider).session!.id, 20);
+    });
+
+    test('late vote response cannot reopen a left session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10));
+      mockApi.voteGate = Completer<Map<String, dynamic>>();
+      final vote = notifier.vote(true);
+      await Future<void>.delayed(Duration.zero);
+
+      await notifier.leave();
+      mockApi.voteGate!.complete(
+        sessionJson(id: 10, myVotes: {'movie_101': true}),
+      );
+      await vote;
+
+      expect(container.read(couchProvider).session, isNull);
+    });
+
+    test('delayed leave cannot clear a newly discovered session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10));
+      mockApi.cancelGate = Completer<void>();
+      final leave = notifier.leave();
+      notifier.debugSetSession(sessionJson(id: 20));
+
+      mockApi.cancelGate!.complete();
+      await leave;
+
+      expect(container.read(couchProvider).session!.id, 20);
+    });
+
+    test('duplicate start taps create only one couch session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      mockApi.intersectionGate = Completer<List<dynamic>>();
+      final friend = Friend(id: 2, username: 'friend');
+      final first = notifier.start(friend, deckSize: 1);
+      final second = notifier.start(friend, deckSize: 1);
+
+      expect(await second, isFalse);
+      expect(mockApi.intersectionCalls, 1);
+      mockApi.intersectionGate!.complete([
+        {
+          'id': 501,
+          'title': 'Shared',
+          'poster_path': '/shared.jpg',
+          'overview': '',
+          'vote_average': 7.0,
+          'is_tv': 0,
+        },
+      ]);
+      expect(await first, isTrue);
+      expect(mockApi.createCalls, 1);
     });
   });
 }

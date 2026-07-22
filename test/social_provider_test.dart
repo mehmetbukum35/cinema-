@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ne_izlesem/models/movie.dart';
+import 'package:ne_izlesem/models/social.dart';
 import 'package:ne_izlesem/providers/social_provider.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 
@@ -17,6 +18,8 @@ class MockApiService implements ApiService {
   final List<Completer<Map<String, dynamic>>> sentPageRequests = [];
   final List<Completer<int>> profileLikeRequests = [];
   final List<bool> profileLikeValues = [];
+  final List<Completer<FriendSignals>> friendSignalRequests = [];
+  final List<Completer<List<dynamic>>> tasteScoreRequests = [];
   Map<String, dynamic> friendsResponse = {
     'friends': [
       {'id': 10, 'username': 'testfriend'},
@@ -200,6 +203,9 @@ class MockApiService implements ApiService {
   @override
   Future<List<dynamic>> getAllTasteMatches() async {
     allTasteMatchesCalled = true;
+    if (tasteScoreRequests.isNotEmpty) {
+      return tasteScoreRequests.removeAt(0).future;
+    }
     if (allTasteMatchesUnsupported) {
       throw ApiException(statusCode: 404, message: 'Bilinmeyen uç');
     }
@@ -207,6 +213,14 @@ class MockApiService implements ApiService {
       for (final e in tasteMatchResponses.entries)
         {'friend_id': e.key, ...e.value},
     ];
+  }
+
+  @override
+  Future<FriendSignals> getFriendSignals() async {
+    if (friendSignalRequests.isNotEmpty) {
+      return friendSignalRequests.removeAt(0).future;
+    }
+    return const FriendSignals();
   }
 
   @override
@@ -937,6 +951,53 @@ void main() {
 
       expect(mockApi.markSeenCalled, isTrue);
       expect(container.read(socialProvider).unseenRecommendations, 1);
+    });
+
+    test('older friend signals cannot overwrite a newer refresh', () async {
+      final stale = Completer<FriendSignals>();
+      final fresh = Completer<FriendSignals>();
+      mockApi.friendSignalRequests.addAll([stale, fresh]);
+      final notifier = container.read(socialProvider.notifier);
+
+      final oldLoad = notifier.loadFriendSignals();
+      final newLoad = notifier.loadFriendSignals();
+      fresh.complete(
+        const FriendSignals({
+          'movie_2': ['Fresh'],
+        }),
+      );
+      await newLoad;
+      stale.complete(
+        const FriendSignals({
+          'movie_1': ['Stale'],
+        }),
+      );
+      await oldLoad;
+
+      final signals = container.read(socialProvider).signals.byTitleKey;
+      expect(signals, {
+        'movie_2': ['Fresh'],
+      });
+    });
+
+    test('older taste scores cannot overwrite a newer refresh', () async {
+      final stale = Completer<List<dynamic>>();
+      final fresh = Completer<List<dynamic>>();
+      mockApi.tasteScoreRequests.addAll([stale, fresh]);
+      final notifier = container.read(socialProvider.notifier);
+
+      final oldLoad = notifier.loadTasteScores();
+      final newLoad = notifier.loadTasteScores();
+      fresh.complete([
+        {'friend_id': 20, 'score': 90, 'has_data': true},
+      ]);
+      await newLoad;
+      stale.complete([
+        {'friend_id': 10, 'score': 10, 'has_data': true},
+      ]);
+      await oldLoad;
+
+      expect(container.read(socialProvider).tasteScores, {20: 90});
     });
   });
 }

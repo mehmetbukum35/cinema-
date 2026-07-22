@@ -262,5 +262,33 @@ void main() {
         expect(container.read(watchlistProvider).value?.single.id, 105);
       },
     );
+
+    test('older stats load cannot overwrite a newer result', () async {
+      final stale = Completer<Map<String, dynamic>>();
+      final fresh = Completer<Map<String, dynamic>>();
+      final reads = <Completer<Map<String, dynamic>>>[stale, fresh];
+      container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          statsProvider.overrideWith(
+            (ref) => StatsNotifier(
+              ref,
+              readStats: () => reads.removeAt(0).future,
+              autoLoad: false,
+            ),
+          ),
+        ],
+      );
+      final notifier = container.read(statsProvider.notifier);
+
+      final oldLoad = notifier.load(skipSync: true);
+      final newLoad = notifier.load(skipSync: true);
+      fresh.complete({'rated': 2});
+      await newLoad;
+      stale.complete({'rated': 1});
+      await oldLoad;
+
+      expect(container.read(statsProvider).value?['rated'], 2);
+    });
   });
 }

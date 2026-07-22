@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +47,7 @@ class MockApiService implements ApiService {
   bool unlinkAppleCalled = false;
   bool getMeCalled = false;
   bool resetPasswordCalled = false;
+  Completer<Map<String, dynamic>>? getMeGate;
 
   @override
   Future<Map<String, dynamic>> login({
@@ -118,6 +121,7 @@ class MockApiService implements ApiService {
   @override
   Future<Map<String, dynamic>> getMe() async {
     getMeCalled = true;
+    if (getMeGate != null) return getMeGate!.future;
     return {
       'id': 1,
       'email': 'test@example.com',
@@ -560,6 +564,28 @@ void main() {
         expect(mockApi.getMeCalled, isTrue);
         expect(container.read(authProvider).user?['google_sub'], 'google_123');
         expect(container.read(authProvider).user?['apple_sub'], 'apple_456');
+      },
+    );
+
+    test(
+      'late refreshUser response cannot restore a logged-out user',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await notifier.login('test@example.com', 'secret123');
+        mockApi.getMeGate = Completer<Map<String, dynamic>>();
+        final refresh = notifier.refreshUser();
+        await Future<void>.delayed(Duration.zero);
+
+        await notifier.clearSession();
+        mockApi.getMeGate!.complete({
+          'id': 1,
+          'email': 'test@example.com',
+          'display_name': 'Late User',
+        });
+        await refresh;
+
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+        expect(await PrefsService.getUserData(), isNull);
       },
     );
   });
