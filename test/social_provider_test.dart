@@ -10,7 +10,11 @@ class MockApiService implements ApiService {
   final List<Completer<Map<String, dynamic>>> friendsRequests = [];
   final List<Completer<Map<String, dynamic>>> sentRecommendationRequests = [];
   final List<Completer<ActivityFeedPage>> friendActivityRequests = [];
+  final List<Completer<ActivityFeedPage>> activityRequests = [];
   final List<Completer<List<dynamic>>> intersectionRequests = [];
+  final List<Completer<Map<String, dynamic>>> recommendationsRequests = [];
+  final List<Completer<Map<String, dynamic>>> receivedPageRequests = [];
+  final List<Completer<Map<String, dynamic>>> sentPageRequests = [];
   final List<Completer<int>> profileLikeRequests = [];
   final List<bool> profileLikeValues = [];
   Map<String, dynamic> friendsResponse = {
@@ -113,6 +117,7 @@ class MockApiService implements ApiService {
   int? loadedIntersectionFriendId;
   int? loadedActivityFriendId;
   bool paginateActivity = false;
+  bool markSeenShouldFail = false;
 
   @override
   Future<Map<String, dynamic>> getFriends() async {
@@ -137,6 +142,9 @@ class MockApiService implements ApiService {
     loadedActivityFriendId = friendId;
     if (friendId != null && friendActivityRequests.isNotEmpty) {
       return friendActivityRequests.removeAt(0).future;
+    }
+    if (friendId == null && activityRequests.isNotEmpty) {
+      return activityRequests.removeAt(0).future;
     }
     if (paginateActivity && cursor == 'page-2') {
       final second = Map<String, dynamic>.from(
@@ -202,8 +210,12 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> getRecommendations() async =>
-      recommendationsResponse;
+  Future<Map<String, dynamic>> getRecommendations() async {
+    if (recommendationsRequests.isNotEmpty) {
+      return recommendationsRequests.removeAt(0).future;
+    }
+    return recommendationsResponse;
+  }
 
   @override
   Future<Map<String, dynamic>> getSentRecommendations() async {
@@ -217,44 +229,55 @@ class MockApiService implements ApiService {
   Future<Map<String, dynamic>> getRecommendationsPage({
     required String cursor,
     int limit = 30,
-  }) async => {
-    'recommendations': [
-      {
-        'id': 3,
-        'movie_id': 777,
-        'is_tv': 1,
-        'title': 'Page Two',
-        'seen': true,
-        'created_at': 500,
-        'from_id': 10,
-        'from_username': 'testfriend',
-      },
-    ],
-    'has_more': false,
-  };
+  }) async {
+    if (receivedPageRequests.isNotEmpty) {
+      return receivedPageRequests.removeAt(0).future;
+    }
+    return {
+      'recommendations': [
+        {
+          'id': 3,
+          'movie_id': 777,
+          'is_tv': 1,
+          'title': 'Page Two',
+          'seen': true,
+          'created_at': 500,
+          'from_id': 10,
+          'from_username': 'testfriend',
+        },
+      ],
+      'has_more': false,
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> getSentRecommendationsPage({
     required String cursor,
     int limit = 30,
-  }) async => {
-    'sent': [
-      {
-        'id': 4,
-        'movie_id': 778,
-        'is_tv': 0,
-        'title': 'Sent Page Two',
-        'created_at': 400,
-        'to_id': 10,
-        'to_username': 'testfriend',
-      },
-    ],
-    'has_more': false,
-  };
+  }) async {
+    if (sentPageRequests.isNotEmpty) {
+      return sentPageRequests.removeAt(0).future;
+    }
+    return {
+      'sent': [
+        {
+          'id': 4,
+          'movie_id': 778,
+          'is_tv': 0,
+          'title': 'Sent Page Two',
+          'created_at': 400,
+          'to_id': 10,
+          'to_username': 'testfriend',
+        },
+      ],
+      'has_more': false,
+    };
+  }
 
   @override
   Future<void> markRecommendationsSeen() async {
     markSeenCalled = true;
+    if (markSeenShouldFail) throw Exception('mark seen failed');
   }
 
   @override
@@ -764,6 +787,156 @@ void main() {
       final finalProfile = container.read(socialProvider).topProfiles.single;
       expect(finalProfile.meLiked, isFalse);
       expect(finalProfile.likeCount, 0);
+    });
+
+    test('stale activity page cannot append after a fresh reload', () async {
+      mockApi.paginateActivity = true;
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadActivityFeed();
+      final stalePage = Completer<ActivityFeedPage>();
+      final freshReload = Completer<ActivityFeedPage>();
+      mockApi.activityRequests.addAll([stalePage, freshReload]);
+
+      final loadMore = notifier.loadMoreActivityFeed();
+      final reload = notifier.loadActivityFeed();
+      final freshItem = Map<String, dynamic>.from(
+        mockApi.activityResponse.single as Map<String, dynamic>,
+      )..['movie_id'] = 303;
+      freshReload.complete(
+        ActivityFeedPage(items: [freshItem], hasMore: false),
+      );
+      await reload;
+      final staleItem = Map<String, dynamic>.from(
+        mockApi.activityResponse.single as Map<String, dynamic>,
+      )..['movie_id'] = 202;
+      stalePage.complete(ActivityFeedPage(items: [staleItem], hasMore: false));
+      await loadMore;
+
+      final state = container.read(socialProvider);
+      expect(state.activityFeed.map((item) => item.movieId), [303]);
+      expect(state.activityLoadingMore, isFalse);
+    });
+
+    test('stale received page cannot append after a fresh reload', () async {
+      mockApi.recommendationsResponse['next_cursor'] = 'page-2';
+      mockApi.recommendationsResponse['has_more'] = true;
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadReceivedRecommendations();
+      final stalePage = Completer<Map<String, dynamic>>();
+      final freshReload = Completer<Map<String, dynamic>>();
+      mockApi.receivedPageRequests.add(stalePage);
+      mockApi.recommendationsRequests.add(freshReload);
+
+      final loadMore = notifier.loadMoreReceivedRecommendations();
+      final reload = notifier.loadReceivedRecommendations();
+      freshReload.complete({
+        'recommendations': [
+          {
+            'id': 30,
+            'movie_id': 30,
+            'is_tv': 0,
+            'title': 'Fresh Received',
+            'created_at': 30,
+            'from_id': 10,
+          },
+        ],
+        'has_more': false,
+      });
+      await reload;
+      stalePage.complete({
+        'recommendations': [
+          {
+            'id': 31,
+            'movie_id': 31,
+            'is_tv': 0,
+            'title': 'Stale Received',
+            'created_at': 31,
+            'from_id': 10,
+          },
+        ],
+        'has_more': false,
+      });
+      await loadMore;
+
+      final state = container.read(socialProvider);
+      expect(state.receivedRecommendations.map((item) => item.id), [30]);
+      expect(state.receivedRecommendationsLoadingMore, isFalse);
+    });
+
+    test('stale sent page cannot append after a fresh reload', () async {
+      mockApi.sentRecommendationsResponse['next_cursor'] = 'page-2';
+      mockApi.sentRecommendationsResponse['has_more'] = true;
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadSentRecommendations();
+      final stalePage = Completer<Map<String, dynamic>>();
+      final freshReload = Completer<Map<String, dynamic>>();
+      mockApi.sentPageRequests.add(stalePage);
+      mockApi.sentRecommendationRequests.add(freshReload);
+
+      final loadMore = notifier.loadMoreSentRecommendations();
+      final reload = notifier.loadSentRecommendations();
+      freshReload.complete({
+        'sent': [
+          {
+            'id': 40,
+            'movie_id': 40,
+            'is_tv': 0,
+            'title': 'Fresh Sent',
+            'created_at': 40,
+            'to_id': 10,
+          },
+        ],
+        'has_more': false,
+      });
+      await reload;
+      stalePage.complete({
+        'sent': [
+          {
+            'id': 41,
+            'movie_id': 41,
+            'is_tv': 0,
+            'title': 'Stale Sent',
+            'created_at': 41,
+            'to_id': 10,
+          },
+        ],
+        'has_more': false,
+      });
+      await loadMore;
+
+      final state = container.read(socialProvider);
+      expect(state.sentRecommendations.map((item) => item.id), [40]);
+      expect(state.sentRecommendationsLoadingMore, isFalse);
+    });
+
+    test(
+      'in-flight recommendation load cannot resurrect a deleted item',
+      () async {
+        final notifier = container.read(socialProvider.notifier);
+        await notifier.loadRecommendations();
+        final staleLoad = Completer<Map<String, dynamic>>();
+        mockApi.recommendationsRequests.add(staleLoad);
+
+        final pendingLoad = notifier.loadRecommendations();
+        await Future<void>.delayed(Duration.zero);
+        expect(await notifier.deleteRecommendation(1), isTrue);
+        staleLoad.complete(mockApi.recommendationsResponse);
+        await pendingLoad;
+
+        expect(container.read(socialProvider).recommendations, isEmpty);
+        expect(container.read(socialProvider).unseenRecommendations, 0);
+      },
+    );
+
+    test('failed mark-seen restores the unseen badge', () async {
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadRecommendations();
+      mockApi.markSeenShouldFail = true;
+
+      await notifier.markRecommendationsSeen();
+
+      expect(mockApi.markSeenCalled, isTrue);
+      expect(container.read(socialProvider).unseenRecommendations, 1);
     });
   });
 }

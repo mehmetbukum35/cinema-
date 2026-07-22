@@ -250,7 +250,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
   Future<void> loadActivityFeed() async {
     final generation = ++_activityLoadGeneration;
     _activityLoading = true;
-    state = state.copyWith(loading: true, error: () => null);
+    state = state.copyWith(
+      loading: true,
+      activityLoadingMore: false,
+      error: () => null,
+    );
     try {
       final page = await _apiService.getActivityFeedPage();
       if (!mounted || generation != _activityLoadGeneration) return;
@@ -283,10 +287,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
     if (state.activityLoadingMore || !state.activityHasMore) return;
     final cursor = state.activityCursor;
     if (cursor == null) return;
+    final generation = _activityLoadGeneration;
     state = state.copyWith(activityLoadingMore: true);
     try {
       final page = await _apiService.getActivityFeedPage(cursor: cursor);
-      if (!mounted) return;
+      if (!mounted || generation != _activityLoadGeneration) return;
       final incoming = page.items
           .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
           .toList();
@@ -297,13 +302,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
         activityLoadingMore: false,
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         activityLoadingMore: false,
         error: () => e.message,
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         activityLoadingMore: false,
         error: () => e.toString(),
@@ -539,18 +544,25 @@ class SocialNotifier extends StateNotifier<SocialState> {
   /// Önerileri görüldü olarak işaretler (rozet sayacını sıfırlar).
   Future<void> markRecommendationsSeen() async {
     if (state.unseenRecommendations == 0) return;
+    final previousUnseen = state.unseenRecommendations;
+    final generation = _recommendationsLoadGeneration;
     state = state.copyWith(unseenRecommendations: 0);
     try {
       await _apiService.markRecommendationsSeen();
     } catch (e, st) {
-      // Sunucuya yazılamadıysa bir sonraki yüklemede tekrar görünür.
       debugPrint("Failed to mark recommendations seen: $e\n$st");
+      if (mounted &&
+          generation == _recommendationsLoadGeneration &&
+          state.unseenRecommendations == 0) {
+        state = state.copyWith(unseenRecommendations: previousUnseen);
+      }
     }
   }
 
   /// Arkadaşlardan gelen önerileri yükler.
   Future<void> loadReceivedRecommendations() async {
     final generation = ++_receivedRecommendationsLoadGeneration;
+    state = state.copyWith(receivedRecommendationsLoadingMore: false);
     try {
       final res = await _apiService.getRecommendations();
       if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
@@ -578,6 +590,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
   /// Kullanıcının arkadaşlarına gönderdiği önerileri yükler.
   Future<void> loadSentRecommendations() async {
     final generation = ++_sentRecommendationsLoadGeneration;
+    state = state.copyWith(sentRecommendationsLoadingMore: false);
     try {
       final res = await _apiService.getSentRecommendations();
       if (!mounted || generation != _sentRecommendationsLoadGeneration) return;
@@ -606,9 +619,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
     final cursor = state.receivedRecommendationsCursor;
     if (cursor == null) return;
+    final generation = _receivedRecommendationsLoadGeneration;
     state = state.copyWith(receivedRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getRecommendationsPage(cursor: cursor);
+      if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
+        return;
+      }
       final page = (res['recommendations'] as List<dynamic>? ?? const [])
           .map(
             (x) =>
@@ -627,7 +644,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
       );
     } catch (e, st) {
       debugPrint('Failed to load more received recommendations: $e\n$st');
-      state = state.copyWith(receivedRecommendationsLoadingMore: false);
+      if (mounted && generation == _receivedRecommendationsLoadGeneration) {
+        state = state.copyWith(receivedRecommendationsLoadingMore: false);
+      }
     }
   }
 
@@ -638,9 +657,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
     final cursor = state.sentRecommendationsCursor;
     if (cursor == null) return;
+    final generation = _sentRecommendationsLoadGeneration;
     state = state.copyWith(sentRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getSentRecommendationsPage(cursor: cursor);
+      if (!mounted || generation != _sentRecommendationsLoadGeneration) {
+        return;
+      }
       final page = (res['sent'] as List<dynamic>? ?? const [])
           .map(
             (x) => SentRecommendationItem.fromJson(x as Map<String, dynamic>),
@@ -658,7 +681,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
       );
     } catch (e, st) {
       debugPrint('Failed to load more sent recommendations: $e\n$st');
-      state = state.copyWith(sentRecommendationsLoadingMore: false);
+      if (mounted && generation == _sentRecommendationsLoadGeneration) {
+        state = state.copyWith(sentRecommendationsLoadingMore: false);
+      }
     }
   }
 
@@ -673,6 +698,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
         }
       }
       await _apiService.deleteRecommendation(recommendationId);
+      // Silme başlamadan önceki GET/page yanıtları öğeyi diriltmemeli.
+      _recommendationsLoadGeneration++;
+      _receivedRecommendationsLoadGeneration++;
+      _sentRecommendationsLoadGeneration++;
       state = state.copyWith(
         sentRecommendations: state.sentRecommendations
             .where((item) => item.id != recommendationId)
