@@ -16,6 +16,14 @@ import 'search/widgets/quick_access.dart';
 import 'search/widgets/results_list.dart';
 import 'search/widgets/skeleton_loader.dart';
 
+@visibleForTesting
+bool isCurrentSearchRequest({
+  required int requestId,
+  required int currentRequestId,
+  required String query,
+  required String currentQuery,
+}) => requestId == currentRequestId && query == currentQuery;
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -137,19 +145,36 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _refreshSearch() async {
     final q = _lastQuery;
     if (q.trim().length < 2) return;
+    final requestId = ++_searchRequestId;
     setState(() {
       _searching = true;
       _hasError = false;
     });
     try {
       final results = await _service.searchMulti(q);
-      if (!mounted || q != _lastQuery) return;
+      if (!mounted ||
+          !isCurrentSearchRequest(
+            requestId: requestId,
+            currentRequestId: _searchRequestId,
+            query: q,
+            currentQuery: _lastQuery,
+          )) {
+        return;
+      }
       setState(() {
         _results = results;
         _searching = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted ||
+          !isCurrentSearchRequest(
+            requestId: requestId,
+            currentRequestId: _searchRequestId,
+            query: q,
+            currentQuery: _lastQuery,
+          )) {
+        return;
+      }
       setState(() {
         _results = [];
         _searching = false;

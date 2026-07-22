@@ -408,17 +408,28 @@ class NotificationService {
     return '$type|$movieId|$isTv';
   }
 
+  /// Maps friendship notifications to their relevant social tab.
+  @visibleForTesting
+  static int? socialTabForNotificationType(String type) {
+    return switch (type) {
+      'friend_request' => 1,
+      'friend_accept' => 0,
+      _ => null,
+    };
+  }
+
   /// Bildirim payload'una göre ilgili ekrana yönlendirir.
   void _routeFromPayload(String? payload) {
     if (payload == null || payload.isEmpty) return;
     final parts = payload.split('|');
     if (parts.isEmpty) return;
     final type = parts[0];
-    if (type == 'friend_request' || type == 'friend_accept') {
+    final socialTab = socialTabForNotificationType(type);
+    if (socialTab != null) {
       final nav = navigatorKey.currentState;
       if (nav == null) return;
       nav.push(
-        MaterialPageRoute(builder: (_) => const SocialScreen(initialTab: 1)),
+        MaterialPageRoute(builder: (_) => SocialScreen(initialTab: socialTab)),
       );
     } else if (type == 'couch_invite' || type == 'couch_match') {
       final nav = navigatorKey.currentState;

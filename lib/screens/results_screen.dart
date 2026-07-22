@@ -14,6 +14,12 @@ import 'results/movie_card.dart';
 import 'results/skeleton_card.dart';
 import 'results/lang_chip.dart';
 
+@visibleForTesting
+bool shouldContinueDiscoverPagination({
+  required int batchLength,
+  required int freshLength,
+}) => batchLength > 0 && freshLength > 0;
+
 class ResultsScreen extends ConsumerStatefulWidget {
   final String? genreStr;
   final int? maxRuntime;
@@ -241,7 +247,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         _page = nextPage;
         _movies.addAll(fresh);
         // TMDB boş sayfa döndürdüyse veya yeni öğe kalmadıysa dur.
-        if (batch.isEmpty) _hasMore = false;
+        _hasMore = shouldContinueDiscoverPagination(
+          batchLength: batch.length,
+          freshLength: fresh.length,
+        );
         _loadingMore = false;
       });
     } catch (e, st) {

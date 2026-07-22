@@ -48,4 +48,27 @@ void main() {
       );
     });
   });
+
+  group('NotificationService.socialTabForNotificationType', () {
+    test('opens Requests for a new friend request', () {
+      expect(
+        NotificationService.socialTabForNotificationType('friend_request'),
+        1,
+      );
+    });
+
+    test('opens Friends after a request is accepted', () {
+      expect(
+        NotificationService.socialTabForNotificationType('friend_accept'),
+        0,
+      );
+    });
+
+    test('ignores notification types outside the social tabs', () {
+      expect(
+        NotificationService.socialTabForNotificationType('release'),
+        isNull,
+      );
+    });
+  });
 }
