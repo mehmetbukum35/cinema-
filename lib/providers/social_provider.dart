@@ -518,6 +518,28 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
   }
 
+  /// Öneriyi yalnızca mevcut kullanıcının gönderilen/alınan görünümünden kaldırır.
+  Future<bool> deleteRecommendation(int recommendationId) async {
+    try {
+      await _apiService.deleteRecommendation(recommendationId);
+      state = state.copyWith(
+        sentRecommendations: state.sentRecommendations
+            .where((item) => item.id != recommendationId)
+            .toList(),
+        receivedRecommendations: state.receivedRecommendations
+            .where((item) => item.id != recommendationId)
+            .toList(),
+        recommendations: state.recommendations
+            .where((item) => item.id != recommendationId)
+            .toList(),
+      );
+      return true;
+    } catch (e, st) {
+      debugPrint('Failed to delete recommendation: $e\n$st');
+      return false;
+    }
+  }
+
   /// Arkadaşa film/dizi önerir.
   Future<bool> recommendToFriend({
     required int friendId,

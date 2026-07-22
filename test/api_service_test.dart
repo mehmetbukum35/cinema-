@@ -486,6 +486,17 @@ void main() {
       expect(res['sent'][0]['to_username'], 'bob');
     });
 
+    test('deleteRecommendation should DELETE the selected item', () async {
+      final client = MockClient((request) async {
+        expect(request.method, 'DELETE');
+        expect(request.url.path, '/api/social/recommendations/42');
+        return http.Response(jsonEncode({'ok': true}), 200);
+      });
+      final apiService = ApiService(client: client);
+
+      await apiService.deleteRecommendation(42);
+    });
+
     test('recommendToFriend should POST correct payload', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');

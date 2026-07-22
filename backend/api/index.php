@@ -109,6 +109,11 @@ if ($method === 'GET' && str_starts_with($path, '/tmdb/')) {
     exit;
 }
 
+if ($method === 'DELETE' && preg_match('#^/social/recommendations/(\d+)$#', $path, $matches)) {
+    $social->deleteRecommendation($auth->requireUser(), (int) $matches[1]);
+    exit;
+}
+
 // "Birlikte Seç" oturumları: GET /social/couch/{id} (poll) ve
 // POST /social/couch/{id}/vote|cancel. Sabit uçlar (create/active) switch'te.
 if (str_starts_with($path, '/social/couch/')) {

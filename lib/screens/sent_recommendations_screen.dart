@@ -8,6 +8,7 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/app_cached_image.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/spring_button.dart';
 import 'social/open_movie_detail.dart';
 
@@ -30,6 +31,8 @@ class SentRecommendationsScreen extends ConsumerStatefulWidget {
 
 class _SentRecommendationsScreenState
     extends ConsumerState<SentRecommendationsScreen> {
+  final Set<int> _deletingIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +41,56 @@ class _SentRecommendationsScreenState
         ref.read(socialProvider.notifier).loadSentRecommendations();
       }
     });
+  }
+
+  Future<void> _confirmDelete(SentRecommendationItem item) async {
+    final c = context.c;
+    final tr = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text(
+          tr?.get('recommendation_delete') ?? 'Öneriyi sil',
+          style: TextStyle(color: c.ink, fontSize: 16),
+        ),
+        content: Text(
+          (tr?.get('recommendation_delete_confirm') ??
+                  '“{}” bu listeden kaldırılsın mı?')
+              .replaceFirst('{}', item.title),
+          style: TextStyle(color: c.dim, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(tr?.get('profile_cancel') ?? 'İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              tr?.get('delete') ?? 'Sil',
+              style: TextStyle(color: c.rBerbat, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingIds.add(item.id));
+    final deleted = await ref
+        .read(socialProvider.notifier)
+        .deleteRecommendation(item.id);
+    if (!mounted) return;
+    setState(() => _deletingIds.remove(item.id));
+    showAppToast(
+      context,
+      tr?.get(
+            deleted ? 'recommendation_deleted' : 'recommendation_delete_failed',
+          ) ??
+          (deleted ? 'Öneri silindi.' : 'Öneri silinemedi.'),
+      success: deleted,
+    );
   }
 
   @override
@@ -209,6 +262,28 @@ class _SentRecommendationsScreenState
                 ],
               ),
             ),
+            const SizedBox(width: 4),
+            if (_deletingIds.contains(item.id))
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: c.dim,
+                    ),
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                tooltip: tr?.get('recommendation_delete') ?? 'Öneriyi sil',
+                onPressed: () => _confirmDelete(item),
+                icon: Icon(Icons.delete_outline_rounded, color: c.rBerbat),
+              ),
           ],
         ),
       ),

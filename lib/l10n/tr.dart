@@ -792,6 +792,11 @@ const Map<String, String> kTrStrings = {
   'received_recommendations_subtitle': 'Sana gelen film ve diziler',
   'received_recommendations_empty': 'Henüz sana öneri gelmedi.',
   'received_recommendation_from': '{} · {}',
+  'recommendation_delete': 'Öneriyi sil',
+  'recommendation_delete_confirm':
+      '“{}” bu listeden kaldırılsın mı? Bu işlem diğer kişinin listesini etkilemez.',
+  'recommendation_deleted': 'Öneri silindi.',
+  'recommendation_delete_failed': 'Öneri silinemedi. Lütfen tekrar deneyin.',
   'username_prompt_title': 'Kullanıcı Adı Belirle',
   'username_prompt_desc':
       'Web profilin ve sosyal özellikler için benzersiz bir kullanıcı adı seç.',

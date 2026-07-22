@@ -436,6 +436,28 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('Mutlaka izle!', $sent['note']);
     }
 
+    public function testRecommendationDeletionIsIndependentForSenderAndRecipient(): void
+    {
+        $this->acceptFriendship(1, 2);
+        $this->social->recommend(1, [
+            'friend_id' => 2, 'movie_id' => 603, 'is_tv' => 0, 'title' => 'The Matrix',
+        ]);
+        $id = (int) $this->db->query('SELECT id FROM recommendations')->fetchColumn();
+
+        TestHelperRegistry::reset();
+        $this->social->deleteRecommendation(1, $id);
+        $this->social->getSentRecommendations(1);
+        $this->assertCount(0, TestHelperRegistry::$lastBody['sent']);
+
+        TestHelperRegistry::reset();
+        $this->social->getRecommendations(2);
+        $this->assertCount(1, TestHelperRegistry::$lastBody['recommendations']);
+
+        TestHelperRegistry::reset();
+        $this->social->deleteRecommendation(2, $id);
+        $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM recommendations')->fetchColumn());
+    }
+
     public function testTitleReviewsAndActivityFeedWithNegativeComments(): void
     {
         // 1. Setup friendship between 1 and 2
@@ -1047,6 +1069,8 @@ class SocialIntegrationTest extends TestCase
                 poster_path TEXT,
                 note TEXT,
                 seen INTEGER NOT NULL DEFAULT 0,
+                sender_deleted INTEGER NOT NULL DEFAULT 0,
+                recipient_deleted INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL,
                 UNIQUE (from_user_id, to_user_id, movie_id, is_tv)
             )'

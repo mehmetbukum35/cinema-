@@ -99,6 +99,7 @@ class MockApiService implements ApiService {
   bool rejectFriendRequestCalled = false;
   bool recommendCalled = false;
   bool markSeenCalled = false;
+  int? deletedRecommendationId;
   int? recommendedFriendId;
   String? recommendedNote;
   int? loadedIntersectionFriendId;
@@ -192,6 +193,11 @@ class MockApiService implements ApiService {
   @override
   Future<void> markRecommendationsSeen() async {
     markSeenCalled = true;
+  }
+
+  @override
+  Future<void> deleteRecommendation(int recommendationId) async {
+    deletedRecommendationId = recommendationId;
   }
 
   @override
@@ -425,6 +431,22 @@ void main() {
       expect(state.receivedRecommendations, hasLength(1));
       expect(state.receivedRecommendations[0].title, 'The Matrix');
       expect(state.receivedRecommendations[0].fromUsername, 'testfriend');
+    });
+
+    test('deleteRecommendation removes the item from local lists', () async {
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadSentRecommendations();
+      await notifier.loadReceivedRecommendations();
+
+      final deleted = await notifier.deleteRecommendation(2);
+
+      expect(deleted, isTrue);
+      expect(mockApi.deletedRecommendationId, 2);
+      expect(container.read(socialProvider).sentRecommendations, isEmpty);
+      expect(
+        container.read(socialProvider).receivedRecommendations,
+        hasLength(1),
+      );
     });
 
     test(

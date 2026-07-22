@@ -137,6 +137,22 @@ mixin RecommendationApi on ApiClient {
     }
   }
 
+  Future<void> deleteRecommendation(int recommendationId) async {
+    final response = await _request(
+      'DELETE',
+      '/social/recommendations/$recommendationId',
+      requireAuth: true,
+    );
+    if (response.statusCode != 200) {
+      final data = _decodeJsonMap(response.body);
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: data['error'] as String? ?? 'Öneri silinemedi.',
+        code: data['code'] as String?,
+      );
+    }
+  }
+
   /// Topluluk "Popüler Top 20" (film ya da dizi). Kimlik doğrulaması gerekmez —
   /// misafirler de görebilir. Sunucu cron ile önhesaplar; bu çağrı hafiftir.
   Future<List<dynamic>> getPopularTitles(bool isTV) async {

@@ -131,6 +131,8 @@ CREATE TABLE `recommendations` (
   `poster_path` varchar(255) DEFAULT NULL,
   `note` varchar(280) DEFAULT NULL,
   `seen` tinyint(1) NOT NULL DEFAULT 0,
+  `sender_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `recipient_deleted` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

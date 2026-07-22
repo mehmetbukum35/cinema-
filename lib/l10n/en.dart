@@ -798,6 +798,12 @@ const Map<String, String> kEnStrings = {
   'received_recommendations_subtitle': 'Films and shows recommended to you',
   'received_recommendations_empty': 'No recommendations from friends yet.',
   'received_recommendation_from': 'From {} · {}',
+  'recommendation_delete': 'Delete recommendation',
+  'recommendation_delete_confirm':
+      'Remove “{}” from this list? This won’t remove it from the other person’s list.',
+  'recommendation_deleted': 'Recommendation deleted.',
+  'recommendation_delete_failed':
+      'Recommendation could not be deleted. Please try again.',
   'username_prompt_title': 'Choose a Username',
   'username_prompt_desc':
       'Pick a unique username for your web profile and social features.',

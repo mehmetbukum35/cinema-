@@ -34,7 +34,10 @@ trait SocialRecommendationsTrait
 
         if ($existingId !== false) {
             $up = $this->db->prepare(
-                'UPDATE recommendations SET note = ?, poster_path = ?, seen = 0, created_at = ? WHERE id = ?'
+                'UPDATE recommendations
+                 SET note = ?, poster_path = ?, seen = 0,
+                     sender_deleted = 0, recipient_deleted = 0, created_at = ?
+                 WHERE id = ?'
             );
             $up->execute([$note, $poster, $t, (int) $existingId]);
         } else {
@@ -64,6 +67,7 @@ trait SocialRecommendationsTrait
              FROM recommendations r
              JOIN users u ON u.id = r.from_user_id
              WHERE r.to_user_id = ?
+               AND r.recipient_deleted = 0
                AND r.from_user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
                AND r.from_user_id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)
              ORDER BY r.created_at DESC
@@ -84,7 +88,11 @@ trait SocialRecommendationsTrait
     // ─── POST /social/recommendations/seen ──────────────────────────────────
     public function markRecommendationsSeen(int $uid): void
     {
-        $st = $this->db->prepare('UPDATE recommendations SET seen = 1 WHERE to_user_id = ? AND seen = 0');
+        $st = $this->db->prepare(
+            'UPDATE recommendations
+             SET seen = 1
+             WHERE to_user_id = ? AND seen = 0 AND recipient_deleted = 0'
+        );
         $st->execute([$uid]);
         json_out(200, ['ok' => true, 'marked' => $st->rowCount()]);
     }
@@ -99,10 +107,38 @@ trait SocialRecommendationsTrait
              FROM recommendations r
              JOIN users u ON u.id = r.to_user_id
              WHERE r.from_user_id = ?
+               AND r.sender_deleted = 0
              ORDER BY r.created_at DESC
              LIMIT 50'
         );
         $st->execute([$uid]);
         json_out(200, ['sent' => $st->fetchAll()]);
+    }
+
+    // ─── DELETE /social/recommendations/{id} ───────────────────────────────
+    // Her taraf yalnızca kendi görünümünü temizler. İki taraf da gizlediyse
+    // artık kimseye görünmeyen fiziksel kayıt güvenle kaldırılır.
+    public function deleteRecommendation(int $uid, int $recommendationId): void
+    {
+        if ($recommendationId <= 0) fail(422, 'Geçerli bir öneri kimliği gerekli.');
+
+        $st = $this->db->prepare(
+            'SELECT from_user_id, to_user_id FROM recommendations WHERE id = ?'
+        );
+        $st->execute([$recommendationId]);
+        $item = $st->fetch();
+        if (!$item || ($uid !== (int) $item['from_user_id'] && $uid !== (int) $item['to_user_id'])) {
+            fail(404, 'Öneri bulunamadı.');
+        }
+
+        $column = $uid === (int) $item['from_user_id'] ? 'sender_deleted' : 'recipient_deleted';
+        $up = $this->db->prepare("UPDATE recommendations SET $column = 1 WHERE id = ?");
+        $up->execute([$recommendationId]);
+
+        $cleanup = $this->db->prepare(
+            'DELETE FROM recommendations WHERE id = ? AND sender_deleted = 1 AND recipient_deleted = 1'
+        );
+        $cleanup->execute([$recommendationId]);
+        json_out(200, ['ok' => true]);
     }
 }
