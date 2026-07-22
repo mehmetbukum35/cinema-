@@ -177,6 +177,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
   SocialNotifier(this._apiService, this._ref) : super(SocialState());
   bool _friendsLoading = false;
   bool _activityLoading = false;
+  int _friendsLoadGeneration = 0;
+  int _activityLoadGeneration = 0;
+  int _recommendationsLoadGeneration = 0;
+  int _receivedRecommendationsLoadGeneration = 0;
+  int _sentRecommendationsLoadGeneration = 0;
+  int _topProfilesLoadGeneration = 0;
 
   Future<void> loadFriendSignals() async {
     try {
@@ -190,10 +196,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
   }
 
   Future<void> loadFriends() async {
+    final generation = ++_friendsLoadGeneration;
     _friendsLoading = true;
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.getFriends();
+      if (!mounted || generation != _friendsLoadGeneration) return;
 
       final friendsList =
           (res['friends'] as List<dynamic>?)
@@ -220,22 +228,28 @@ class SocialNotifier extends StateNotifier<SocialState> {
       // Rozetler için uyum skorlarını arka planda yükle (await edilmez).
       unawaited(loadTasteScores());
     } on ApiException catch (e) {
+      if (!mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(loading: _activityLoading, error: () => e.message);
     } catch (e) {
+      if (!mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(
         loading: _activityLoading,
         error: () => e.toString(),
       );
     } finally {
-      _friendsLoading = false;
+      if (mounted && generation == _friendsLoadGeneration) {
+        _friendsLoading = false;
+      }
     }
   }
 
   Future<void> loadActivityFeed() async {
+    final generation = ++_activityLoadGeneration;
     _activityLoading = true;
     state = state.copyWith(loading: true, error: () => null);
     try {
       final page = await _apiService.getActivityFeedPage();
+      if (!mounted || generation != _activityLoadGeneration) return;
       final feedList = page.items
           .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
           .toList();
@@ -246,14 +260,18 @@ class SocialNotifier extends StateNotifier<SocialState> {
         loading: _friendsLoading,
       );
     } on ApiException catch (e) {
+      if (!mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(loading: _friendsLoading, error: () => e.message);
     } catch (e) {
+      if (!mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         loading: _friendsLoading,
         error: () => e.toString(),
       );
     } finally {
-      _activityLoading = false;
+      if (mounted && generation == _activityLoadGeneration) {
+        _activityLoading = false;
+      }
     }
   }
 
@@ -482,8 +500,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
 
   /// Gelen önerileri yükler.
   Future<void> loadRecommendations() async {
+    final generation = ++_recommendationsLoadGeneration;
     try {
       final res = await _apiService.getRecommendations();
+      if (!mounted || generation != _recommendationsLoadGeneration) return;
       final recList =
           (res['recommendations'] as List<dynamic>?)
               ?.map(
@@ -516,8 +536,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
 
   /// Arkadaşlardan gelen önerileri yükler.
   Future<void> loadReceivedRecommendations() async {
+    final generation = ++_receivedRecommendationsLoadGeneration;
     try {
       final res = await _apiService.getRecommendations();
+      if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
+        return;
+      }
       final list =
           (res['recommendations'] as List<dynamic>?)
               ?.map(
@@ -539,8 +563,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
 
   /// Kullanıcının arkadaşlarına gönderdiği önerileri yükler.
   Future<void> loadSentRecommendations() async {
+    final generation = ++_sentRecommendationsLoadGeneration;
     try {
       final res = await _apiService.getSentRecommendations();
+      if (!mounted || generation != _sentRecommendationsLoadGeneration) return;
       final list =
           (res['sent'] as List<dynamic>?)
               ?.map(
@@ -687,9 +713,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
 
   /// "Popüler Listeler" sıralamasını yükler.
   Future<void> loadTopProfiles() async {
+    final generation = ++_topProfilesLoadGeneration;
     state = state.copyWith(topProfilesLoading: true);
     try {
       final res = await _apiService.getTopProfiles();
+      if (!mounted || generation != _topProfilesLoadGeneration) return;
       final list =
           (res['profiles'] as List<dynamic>?)
               ?.map((x) => TopProfile.fromJson(x as Map<String, dynamic>))
@@ -700,7 +728,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
       // Popüler profiller arkadaş listesinin arka plan verisidir; geçici ağ
       // hatası tüm sosyal ekranı hata durumuna sokmamalı.
       debugPrint('Failed to load top profiles: $e\n$st');
-      if (mounted) state = state.copyWith(topProfilesLoading: false);
+      if (mounted && generation == _topProfilesLoadGeneration) {
+        state = state.copyWith(topProfilesLoading: false);
+      }
     }
   }
 

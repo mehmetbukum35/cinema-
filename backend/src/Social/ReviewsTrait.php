@@ -152,6 +152,7 @@ trait SocialReviewsTrait
               WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)'
         );
         $del->execute([$uid, $blockedId, $blockedId, $uid]);
+        $this->cancelCouchSessionsBetween($uid, $blockedId);
 
         // Engellenen kişinin önceki önerileri inbox'ta kalmasın.
         $purge = $this->db->prepare(

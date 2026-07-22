@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ne_izlesem/models/movie.dart';
@@ -5,6 +7,8 @@ import 'package:ne_izlesem/providers/social_provider.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 
 class MockApiService implements ApiService {
+  final List<Completer<Map<String, dynamic>>> friendsRequests = [];
+  final List<Completer<Map<String, dynamic>>> sentRecommendationRequests = [];
   Map<String, dynamic> friendsResponse = {
     'friends': [
       {'id': 10, 'username': 'testfriend'},
@@ -107,7 +111,12 @@ class MockApiService implements ApiService {
   bool paginateActivity = false;
 
   @override
-  Future<Map<String, dynamic>> getFriends() async => friendsResponse;
+  Future<Map<String, dynamic>> getFriends() async {
+    if (friendsRequests.isNotEmpty) {
+      return friendsRequests.removeAt(0).future;
+    }
+    return friendsResponse;
+  }
 
   @override
   Future<List<dynamic>> getActivityFeed({int? friendId}) async {
@@ -187,8 +196,12 @@ class MockApiService implements ApiService {
       recommendationsResponse;
 
   @override
-  Future<Map<String, dynamic>> getSentRecommendations() async =>
-      sentRecommendationsResponse;
+  Future<Map<String, dynamic>> getSentRecommendations() async {
+    if (sentRecommendationRequests.isNotEmpty) {
+      return sentRecommendationRequests.removeAt(0).future;
+    }
+    return sentRecommendationsResponse;
+  }
 
   @override
   Future<Map<String, dynamic>> getRecommendationsPage({
@@ -292,6 +305,52 @@ void main() {
       expect(state.friends[0].username, 'testfriend');
       expect(state.pendingReceived, hasLength(1));
       expect(state.pendingSent, hasLength(1));
+    });
+
+    test('older friends response cannot overwrite a newer refresh', () async {
+      final stale = Completer<Map<String, dynamic>>();
+      final fresh = Completer<Map<String, dynamic>>();
+      mockApi.friendsRequests.addAll([stale, fresh]);
+      final notifier = container.read(socialProvider.notifier);
+
+      final staleLoad = notifier.loadFriends();
+      final freshLoad = notifier.loadFriends();
+      fresh.complete({
+        'friends': [
+          {'id': 11, 'username': 'fresh_friend'},
+        ],
+        'pending_received': [],
+        'pending_sent': [],
+      });
+      await freshLoad;
+      stale.complete({
+        'friends': [
+          {'id': 10, 'username': 'stale_friend'},
+        ],
+        'pending_received': [],
+        'pending_sent': [],
+      });
+      await staleLoad;
+
+      expect(container.read(socialProvider).friends.single.id, 11);
+      expect(container.read(socialProvider).loading, isFalse);
+    });
+
+    test('loadFriends exits safely after provider disposal', () async {
+      final pending = Completer<Map<String, dynamic>>();
+      mockApi.friendsRequests.add(pending);
+      final notifier = container.read(socialProvider.notifier);
+      final load = notifier.loadFriends();
+
+      container.dispose();
+      pending.complete({
+        'friends': [],
+        'pending_received': [],
+        'pending_sent': [],
+      });
+
+      await expectLater(load, completes);
+      container = ProviderContainer();
     });
 
     test('loadActivityFeed should update activityFeed state', () async {
@@ -460,6 +519,50 @@ void main() {
       expect(state.sentRecommendations[0].title, 'Fight Club');
       expect(state.sentRecommendations[0].toUsername, 'testfriend');
     });
+
+    test(
+      'older sent recommendations cannot overwrite a newer refresh',
+      () async {
+        final stale = Completer<Map<String, dynamic>>();
+        final fresh = Completer<Map<String, dynamic>>();
+        mockApi.sentRecommendationRequests.addAll([stale, fresh]);
+        final notifier = container.read(socialProvider.notifier);
+
+        final staleLoad = notifier.loadSentRecommendations();
+        final freshLoad = notifier.loadSentRecommendations();
+        fresh.complete({
+          'sent': [
+            {
+              'id': 20,
+              'movie_id': 20,
+              'is_tv': 0,
+              'title': 'Fresh',
+              'created_at': 20,
+              'to_id': 10,
+            },
+          ],
+        });
+        await freshLoad;
+        stale.complete({
+          'sent': [
+            {
+              'id': 10,
+              'movie_id': 10,
+              'is_tv': 0,
+              'title': 'Stale',
+              'created_at': 10,
+              'to_id': 10,
+            },
+          ],
+        });
+        await staleLoad;
+
+        expect(
+          container.read(socialProvider).sentRecommendations.single.id,
+          20,
+        );
+      },
+    );
 
     test('loadReceivedRecommendations should map received items', () async {
       final notifier = container.read(socialProvider.notifier);

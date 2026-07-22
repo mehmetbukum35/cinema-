@@ -139,6 +139,7 @@ trait SocialFriendsTrait
         // İki yöndeki ilişkileri de sil
         $del = $this->db->prepare('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)');
         $del->execute([$uid, $friendId, $friendId, $uid]);
+        $this->cancelCouchSessionsBetween($uid, $friendId);
 
         json_out(200, ['ok' => true]);
     }

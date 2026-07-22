@@ -1386,6 +1386,36 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('cancelled', $st->fetchColumn());
     }
 
+    public function testBlockingFriendCancelsAndRevokesCouchSession(): void
+    {
+        $id = $this->createCouch();
+
+        $this->social->blockUser(1, ['user_id' => 2]);
+
+        $st = $this->db->prepare('SELECT status FROM couch_sessions WHERE id = ?');
+        $st->execute([$id]);
+        $this->assertSame('cancelled', $st->fetchColumn());
+
+        TestHelperRegistry::reset();
+        try {
+            $this->social->getCouchSession(2, $id);
+            $this->fail('Engellenen kullanıcı eski couch oturumunu okuyabildi.');
+        } catch (TestExitException $e) {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testRemovingFriendCancelsCouchSession(): void
+    {
+        $id = $this->createCouch();
+
+        $this->social->rejectFriendRequest(1, ['friend_id' => 2]);
+
+        $st = $this->db->prepare('SELECT status FROM couch_sessions WHERE id = ?');
+        $st->execute([$id]);
+        $this->assertSame('cancelled', $st->fetchColumn());
+    }
+
     public function testUsedCouchMoviesExcludesPreviouslyPlayedDecks(): void
     {
         $id = $this->createCouch();

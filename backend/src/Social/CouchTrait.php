@@ -114,6 +114,7 @@ trait SocialCouchTrait
         if (!$row) {
             json_out(200, ['session' => null]);
         }
+        $this->assertCouchFriendshipForRow($row, $uid);
         json_out(200, ['session' => $this->couchPayload($row, $uid)]);
     }
 
@@ -147,6 +148,7 @@ trait SocialCouchTrait
             if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
                 fail(403, 'Bu oturuma erişim yetkin yok.');
             }
+            $this->assertCouchFriendshipForRow($row, $uid);
             if ($row['status'] === 'cancelled' || $row['status'] === 'ended') {
                 fail(409, 'Oturum sona erdi.');
             }
@@ -217,7 +219,30 @@ trait SocialCouchTrait
         if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
             fail(403, 'Bu oturuma erişim yetkin yok.');
         }
+        $this->assertCouchFriendshipForRow($row, $uid);
         return $row;
+    }
+
+    private function assertCouchFriendshipForRow(array $row, int $uid): void
+    {
+        $friendId = (int) $row['host_id'] === $uid
+            ? (int) $row['guest_id']
+            : (int) $row['host_id'];
+        $this->assertFriendship(
+            $uid,
+            $friendId,
+            'Bu Birlikte Seç oturumuna erişim yetkiniz yok.'
+        );
+    }
+
+    private function cancelCouchSessionsBetween(int $uid, int $friendId): void
+    {
+        $cancel = $this->db->prepare(
+            "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+              WHERE ((host_id = ? AND guest_id = ?) OR (host_id = ? AND guest_id = ?))
+                AND status IN ('pending', 'active', 'matched')"
+        );
+        $cancel->execute([now_ms(), $uid, $friendId, $friendId, $uid]);
     }
 
     /** Misafirin ilk teması oturumu pending → active taşır. */
