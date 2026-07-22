@@ -744,6 +744,58 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('alice', $profiles[0]['username']);
     }
 
+    public function testProfilePrivacyChangeInvalidatesTopProfilesCache(): void
+    {
+        $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_top_profiles_tr.json';
+        file_put_contents($cacheFile, '[{"id":1,"username":"alice"}]');
+
+        $this->social->setupProfile(1, ['username' => 'alice', 'is_public' => 0]);
+
+        $this->assertFileDoesNotExist($cacheFile);
+        $isPublic = $this->db->query('SELECT is_public FROM users WHERE id = 1')->fetchColumn();
+        $this->assertSame(0, (int) $isPublic);
+    }
+
+    public function testTopProfilesHidesBlockedUsersInBothDirections(): void
+    {
+        $this->social->blockUser(1, ['user_id' => 2]);
+
+        TestHelperRegistry::reset();
+        $this->social->getTopProfiles(1);
+        $aliceProfiles = TestHelperRegistry::$lastBody['profiles'];
+        $this->assertNotContains('bob', array_column($aliceProfiles, 'username'));
+
+        TestHelperRegistry::reset();
+        $this->social->getTopProfiles(2);
+        $bobProfiles = TestHelperRegistry::$lastBody['profiles'];
+        $this->assertNotContains('alice', array_column($bobProfiles, 'username'));
+
+        TestHelperRegistry::reset();
+        $this->social->getTopProfiles(3);
+        $carolProfiles = TestHelperRegistry::$lastBody['profiles'];
+        $this->assertContains('alice', array_column($carolProfiles, 'username'));
+        $this->assertContains('bob', array_column($carolProfiles, 'username'));
+    }
+
+    public function testBlockedUsersCannotLikeProfilesAndOldLikesAreRemoved(): void
+    {
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        $this->social->blockUser(1, ['user_id' => 2]);
+
+        $count = $this->db->query(
+            'SELECT COUNT(*) FROM profile_likes WHERE voter_id = 1 AND owner_id = 2'
+        )->fetchColumn();
+        $this->assertSame(0, (int) $count);
+
+        TestHelperRegistry::reset();
+        try {
+            $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+            $this->fail('Engellenen kullanıcıların profil beğenisi reddedilmeliydi.');
+        } catch (TestExitException $e) {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+        }
+    }
+
     public function testReportReviewAutoHidesAfterThreshold(): void
     {
         // Bob (2) yorum yazar; 3 farklı kullanıcı şikayet edince otomatik gizlenir.

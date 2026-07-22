@@ -4,6 +4,7 @@ import '../../models/movie.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/blocking_loading_dialog.dart';
 import '../movie_detail_sheet.dart';
 
 /// Akış/öneri kartından yapım detayına geçiş: TMDB'den detayları çekip
@@ -17,18 +18,12 @@ Future<void> openMovieDetailById(
   final service = ref.read(tmdbServiceProvider);
   final c = context.c;
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogCtx) =>
-        Center(child: CircularProgressIndicator(color: c.gold)),
-  );
-
   try {
-    final details = await service.getFullDetails(movieId, isTV: isTv);
-    if (context.mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
-    }
+    final details = await runWithBlockingLoadingDialog(
+      context: context,
+      color: c.gold,
+      task: () => service.getFullDetails(movieId, isTV: isTv),
+    );
 
     if (details == null) {
       if (context.mounted) {
@@ -48,7 +43,6 @@ Future<void> openMovieDetailById(
     }
   } catch (e) {
     if (context.mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
       showAppToast(context, 'Hata: $e', success: false);
     }
   }

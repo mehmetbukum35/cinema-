@@ -28,6 +28,7 @@ trait SocialProfilesTrait
         // Güncelle
         $up = $this->db->prepare('UPDATE users SET username = ?, is_public = ?, updated_at = ? WHERE id = ?');
         $up->execute([$username, $isPublic, now_ms(), $uid]);
+        $this->invalidateTopProfilesCache();
 
         json_out(200, ['ok' => true, 'username' => $username, 'is_public' => $isPublic]);
     }

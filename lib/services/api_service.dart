@@ -49,6 +49,12 @@ class ApiClient {
     this.transientRetryDelay = const Duration(milliseconds: 250),
   }) : _client = client ?? http.Client();
 
+  void _invalidateInFlightGets(String pathPrefix) {
+    _inFlightGets.removeWhere(
+      (key, _) => key.$3 == pathPrefix || key.$3.startsWith('$pathPrefix?'),
+    );
+  }
+
   Future<Map<String, String>> _getHeaders({
     bool requireAuth = true,
     String? requestId,

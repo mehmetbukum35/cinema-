@@ -161,6 +161,16 @@ trait SocialReviewsTrait
         );
         $purge->execute([$uid, $blockedId, $blockedId, $uid]);
 
+        // Engellenen hesaplar birbirlerinin profil beğenilerine de katkıda
+        // bulunmamalı; iki yöndeki eski oyları temizle.
+        $purgeLikes = $this->db->prepare(
+            'DELETE FROM profile_likes
+              WHERE (voter_id = ? AND owner_id = ?)
+                 OR (voter_id = ? AND owner_id = ?)'
+        );
+        $purgeLikes->execute([$uid, $blockedId, $blockedId, $uid]);
+        $this->invalidateTopProfilesCache();
+
         json_out(200, ['ok' => true]);
     }
 

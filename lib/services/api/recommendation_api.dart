@@ -83,6 +83,7 @@ mixin RecommendationApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/recommendations/sent');
   }
 
   Future<Map<String, dynamic>> getRecommendations() async {
@@ -187,6 +188,8 @@ mixin RecommendationApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/recommendations');
+    _invalidateInFlightGets('/social/recommendations/sent');
   }
 
   /// Topluluk "Popüler Top 20" (film ya da dizi). Kimlik doğrulaması gerekmez —

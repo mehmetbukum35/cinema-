@@ -14,6 +14,7 @@ mixin SocialApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
+      _invalidateInFlightGets('/social/profiles/top');
       return data;
     } else {
       throw ApiException(
@@ -85,6 +86,7 @@ mixin SocialApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
+      _invalidateInFlightGets('/social/friends');
       return data;
     } else {
       throw ApiException(
@@ -110,6 +112,7 @@ mixin SocialApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/friends');
   }
 
   Future<void> rejectFriendRequest(int friendId) async {
@@ -127,6 +130,7 @@ mixin SocialApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/friends');
   }
 
   Future<List<dynamic>> getActivityFeed({int? friendId}) async {
@@ -230,6 +234,7 @@ mixin SocialApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
+      _invalidateInFlightGets('/social/profiles/top');
       return int.tryParse(data['like_count']?.toString() ?? '') ?? 0;
     }
     throw ApiException(
@@ -299,6 +304,9 @@ mixin SocialApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/friends');
+    _invalidateInFlightGets('/social/profiles/top');
+    _invalidateInFlightGets('/social/users/blocked');
   }
 
   Future<void> unblockUser(int userId) async {
@@ -316,6 +324,8 @@ mixin SocialApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+    _invalidateInFlightGets('/social/profiles/top');
+    _invalidateInFlightGets('/social/users/blocked');
   }
 
   Future<List<dynamic>> getBlockedUsers() async {

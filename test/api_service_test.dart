@@ -569,6 +569,51 @@ void main() {
     });
 
     test(
+      'friend mutation does not reuse a stale in-flight friends GET',
+      () async {
+        final staleResponse = Completer<http.Response>();
+        var friendsGetCount = 0;
+        final client = MockClient((request) async {
+          if (request.method == 'GET' &&
+              request.url.path == '/api/social/friends') {
+            friendsGetCount++;
+            if (friendsGetCount == 1) return staleResponse.future;
+            return http.Response(
+              jsonEncode({
+                'friends': ['fresh'],
+              }),
+              200,
+            );
+          }
+          if (request.method == 'POST' &&
+              request.url.path == '/api/social/friends/accept') {
+            return http.Response(jsonEncode({'ok': true}), 200);
+          }
+          fail('Unexpected request: ${request.method} ${request.url.path}');
+        });
+        final apiService = ApiService(client: client);
+
+        final stale = apiService.getFriends();
+        await Future<void>.delayed(Duration.zero);
+        await apiService.acceptFriendRequest(2);
+        final fresh = await apiService.getFriends();
+
+        expect(friendsGetCount, 2);
+        expect(fresh['friends'], ['fresh']);
+
+        staleResponse.complete(
+          http.Response(
+            jsonEncode({
+              'friends': ['stale'],
+            }),
+            200,
+          ),
+        );
+        expect((await stale)['friends'], ['stale']);
+      },
+    );
+
+    test(
       'getTitleScore should call score endpoint and parse payload',
       () async {
         final mockClient = MockClient((request) async {

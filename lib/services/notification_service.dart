@@ -16,6 +16,7 @@ import '../screens/couch_screen.dart';
 import '../models/movie.dart';
 import '../screens/movie_detail_sheet.dart';
 import 'tmdb_service.dart';
+import '../widgets/blocking_loading_dialog.dart';
 
 /// Arka planda (uygulama kapalı veya arka planda) gelen FCM mesajları için
 /// top-level handler. Sistem bildirimi otomatik gösterilir; burada ağır iş yapma.
@@ -522,16 +523,12 @@ class NotificationService {
       region: locale.region,
     );
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: Colors.red)),
-    );
-
     try {
-      final details = await service.getFullDetails(movieId, isTV: isTV);
-      nav.pop(); // Dismiss loading dialog
+      final details = await runWithBlockingLoadingDialog(
+        context: context,
+        color: Colors.red,
+        task: () => service.getFullDetails(movieId, isTV: isTV),
+      );
       if (details == null) return;
 
       if (!context.mounted) return;
@@ -543,7 +540,6 @@ class NotificationService {
         builder: (_) => MovieDetailSheet(movie: movie, service: service),
       );
     } catch (e) {
-      nav.pop(); // Dismiss loading dialog
       debugPrint('Error opening movie from notification: $e');
     }
   }

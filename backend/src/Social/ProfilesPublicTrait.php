@@ -20,6 +20,14 @@ trait SocialProfilesPublicTrait
         if (!$row) fail(404, 'Kullanıcı bulunamadı.');
         if ((int) $row['is_public'] !== 1) fail(403, 'Bu profil herkese açık değil.');
 
+        $blocked = $this->db->prepare(
+            'SELECT 1 FROM user_blocks
+              WHERE (user_id = ? AND blocked_user_id = ?)
+                 OR (user_id = ? AND blocked_user_id = ?)'
+        );
+        $blocked->execute([$uid, $ownerId, $ownerId, $uid]);
+        if ($blocked->fetch()) fail(404, 'Kullanıcı bulunamadı.');
+
         if ($liked) {
             $check = $this->db->prepare(
                 'SELECT 1 FROM profile_likes WHERE voter_id = ? AND owner_id = ?'
@@ -46,9 +54,7 @@ trait SocialProfilesPublicTrait
 
         $cnt = $this->db->prepare('SELECT COUNT(*) FROM profile_likes WHERE owner_id = ?');
         $cnt->execute([$ownerId]);
-        foreach (['tr', 'en', 'und'] as $cacheLocale) {
-            @unlink($this->topProfilesCacheFile($cacheLocale));
-        }
+        $this->invalidateTopProfilesCache();
         json_out(200, ['ok' => true, 'liked' => $liked, 'like_count' => (int) $cnt->fetchColumn()]);
     }
 
@@ -112,6 +118,23 @@ trait SocialProfilesPublicTrait
             $this->writeTopProfilesCache($locale, $profiles);
         }
 
+        $blockedUsers = $this->db->prepare(
+            'SELECT blocked_user_id AS id FROM user_blocks WHERE user_id = ?
+             UNION
+             SELECT user_id AS id FROM user_blocks WHERE blocked_user_id = ?'
+        );
+        $blockedUsers->execute([$uid, $uid]);
+        $blockedIds = array_fill_keys(
+            array_map('intval', $blockedUsers->fetchAll(PDO::FETCH_COLUMN)),
+            true
+        );
+        if ($blockedIds !== []) {
+            $profiles = array_values(array_filter(
+                $profiles,
+                static fn(array $profile): bool => !isset($blockedIds[(int) $profile['id']])
+            ));
+        }
+
         $likedOwnerIds = [];
         if ($profiles !== []) {
             $ids = array_column($profiles, 'id');
@@ -133,6 +156,13 @@ trait SocialProfilesPublicTrait
     private function topProfilesCacheFile(string $locale): string
     {
         return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_top_profiles_' . $locale . '.json';
+    }
+
+    private function invalidateTopProfilesCache(): void
+    {
+        foreach (['tr', 'en', 'und'] as $cacheLocale) {
+            @unlink($this->topProfilesCacheFile($cacheLocale));
+        }
     }
 
     private function readTopProfilesCache(string $locale): ?array
