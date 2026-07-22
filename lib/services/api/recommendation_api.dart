@@ -103,6 +103,24 @@ mixin RecommendationApi on ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getRecommendationsPage({
+    required String cursor,
+    int limit = 30,
+  }) async {
+    final response = await _request(
+      'GET',
+      '/social/recommendations?cursor=${Uri.encodeQueryComponent(cursor)}&limit=$limit',
+      requireAuth: true,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) return data;
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Öneriler alınamadı.',
+      code: data['code'] as String?,
+    );
+  }
+
   Future<void> markRecommendationsSeen() async {
     final response = await _request(
       'POST',
@@ -135,6 +153,24 @@ mixin RecommendationApi on ApiClient {
         code: data['code'] as String?,
       );
     }
+  }
+
+  Future<Map<String, dynamic>> getSentRecommendationsPage({
+    required String cursor,
+    int limit = 30,
+  }) async {
+    final response = await _request(
+      'GET',
+      '/social/recommendations/sent?cursor=${Uri.encodeQueryComponent(cursor)}&limit=$limit',
+      requireAuth: true,
+    );
+    final data = _decodeJsonMap(response.body);
+    if (response.statusCode == 200) return data;
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: data['error'] as String? ?? 'Gönderilen öneriler alınamadı.',
+      code: data['code'] as String?,
+    );
   }
 
   Future<void> deleteRecommendation(int recommendationId) async {

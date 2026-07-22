@@ -703,7 +703,6 @@ const Map<String, String> kEnStrings = {
   'all': '🎬 All',
   'no_more_content': 'No More Content',
   'loading_more': 'Loading more...',
-  'load_more': 'Load more',
   'no_more_content_matches_your_f':
       'No more content matches your filters.\nYou can clear the filters to continue.',
   'discovery_gestures': 'Discovery Gestures',
@@ -807,6 +806,7 @@ const Map<String, String> kEnStrings = {
   'recommendation_deleted': 'Recommendation deleted.',
   'recommendation_delete_failed':
       'Recommendation could not be deleted. Please try again.',
+  'load_more': 'Load more',
   'username_prompt_title': 'Choose a Username',
   'username_prompt_desc':
       'Pick a unique username for your web profile and social features.',

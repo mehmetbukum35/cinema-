@@ -241,6 +241,7 @@ class ReceivedRecommendationItem {
   final int fromId;
   final String? fromName;
   final String fromUsername;
+  final bool seen;
 
   ReceivedRecommendationItem({
     required this.id,
@@ -253,6 +254,7 @@ class ReceivedRecommendationItem {
     required this.fromId,
     this.fromName,
     required this.fromUsername,
+    this.seen = false,
   });
 
   String get friendLabel => (fromName != null && fromName!.trim().isNotEmpty)
@@ -274,6 +276,10 @@ class ReceivedRecommendationItem {
       fromId: int.tryParse(json['from_id']?.toString() ?? '') ?? 0,
       fromName: json['from_name'] as String?,
       fromUsername: json['from_username'] as String? ?? '',
+      seen:
+          json['seen'] == true ||
+          json['seen'] == 1 ||
+          json['seen']?.toString() == '1',
     );
   }
 
@@ -288,6 +294,7 @@ class ReceivedRecommendationItem {
     'from_id': fromId,
     'from_name': fromName,
     'from_username': fromUsername,
+    'seen': seen ? 1 : 0,
   };
 }
 

@@ -458,6 +458,35 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM recommendations')->fetchColumn());
     }
 
+    public function testRecommendationsUseCursorPaginationAndCountAllUnseen(): void
+    {
+        $this->acceptFriendship(1, 2);
+        for ($i = 1; $i <= 35; $i++) {
+            $this->social->recommend(1, [
+                'friend_id' => 2,
+                'movie_id' => 7000 + $i,
+                'is_tv' => 0,
+                'title' => 'Movie ' . $i,
+            ]);
+        }
+
+        TestHelperRegistry::reset();
+        $this->social->getRecommendations(2, null, 10);
+        $first = TestHelperRegistry::$lastBody;
+        $this->assertCount(10, $first['recommendations']);
+        $this->assertTrue($first['has_more']);
+        $this->assertNotNull($first['next_cursor']);
+        $this->assertSame(35, $first['unseen']);
+
+        TestHelperRegistry::reset();
+        $this->social->getRecommendations(2, $first['next_cursor'], 10);
+        $second = TestHelperRegistry::$lastBody;
+        $this->assertCount(10, $second['recommendations']);
+        $firstIds = array_column($first['recommendations'], 'id');
+        $secondIds = array_column($second['recommendations'], 'id');
+        $this->assertSame([], array_values(array_intersect($firstIds, $secondIds)));
+    }
+
     public function testTitleReviewsAndActivityFeedWithNegativeComments(): void
     {
         // 1. Setup friendship between 1 and 2

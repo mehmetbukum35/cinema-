@@ -697,7 +697,6 @@ const Map<String, String> kTrStrings = {
   'all': '🎬 Tümü',
   'no_more_content': 'İçerik Kalmadı',
   'loading_more': 'Daha fazla yükleniyor...',
-  'load_more': 'Daha fazla yükle',
   'no_more_content_matches_your_f':
       'Filtrenize uygun başka içerik kalmadı.\nFiltreleri temizleyerek devam edebilirsiniz.',
   'discovery_gestures': 'Keşfetme Hareketleri',
@@ -799,6 +798,7 @@ const Map<String, String> kTrStrings = {
       '“{}” bu listeden kaldırılsın mı? Bu işlem diğer kişinin listesini etkilemez.',
   'recommendation_deleted': 'Öneri silindi.',
   'recommendation_delete_failed': 'Öneri silinemedi. Lütfen tekrar deneyin.',
+  'load_more': 'Daha fazla yükle',
   'username_prompt_title': 'Kullanıcı Adı Belirle',
   'username_prompt_desc':
       'Web profilin ve sosyal özellikler için benzersiz bir kullanıcı adı seç.',

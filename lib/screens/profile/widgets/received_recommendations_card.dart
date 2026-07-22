@@ -37,7 +37,10 @@ class _ReceivedRecommendationsCardState
     final auth = ref.watch(authProvider);
     if (!auth.isAuthenticated) return const SizedBox.shrink();
 
-    final count = ref.watch(socialProvider).receivedRecommendations.length;
+    final social = ref.watch(socialProvider);
+    final count = social.receivedRecommendations.length;
+    final countLabel =
+        '$count${social.receivedRecommendationsHasMore ? '+' : ''}';
 
     return SpringButton(
       onTap: () {
@@ -100,7 +103,7 @@ class _ReceivedRecommendationsCardState
                   border: Border.all(color: c.gold.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  '$count',
+                  countLabel,
                   style: TextStyle(
                     color: c.gold,
                     fontSize: 12,

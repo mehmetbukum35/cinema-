@@ -76,8 +76,19 @@ void main() {
         final requests = <Uri>[];
         final client = MockClient((request) async {
           requests.add(request.url);
+          final results = request.url.path.endsWith('/3/search/movie')
+              ? [
+                  {
+                    'id': 11,
+                    'title': 'Dune',
+                    'release_date': '1984-12-14',
+                    'vote_count': 100,
+                    'poster_path': '/dune.jpg',
+                  },
+                ]
+              : <dynamic>[];
           return http.Response(
-            jsonEncode({'results': <dynamic>[]}),
+            jsonEncode({'results': results}),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
@@ -97,6 +108,37 @@ void main() {
         expect(movieRequest.queryParameters['primary_release_year'], '1984');
         expect(tvRequest.queryParameters['query'], 'Dune');
         expect(tvRequest.queryParameters['first_air_date_year'], '1984');
+      },
+    );
+
+    test('searchMulti should preserve a year inside a title', () async {
+      final requests = <Uri>[];
+      final client = MockClient((request) async {
+        requests.add(request.url);
+        return http.Response(jsonEncode({'results': <dynamic>[]}), 200);
+      });
+
+      await TmdbService(client: client).searchMulti('2001: A Space Odyssey');
+
+      expect(requests, hasLength(1));
+      expect(requests.single.path, endsWith('/3/search/multi'));
+      expect(requests.single.queryParameters['query'], '2001: A Space Odyssey');
+    });
+
+    test(
+      'searchMulti falls back when a trailing number belongs to the title',
+      () async {
+        final requests = <Uri>[];
+        final client = MockClient((request) async {
+          requests.add(request.url);
+          return http.Response(jsonEncode({'results': <dynamic>[]}), 200);
+        });
+
+        await TmdbService(client: client).searchMulti('Blade Runner 2049');
+
+        expect(requests, hasLength(3));
+        expect(requests.last.path, endsWith('/3/search/multi'));
+        expect(requests.last.queryParameters['query'], 'Blade Runner 2049');
       },
     );
 

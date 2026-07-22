@@ -486,6 +486,23 @@ void main() {
       expect(res['sent'][0]['to_username'], 'bob');
     });
 
+    test('getRecommendationsPage should encode its cursor', () async {
+      final client = MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/social/recommendations');
+        expect(request.url.queryParameters['cursor'], 'page/2+next');
+        expect(request.url.queryParameters['limit'], '30');
+        return http.Response(
+          jsonEncode({'recommendations': [], 'has_more': false}),
+          200,
+        );
+      });
+
+      await ApiService(
+        client: client,
+      ).getRecommendationsPage(cursor: 'page/2+next');
+    });
+
     test('deleteRecommendation should DELETE the selected item', () async {
       final client = MockClient((request) async {
         expect(request.method, 'DELETE');

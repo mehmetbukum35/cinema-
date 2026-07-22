@@ -36,9 +36,11 @@ class _ReceivedRecommendationsScreenState
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
       if (ref.read(authProvider).isAuthenticated) {
-        ref.read(socialProvider.notifier).loadReceivedRecommendations();
+        final notifier = ref.read(socialProvider.notifier);
+        await notifier.loadReceivedRecommendations();
+        await notifier.markRecommendationsSeen();
       }
     });
   }
@@ -97,7 +99,8 @@ class _ReceivedRecommendationsScreenState
   Widget build(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    final received = ref.watch(socialProvider).receivedRecommendations;
+    final social = ref.watch(socialProvider);
+    final received = social.receivedRecommendations;
 
     return CinematicBackground(
       child: Scaffold(
@@ -142,9 +145,50 @@ class _ReceivedRecommendationsScreenState
             : ListView.builder(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: received.length,
-                itemBuilder: (_, i) => _recommendationCard(received[i], c, tr),
+                itemCount:
+                    received.length +
+                    (social.receivedRecommendationsHasMore ? 1 : 0),
+                itemBuilder: (_, i) {
+                  if (i < received.length) {
+                    return _recommendationCard(received[i], c, tr);
+                  }
+                  return _loadMoreButton(
+                    c,
+                    tr,
+                    loading: social.receivedRecommendationsLoadingMore,
+                    onPressed: () => ref
+                        .read(socialProvider.notifier)
+                        .loadMoreReceivedRecommendations(),
+                  );
+                },
               ),
+      ),
+    );
+  }
+
+  Widget _loadMoreButton(
+    ThemePalette c,
+    AppLocalizations? tr, {
+    required bool loading,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: SizedBox(
+        height: 48,
+        child: OutlinedButton(
+          onPressed: loading ? null : onPressed,
+          child: loading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.dim,
+                  ),
+                )
+              : Text(tr?.get('load_more') ?? 'Daha fazla yükle'),
+        ),
       ),
     );
   }

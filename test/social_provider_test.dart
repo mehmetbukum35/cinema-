@@ -191,6 +191,45 @@ class MockApiService implements ApiService {
       sentRecommendationsResponse;
 
   @override
+  Future<Map<String, dynamic>> getRecommendationsPage({
+    required String cursor,
+    int limit = 30,
+  }) async => {
+    'recommendations': [
+      {
+        'id': 3,
+        'movie_id': 777,
+        'is_tv': 1,
+        'title': 'Page Two',
+        'seen': true,
+        'created_at': 500,
+        'from_id': 10,
+        'from_username': 'testfriend',
+      },
+    ],
+    'has_more': false,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getSentRecommendationsPage({
+    required String cursor,
+    int limit = 30,
+  }) async => {
+    'sent': [
+      {
+        'id': 4,
+        'movie_id': 778,
+        'is_tv': 0,
+        'title': 'Sent Page Two',
+        'created_at': 400,
+        'to_id': 10,
+        'to_username': 'testfriend',
+      },
+    ],
+    'has_more': false,
+  };
+
+  @override
   Future<void> markRecommendationsSeen() async {
     markSeenCalled = true;
   }
@@ -447,6 +486,29 @@ void main() {
         container.read(socialProvider).receivedRecommendations,
         hasLength(1),
       );
+    });
+
+    test('deleteRecommendation decrements unseen inbox count', () async {
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadRecommendations();
+
+      await notifier.deleteRecommendation(1);
+
+      expect(container.read(socialProvider).unseenRecommendations, 0);
+    });
+
+    test('loadMoreReceivedRecommendations appends the next page', () async {
+      mockApi.recommendationsResponse['next_cursor'] = 'page-2';
+      mockApi.recommendationsResponse['has_more'] = true;
+      final notifier = container.read(socialProvider.notifier);
+      await notifier.loadReceivedRecommendations();
+
+      await notifier.loadMoreReceivedRecommendations();
+
+      final state = container.read(socialProvider);
+      expect(state.receivedRecommendations, hasLength(2));
+      expect(state.receivedRecommendations.last.title, 'Page Two');
+      expect(state.receivedRecommendationsHasMore, isFalse);
     });
 
     test(

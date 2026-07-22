@@ -33,6 +33,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _searching = false;
   String _lastQuery = '';
   bool _hasError = false;
+  int _searchRequestId = 0;
 
   String? _selectedLanguage;
   int? _selectedProvider;
@@ -55,6 +56,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _search(String q) {
     _debounce?.cancel();
+    final requestId = ++_searchRequestId;
     setState(() {});
     if (q.trim().length < 2) {
       setState(() {
@@ -74,17 +76,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       });
       try {
         final results = await _service.searchMulti(q);
-        if (!mounted || q != _lastQuery) return;
+        if (!mounted || requestId != _searchRequestId) return;
         await PrefsService.addSearchHistory(q.trim());
         final history = await PrefsService.getSearchHistory();
-        if (!mounted) return;
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _results = results;
           _searching = false;
           _history = history;
         });
       } catch (e) {
-        if (!mounted || q != _lastQuery) return;
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _results = [];
           _searching = false;

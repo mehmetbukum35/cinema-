@@ -199,12 +199,13 @@ class TmdbService {
   Future<List<Movie>> searchMulti(String query) async {
     if (query.trim().isEmpty) return [];
 
-    // Detect 4-digit year (e.g. 1800 - 2099) in query
-    final yearRegex = RegExp(r'\b(1[89]\d{2}|20\d{2})\b');
+    // Yalnızca sorgunun sonundaki bağımsız yılı filtre kabul et. Böylece
+    // "2001: A Space Odyssey" gibi adların içindeki sayılar bozulmaz.
+    final yearRegex = RegExp(r'(?:^|\s|[\(\[])(1[89]\d{2}|20\d{2})[\)\]]?\s*$');
     final match = yearRegex.firstMatch(query);
 
     if (match != null) {
-      final yearStr = match.group(0)!;
+      final yearStr = match.group(1)!;
       final year = int.tryParse(yearStr);
       if (year != null) {
         // Strip the year and any surrounding parentheses/brackets
@@ -223,8 +224,10 @@ class TmdbService {
               _searchTvWithYear(cleanQuery, year),
             ]);
             final combined = [...results[0], ...results[1]];
-            combined.sort((a, b) => b.popularity.compareTo(a.popularity));
-            return _sanitizeList(combined, isSearch: true);
+            if (combined.isNotEmpty) {
+              combined.sort((a, b) => b.popularity.compareTo(a.popularity));
+              return _sanitizeList(combined, isSearch: true);
+            }
           } catch (e) {
             debugPrint("Parallel year-based search failed, falling back: $e");
           }

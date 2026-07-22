@@ -59,8 +59,16 @@ trait SocialRecommendationsTrait
 
     // ─── GET /social/recommendations ────────────────────────────────────────
     // Kullanıcıya gelen önerileri (gönderen bilgisiyle) döner.
-    public function getRecommendations(int $uid): void
+    public function getRecommendations(int $uid, ?string $cursor = null, int $limit = 30): void
     {
+        $limit = max(1, min($limit, 50));
+        $cursorData = $this->decodeRecommendationCursor($cursor);
+        $cursorSql = '';
+        $params = [$uid, $uid, $uid];
+        if ($cursorData !== null) {
+            $cursorSql = ' AND (r.created_at < ? OR (r.created_at = ? AND r.id < ?))';
+            array_push($params, $cursorData['created_at'], $cursorData['created_at'], $cursorData['id']);
+        }
         $st = $this->db->prepare(
             'SELECT r.id, r.movie_id, r.is_tv, r.title, r.poster_path, r.note, r.seen, r.created_at,
                     u.id as from_id, u.display_name as from_name, u.username as from_username
@@ -70,19 +78,37 @@ trait SocialRecommendationsTrait
                AND r.recipient_deleted = 0
                AND r.from_user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
                AND r.from_user_id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)
-             ORDER BY r.created_at DESC
-             LIMIT 50'
+             ' . $cursorSql . '
+             ORDER BY r.created_at DESC, r.id DESC
+             LIMIT ' . ($limit + 1)
         );
-        $st->execute([$uid, $uid, $uid]);
+        $st->execute($params);
         $items = $st->fetchAll();
-
-        $unseen = 0;
+        $hasMore = count($items) > $limit;
+        if ($hasMore) array_pop($items);
         foreach ($items as &$item) {
             $item['seen'] = (bool) $item['seen'];
-            if (!$item['seen']) $unseen++;
         }
+        unset($item);
 
-        json_out(200, ['recommendations' => $items, 'unseen' => $unseen]);
+        $count = $this->db->prepare(
+            'SELECT COUNT(*) FROM recommendations r
+             WHERE r.to_user_id = ? AND r.seen = 0 AND r.recipient_deleted = 0
+               AND r.from_user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
+               AND r.from_user_id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)'
+        );
+        $count->execute([$uid, $uid, $uid]);
+        $unseen = (int) $count->fetchColumn();
+        $nextCursor = $hasMore && $items !== []
+            ? $this->encodeRecommendationCursor($items[array_key_last($items)])
+            : null;
+
+        json_out(200, [
+            'recommendations' => $items,
+            'unseen' => $unseen,
+            'next_cursor' => $nextCursor,
+            'has_more' => $hasMore,
+        ]);
     }
 
     // ─── POST /social/recommendations/seen ──────────────────────────────────
@@ -99,8 +125,16 @@ trait SocialRecommendationsTrait
 
     // ─── GET /social/recommendations/sent ───────────────────────────────────
     // Kullanıcının arkadaşlarına gönderdiği önerileri (alıcı bilgisiyle) döner.
-    public function getSentRecommendations(int $uid): void
+    public function getSentRecommendations(int $uid, ?string $cursor = null, int $limit = 30): void
     {
+        $limit = max(1, min($limit, 50));
+        $cursorData = $this->decodeRecommendationCursor($cursor);
+        $cursorSql = '';
+        $params = [$uid];
+        if ($cursorData !== null) {
+            $cursorSql = ' AND (r.created_at < ? OR (r.created_at = ? AND r.id < ?))';
+            array_push($params, $cursorData['created_at'], $cursorData['created_at'], $cursorData['id']);
+        }
         $st = $this->db->prepare(
             'SELECT r.id, r.movie_id, r.is_tv, r.title, r.poster_path, r.note, r.created_at,
                     u.id as to_id, u.display_name as to_name, u.username as to_username
@@ -108,11 +142,40 @@ trait SocialRecommendationsTrait
              JOIN users u ON u.id = r.to_user_id
              WHERE r.from_user_id = ?
                AND r.sender_deleted = 0
-             ORDER BY r.created_at DESC
-             LIMIT 50'
+             ' . $cursorSql . '
+             ORDER BY r.created_at DESC, r.id DESC
+             LIMIT ' . ($limit + 1)
         );
-        $st->execute([$uid]);
-        json_out(200, ['sent' => $st->fetchAll()]);
+        $st->execute($params);
+        $items = $st->fetchAll();
+        $hasMore = count($items) > $limit;
+        if ($hasMore) array_pop($items);
+        $nextCursor = $hasMore && $items !== []
+            ? $this->encodeRecommendationCursor($items[array_key_last($items)])
+            : null;
+        json_out(200, ['sent' => $items, 'next_cursor' => $nextCursor, 'has_more' => $hasMore]);
+    }
+
+    private function encodeRecommendationCursor(array $item): string
+    {
+        return rtrim(strtr(base64_encode(json_encode([
+            'created_at' => (int) $item['created_at'],
+            'id' => (int) $item['id'],
+        ], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+    }
+
+    private function decodeRecommendationCursor(?string $cursor): ?array
+    {
+        if ($cursor === null || $cursor === '') return null;
+        $normalized = strtr($cursor, '-_', '+/');
+        $normalized .= str_repeat('=', (4 - strlen($normalized) % 4) % 4);
+        $raw = base64_decode($normalized, true);
+        if ($raw === false) fail(422, 'Geçersiz öneri cursor değeri.');
+        $data = json_decode($raw, true);
+        if (!is_array($data) || !isset($data['created_at'], $data['id'])) {
+            fail(422, 'Geçersiz öneri cursor değeri.');
+        }
+        return ['created_at' => (int) $data['created_at'], 'id' => (int) $data['id']];
     }
 
     // ─── DELETE /social/recommendations/{id} ───────────────────────────────

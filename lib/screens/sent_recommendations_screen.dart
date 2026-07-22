@@ -97,7 +97,8 @@ class _SentRecommendationsScreenState
   Widget build(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    final sent = ref.watch(socialProvider).sentRecommendations;
+    final social = ref.watch(socialProvider);
+    final sent = social.sentRecommendations;
 
     return CinematicBackground(
       child: Scaffold(
@@ -142,9 +143,49 @@ class _SentRecommendationsScreenState
             : ListView.builder(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: sent.length,
-                itemBuilder: (_, i) => _recommendationCard(sent[i], c, tr),
+                itemCount:
+                    sent.length + (social.sentRecommendationsHasMore ? 1 : 0),
+                itemBuilder: (_, i) {
+                  if (i < sent.length) {
+                    return _recommendationCard(sent[i], c, tr);
+                  }
+                  return _loadMoreButton(
+                    c,
+                    tr,
+                    loading: social.sentRecommendationsLoadingMore,
+                    onPressed: () => ref
+                        .read(socialProvider.notifier)
+                        .loadMoreSentRecommendations(),
+                  );
+                },
               ),
+      ),
+    );
+  }
+
+  Widget _loadMoreButton(
+    ThemePalette c,
+    AppLocalizations? tr, {
+    required bool loading,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: SizedBox(
+        height: 48,
+        child: OutlinedButton(
+          onPressed: loading ? null : onPressed,
+          child: loading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.dim,
+                  ),
+                )
+              : Text(tr?.get('load_more') ?? 'Daha fazla yükle'),
+        ),
       ),
     );
   }

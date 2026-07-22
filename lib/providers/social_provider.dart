@@ -28,6 +28,12 @@ class SocialState {
 
   /// Arkadaşlardan gelen öneriler (en yeni önce).
   final List<ReceivedRecommendationItem> receivedRecommendations;
+  final String? receivedRecommendationsCursor;
+  final bool receivedRecommendationsHasMore;
+  final bool receivedRecommendationsLoadingMore;
+  final String? sentRecommendationsCursor;
+  final bool sentRecommendationsHasMore;
+  final bool sentRecommendationsLoadingMore;
 
   /// Arkadaş id -> O arkadaşın aktivite akışı listesi.
   final Map<int, List<ActivityItem>> friendActivities;
@@ -60,6 +66,12 @@ class SocialState {
     this.unseenRecommendations = 0,
     this.sentRecommendations = const [],
     this.receivedRecommendations = const [],
+    this.receivedRecommendationsCursor,
+    this.receivedRecommendationsHasMore = false,
+    this.receivedRecommendationsLoadingMore = false,
+    this.sentRecommendationsCursor,
+    this.sentRecommendationsHasMore = false,
+    this.sentRecommendationsLoadingMore = false,
     this.friendActivities = const {},
     this.friendActivityCursor,
     this.friendActivityHasMore = false,
@@ -86,6 +98,12 @@ class SocialState {
     int? unseenRecommendations,
     List<SentRecommendationItem>? sentRecommendations,
     List<ReceivedRecommendationItem>? receivedRecommendations,
+    String? Function()? receivedRecommendationsCursor,
+    bool? receivedRecommendationsHasMore,
+    bool? receivedRecommendationsLoadingMore,
+    String? Function()? sentRecommendationsCursor,
+    bool? sentRecommendationsHasMore,
+    bool? sentRecommendationsLoadingMore,
     Map<int, List<ActivityItem>>? friendActivities,
     String? Function()? friendActivityCursor,
     bool? friendActivityHasMore,
@@ -113,6 +131,21 @@ class SocialState {
       sentRecommendations: sentRecommendations ?? this.sentRecommendations,
       receivedRecommendations:
           receivedRecommendations ?? this.receivedRecommendations,
+      receivedRecommendationsCursor: receivedRecommendationsCursor != null
+          ? receivedRecommendationsCursor()
+          : this.receivedRecommendationsCursor,
+      receivedRecommendationsHasMore:
+          receivedRecommendationsHasMore ?? this.receivedRecommendationsHasMore,
+      receivedRecommendationsLoadingMore:
+          receivedRecommendationsLoadingMore ??
+          this.receivedRecommendationsLoadingMore,
+      sentRecommendationsCursor: sentRecommendationsCursor != null
+          ? sentRecommendationsCursor()
+          : this.sentRecommendationsCursor,
+      sentRecommendationsHasMore:
+          sentRecommendationsHasMore ?? this.sentRecommendationsHasMore,
+      sentRecommendationsLoadingMore:
+          sentRecommendationsLoadingMore ?? this.sentRecommendationsLoadingMore,
       friendActivities: friendActivities ?? this.friendActivities,
       friendActivityCursor: friendActivityCursor != null
           ? friendActivityCursor()
@@ -494,7 +527,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
               )
               .toList() ??
           const [];
-      state = state.copyWith(receivedRecommendations: list);
+      state = state.copyWith(
+        receivedRecommendations: list,
+        receivedRecommendationsCursor: () => res['next_cursor'] as String?,
+        receivedRecommendationsHasMore: res['has_more'] == true,
+      );
     } catch (e, st) {
       debugPrint("Failed to load received recommendations: $e\n$st");
     }
@@ -512,15 +549,89 @@ class SocialNotifier extends StateNotifier<SocialState> {
               )
               .toList() ??
           const [];
-      state = state.copyWith(sentRecommendations: list);
+      state = state.copyWith(
+        sentRecommendations: list,
+        sentRecommendationsCursor: () => res['next_cursor'] as String?,
+        sentRecommendationsHasMore: res['has_more'] == true,
+      );
     } catch (e, st) {
       debugPrint("Failed to load sent recommendations: $e\n$st");
+    }
+  }
+
+  Future<void> loadMoreReceivedRecommendations() async {
+    if (state.receivedRecommendationsLoadingMore ||
+        !state.receivedRecommendationsHasMore) {
+      return;
+    }
+    final cursor = state.receivedRecommendationsCursor;
+    if (cursor == null) return;
+    state = state.copyWith(receivedRecommendationsLoadingMore: true);
+    try {
+      final res = await _apiService.getRecommendationsPage(cursor: cursor);
+      final page = (res['recommendations'] as List<dynamic>? ?? const [])
+          .map(
+            (x) =>
+                ReceivedRecommendationItem.fromJson(x as Map<String, dynamic>),
+          )
+          .toList();
+      final ids = state.receivedRecommendations.map((item) => item.id).toSet();
+      state = state.copyWith(
+        receivedRecommendations: [
+          ...state.receivedRecommendations,
+          ...page.where((item) => ids.add(item.id)),
+        ],
+        receivedRecommendationsCursor: () => res['next_cursor'] as String?,
+        receivedRecommendationsHasMore: res['has_more'] == true,
+        receivedRecommendationsLoadingMore: false,
+      );
+    } catch (e, st) {
+      debugPrint('Failed to load more received recommendations: $e\n$st');
+      state = state.copyWith(receivedRecommendationsLoadingMore: false);
+    }
+  }
+
+  Future<void> loadMoreSentRecommendations() async {
+    if (state.sentRecommendationsLoadingMore ||
+        !state.sentRecommendationsHasMore) {
+      return;
+    }
+    final cursor = state.sentRecommendationsCursor;
+    if (cursor == null) return;
+    state = state.copyWith(sentRecommendationsLoadingMore: true);
+    try {
+      final res = await _apiService.getSentRecommendationsPage(cursor: cursor);
+      final page = (res['sent'] as List<dynamic>? ?? const [])
+          .map(
+            (x) => SentRecommendationItem.fromJson(x as Map<String, dynamic>),
+          )
+          .toList();
+      final ids = state.sentRecommendations.map((item) => item.id).toSet();
+      state = state.copyWith(
+        sentRecommendations: [
+          ...state.sentRecommendations,
+          ...page.where((item) => ids.add(item.id)),
+        ],
+        sentRecommendationsCursor: () => res['next_cursor'] as String?,
+        sentRecommendationsHasMore: res['has_more'] == true,
+        sentRecommendationsLoadingMore: false,
+      );
+    } catch (e, st) {
+      debugPrint('Failed to load more sent recommendations: $e\n$st');
+      state = state.copyWith(sentRecommendationsLoadingMore: false);
     }
   }
 
   /// Öneriyi yalnızca mevcut kullanıcının gönderilen/alınan görünümünden kaldırır.
   Future<bool> deleteRecommendation(int recommendationId) async {
     try {
+      RecommendationInboxItem? deletedInboxItem;
+      for (final item in state.recommendations) {
+        if (item.id == recommendationId) {
+          deletedInboxItem = item;
+          break;
+        }
+      }
       await _apiService.deleteRecommendation(recommendationId);
       state = state.copyWith(
         sentRecommendations: state.sentRecommendations
@@ -532,6 +643,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
         recommendations: state.recommendations
             .where((item) => item.id != recommendationId)
             .toList(),
+        unseenRecommendations:
+            deletedInboxItem != null && !deletedInboxItem.seen
+            ? (state.unseenRecommendations - 1).clamp(
+                0,
+                state.unseenRecommendations,
+              )
+            : state.unseenRecommendations,
       );
       return true;
     } catch (e, st) {

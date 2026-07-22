@@ -418,11 +418,19 @@ switch (true) {
         break;
 
     case $route === 'GET /social/recommendations':
-        $social->getRecommendations($auth->requireUser());
+        $social->getRecommendations(
+            $auth->requireUser(),
+            isset($_GET['cursor']) ? (string) $_GET['cursor'] : null,
+            isset($_GET['limit']) ? (int) $_GET['limit'] : 30,
+        );
         break;
 
     case $route === 'GET /social/recommendations/sent':
-        $social->getSentRecommendations($auth->requireUser());
+        $social->getSentRecommendations(
+            $auth->requireUser(),
+            isset($_GET['cursor']) ? (string) $_GET['cursor'] : null,
+            isset($_GET['limit']) ? (int) $_GET['limit'] : 30,
+        );
         break;
 
     case $route === 'POST /social/recommendations/seen':
