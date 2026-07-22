@@ -14,46 +14,62 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A0A0C'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' text-anchor='middle' fill='%23F5F5F7'%3Ec%3Ctspan fill='%23E9B872'%3E%2B%3C/tspan%3E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0A0A0C; --bg-warm:#120E10; --surface:#15151A; --card:#1C1C22; --card-hi:#24242C;
-  --ink:#F5F5F7; --dim:#9A9AA4; --faint:#6E6E78;
+  --bg:#0A0A0C; --bg-warm:#100D10; --surface:#141419; --card:#1B1B21; --card-hi:#23232B;
+  --ink:#F5F5F7; --dim:#A2A2AC; --faint:#6E6E78;
   --red:#E94560; --crimson:#C9304E; --ember:#FF6B81;
-  --gold:#E9B872; --gold-deep:#B8893E;
-  --border:#26262E; --border-soft:#1E1E25;
-  --glass:rgba(255,255,255,.06); --glass-stroke:rgba(255,255,255,.12);
+  --gold:#E9B872; --gold-deep:#B8893E; --gold-soft:rgba(233,184,114,.14);
+  --border:#26262E; --border-soft:#1D1D24;
+  --glass:rgba(255,255,255,.05); --glass-stroke:rgba(255,255,255,.11);
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:300;line-height:1.7;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.7;overflow-x:hidden}
 [data-lang="tr"] .en{display:none!important}
 [data-lang="en"] .tr{display:none!important}
 a{color:inherit;text-decoration:none}
 img,svg{max-width:100%}
-.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+button{font:inherit}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px}
 ::selection{background:var(--red);color:#fff}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+
+/* film grain over everything, very faint */
+.grain{position:fixed;inset:-50%;width:200%;height:200%;z-index:90;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");animation:grain 9s steps(6) infinite}
+@keyframes grain{0%,100%{transform:translate(0,0)}20%{transform:translate(-2%,1%)}40%{transform:translate(1%,-2%)}60%{transform:translate(-1%,2%)}80%{transform:translate(2%,-1%)}}
 
 /* ── Nav ── */
 nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(10,10,12,.72);border-bottom:1px solid var(--border-soft)}
 .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
 .wordmark{font-size:1.35rem;font-weight:600;letter-spacing:-.02em}
 .wordmark b{color:var(--gold);font-weight:600}
-.nav-links{display:flex;gap:28px;align-items:center;font-size:.92rem;color:var(--dim)}
+.nav-links{display:flex;gap:26px;align-items:center;font-size:.92rem;color:var(--dim)}
 .nav-links a{transition:color .2s}
 .nav-links a:hover{color:var(--ink)}
-.lang-btn{cursor:pointer;border:1px solid var(--border);background:var(--glass);border-radius:99px;padding:5px 14px;color:var(--dim);font:inherit;font-size:.82rem;transition:color .2s,border-color .2s}
+.lang-btn{cursor:pointer;border:1px solid var(--border);background:var(--glass);border-radius:99px;padding:5px 14px;color:var(--dim);font-size:.82rem;transition:color .2s,border-color .2s}
 .lang-btn:hover{color:var(--gold);border-color:var(--gold-deep)}
 .lang-btn span.on{color:var(--gold);font-weight:500}
-@media(max-width:720px){.nav-links a{display:none}}
+@media(max-width:760px){.nav-links a{display:none}}
 
 /* ── Hero ── */
-header{position:relative;padding:150px 0 90px;background:radial-gradient(900px 500px at 70% -10%,rgba(233,69,96,.13),transparent 60%),radial-gradient(700px 420px at 15% 20%,rgba(233,184,114,.07),transparent 60%),var(--bg)}
-.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
-.eyebrow{font-size:.8rem;letter-spacing:.35em;color:var(--gold);font-weight:500;margin-bottom:18px}
-h1{font-size:clamp(2.4rem,5.5vw,4.2rem);line-height:1.08;font-weight:700;letter-spacing:-.03em}
-h1 .accent{background:linear-gradient(120deg,var(--red),var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero p{color:var(--dim);font-size:1.12rem;max-width:34rem;margin:22px 0 34px}
+header{position:relative;padding:158px 0 72px;overflow:hidden;background:
+  radial-gradient(1000px 560px at 72% -12%,rgba(233,69,96,.14),transparent 62%),
+  radial-gradient(760px 460px at 12% 18%,rgba(233,184,114,.08),transparent 60%),
+  var(--bg)}
+/* projector beams */
+header::before{content:"";position:absolute;inset:0;pointer-events:none;background:
+  linear-gradient(115deg,transparent 42%,rgba(233,184,114,.05) 50%,transparent 58%),
+  linear-gradient(65deg,transparent 55%,rgba(233,69,96,.04) 63%,transparent 71%)}
+.hero{display:grid;grid-template-columns:1.12fr .88fr;gap:48px;align-items:center;position:relative}
+.eyebrow{font-size:.78rem;letter-spacing:.42em;color:var(--gold);font-weight:500;margin-bottom:22px}
+h1{font-family:var(--serif);font-size:clamp(2.7rem,6.2vw,4.9rem);line-height:1.04;font-weight:400;letter-spacing:-.015em}
+h1 em{font-style:italic;background:linear-gradient(115deg,var(--gold) 10%,var(--ember) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 .line2{display:block;font-size:.52em;font-family:var(--sans);font-weight:300;color:var(--dim);letter-spacing:.01em;margin-top:18px;line-height:1.4}
+.hero-lead{color:var(--dim);font-size:1.1rem;max-width:33rem;margin:24px 0 36px}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .btn-play{display:inline-flex;align-items:center;gap:12px;background:var(--ink);color:#0A0A0C;border-radius:14px;padding:12px 22px;font-weight:500;transition:transform .2s,box-shadow .2s;cursor:pointer}
 .btn-play:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(233,69,96,.25)}
@@ -61,23 +77,25 @@ h1 .accent{background:linear-gradient(120deg,var(--red),var(--ember));-webkit-ba
 .btn-play .big{font-size:1.02rem;line-height:1.25}
 .btn-ghost{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:14px;padding:14px 22px;color:var(--dim);font-size:.95rem;transition:color .2s,border-color .2s;cursor:pointer}
 .btn-ghost:hover{color:var(--ink);border-color:var(--faint)}
-.soon{font-size:.8rem;color:var(--faint);margin-top:12px}
+.soon{font-size:.8rem;color:var(--faint);margin-top:14px}
 
 /* phone mockup */
-.stage{display:flex;justify-content:center}
-.phone{width:280px;height:560px;background:linear-gradient(180deg,#17171d,#101014);border:1px solid var(--border);border-radius:42px;padding:16px 14px;position:relative;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.03) inset}
+.stage{display:flex;justify-content:center;position:relative}
+.stage::after{content:"";position:absolute;bottom:-30px;width:70%;height:60px;background:radial-gradient(ellipse,rgba(233,69,96,.16),transparent 70%);filter:blur(10px)}
+.phone{width:282px;height:568px;background:linear-gradient(180deg,#17171d,#101014);border:1px solid var(--border);border-radius:42px;padding:16px 14px;position:relative;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.03) inset;z-index:1}
 .notch{width:110px;height:22px;background:#000;border-radius:12px;margin:0 auto 12px}
-.deck{position:relative;height:400px}
+.deck{position:relative;height:388px}
 .mcard{position:absolute;inset:0;border-radius:22px;overflow:hidden;border:1px solid var(--glass-stroke);display:flex;flex-direction:column;justify-content:flex-end;transition:transform .5s cubic-bezier(.2,.7,.3,1),opacity .5s}
 .mcard .art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .mcard .art svg{width:72px;height:72px;opacity:.5}
-.mcard .meta{position:relative;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%);padding:52px 16px 16px}
-.mcard .title{font-weight:600;font-size:1.05rem}
-.mcard .sub{font-size:.8rem;color:var(--gold)}
+.mcard .meta{position:relative;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%);padding:52px 16px 14px}
+.mcard .title{font-weight:600;font-size:1.02rem}
+.mcard .sub{font-size:.78rem;color:var(--gold)}
+.mcard .match{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.55);border:1px solid var(--glass-stroke);backdrop-filter:blur(6px);border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:600;color:var(--gold)}
 .g-crimson{background:linear-gradient(160deg,#3d1220,#1a0b12 70%)}
 .g-gold{background:linear-gradient(160deg,#3a2c14,#161006 70%)}
 .g-blue{background:linear-gradient(160deg,#122036,#0a0f18 70%)}
-.stamp{position:absolute;top:20px;padding:5px 14px;border:2.5px solid;border-radius:8px;font-weight:700;font-size:.95rem;letter-spacing:.08em;opacity:0;transform:rotate(0deg)}
+.stamp{position:absolute;top:20px;padding:5px 14px;border:2.5px solid;border-radius:8px;font-weight:700;font-size:.92rem;letter-spacing:.08em;opacity:0}
 .stamp.like{right:16px;color:#4CAF50;border-color:#4CAF50}
 .stamp.nope{left:16px;color:var(--red);border-color:var(--red)}
 .fly-right{transform:translateX(130%) rotate(14deg)!important;opacity:0}
@@ -86,36 +104,130 @@ h1 .accent{background:linear-gradient(120deg,var(--red),var(--ember));-webkit-ba
 .deck .pos1{transform:scale(1) translateY(0);z-index:3}
 .deck .pos2{transform:scale(.94) translateY(-16px);z-index:2;filter:brightness(.7)}
 .deck .pos3{transform:scale(.88) translateY(-32px);z-index:1;filter:brightness(.45)}
-.pillrow{display:flex;justify-content:center;gap:22px;margin-top:22px}
-.pill{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;background:var(--glass)}
-.pill.no{border-color:var(--red);color:var(--red)}
-.pill.yes{border-color:#4CAF50;color:#4CAF50}
-.pill svg{width:24px;height:24px}
-@media(max-width:880px){.hero{grid-template-columns:1fr;text-align:center}.hero p{margin-inline:auto}.cta-row{justify-content:center}.stage{margin-top:10px}.phone{width:250px;height:500px}.deck{height:350px}}
+.raterow{display:flex;justify-content:center;gap:8px;margin-top:18px}
+.rate{padding:7px 13px;border-radius:99px;border:1px solid var(--border);font-size:.72rem;color:var(--dim);background:var(--glass)}
+.rate.hot{border-color:var(--gold-deep);color:var(--gold)}
+@media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}.hero-lead{margin-inline:auto}.cta-row{justify-content:center}.stage{margin-top:14px}.phone{width:252px;height:508px}.deck{height:338px}}
 
-/* ── Sections ── */
-section{padding:90px 0}
-.sec-head{text-align:center;max-width:44rem;margin:0 auto 56px}
-h2{font-size:clamp(1.7rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-.02em;line-height:1.2}
-.sec-head p{color:var(--dim);margin-top:14px;font-size:1.05rem}
-.gold-line{width:56px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:0 auto 22px}
+/* ── marquee ticker ── */
+.ticker{border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);background:var(--bg-warm);overflow:hidden;padding:16px 0}
+.ticker-track{display:flex;width:max-content;animation:tick 36s linear infinite}
+.ticker span{font-family:var(--serif);font-style:italic;font-size:1.05rem;color:var(--dim);padding:0 26px;white-space:nowrap}
+.ticker i{color:var(--gold-deep);font-style:normal}
+@keyframes tick{to{transform:translateX(-50%)}}
 
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.grid{grid-template-columns:1fr}}
-.feat{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;padding:26px 24px;transition:transform .25s,border-color .25s,background .25s}
-.feat:hover{transform:translateY(-4px);border-color:var(--border);background:var(--card)}
-.feat .ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;background:var(--glass);border:1px solid var(--glass-stroke)}
-.feat .ic svg{width:22px;height:22px}
-.feat h3{font-size:1.08rem;font-weight:600;margin-bottom:8px}
-.feat p{color:var(--dim);font-size:.93rem}
+/* ── Acts ── */
+section{padding:96px 0}
+.act-head{max-width:52rem;margin:0 auto 64px;text-align:center}
+.act-no{font-family:var(--serif);font-style:italic;font-size:1rem;color:var(--gold);letter-spacing:.3em;text-transform:uppercase}
+.act-rule{width:1px;height:40px;background:linear-gradient(var(--gold-deep),transparent);margin:14px auto 18px}
+h2{font-family:var(--serif);font-size:clamp(1.9rem,4vw,3rem);font-weight:400;letter-spacing:-.01em;line-height:1.15}
+.act-head p{color:var(--dim);margin-top:16px;font-size:1.05rem}
+
+/* showcase rows */
+.show{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:44px 0}
+.show+.show{border-top:1px solid var(--border-soft)}
+.show.flip .viz{order:-1}
+@media(max-width:860px){.show{grid-template-columns:1fr;gap:28px}.show.flip .viz{order:0}}
+.show .kicker{font-size:.74rem;letter-spacing:.28em;color:var(--gold);font-weight:500;text-transform:uppercase;margin-bottom:12px}
+.show h3{font-family:var(--serif);font-size:clamp(1.4rem,2.6vw,2rem);font-weight:400;line-height:1.25;margin-bottom:14px}
+.show p{color:var(--dim);font-size:.98rem;max-width:30rem}
+.show ul{list-style:none;margin-top:18px;display:grid;gap:9px}
+.show li{display:flex;gap:10px;align-items:baseline;color:var(--dim);font-size:.92rem}
+.show li::before{content:"✦";color:var(--gold-deep);font-size:.7rem;flex:none}
+
+/* viz vignettes */
+.viz{display:flex;justify-content:center}
+.vig{position:relative;width:100%;max-width:440px;border:1px solid var(--border-soft);border-radius:24px;background:linear-gradient(165deg,var(--surface),var(--bg-warm));padding:34px;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center}
+.vig::before{content:"";position:absolute;inset:0;background:radial-gradient(340px 220px at 30% 0%,var(--gold-soft),transparent 70%)}
+
+/* match ring */
+.ring{position:relative;width:180px;height:180px}
+.ring svg{transform:rotate(-90deg)}
+.ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct{font-family:var(--serif);font-size:2.6rem;color:var(--gold)}
+.ring .lbl{font-size:.72rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+
+/* tonight spotlight */
+.spot{position:relative;width:200px;height:270px;border-radius:18px;background:linear-gradient(160deg,#2b1020,#12060c 70%);border:1px solid var(--glass-stroke);display:flex;flex-direction:column;justify-content:flex-end;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.spot::before{content:"";position:absolute;inset:-70px -40px auto;height:150px;background:radial-gradient(ellipse at 50% 100%,rgba(233,184,114,.28),transparent 70%)}
+.spot .t{font-family:var(--serif);font-size:1.1rem}
+.spot .s{font-size:.76rem;color:var(--gold)}
+.spot .badge{position:absolute;top:14px;right:14px;font-size:.66rem;letter-spacing:.14em;background:rgba(233,184,114,.14);border:1px solid rgba(233,184,114,.3);color:var(--gold);border-radius:99px;padding:3px 10px}
+
+/* couch: two phones */
+.duo{display:flex;gap:22px;align-items:center;position:relative}
+.mini{width:110px;height:200px;border-radius:20px;background:linear-gradient(180deg,#17171d,#101014);border:1px solid var(--border);padding:8px;display:flex;flex-direction:column;gap:6px}
+.mini .mc{flex:1;border-radius:12px;border:1px solid var(--glass-stroke)}
+.mini .nm{font-size:.66rem;color:var(--faint);text-align:center}
+.duo .pulse{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(233,69,96,.16);border:1px solid rgba(233,69,96,.4);display:flex;align-items:center;justify-content:center;color:var(--ember);animation:pulse 2.4s ease-in-out infinite;z-index:2}
+@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.14)}}
+
+/* venn */
+.venn{position:relative;width:280px;height:190px}
+.venn .c{position:absolute;top:0;width:190px;height:190px;border-radius:50%;border:1px solid}
+.venn .a{left:0;border-color:rgba(233,184,114,.5);background:radial-gradient(circle,rgba(233,184,114,.10),transparent 70%)}
+.venn .b{right:0;border-color:rgba(233,69,96,.5);background:radial-gradient(circle,rgba(233,69,96,.10),transparent 70%)}
+.venn .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.venn .pct{font-family:var(--serif);font-size:2rem;color:var(--ink)}
+.venn .lbl{font-size:.68rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+
+/* browser mock */
+.browser{width:100%;max-width:360px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--card)}
+.browser .bar{display:flex;align-items:center;gap:8px;background:var(--surface);border-bottom:1px solid var(--border-soft);padding:10px 14px}
+.browser .dot{width:9px;height:9px;border-radius:50%;background:var(--border)}
+.browser .url{flex:1;font-size:.7rem;color:var(--faint);background:var(--bg);border-radius:8px;padding:4px 12px;text-align:center}
+.browser .page{padding:22px;background:linear-gradient(180deg,#1a0c12,var(--bg-warm) 65%)}
+.browser .avat{width:46px;height:46px;border-radius:50%;background:linear-gradient(140deg,var(--gold),var(--crimson));margin-bottom:10px}
+.browser .nm{font-family:var(--serif);font-size:1.05rem}
+.browser .dna-tag{display:inline-block;margin-top:6px;font-size:.68rem;color:var(--gold);border:1px solid rgba(233,184,114,.3);border-radius:99px;padding:2px 10px}
+.browser .strip{display:flex;gap:6px;margin-top:16px}
+.browser .strip i{flex:1;height:52px;border-radius:8px;background:var(--card-hi);border:1px solid var(--border-soft)}
+
+/* chips (compact feature coverage) */
+.chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:44px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-soft);background:var(--surface);border-radius:99px;padding:8px 16px;font-size:.84rem;color:var(--dim);transition:border-color .25s,color .25s}
+.chip:hover{border-color:var(--gold-deep);color:var(--ink)}
+.chip svg{width:15px;height:15px;color:var(--gold);flex:none}
+
+/* ── DNA gallery ── */
+.dna-sec{background:var(--bg-warm);border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+.gallery{display:grid;grid-auto-flow:column;grid-auto-columns:236px;gap:16px;overflow-x:auto;padding:8px 24px 24px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.gallery::-webkit-scrollbar{height:6px}
+.gallery::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+.arch{scroll-snap-align:start;position:relative;border-radius:20px;border:1px solid var(--border-soft);padding:26px 22px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;transition:transform .3s,border-color .3s}
+.arch:hover{transform:translateY(-6px);border-color:var(--border)}
+.arch .no{position:absolute;top:16px;right:18px;font-family:var(--serif);font-style:italic;font-size:1.5rem;color:rgba(255,255,255,.16)}
+.arch .sig{width:38px;height:38px;margin-bottom:auto;opacity:.85}
+.arch h4{font-family:var(--serif);font-weight:400;font-size:1.22rem;line-height:1.25;margin:16px 0 6px}
+.arch p{font-size:.8rem;color:rgba(245,245,247,.62);line-height:1.55}
+.a1{background:linear-gradient(165deg,#241226,#0e0812 72%)}
+.a2{background:linear-gradient(165deg,#33121c,#140810 72%)}
+.a3{background:linear-gradient(165deg,#0e2230,#081018 72%)}
+.a4{background:linear-gradient(165deg,#331708,#150a05 72%)}
+.a5{background:linear-gradient(165deg,#332708,#151004 72%)}
+.a6{background:linear-gradient(165deg,#14222b,#0a0f14 72%)}
+.a7{background:linear-gradient(165deg,#25182e,#100a16 72%)}
+.a8{background:linear-gradient(165deg,#1c2a14,#0d1309 72%)}
+.gallery-hint{text-align:center;color:var(--faint);font-size:.8rem;margin-top:4px}
+
+/* ── bento ── */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:940px){.bento{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.bento{grid-template-columns:1fr}}
+.b{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;padding:22px;transition:transform .25s,border-color .25s}
+.b:hover{transform:translateY(-3px);border-color:var(--border)}
+.b .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;background:var(--glass);border:1px solid var(--glass-stroke)}
+.b .ic svg{width:18px;height:18px}
+.b h4{font-size:.98rem;font-weight:600;margin-bottom:6px}
+.b p{color:var(--dim);font-size:.85rem;line-height:1.55}
 .c-red{color:var(--red)} .c-gold{color:var(--gold)} .c-blue{color:#4A90E2} .c-green{color:#4CAF50} .c-ember{color:var(--ember)} .c-dim{color:var(--dim)}
 
-/* how it works */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:step}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 @media(max-width:720px){.steps{grid-template-columns:1fr}}
 .step{position:relative;background:var(--bg-warm);border:1px solid var(--border-soft);border-radius:18px;padding:30px 26px}
-.step .num{font-size:2.6rem;font-weight:700;color:transparent;-webkit-text-stroke:1px var(--gold-deep);line-height:1;margin-bottom:14px}
+.step .num{font-family:var(--serif);font-style:italic;font-size:2.4rem;color:transparent;-webkit-text-stroke:1px var(--gold-deep);line-height:1;margin-bottom:14px}
 .step h3{font-size:1.05rem;font-weight:600;margin-bottom:8px}
 .step p{color:var(--dim);font-size:.93rem}
 
@@ -130,9 +242,10 @@ details[open] .chev{transform:rotate(45deg)}
 .faq-body{padding:0 4px 20px;color:var(--dim);font-size:.95rem}
 
 /* CTA band */
-.band{background:linear-gradient(140deg,rgba(233,69,96,.12),rgba(233,184,114,.06)),var(--surface);border:1px solid var(--border);border-radius:26px;padding:56px 40px;text-align:center}
-.band h2{margin-bottom:12px}
-.band p{color:var(--dim);margin-bottom:28px}
+.band{position:relative;overflow:hidden;background:linear-gradient(140deg,rgba(233,69,96,.12),rgba(233,184,114,.06)),var(--surface);border:1px solid var(--border);border-radius:26px;padding:64px 40px;text-align:center}
+.band::before{content:"";position:absolute;inset:0;background:radial-gradient(480px 200px at 50% -30%,rgba(233,184,114,.12),transparent 70%)}
+.band h2{margin-bottom:12px;position:relative}
+.band p{color:var(--dim);margin-bottom:28px;position:relative}
 
 /* footer */
 footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:var(--bg-warm)}
@@ -151,19 +264,22 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
 .rv.in{opacity:1;transform:none}
 @media (prefers-reduced-motion: reduce){
   .rv{opacity:1;transform:none;transition:none}
-  .mcard{transition:none}
+  .mcard,.arch,.b,.feat{transition:none}
+  .ticker-track,.grain,.duo .pulse{animation:none}
   html{scroll-behavior:auto}
 }
 </style>
 </head>
 <body>
+<div class="grain" aria-hidden="true"></div>
 
 <nav>
   <div class="wrap nav-in">
     <a href="#" class="wordmark" aria-label="Cinema+ ana sayfa">cinema<b>+</b></a>
     <div class="nav-links">
-      <a href="#features"><span class="tr">Özellikler</span><span class="en">Features</span></a>
-      <a href="#how"><span class="tr">Nasıl çalışır</span><span class="en">How it works</span></a>
+      <a href="#kesfet"><span class="tr">Keşfet</span><span class="en">Discover</span></a>
+      <a href="#birlikte"><span class="tr">Birlikte</span><span class="en">Together</span></a>
+      <a href="#dna"><span class="tr">Sinema DNA</span><span class="en">Cinema DNA</span></a>
       <a href="#faq"><span class="tr">SSS</span><span class="en">FAQ</span></a>
       <button class="lang-btn" id="langBtn" aria-label="Dil değiştir / Change language"><span id="lt" class="on">TR</span> / <span id="le">EN</span></button>
     </div>
@@ -173,31 +289,31 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
 <header>
   <div class="wrap hero">
     <div>
-      <div class="eyebrow">CINEMA+</div>
+      <div class="eyebrow">CINEMA+ · NE İZLESEM?</div>
       <h1>
-        <span class="tr">Bu gece <span class="accent">ne izlesem?</span><br>Kaydır, keşfet, izle.</span>
-        <span class="en">What to <span class="accent">watch tonight?</span><br>Swipe, discover, watch.</span>
+        <span class="tr">“Bu gece <em>ne izlesem?</em>”<span class="line2">Bu soruyu son kez soruyorsun.</span></span>
+        <span class="en">“What to <em>watch tonight?</em>”<span class="line2">You're asking that for the last time.</span></span>
       </h1>
-      <p>
-        <span class="tr">Film ve dizileri Tinder tarzı kaydırarak keşfet, arkadaşlarınla ortak zevkini eşleştir, sana özel Sinema DNA'nı çıkar. Karar verme derdi bitti.</span>
-        <span class="en">Discover movies and shows with Tinder-style swiping, match tastes with your friends, and build your unique Cinema DNA. No more endless scrolling.</span>
+      <p class="hero-lead">
+        <span class="tr">Kaydırarak keşfet, zevkini öğrenen motorla eşleş, arkadaşlarınla tek dokunuşta karar ver ve puanlarından doğan Sinema DNA'nı dünyayla paylaş.</span>
+        <span class="en">Swipe to discover, match with an engine that learns your taste, decide with friends in one tap, and share the Cinema DNA born from your ratings.</span>
       </p>
       <div class="cta-row">
-        <a class="btn-play" id="playBadge" href="https://cinema.mbkm.com.tr/download" rel="noopener">
+        <a class="btn-play" href="https://cinema.mbkm.com.tr/download" rel="noopener">
           <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
           <span>
-            <small><span class="tr">ÜCRETSİZ</span><span class="en">FREE</span></small>
+            <small><span class="tr">ÜCRETSİZ · REKLAMSIZ</span><span class="en">FREE · NO ADS</span></small>
             <span class="big"><span class="tr">Android İndir</span><span class="en">Download Android</span></span>
           </span>
         </a>
-        <a class="btn-ghost" href="#features">
-          <span class="tr">Özellikleri gör</span><span class="en">See features</span>
+        <a class="btn-ghost" href="#kesfet">
+          <span class="tr">Vitrini gez</span><span class="en">Tour the features</span>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         </a>
       </div>
       <div class="soon">
-        <span class="tr">E-posta veya Google ile giriş · iOS yolda</span>
-        <span class="en">Sign in with email or Google · iOS on the way</span>
+        <span class="tr">Misafir, e-posta, Google veya Apple ile giriş · iOS yolda</span>
+        <span class="en">Guest, email, Google or Apple sign-in · iOS on the way</span>
       </div>
     </div>
 
@@ -207,131 +323,372 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
         <div class="deck" id="deck">
           <div class="mcard g-blue">
             <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 2.4 3.9 5.5 3.9 9S14.5 18.6 12 21M12 3C9.5 5.4 8.1 8.5 8.1 12s1.4 6.6 3.9 9M3.5 9h17M3.5 15h17"/></svg></div>
+            <div class="match">%92 uyum</div>
             <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
             <div class="meta"><div class="title"><span class="tr">Bilim Kurgu</span><span class="en">Sci-Fi</span></div><div class="sub">★ 8.4 · 2026</div></div>
           </div>
           <div class="mcard g-gold">
             <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#E9B872" stroke-width="1.2"><path d="M12 3l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6L4 8.9l5.6-.7L12 3z"/></svg></div>
+            <div class="match">%88 uyum</div>
             <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
             <div class="meta"><div class="title"><span class="tr">Romantik Komedi</span><span class="en">Rom-Com</span></div><div class="sub">★ 7.9 · 2025</div></div>
           </div>
           <div class="mcard g-crimson">
             <div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#E94560" stroke-width="1.2"><path d="M12 21s-7.5-4.7-9.3-9.6C1.5 8 3.6 4.9 6.8 4.9c2 0 3.7 1.1 4.6 2.8h1.2c.9-1.7 2.6-2.8 4.6-2.8 3.2 0 5.3 3.1 4.1 6.5C19.5 16.3 12 21 12 21z"/></svg></div>
+            <div class="match">%95 uyum</div>
             <div class="stamp like">İZLERİM</div><div class="stamp nope">GEÇERİM</div>
             <div class="meta"><div class="title"><span class="tr">Gerilim</span><span class="en">Thriller</span></div><div class="sub">★ 8.1 · 2026</div></div>
           </div>
         </div>
-        <div class="pillrow">
-          <div class="pill no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
-          <div class="pill yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-8.7-9C2.2 8 4.1 5.2 7 5.2c1.9 0 3.4 1 4.2 2.5h1.6c.8-1.5 2.3-2.5 4.2-2.5 2.9 0 4.8 2.8 3.7 5.8C19 15.6 12 20 12 20z"/></svg></div>
+        <div class="raterow">
+          <span class="rate"><span class="tr">Berbat</span><span class="en">Awful</span></span>
+          <span class="rate"><span class="tr">Eh</span><span class="en">Meh</span></span>
+          <span class="rate hot"><span class="tr">İyi</span><span class="en">Good</span></span>
+          <span class="rate hot"><span class="tr">Harika</span><span class="en">Amazing</span></span>
         </div>
       </div>
     </div>
   </div>
 </header>
 
-<section id="features">
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track" id="tick">
+    <span class="tr">Kaydır <i>✦</i> Eşleş <i>✦</i> Keşfet <i>✦</i> Puanla <i>✦</i> Birlikte Seç <i>✦</i> Sinema DNA <i>✦</i> Top 20 <i>✦</i> Yıl Özeti <i>✦</i> İzleme Listesi <i>✦</i> Bu Gece Ne İzlesem <i>✦</i> Ruh Haline Göre <i>✦</i> Arkadaşına Öner <i>✦</i></span>
+    <span class="en">Swipe <i>✦</i> Match <i>✦</i> Discover <i>✦</i> Rate <i>✦</i> Pick Together <i>✦</i> Cinema DNA <i>✦</i> Top 20 <i>✦</i> Year Recap <i>✦</i> Watchlist <i>✦</i> Tonight's Pick <i>✦</i> By Mood <i>✦</i> Recommend a Friend <i>✦</i></span>
+  </div>
+</div>
+
+<!-- ═══ PERDE I — KEŞFET ═══ -->
+<section id="kesfet">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="gold-line"></div>
-      <h2><span class="tr">Keşfetmenin en eğlenceli hali</span><span class="en">Discovery, but make it fun</span></h2>
-      <p><span class="tr">Cinema+, "ne izlesem?" sorusunu bir oyuna çevirir. Ne kadar kaydırırsan, öneriler o kadar sana benzer.</span><span class="en">Cinema+ turns "what to watch?" into a game. The more you swipe, the more the recommendations feel like you.</span></p>
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Perde I</span><span class="en">Act I</span></div>
+      <div class="act-rule"></div>
+      <h2><span class="tr">Zevkini öğrenen bir sinema salonu</span><span class="en">A cinema that learns your taste</span></h2>
+      <p><span class="tr">Cinema+, "ne izlesem?" sorusunu bir oyuna çevirir. Ne kadar kaydırırsan, öneriler o kadar sana benzer.</span><span class="en">Cinema+ turns "what to watch?" into a game. The more you swipe, the more the picks feel like you.</span></p>
     </div>
-    <div class="grid">
-      <div class="feat rv">
-        <div class="ic c-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="12" height="17" rx="2.5" transform="rotate(-6 11 11)"/><path d="M9.5 21.5 19 19M20.5 8.5 22 12"/></svg></div>
-        <h3><span class="tr">Kaydırarak keşfet</span><span class="en">Swipe to discover</span></h3>
-        <p><span class="tr">Beğendiysen sağa, değilsen sola. Zevkine göre öğrenen öneri motoru her kaydırışta seni daha iyi tanır.</span><span class="en">Right if you like it, left if you don't. The recommendation engine learns your taste with every swipe.</span></p>
+
+    <div class="show rv">
+      <div>
+        <div class="kicker"><span class="tr">Kaydırarak Keşfet</span><span class="en">Swipe Discovery</span></div>
+        <h3><span class="tr">Beğendiysen sağa, değilsen sola.</span><span class="en">Right if you like it, left if you don't.</span></h3>
+        <p><span class="tr">Dört kademeli puanlama ile zevkinin dokusunu işle: Berbat, Eh, İyi, Harika. Karta dokun — fragman, oyuncular ve tüm detaylar bir dokunuş uzağında.</span><span class="en">Weave the texture of your taste with four-tier ratings: Awful, Meh, Good, Amazing. Tap the card — trailer, cast, and full detail are one touch away.</span></p>
+        <ul>
+          <li><span class="tr">"İzlemedim" de, geri al, ilk kullanımda jest rehberi</span><span class="en">"Haven't seen it", undo, first-run gesture guide</span></li>
+          <li><span class="tr">Deste, öneri motorunun "Sana Özel" seçkisiyle beslenir</span><span class="en">The deck is fed by the engine's "For You" picks</span></li>
+          <li><span class="tr">Sinema bölgesi ve platform filtreleri: Kore'den Bollywood'a</span><span class="en">Region and platform filters: from Korea to Bollywood</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 3c0 4 10 4 10 8s-10 4-10 8M17 3c0 4-10 4-10 8s10 4 10 8M7 5.5h10M7 18.5h10M8.5 12h7"/></svg></div>
-        <h3><span class="tr">Sinema DNA'n</span><span class="en">Your Cinema DNA</span></h3>
-        <p><span class="tr">Puanların ve tercihlerinden benzersiz bir zevk arketipi çıkarır: sen hangi izleyicisin?</span><span class="en">Your ratings and picks form a unique taste archetype: what kind of watcher are you?</span></p>
+      <div class="viz"><div class="vig">
+        <div class="ring">
+          <svg width="180" height="180" viewBox="0 0 180 180" aria-hidden="true">
+            <circle cx="90" cy="90" r="80" fill="none" stroke="var(--border)" stroke-width="6"/>
+            <circle cx="90" cy="90" r="80" fill="none" stroke="url(#gg)" stroke-width="6" stroke-linecap="round" stroke-dasharray="502" stroke-dashoffset="40"/>
+            <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9B872"/><stop offset="1" stop-color="#E94560"/></linearGradient></defs>
+          </svg>
+          <div class="val"><div class="pct">%92</div><div class="lbl"><span class="tr">seninle uyum</span><span class="en">match with you</span></div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="show flip rv">
+      <div>
+        <div class="kicker"><span class="tr">Kişisel Öneri Motoru</span><span class="en">Personal Engine</span></div>
+        <h3><span class="tr">Her öneri, bir gerekçeyle gelir.</span><span class="en">Every pick comes with a reason.</span></h3>
+        <p><span class="tr">Cihazında çalışan motor; türlerini, temalarını, arkadaş sinyallerini ve TMDB skorlarını harmanlayıp her yapıma kişisel bir uyum yüzdesi biçer. "X'i sevdiğin için", "bir arkadaşın bayıldı" — nedenini hep bilirsin.</span><span class="en">The on-device engine blends your genres, themes, friend signals and TMDB scores into a personal match percentage for every title. "Because you loved X", "a friend adored this" — you always know why.</span></p>
+        <ul>
+          <li><span class="tr">Sinerji skoru: kişisel uyum + üye skoru + TMDB tek potada</span><span class="en">Synergy score: personal match + member score + TMDB in one</span></li>
+          <li><span class="tr">cinema+ üyelerinin yüzde kaçı beğendi — topluluk skoru</span><span class="en">What % of cinema+ members liked it — the community score</span></li>
+          <li><span class="tr">Trendler, vizyondakiler, yaklaşanlar ve topluluk Top 20 rafları</span><span class="en">Trending, in theaters, upcoming, and community Top 20 rails</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 15.2c2.6.2 4.4 1.9 4.9 4.8"/></svg></div>
-        <h3><span class="tr">Koltuk Modu</span><span class="en">Couch Mode</span></h3>
-        <p><span class="tr">Aynı odada, aynı anda kaydırın: oda kodu paylaşın, ikinizin de beğendiği yapım anında eşleşsin. Tek ekranda birlikte karar vermek için.</span><span class="en">Swipe in the same room at the same time: share a room code and match when you both like the same title. Built for deciding together on one screen.</span></p>
+      <div class="viz"><div class="vig">
+        <div class="spot">
+          <span class="badge"><span class="tr">BU GECE</span><span class="en">TONIGHT</span></span>
+          <div class="t"><span class="tr">Gecenin Seçimi</span><span class="en">Tonight's Pick</span></div>
+          <div class="s">★ 8.6 · %94 <span class="tr">uyum</span><span class="en">match</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="show rv">
+      <div>
+        <div class="kicker"><span class="tr">Bu Gece Ne İzlesem?</span><span class="en">What to Watch Tonight?</span></div>
+        <h3><span class="tr">Kararsız akşamlar için tek bir cevap.</span><span class="en">One answer for indecisive nights.</span></h3>
+        <p><span class="tr">Motorun en yüksek skorlu tek seçimi her gün seni bekler. Olmadıysa "başka öner" de; ruh haline göre keşfet — komik, gerilim, ağlatan, 90'lar klasiği, belgesel… Ya da sevdiğin bir yapımı yaz, benzerlerini bul.</span><span class="en">The engine's single highest-scoring pick awaits you daily. Not feeling it? Shuffle — or browse by mood: funny, thrilling, tearjerker, 90s classic, documentary… Or type a title you love and find its kin.</span></p>
+        <ul>
+          <li><span class="tr">"Şansıma Bırak" — sürpriz seçim</span><span class="en">"Lucky pick" — a surprise choice</span></li>
+          <li><span class="tr">Gelişmiş arama: yıl, dil, platform, minimum puan</span><span class="en">Advanced search: year, language, platform, minimum score</span></li>
+          <li><span class="tr">Nerede izlenir? Bölgene göre yayın platformları</span><span class="en">Where to watch? Streaming providers for your region</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-ember"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5A8 8 0 1 1 11.5 4a6.5 6.5 0 0 0 8.5 8.5z"/><path d="m16 5 .6 1.6L18.2 7l-1.6.6L16 9.2l-.6-1.6L13.8 7l1.6-.4L16 5z"/></svg></div>
-        <h3><span class="tr">Bu Gece Ne İzlesem?</span><span class="en">What to Watch Tonight?</span></h3>
-        <p><span class="tr">Kararsız kaldığın akşamlar için öneri motorunun en yüksek skorlu tek seçimi: aç ve izle.</span><span class="en">For indecisive nights: the engine's single highest-scoring pick. Open and press play.</span></p>
+      <div class="viz"><div class="vig" style="flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;position:relative">
+          <span class="rate"><span class="tr">Komik</span><span class="en">Funny</span></span>
+          <span class="rate hot"><span class="tr">Gerilim</span><span class="en">Thrill</span></span>
+          <span class="rate"><span class="tr">Ağlatan</span><span class="en">Tearjerker</span></span>
+          <span class="rate"><span class="tr">Aksiyon</span><span class="en">Action</span></span>
+          <span class="rate hot"><span class="tr">90'lar</span><span class="en">90s</span></span>
+          <span class="rate"><span class="tr">Belgesel</span><span class="en">Documentary</span></span>
+          <span class="rate"><span class="tr">Romantik</span><span class="en">Romance</span></span>
+          <span class="rate hot"><span class="tr">Fantastik</span><span class="en">Fantasy</span></span>
+        </div>
+        <div style="position:relative;color:var(--faint);font-size:.78rem"><span class="tr">Ruh haline göre keşfet</span><span class="en">Discover by mood</span></div>
+      </div></div>
+    </div>
+
+    <div class="chips rv">
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="tr">Uygulama içi fragman</span><span class="en">In-app trailers</span></span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.7-3.8 3.3-6 8-6s7.3 2.2 8 6"/></svg><span class="tr">Oyuncu sayfaları & filmografi</span><span class="en">Cast pages & filmography</span></span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><span class="tr">Sezon izleme takibi</span><span class="en">Season tracking</span></span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><span class="tr">Koleksiyon & benzer yapımlar</span><span class="en">Collections & similar titles</span></span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.4 5.6 5.6 18.4M5.6 5.6l12.8 12.8"/></svg><span class="tr">İstemediğin yapımı gizle</span><span class="en">Hide unwanted titles</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PERDE II — BİRLİKTE ═══ -->
+<section id="birlikte" style="padding-top:20px">
+  <div class="wrap">
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Perde II</span><span class="en">Act II</span></div>
+      <div class="act-rule"></div>
+      <h2><span class="tr">Sinema yalnız izlenmez</span><span class="en">Cinema isn't watched alone</span></h2>
+      <p><span class="tr">Arkadaşlarını ekle, zevkinizi karşılaştırın, aynı anda kaydırın — kumandayı kimin tuttuğu artık tartışma konusu değil.</span><span class="en">Add friends, compare tastes, swipe at the same time — who holds the remote is no longer a debate.</span></p>
+    </div>
+
+    <div class="show rv">
+      <div>
+        <div class="kicker"><span class="tr">Birlikte Seç · Canlı</span><span class="en">Pick Together · Live</span></div>
+        <h3><span class="tr">İki telefon, aynı deste, tek karar.</span><span class="en">Two phones, one deck, one decision.</span></h3>
+        <p><span class="tr">Arkadaşına davet gönder; ikiniz de kendi telefonunuzda aynı desteyi kaydırın. İlk ortak beğeni anında eşleşir — bildirim gelir, film gecesi başlar. Eşleşme çıkmazsa yeni deste bir dokunuş uzakta.</span><span class="en">Send a friend an invite; you both swipe the same deck on your own phones. The first mutual like matches instantly — a notification lands, movie night begins. No match? A fresh deck is one tap away.</span></p>
+        <ul>
+          <li><span class="tr">Aynı cihazda Koltuk Modu: telefonu elden ele verin, tür seçin, ortak öneriler gelsin</span><span class="en">Same-device Couch Mode: pass the phone, pick genres, get joint picks</span></li>
+          <li><span class="tr">Yarım kalan oturuma kaldığın yerden devam et</span><span class="en">Resume an unfinished session right where you left off</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21V3z"/><path d="M9.5 9.5h5M12 7v5"/></svg></div>
-        <h3><span class="tr">İzleme listesi + topluluk skoru</span><span class="en">Watchlist + community score</span></h3>
-        <p><span class="tr">Listeni her cihazda senkron tut; bir yapımı Cinema+ üyelerinin yüzde kaçının beğendiğini gör.</span><span class="en">Keep your list in sync across devices and see what percentage of Cinema+ members liked a title.</span></p>
+      <div class="viz"><div class="vig">
+        <div class="duo">
+          <div class="mini"><div class="mc g-crimson"></div><div class="nm">Sen</div></div>
+          <div class="pulse"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 20s-7-4.4-8.7-9C2.2 8 4.1 5.2 7 5.2c1.9 0 3.4 1 4.2 2.5h1.6c.8-1.5 2.3-2.5 4.2-2.5 2.9 0 4.8 2.8 3.7 5.8C19 15.6 12 20 12 20z"/></svg></div>
+          <div class="mini"><div class="mc g-gold"></div><div class="nm"><span class="tr">Arkadaşın</span><span class="en">Friend</span></div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="show flip rv">
+      <div>
+        <div class="kicker"><span class="tr">Arkadaş Eşleşmesi</span><span class="en">Friend Match</span></div>
+        <h3><span class="tr">Zevkiniz yüzde kaç örtüşüyor?</span><span class="en">How much do your tastes overlap?</span></h3>
+        <p><span class="tr">Her arkadaşınla sinema zevk uyumunu gör; izleme listelerinizin kesişimini keşfet ve ortak beğenilerinizden doğan ortak öneriler al. "Arkadaşım ne önerirdi?" sorusunun matematiksel cevabı.</span><span class="en">See your cinema taste match with every friend; explore your watchlist intersection and get joint picks born from shared favorites. The mathematical answer to "what would my friend recommend?"</span></p>
+        <ul>
+          <li><span class="tr">Arkadaşına yapım öner — kişisel notunla birlikte</span><span class="en">Recommend a title to a friend — with a personal note</span></li>
+          <li><span class="tr">Aktivite akışı: arkadaşların ne izledi, neye bayıldı</span><span class="en">Activity feed: what friends watched and loved</span></li>
+          <li><span class="tr">Popüler profilleri keşfet, beğendiklerini alkışla</span><span class="en">Discover popular profiles and applaud the ones you like</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M4 12h16M12 9v11M12 9S9.5 4.5 7 4.5 4.5 7.5 7 8.2c1.6.5 5 .8 5 .8zm0 0s2.5-4.5 5-4.5 2.5 3 0 3.7c-1.6.5-5 .8-5 .8z"/></svg></div>
-        <h3><span class="tr">Yıl sonu özeti</span><span class="en">Your year, wrapped</span></h3>
-        <p><span class="tr">Yılın biterken sinematik özetini çıkar ve tek dokunuşla arkadaşlarınla paylaş.</span><span class="en">Get a cinematic recap of your year and share it with friends in one tap.</span></p>
+      <div class="viz"><div class="vig">
+        <div class="venn">
+          <div class="c a"></div><div class="c b"></div>
+          <div class="mid"><div class="pct">%78</div><div class="lbl"><span class="tr">zevk uyumu</span><span class="en">taste match</span></div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="show rv">
+      <div>
+        <div class="kicker"><span class="tr">Yorumlar & Topluluk</span><span class="en">Reviews & Community</span></div>
+        <h3><span class="tr">Sözün de sahnede.</span><span class="en">Your words take the stage too.</span></h3>
+        <p><span class="tr">Filmlere ve dizilere yorumunu yaz; spoiler'ları tek dokunuşla perdele, istersen puanını tamamen özel tut. Arkadaşlarının yorumları önde, topluluğunki hemen ardında.</span><span class="en">Write reviews for movies and shows; veil spoilers with a tap, keep ratings fully private if you wish. Friends' reviews come first, the community's right behind.</span></p>
+        <ul>
+          <li><span class="tr">Spoiler etiketi: dokununca açılır, sürpriz bozulmaz</span><span class="en">Spoiler tags: tap to reveal, surprises stay intact</span></li>
+          <li><span class="tr">Gizli puan & gizli yorum — zevkin sana kalsın istersen</span><span class="en">Private ratings & comments — keep your taste to yourself</span></li>
+          <li><span class="tr">Bildir ve engelle: topluluk herkes için güvenli</span><span class="en">Report and block: a community safe for everyone</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3><span class="tr">Sinema topluluğu</span><span class="en">Social network</span></h3>
-        <p><span class="tr">Kullanıcıları takip et, akışında ne izlediklerini gör ve sinema sohbetine katıl.</span><span class="en">Follow users, see what they're watching in your feed, and join the movie conversation.</span></p>
+      <div class="viz"><div class="vig" style="flex-direction:column;gap:12px;align-items:stretch">
+        <div style="position:relative;background:var(--card);border:1px solid var(--border-soft);border-radius:14px;padding:14px 16px">
+          <div style="font-size:.8rem;color:var(--gold);margin-bottom:4px">@sinemasever · <span class="tr">Harika</span><span class="en">Amazing</span> ★★★★</div>
+          <div style="font-size:.86rem;color:var(--dim)"><span class="tr">"Final sahnesi tam bir başyapıt…"</span><span class="en">"That final scene is a masterpiece…"</span></div>
+        </div>
+        <div style="position:relative;background:var(--card);border:1px solid var(--border-soft);border-radius:14px;padding:14px 16px">
+          <div style="font-size:.8rem;color:var(--faint);margin-bottom:4px">@filmkurdu · <span class="tr">İyi</span><span class="en">Good</span> ★★★</div>
+          <div style="font-size:.86rem;color:var(--faint);filter:blur(4px)"><span class="tr">Bu yorum spoiler içeriyor…</span><span class="en">This review contains spoilers…</span></div>
+          <div style="position:absolute;right:14px;bottom:12px;font-size:.68rem;color:var(--gold);letter-spacing:.1em">SPOILER</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PERDE III — KİMLİĞİN ═══ -->
+<section id="dna" class="dna-sec">
+  <div class="wrap">
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Perde III</span><span class="en">Act III</span></div>
+      <div class="act-rule"></div>
+      <h2><span class="tr">Sen hangi izleyicisin?</span><span class="en">What kind of watcher are you?</span></h2>
+      <p><span class="tr">Puanların birikir, örüntüler belirir ve Sinema DNA'n ortaya çıkar: sekiz arketipten hangisi sensin? Temaların, kör noktaların, zevkinin rotası — hepsi tek kartta.</span><span class="en">Your ratings accumulate, patterns emerge, and your Cinema DNA is revealed: which of the eight archetypes are you? Your themes, blind spots, and taste trajectory — all on one card.</span></p>
+    </div>
+  </div>
+  <div class="gallery rv" style="max-width:1140px;margin:0 auto">
+    <div class="arch a1"><span class="no">I</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#B98BD0" stroke-width="1.4" stroke-linecap="round"><path d="M12 3a7 7 0 0 0-4 12.7V19a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-3.3A7 7 0 0 0 12 3z"/><path d="M9 21h6"/></svg>
+      <h4><span class="tr">Karanlık Anlatıcı</span><span class="en">The Dark Chronicler</span></h4>
+      <p><span class="tr">Gölgelerin anlattığı hikâyeler seni bulur.</span><span class="en">Stories told by shadows find you.</span></p>
+    </div>
+    <div class="arch a2"><span class="no">II</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#FF6B81" stroke-width="1.4" stroke-linecap="round"><path d="M12 21s-7.5-4.7-9.3-9.6C1.5 8 3.6 4.9 6.8 4.9c2 0 3.7 1.1 4.6 2.8h1.2c.9-1.7 2.6-2.8 4.6-2.8 3.2 0 5.3 3.1 4.1 6.5C19.5 16.3 12 21 12 21z"/></svg>
+      <h4><span class="tr">Duygu Avcısı</span><span class="en">The Emotion Seeker</span></h4>
+      <p><span class="tr">Bir filmin kalbini kırabilmesi senin için bir erdem.</span><span class="en">A film that can break your heart is a virtue.</span></p>
+    </div>
+    <div class="arch a3"><span class="no">III</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#5FB8C9" stroke-width="1.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 2.4 3.9 5.5 3.9 9S14.5 18.6 12 21M12 3C9.5 5.4 8.1 8.5 8.1 12s1.4 6.6 3.9 9M3.5 9h17M3.5 15h17"/></svg>
+      <h4><span class="tr">Dünya Kâşifi</span><span class="en">The World Explorer</span></h4>
+      <p><span class="tr">Yeni evrenler, imkânsız dünyalar seni çağırıyor.</span><span class="en">New universes and impossible worlds call to you.</span></p>
+    </div>
+    <div class="arch a4"><span class="no">IV</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#FF8A5C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11L9.5 22 19 10.5h-6.5L13 2z"/></svg>
+      <h4><span class="tr">Adrenalin Tutkunu</span><span class="en">The Adrenaline Seeker</span></h4>
+      <p><span class="tr">Tempo, aksiyon ve macera senin yakıtın.</span><span class="en">Pace, action and adventure are your fuel.</span></p>
+    </div>
+    <div class="arch a5"><span class="no">V</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#E9B872" stroke-width="1.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.3 2.4 2 4 2s3-.7 4-2M9 9.5h.01M15 9.5h.01"/></svg>
+      <h4><span class="tr">Neşe Avcısı</span><span class="en">The Joy Chaser</span></h4>
+      <p><span class="tr">Kahkaha ve hafiflik senin sığınağın.</span><span class="en">Laughter and lightness are your refuge.</span></p>
+    </div>
+    <div class="arch a6"><span class="no">VI</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#8FB3C9" stroke-width="1.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <h4><span class="tr">Gerçeğin Peşinde</span><span class="en">The Truth Seeker</span></h4>
+      <p><span class="tr">Gerçek hikâyeler, keskin sorular, çıplak hakikat.</span><span class="en">True stories, sharp questions, the naked truth.</span></p>
+    </div>
+    <div class="arch a7"><span class="no">VII</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#C9A0E9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6L4 8.9l5.6-.7L12 3z"/></svg>
+      <h4><span class="tr">Sonsuz Çocuk</span><span class="en">The Eternal Child</span></h4>
+      <p><span class="tr">İçindeki çocuk hiç büyümedi — ve bu çok iyi.</span><span class="en">The child in you never grew up — and that rules.</span></p>
+    </div>
+    <div class="arch a8"><span class="no">VIII</span>
+      <svg class="sig" viewBox="0 0 24 24" fill="none" stroke="#A8C97F" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
+      <h4><span class="tr">Tür Göçebesi</span><span class="en">The Genre Nomad</span></h4>
+      <p><span class="tr">Tek bir türe sığmıyorsun; her renkten tadıyorsun.</span><span class="en">You don't fit one genre; you taste every color.</span></p>
+    </div>
+  </div>
+  <div class="gallery-hint rv"><span class="tr">← Sekiz arketipi keşfetmek için kaydır →</span><span class="en">← Swipe to explore all eight archetypes →</span></div>
+
+  <div class="wrap">
+    <div class="show rv" style="margin-top:40px">
+      <div>
+        <div class="kicker"><span class="tr">Paylaşılabilir Web Profili</span><span class="en">Shareable Web Profile</span></div>
+        <h3><span class="tr">Zevkinin bir adresi var.</span><span class="en">Your taste has an address.</span></h3>
+        <p><span class="tr">DNA'n, Top 20 panteonun ve istatistiklerin şık bir web sayfasında buluşur. Bağlantıyı Instagram biyografine koy; profiline giren herkes hangi izleyici olduğunu görsün.</span><span class="en">Your DNA, Top 20 pantheon and stats meet on an elegant web page. Drop the link in your Instagram bio; anyone who visits sees exactly what kind of watcher you are.</span></p>
+        <ul>
+          <li><span class="tr">Top 20'm: en sevdiğin 20 film + 20 diziyi sürükleyerek sırala</span><span class="en">My Top 20: drag-to-rank your 20 favorite movies + 20 shows</span></li>
+          <li><span class="tr">Yıl biterken sinematik özetini çıkar, tek dokunuşla paylaş</span><span class="en">As the year ends, get your cinematic recap and share it in a tap</span></li>
+          <li><span class="tr">İstatistikler: puan dağılımın, zirvedeki türlerin, kütüphanen</span><span class="en">Stats: rating distribution, top genres, your library</span></li>
+        </ul>
       </div>
-      <div class="feat rv">
-        <div class="ic c-ember"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <h3><span class="tr">Kullanıcı yorumları</span><span class="en">User reviews</span></h3>
-        <p><span class="tr">Filmlere ve dizilere kendi yorumunu yaz; topluluğun düşüncelerini oku, kararını güçlendir.</span><span class="en">Write your own reviews for movies and shows; read what the community thinks before you commit.</span></p>
+      <div class="viz"><div class="vig">
+        <div class="browser">
+          <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">cinema.mbkm.com.tr/profile/sen</span></div>
+          <div class="page">
+            <div class="avat"></div>
+            <div class="nm">@<span class="tr">sen</span><span class="en">you</span></div>
+            <span class="dna-tag"><span class="tr">Karanlık Anlatıcı</span><span class="en">The Dark Chronicler</span></span>
+            <div class="strip"><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ bento: her detay ═══ -->
+<section id="detaylar">
+  <div class="wrap">
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Sahne Arkası</span><span class="en">Behind the Scenes</span></div>
+      <div class="act-rule"></div>
+      <h2><span class="tr">Her detay düşünüldü</span><span class="en">Every detail, considered</span></h2>
+    </div>
+    <div class="bento">
+      <div class="b rv">
+        <div class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21V3z"/></svg></div>
+        <h4><span class="tr">İzleme listesi + bulut senkron</span><span class="en">Watchlist + cloud sync</span></h4>
+        <p><span class="tr">Puanların, listen ve yorumların tüm cihazlarında; çevrimdışıyken bile.</span><span class="en">Ratings, list and reviews on all your devices — even offline.</span></p>
       </div>
-      <div class="feat rv">
-        <div class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3-3m0 0l-3 3m3-3v12"/></svg></div>
-        <h3><span class="tr">Arkadaş önerileri</span><span class="en">Friend recommendations</span></h3>
-        <p><span class="tr">Arkadaş Eşleşmesi ile zevk profillerinizi karşılaştırın; ortak beğenilerinizden kişisel öneriler alın.</span><span class="en">With Friend Match, compare taste profiles and get picks drawn from what you both love.</span></p>
-      </div>
-      <div class="feat rv">
-        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
-        <h3><span class="tr">Paylaşılabilir Sinema DNA profili</span><span class="en">Shareable Cinema DNA profile</span></h3>
-        <p><span class="tr">Web profilini herkese aç, benzersiz Sinema DNA'nı bağlantıyla paylaş — Instagram biyografine ekle.</span><span class="en">Make your web profile public and share your unique Cinema DNA via link — add it to your Instagram bio.</span></p>
-      </div>
-      <div class="feat rv">
+      <div class="b rv">
         <div class="ic c-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-        <h3><span class="tr">Vizyon hatırlatıcıları</span><span class="en">Release reminders</span></h3>
-        <p><span class="tr">İzleme listendeki yapımlar vizyona girdiğinde bildirim al; kaçırdığın film olmasın.</span><span class="en">Get notified when watchlist titles hit theaters or streaming — never miss a release again.</span></p>
+        <h4><span class="tr">Vizyon hatırlatıcıları</span><span class="en">Release reminders</span></h4>
+        <p><span class="tr">Listendeki yapım çıktığı gün bildirim al; kaçan film olmasın.</span><span class="en">Get pinged the day a watchlist title drops; miss nothing.</span></p>
       </div>
-      <div class="feat rv">
+      <div class="b rv">
+        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8h4l3-6 4 12 3-6h8"/></svg></div>
+        <h4><span class="tr">Çevrimdışı öncelikli</span><span class="en">Offline-first</span></h4>
+        <p><span class="tr">Uçakta bile çalışır: yerel önbellek, bağlanınca sessizce eşitler.</span><span class="en">Works on a plane: local cache syncs quietly when you're back.</span></p>
+      </div>
+      <div class="b rv">
         <div class="ic c-dim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-        <h3><span class="tr">Aile Modu</span><span class="en">Family Mode</span></h3>
-        <p><span class="tr">Çocuklar için güvenli keşif: yaşa uygun filtreler ve aile dostu önerilerle birlikte izleyin.</span><span class="en">Safer discovery for kids: age-appropriate filters and family-friendly picks for watching together.</span></p>
+        <h4><span class="tr">Aile dostu mod</span><span class="en">Family friendly mode</span></h4>
+        <p><span class="tr">Tek anahtarla yetişkin içerik süzülür; keşif çocuklar için güvenli.</span><span class="en">One switch filters mature content; discovery stays kid-safe.</span></p>
+      </div>
+      <div class="b rv">
+        <div class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
+        <h4><span class="tr">Türkçe & İngilizce</span><span class="en">Turkish & English</span></h4>
+        <p><span class="tr">Arayüz iki dilde; tek dokunuşla geçiş.</span><span class="en">Full UI in both languages; switch in one tap.</span></p>
+      </div>
+      <div class="b rv">
+        <div class="ic c-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+        <h4><span class="tr">Açık & koyu tema</span><span class="en">Light & dark theme</span></h4>
+        <p><span class="tr">Gündüz ferah, gece loş — tercihin hatırlanır.</span><span class="en">Bright by day, dim by night — your choice is remembered.</span></p>
+      </div>
+      <div class="b rv">
+        <div class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <h4><span class="tr">Gizlilik senin elinde</span><span class="en">Privacy in your hands</span></h4>
+        <p><span class="tr">Gizli puan, gizli yorum, engelleme, tek dokunuşla hesap silme.</span><span class="en">Private ratings, private reviews, blocking, one-tap account deletion.</span></p>
+      </div>
+      <div class="b rv">
+        <div class="ic c-ember"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
+        <h4><span class="tr">Misafir olarak dene</span><span class="en">Try as a guest</span></h4>
+        <p><span class="tr">Hesapsız keşfet; sonra e-posta, Google veya Apple ile bağla, hiçbir şey kaybolmasın.</span><span class="en">Explore without an account; link email, Google or Apple later — nothing is lost.</span></p>
       </div>
     </div>
   </div>
 </section>
 
+<!-- steps -->
 <section id="how" style="padding-top:20px">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="gold-line"></div>
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Fragman</span><span class="en">The Trailer</span></div>
+      <div class="act-rule"></div>
       <h2><span class="tr">Üç adımda başla</span><span class="en">Start in three steps</span></h2>
     </div>
     <div class="steps">
       <div class="step rv">
         <div class="num">01</div>
         <h3><span class="tr">İndir ve giriş yap</span><span class="en">Download and sign in</span></h3>
-        <p><span class="tr">E-posta ile kayıt ol, Google hesabınla giriş yap veya önce misafir olarak keşfet.</span><span class="en">Register with email, sign in with Google, or explore as a guest first.</span></p>
+        <p><span class="tr">E-posta ile kayıt ol, Google veya Apple hesabınla gir — ya da önce misafir olarak keşfet.</span><span class="en">Register with email, sign in with Google or Apple — or explore as a guest first.</span></p>
       </div>
       <div class="step rv">
         <div class="num">02</div>
-        <h3><span class="tr">Kaydır ve puanla</span><span class="en">Swipe and rate</span></h3>
-        <p><span class="tr">Birkaç kaydırma yeter: öneri motoru zevk profilini örmeye hemen başlar.</span><span class="en">A few swipes is all it takes: the engine starts weaving your taste profile right away.</span></p>
+        <h3><span class="tr">Zevk analizini yap, kaydır</span><span class="en">Do the taste setup, swipe</span></h3>
+        <p><span class="tr">İki dakikalık zevk analizi + birkaç kaydırma: motor, zevk profilini örmeye hemen başlar.</span><span class="en">A two-minute taste setup + a few swipes: the engine starts weaving your profile right away.</span></p>
       </div>
       <div class="step rv">
         <div class="num">03</div>
         <h3><span class="tr">İzle ve paylaş</span><span class="en">Watch and share</span></h3>
-        <p><span class="tr">Nerede izleyebileceğini gör, arkadaşlarınla eşleş, <a href="https://cinema.mbkm.com.tr" style="color:var(--gold)">paylaşılabilir Sinema DNA profilini</a> dünyaya aç.</span><span class="en">See where to stream it, match with friends, and share your <a href="https://cinema.mbkm.com.tr" style="color:var(--gold)">shareable Cinema DNA profile</a> with the world.</span></p>
+        <p><span class="tr">Nerede izleyebileceğini gör, arkadaşlarınla eşleş, <a href="https://cinema.mbkm.com.tr" style="color:var(--gold)">Sinema DNA profilini</a> dünyaya aç.</span><span class="en">See where to stream it, match with friends, and open your <a href="https://cinema.mbkm.com.tr" style="color:var(--gold)">Cinema DNA profile</a> to the world.</span></p>
       </div>
     </div>
   </div>
 </section>
 
+<!-- FAQ -->
 <section id="faq" style="padding-top:20px">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="gold-line"></div>
+    <div class="act-head rv">
+      <div class="act-no"><span class="tr">Perde Arası</span><span class="en">Intermission</span></div>
+      <div class="act-rule"></div>
       <h2><span class="tr">Sık sorulan sorular</span><span class="en">Frequently asked questions</span></h2>
     </div>
     <div class="faq rv">
@@ -352,8 +709,8 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
         <div class="faq-body"><span class="tr">Uygulama içinden birkaç dokunuşla ya da e-posta talebiyle. Ayrıntılar <a href="hesap-silme.html" style="color:var(--gold)">hesap silme sayfasında</a>.</span><span class="en">In a few taps inside the app, or by email request. Details on the <a href="hesap-silme.html" style="color:var(--gold)">account deletion page</a>.</span></div>
       </details>
       <details>
-        <summary><span><span class="tr">Koltuk Modu ile Arkadaş Eşleşmesi arasındaki fark nedir?</span><span class="en">What's the difference between Couch Mode and Friend Match?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
-        <div class="faq-body"><span class="tr"><strong>Koltuk Modu</strong> aynı anda, aynı odada kaydırma içindir: oda kodu paylaşırsınız ve ikiniz de beğendiğinizde anında eşleşirsiniz — tek ekranda birlikte karar vermek için idealdir. <strong>Arkadaş Eşleşmesi</strong> ise uzaktaki arkadaşınızla zevk profillerinizi karşılaştırır; ortak beğenilerinizden kişisel öneriler üretir. Biri "şimdi ne izlesek?" sorusuna, diğeri "arkadaşım ne önerir?" sorusuna cevap verir.</span><span class="en"><strong>Couch Mode</strong> is for swiping together in real time: share a room code and match instantly when you both like the same title — perfect for deciding on one screen. <strong>Friend Match</strong> compares taste profiles with a remote friend and generates recommendations from your shared favorites. One answers "what should we watch right now?" — the other answers "what would my friend recommend?"</span></div>
+        <summary><span><span class="tr">Birlikte Seç ile Arkadaş Eşleşmesi arasındaki fark nedir?</span><span class="en">What's the difference between Pick Together and Friend Match?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="faq-body"><span class="tr"><strong>Birlikte Seç</strong>, arkadaşına davet gönderip aynı anda, kendi telefonlarınızda aynı desteyi kaydırmanızdır: ilk ortak beğenide anında eşleşirsiniz — "şimdi ne izlesek?" sorusunun cevabı. <strong>Arkadaş Eşleşmesi</strong> ise zevk profillerinizi karşılaştırır ve ortak beğenilerinizden öneriler üretir — "arkadaşım ne önerirdi?" sorusunun cevabı. Ayrıca tek telefonu elden ele vererek tür seçtiğiniz <strong>Koltuk Modu</strong> da var.</span><span class="en"><strong>Pick Together</strong> means inviting a friend and swiping the same deck at the same time on your own phones: the first mutual like matches instantly — answering "what should we watch right now?". <strong>Friend Match</strong> compares your taste profiles and generates picks from shared favorites — answering "what would my friend recommend?". There's also a pass-the-phone <strong>Couch Mode</strong> where you pick genres on a single device.</span></div>
       </details>
       <details>
         <summary><span><span class="tr">Hangi platformlarda kullanabilirim?</span><span class="en">Which platforms is it on?</span></span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
@@ -363,15 +720,16 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
   </div>
 </section>
 
+<!-- CTA -->
 <section style="padding-top:20px">
   <div class="wrap">
     <div class="band rv">
-      <h2><span class="tr">Sinema DNA'nı keşfetmeye hazır mısın?</span><span class="en">Ready to discover your Cinema DNA?</span></h2>
-      <p><span class="tr">Android uygulamasını indir, e-posta veya Google ile giriş yap ve kaydırmaya başla.</span><span class="en">Download the Android app, sign in with email or Google, and start swiping.</span></p>
-      <a class="btn-play" href="https://cinema.mbkm.com.tr/download" rel="noopener" style="display:inline-flex">
+      <h2><span class="tr">Perde senin için açılıyor.</span><span class="en">The curtain rises for you.</span></h2>
+      <p><span class="tr">Android uygulamasını indir, iki dakikalık zevk analizini yap ve Sinema DNA'nı keşfet.</span><span class="en">Download the Android app, do the two-minute taste setup, and discover your Cinema DNA.</span></p>
+      <a class="btn-play" href="https://cinema.mbkm.com.tr/download" rel="noopener" style="display:inline-flex;position:relative">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
         <span>
-          <small><span class="tr">ÜCRETSİZ</span><span class="en">FREE</span></small>
+          <small><span class="tr">ÜCRETSİZ · REKLAMSIZ</span><span class="en">FREE · NO ADS</span></small>
           <span class="big"><span class="tr">Android İndir</span><span class="en">Download Android</span></span>
         </span>
       </a>
@@ -430,11 +788,15 @@ footer{border-top:1px solid var(--border-soft);padding:48px 0 36px;background:va
   setLang(saved);
   btn.addEventListener('click',function(){setLang(root.dataset.lang==='tr'?'en':'tr',true)});
 
+  // marquee: duplicate content so the 50% translate loops seamlessly
+  var tick=document.getElementById('tick');
+  if(tick){tick.innerHTML+=tick.innerHTML;}
+
   var els=document.querySelectorAll('.rv');
   if('IntersectionObserver' in window){
     var io=new IntersectionObserver(function(es){
       es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
-    },{threshold:.15});
+    },{threshold:.12});
     els.forEach(function(el){io.observe(el)});
   }else{els.forEach(function(el){el.classList.add('in')})}
 
