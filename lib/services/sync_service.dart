@@ -58,6 +58,10 @@ int _maxUpdatedAtInPayload(Map<String, dynamic> payload) {
   return maxTs;
 }
 
+class _SyncSessionChanged implements Exception {
+  const _SyncSessionChanged();
+}
+
 class SyncService {
   static const int _pushBatchSize = 500;
   final ApiService _apiService;
@@ -70,7 +74,24 @@ class SyncService {
 
   SyncService(this._apiService, [this._ref]);
 
-  Future<int> _pushPayloadInChunks(Map<String, dynamic> payload) async {
+  Future<String?> _currentUserId() async {
+    final user = await PrefsService.getUserData();
+    return user?['id']?.toString();
+  }
+
+  Future<void> _ensureSession(String? expectedUserId) async {
+    // Unit tests and mock-storage handshakes may intentionally have no user.
+    // A real authenticated sync always has persisted user data.
+    if (expectedUserId == null) return;
+    if (await _currentUserId() != expectedUserId) {
+      throw const _SyncSessionChanged();
+    }
+  }
+
+  Future<int> _pushPayloadInChunks(
+    Map<String, dynamic> payload,
+    String? sessionUserId,
+  ) async {
     const tables = [
       'ratings',
       'watchlist',
@@ -103,7 +124,9 @@ class SyncService {
           chunk[table] = const [];
         }
       }
+      await _ensureSession(sessionUserId);
       final result = await _apiService.push(chunk);
+      await _ensureSession(sessionUserId);
       applied += _asInt(result['applied']);
     }
     return applied;
@@ -118,6 +141,8 @@ class SyncService {
     _syncFuture = _performSync();
     try {
       await _syncFuture;
+    } on _SyncSessionChanged {
+      debugPrint('Sync cancelled because the authenticated user changed.');
     } on ApiException catch (e) {
       if (e.code != 'sync_reset_required') rethrow;
       debugPrint('Sync device expired; performing a safe full resync.');
@@ -228,6 +253,7 @@ class SyncService {
   }
 
   Future<void> _performSync() async {
+    final sessionUserId = await _currentUserId();
     // İki ayrı imleç tutulur:
     //  - lastPull: sunucu saatiyle (server_time) — pull "since" parametresi.
     //  - lastPush: CİHAZ saatiyle — push adayları yerel updated_at ile seçilir.
@@ -242,17 +268,22 @@ class SyncService {
       debugPrint(
         "Starting sync (mock DB). pull since: $lastPull, push since: $lastPush",
       );
+      await _ensureSession(sessionUserId);
       final pushResult = await _apiService.push(<String, dynamic>{
         'metadata_locale': PrefsService.activeLanguageCode,
         if (_declareLocalReset) 'local_reset': true,
       });
+      await _ensureSession(sessionUserId);
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
       // Mock DB'de gönderilecek satır yok — duvar saatiyle imleç ilerletme.
+      await _ensureSession(sessionUserId);
       final pullResult = await _apiService.pull(
         lastPull,
         localReset: _declareLocalReset,
       );
+      await _ensureSession(sessionUserId);
       final serverTime = _asInt(pullResult['server_time']);
+      await _ensureSession(sessionUserId);
       await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
       PrefsService.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
@@ -392,7 +423,7 @@ class SyncService {
         .toList();
 
     // Push local updates to server
-    final applied = await _pushPayloadInChunks(payload);
+    final applied = await _pushPayloadInChunks(payload, sessionUserId);
     debugPrint("Push complete. Applied changes: $applied");
 
     // Push imlecini gönderilen satırların max(updated_at)'ine bağla — duvar
@@ -408,10 +439,12 @@ class SyncService {
     }
 
     // 2. PULL remote changes
+    await _ensureSession(sessionUserId);
     final pullResult = await _apiService.pull(
       lastPull,
       localReset: _declareLocalReset,
     );
+    await _ensureSession(sessionUserId);
     final serverTime = _asInt(pullResult['server_time']);
 
     // Sunucudan gelen satır, yereldeki karşılığından ESKİYSE uygulanmaz.
@@ -574,20 +607,26 @@ class SyncService {
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
+      // A logout/account switch can happen while SQLite awaits above yield.
+      // Throwing here keeps the transaction from committing stale account data.
+      await _ensureSession(sessionUserId);
     });
 
     // Birleşik pull sonrası Top 20 tavanını ve sıra indekslerini toparla.
     // Trim/remap updated_at stamps happen AFTER the main push, so push those
     // favorites in the same sync turn (tombstones + remapped ranks).
+    await _ensureSession(sessionUserId);
     final normalizeStartMs = DateTime.now().millisecondsSinceEpoch;
     final trimmedFavorites = await DatabaseHelper().normalizeFavoritesCap();
     if (trimmedFavorites > 0) {
       appliedCount += trimmedFavorites;
       debugPrint('Sync trimmed $trimmedFavorites favorites over Top 20 cap.');
     }
-    await _pushFavoritesTouchedSince(normalizeStartMs);
+    await _ensureSession(sessionUserId);
+    await _pushFavoritesTouchedSince(normalizeStartMs, sessionUserId);
 
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
+    await _ensureSession(sessionUserId);
     await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
     PrefsService.invalidateGenreWeights();
 
@@ -650,7 +689,10 @@ class SyncService {
 
   /// Push favorites rows touched at/after [sinceMs] (cap trim tombstones +
   /// remapped ranks) so they leave in the same sync turn as normalize.
-  Future<void> _pushFavoritesTouchedSince(int sinceMs) async {
+  Future<void> _pushFavoritesTouchedSince(
+    int sinceMs,
+    String? sessionUserId,
+  ) async {
     final db = await DatabaseHelper().database;
     if (db == null) return;
 
@@ -684,7 +726,7 @@ class SyncService {
           .toList(),
     };
 
-    final applied = await _pushPayloadInChunks(payload);
+    final applied = await _pushPayloadInChunks(payload, sessionUserId);
     debugPrint(
       'Sync pushed ${rows.length} favorites after cap normalize '
       '(applied=$applied).',

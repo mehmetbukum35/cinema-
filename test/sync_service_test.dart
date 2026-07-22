@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -20,10 +21,14 @@ class MockApiService implements ApiService {
   int pushCount = 0;
   int pullCount = 0;
   Duration? delay;
+  Completer<void>? pushStarted;
+  Completer<void>? pushGate;
 
   @override
   Future<Map<String, dynamic>> push(Map<String, dynamic> payload) async {
     pushCount++;
+    pushStarted?.complete();
+    if (pushGate case final gate?) await gate.future;
     pushedPayload = payload;
     pushedPayloads.add(payload);
     if (resetRequiredOnFirstPush && pushCount == 1) {
@@ -335,6 +340,30 @@ void main() {
 
       expect(mockApi.pushCount, 1);
       expect(mockApi.pullCount, 1);
+    });
+
+    test('should cancel stale sync when authenticated user changes', () async {
+      await PrefsService.saveUserData({'id': 1, 'email': 'one@example.com'});
+      mockApi.pushStarted = Completer<void>();
+      mockApi.pushGate = Completer<void>();
+      mockApi.pullResponse = {
+        'server_time': 3000,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      final pendingSync = syncService.sync();
+      await mockApi.pushStarted!.future;
+      await PrefsService.saveUserData({'id': 2, 'email': 'two@example.com'});
+      mockApi.pushGate!.complete();
+      await pendingSync;
+
+      expect(mockApi.pushCount, 1);
+      expect(mockApi.pullCount, 0);
+      expect(await PrefsService.getLastSyncTime(), 1000);
     });
 
     test(
