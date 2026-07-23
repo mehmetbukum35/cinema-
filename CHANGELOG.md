@@ -4,7 +4,14 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [1.0.0] — 2026-07-24
+
+First public release. Everything below shipped in it.
+
 ### Added
+- Shared title catalog authority (`titles.source`, `titles.refreshed_at`, migration 025): TMDB-written rows are canonical and cannot be overwritten by a client sync push; client metadata is fill-empty only and is promoted to `source=tmdb` by lazy refresh and the maintenance cron
 - English Taste DNA theme lexicon (`assets/lexicon/theme_en.json`) loaded alongside Turkish
 - Android release CI now injects a real upload keystore from GitHub secrets (`ANDROID_KEYSTORE_*`), fails closed when signing is missing, and rejects debug-signed APKs before uploading artifacts
 - Release-only Firebase Crashlytics reporting for uncaught Flutter, platform, and asynchronous errors; API 5xx reports are correlated with structured backend JSON logs through redacted `X-Request-ID` metadata
@@ -21,6 +28,8 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - EN trailer fallback caching under the primary locale key (avoids double TMDB fetch)
 
 ### Changed
+- Analyzer runs with `strict-casts` and `strict-raw-types`, plus six lint rules that already passed clean (`cancel_subscriptions`, `close_sinks`, `only_throw_errors`, `throw_in_finally`, `test_types_in_equals`, `no_adjacent_strings_in_list`); values decoded from JSON and SQLite can no longer reach typed positions unchecked
+- CI Dart coverage gate on the logic layers raised from 50% to 70% (actual: 74%)
 - Split the monolithic `ApiService` into a 235-line shared `ApiClient` plus focused auth, sync, social, recommendation, and live-couch API modules while preserving the existing facade and provider contracts
 - Watchlist and stats screens now render local data immediately and refresh after background sync (offline-first, no more sync-blocked spinner)
 - All `ApiService` error paths decode responses defensively (HTML error pages no longer surface as `FormatException`)
@@ -31,6 +40,9 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - `backend/src/Social.php` split into domain traits under `backend/src/Social/`
 
 ### Fixed
+- A 401 that could not be refreshed returned the raw server body to callers, throwing an unhandled `FormatException` instead of the typed `ApiException` every provider already catches; the same applied to any plain-text or HTML error body
+- Eleven unchecked `dynamic` values reaching typed positions, found by `strict-casts` — including a reviewer-name crash path identical to the one already fixed for avatars, and an unchecked `communityScore['total']` comparison that throws on a null or non-numeric total
+- Client-supplied title metadata is validated before storage: image paths reject `..` traversal and non-TMDB shapes, `vote_average` and `popularity` clamp to their ranges or drop when non-numeric, and `release_date` must be `YYYY-MM-DD`. The canonical TMDB path runs through the same normalization
 - Rating button and primary CTA contrast (WCAG): dark labels on light fills, deeper red fills, crimson elevated buttons, readable light-theme gold
 - Hardcoded Turkish UI fallbacks now default to English; notification channels localize by active language
 - Taste DNA was regenerated and re-published to the server on every sync: recommendation-cache invalidation no longer wipes the DNA cache or the last-published hash (DNA cache self-validates via its input hash)
@@ -64,4 +76,5 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 - TMDB proxy via backend (`GET /tmdb/*`); client no longer needs TMDB API key
 - Turkish (default) and English localization
 
-[Unreleased]: https://github.com/mehmetbukum35/cinema-/compare/main...HEAD
+[Unreleased]: https://github.com/mehmetbukum35/cinema-/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/mehmetbukum35/cinema-/releases/tag/v1.0.0
