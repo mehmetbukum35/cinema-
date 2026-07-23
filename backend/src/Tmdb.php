@@ -77,6 +77,66 @@ class Tmdb
     }
 
     /**
+     * Film/dizi detayını JSON olarak döner (proxy exit etmez). Adult / hata → null.
+     * TitleCatalog lazy refresh ve cron backfill için.
+     *
+     * @return array{
+     *   title:?string, overview:?string, poster_path:?string, backdrop_path:?string,
+     *   vote_average:?float, release_date:?string, popularity:?float, genre_ids:?string
+     * }|null
+     */
+    public function fetchDetails(int $tmdbId, bool $isTv, string $locale): ?array
+    {
+        if ($this->apiKey === '' || $tmdbId <= 0) {
+            return null;
+        }
+        $path = $isTv ? "/3/tv/$tmdbId" : "/3/movie/$tmdbId";
+        $lang = in_array($locale, ['tr', 'en'], true) ? $locale : 'en';
+        $result = $this->request($path, ['language' => $lang]);
+        if ($result === null || $result['status'] !== 200 || $result['body'] === '') {
+            return null;
+        }
+        $data = json_decode($result['body'], true);
+        if (!is_array($data) || !empty($data['adult'])) {
+            return null;
+        }
+
+        $title = $data['title'] ?? $data['name'] ?? null;
+        $overview = $data['overview'] ?? null;
+        $genreIds = null;
+        if (isset($data['genres']) && is_array($data['genres'])) {
+            $ids = [];
+            foreach ($data['genres'] as $genre) {
+                if (!is_array($genre)) {
+                    continue;
+                }
+                $id = (int) ($genre['id'] ?? 0);
+                if ($id > 0) {
+                    $ids[] = $id;
+                }
+            }
+            $genreIds = $ids === [] ? null : json_encode($ids, JSON_UNESCAPED_UNICODE);
+        } elseif (isset($data['genre_ids']) && is_array($data['genre_ids'])) {
+            $genreIds = json_encode(array_values($data['genre_ids']), JSON_UNESCAPED_UNICODE);
+        }
+
+        return [
+            'title' => is_string($title) ? $title : null,
+            'overview' => is_string($overview) ? $overview : null,
+            'poster_path' => isset($data['poster_path']) && is_string($data['poster_path'])
+                ? $data['poster_path'] : null,
+            'backdrop_path' => isset($data['backdrop_path']) && is_string($data['backdrop_path'])
+                ? $data['backdrop_path'] : null,
+            'vote_average' => isset($data['vote_average']) ? (float) $data['vote_average'] : null,
+            'release_date' => is_string($data['release_date'] ?? null)
+                ? $data['release_date']
+                : (is_string($data['first_air_date'] ?? null) ? $data['first_air_date'] : null),
+            'popularity' => isset($data['popularity']) ? (float) $data['popularity'] : null,
+            'genre_ids' => $genreIds,
+        ];
+    }
+
+    /**
      * $path:  TMDB API yolu, örn. "/3/discover/movie" (baştaki /tmdb kaldırılmış halde).
      * $query: client'tan gelen query string parametreleri. İçinde api_key
      *         varsa yok sayılır; gerçek anahtar burada eklenir. Web isteğinde
@@ -99,6 +159,42 @@ class Tmdb
             $query = self::parseRawQuery($rawQs);
         }
 
+        $result = $this->request($path, $query, persistCache: false);
+        if ($result === null) {
+            fail(502, 'TMDB sunucusuna ulaşılamadı. Lütfen daha sonra tekrar deneyin.');
+        }
+
+        // Katman 2: Yanıt düzeyinde adult=true filtreleme (önbelleğe filtrelenmiş yaz).
+        $body = $this->filterResponse($result['status'], $result['body']);
+        if ($result['status'] === 200 && $body !== '') {
+            unset($query['api_key']);
+            $query['api_key'] = $this->apiKey;
+            $query['include_adult'] = 'false';
+            @file_put_contents(self::cacheFile($path, $query), $body, LOCK_EX);
+        }
+
+        // TMDB'nin ham cevabını client'a aynen ilet. Bu cevap hiçbir zaman
+        // api_key içermez (TMDB kendi yanıtına isteği yansıtmaz), bu yüzden
+        // doğrudan geçirmek güvenlidir.
+        self::sendResponse($result['status'], $body, $result['cache']);
+    }
+
+    /**
+     * Ortak HTTP + dosya önbelleği. Exit etmez; curl hatasında null döner.
+     *
+     * @return array{status:int, body:string, cache:string}|null
+     */
+    private function request(string $path, array $query, bool $persistCache = true): ?array
+    {
+        if ($this->apiKey === '') {
+            return null;
+        }
+
+        $path = '/' . ltrim($path, '/');
+        if (!str_starts_with($path, self::ALLOWED_PREFIX)) {
+            return null;
+        }
+
         unset($query['api_key']);
         $query['api_key'] = $this->apiKey;
         $query['include_adult'] = 'false'; // Katman 1: Sunucu düzeyinde adult filtresi zorunluluğu
@@ -111,7 +207,7 @@ class Tmdb
             : '';
         $cachedMtime = $cachedBody !== '' ? @filemtime($cacheFile) : false;
         if ($cachedMtime !== false && $cachedMtime + $ttl > time()) {
-            self::sendResponse(200, $cachedBody, 'HIT');
+            return ['status' => 200, 'body' => $cachedBody, 'cache' => 'HIT'];
         }
 
         $ch = curl_init($url);
@@ -128,22 +224,17 @@ class Tmdb
         if ($body === false) {
             $err = curl_error($ch);
             curl_close($ch);
-            cinema_error("TMDB proxy curl hatası: $err (url: $path)");
-            fail(502, 'TMDB sunucusuna ulaşılamadı. Lütfen daha sonra tekrar deneyin.');
+            cinema_error("TMDB request curl hatası: $err (url: $path)");
+            return null;
         }
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        // Katman 2: Yanıt düzeyinde adult=true filtreleme
-        $body = $this->filterResponse($status, $body);
-        if ($status === 200 && $body !== '') {
+        if ($persistCache && $status === 200 && $body !== '') {
             @file_put_contents($cacheFile, $body, LOCK_EX);
         }
 
-        // TMDB'nin ham cevabını client'a aynen ilet. Bu cevap hiçbir zaman
-        // api_key içermez (TMDB kendi yanıtına isteği yansıtmaz), bu yüzden
-        // doğrudan geçirmek güvenlidir.
-        self::sendResponse($status, $body, 'MISS');
+        return ['status' => $status, 'body' => (string) $body, 'cache' => 'MISS'];
     }
 
     public function filterResponse(int $status, string $body): string

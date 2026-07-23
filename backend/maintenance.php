@@ -12,6 +12,9 @@ if (!is_dir($src)) {
 }
 require_once "$src/Db.php";
 require_once "$src/Maintenance.php";
+require_once "$src/Tmdb.php";
+require_once "$src/TitleCatalog.php";
+require_once "$src/Helpers.php";
 
 $configFile = "$src/Config.php";
 if (!is_file($configFile)) {
@@ -21,17 +24,19 @@ if (!is_file($configFile)) {
 
 $config = require $configFile;
 
-// Mod: 'cleanup' (günlük temizlik), 'popular' (saatlik Top 20) ya da 'all'
-// (ikisi birlikte — varsayılan, geriye dönük uyumlu). İki cron ayrı çağrılabilsin
-// diye popüler önhesap kendi lock dosyasını kullanır; böylece saatlik Top 20 ile
-// günlük temizlik birbirini bloklamaz.
+// Mod: 'cleanup' (günlük temizlik), 'popular' (saatlik Top 20), 'titles'
+// (TMDB backfill) ya da 'all' (cleanup+popular+titles — varsayılan).
 $mode = $argv[1] ?? 'all';
-if (!in_array($mode, ['all', 'cleanup', 'popular'], true)) {
-    fwrite(STDERR, "Kullanım: maintenance.php [all|cleanup|popular]\n");
+if (!in_array($mode, ['all', 'cleanup', 'popular', 'titles'], true)) {
+    fwrite(STDERR, "Kullanım: maintenance.php [all|cleanup|popular|titles]\n");
     exit(1);
 }
 
-$lockName = $mode === 'popular' ? 'cinema-plus-popular.lock' : 'cinema-plus-maintenance.lock';
+$lockName = match ($mode) {
+    'popular' => 'cinema-plus-popular.lock',
+    'titles' => 'cinema-plus-titles.lock',
+    default => 'cinema-plus-maintenance.lock',
+};
 $lock = fopen(sys_get_temp_dir() . '/' . $lockName, 'c');
 if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
     fwrite(STDERR, "Bakım görevi zaten çalışıyor.\n");
@@ -39,11 +44,14 @@ if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
 }
 
 try {
-    $maintenance = new Maintenance(Db::conn($config), $config['maintenance'] ?? []);
+    $tmdbKey = (string) ($config['tmdb_api_key'] ?? '');
+    $tmdb = $tmdbKey !== '' ? new Tmdb($tmdbKey) : null;
+    $maintenance = new Maintenance(Db::conn($config), $config['maintenance'] ?? [], $tmdb);
     $result = match ($mode) {
         'cleanup' => $maintenance->runCleanup(),
         'popular' => $maintenance->runPopular(),
-        default   => $maintenance->run(),
+        'titles' => $maintenance->runTitles(),
+        default => $maintenance->run(),
     };
     echo json_encode(
         ['ok' => true, 'completed_at' => gmdate(DATE_ATOM), 'affected' => $result],

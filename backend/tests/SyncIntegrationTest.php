@@ -128,6 +128,64 @@ class SyncIntegrationTest extends TestCase
             ],
         ]);
         $this->assertSame('CoolMovie', $this->titleRow(778, 0)['title']);
+        $this->assertSame('client', $this->titleRow(778, 0)['source']);
+    }
+
+    public function testClientCannotOverwriteTmdbSource(): void
+    {
+        $this->db->exec(
+            "INSERT INTO titles (tmdb_id, is_tv, locale, title, overview, metadata_updated_at, source, refreshed_at)
+             VALUES (9001, 0, 'und', 'Canonical', 'Official overview', 1000, 'tmdb', 1000)"
+        );
+
+        $this->push(1, 'ratings', [
+            [
+                'movie_id' => 9001, 'is_tv' => 0, 'rating' => 2,
+                'title' => 'Client Poison',
+                'overview' => 'Client overview',
+                'updated_at' => 5000,
+            ],
+        ]);
+
+        $title = $this->titleRow(9001, 0);
+        $this->assertSame('Canonical', $title['title']);
+        $this->assertSame('Official overview', $title['overview']);
+        $this->assertSame('tmdb', $title['source']);
+    }
+
+    public function testLazyRefreshPromotesClientTitleToTmdb(): void
+    {
+        $fake = new class('test-key') extends Tmdb {
+            public function fetchDetails(int $tmdbId, bool $isTv, string $locale): ?array
+            {
+                return [
+                    'title' => 'Official Title',
+                    'overview' => 'From TMDB',
+                    'poster_path' => '/poster.jpg',
+                    'backdrop_path' => null,
+                    'vote_average' => 8.5,
+                    'release_date' => '1999-03-31',
+                    'popularity' => 12.0,
+                    'genre_ids' => '[28,12]',
+                ];
+            }
+        };
+        $this->sync = new Sync($this->db, new TitleCatalog($this->db, $fake));
+
+        $this->push(1, 'ratings', [
+            [
+                'movie_id' => 9002, 'is_tv' => 0, 'rating' => 3,
+                'title' => 'Client Draft',
+                'updated_at' => 1000,
+            ],
+        ]);
+
+        $title = $this->titleRow(9002, 0);
+        $this->assertSame('Official Title', $title['title']);
+        $this->assertSame('From TMDB', $title['overview']);
+        $this->assertSame('/poster.jpg', $title['poster_path']);
+        $this->assertSame('tmdb', $title['source']);
+        $this->assertGreaterThan(0, (int) $title['refreshed_at']);
     }
 
     // ─── last-write-wins: ESKİ veri yok sayılır ──────────────────────────────
@@ -592,6 +650,8 @@ class SyncIntegrationTest extends TestCase
                 popularity REAL,
                 genre_ids TEXT,
                 metadata_updated_at INTEGER NOT NULL DEFAULT 0,
+                source TEXT NOT NULL DEFAULT \'client\',
+                refreshed_at INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (tmdb_id, is_tv, locale)
             )'
         );

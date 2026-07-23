@@ -45,6 +45,8 @@ return [
         'couch_terminal_days' => 30,
         'tombstone_retention_days' => 30,
         'sync_device_inactive_days' => 90,
+        // Client-sourced titles backfill: php maintenance.php titles
+        'titles_refresh_batch' => 20,
     ],
 
     'smtp' => [

@@ -20,12 +20,16 @@ final class Maintenance
         'sync_device_inactive_days' => 90,
         'popular_min_votes' => 1,
         'popular_limit' => 20,
+        'titles_refresh_batch' => 20,
     ];
 
     private array $options;
 
-    public function __construct(private PDO $db, array $options = [])
-    {
+    public function __construct(
+        private PDO $db,
+        array $options = [],
+        private ?Tmdb $tmdb = null,
+    ) {
         $this->options = array_replace(self::DEFAULTS, $options);
         $this->options['batch_limit'] = max(1, min(5000, (int) $this->options['batch_limit']));
         $this->options['search_history_limit'] = max(0, min(500, (int) $this->options['search_history_limit']));
@@ -33,18 +37,19 @@ final class Maintenance
         $this->options['sync_device_inactive_days'] = max(30, min(730, (int) $this->options['sync_device_inactive_days']));
         $this->options['popular_min_votes'] = max(1, min(100000, (int) $this->options['popular_min_votes']));
         $this->options['popular_limit'] = max(1, min(50, (int) $this->options['popular_limit']));
+        $this->options['titles_refresh_batch'] = max(1, min(100, (int) $this->options['titles_refresh_batch']));
     }
 
     /**
-     * Temizlik + Popüler Top 20'yi birlikte koşar (geriye dönük uyumlu tek çağrı).
-     * Farklı cadence isteniyorsa runCleanup()/runPopular() ayrı ayrı çağrılır.
+     * Temizlik + Popüler Top 20 + titles TMDB backfill (geriye dönük uyumlu tek çağrı).
+     * Farklı cadence isteniyorsa runCleanup()/runPopular()/runTitles() ayrı ayrı çağrılır.
      *
      * @return array<string, int> affected row counts
      */
     public function run(?int $nowMs = null): array
     {
         $nowMs ??= (int) round(microtime(true) * 1000);
-        return $this->runCleanup($nowMs) + $this->runPopular($nowMs);
+        return $this->runCleanup($nowMs) + $this->runPopular($nowMs) + $this->runTitles($nowMs);
     }
 
     /**
@@ -109,6 +114,27 @@ final class Maintenance
     {
         $nowMs ??= (int) round(microtime(true) * 1000);
         return ['popular_titles_written' => $this->recomputePopularTitles($nowMs)];
+    }
+
+    /**
+     * Client-sourced / yenilenmemiş `titles` satırlarını TMDB ile doldurur.
+     * HTTP çağrıları transaction dışında; Tmdb yoksa no-op.
+     *
+     * @return array<string, int>
+     */
+    public function runTitles(?int $nowMs = null): array
+    {
+        $nowMs ??= (int) round(microtime(true) * 1000);
+        if ($this->tmdb === null) {
+            return ['titles_refreshed' => 0];
+        }
+        $catalog = new TitleCatalog($this->db, $this->tmdb);
+        return [
+            'titles_refreshed' => $catalog->refreshStaleBatch(
+                (int) $this->options['titles_refresh_batch'],
+                $nowMs
+            ),
+        ];
     }
 
     /// `favorites`'ı türe göre gruplayıp en çok favorilenen ilk N başlığı

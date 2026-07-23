@@ -51,8 +51,11 @@ CREATE TABLE `titles` (
   `popularity` double DEFAULT NULL,
   `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
   `metadata_updated_at` bigint(20) NOT NULL DEFAULT 0,
+  `source` varchar(10) NOT NULL DEFAULT 'client',
+  `refreshed_at` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`tmdb_id`,`is_tv`,`locale`),
-  KEY `idx_titles_metadata_updated` (`metadata_updated_at`)
+  KEY `idx_titles_metadata_updated` (`metadata_updated_at`),
+  KEY `idx_titles_source_refreshed` (`source`,`refreshed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

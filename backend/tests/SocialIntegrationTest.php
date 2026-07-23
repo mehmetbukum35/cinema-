@@ -1099,6 +1099,8 @@ class SocialIntegrationTest extends TestCase
                 popularity REAL,
                 genre_ids TEXT,
                 metadata_updated_at INTEGER NOT NULL DEFAULT 0,
+                source TEXT NOT NULL DEFAULT \'client\',
+                refreshed_at INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (tmdb_id, is_tv, locale)
             )'
         );

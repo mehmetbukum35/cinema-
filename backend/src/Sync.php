@@ -37,7 +37,12 @@ class Sync
         ],
     ];
 
-    public function __construct(private PDO $db) {}
+    private TitleCatalog $titles;
+
+    public function __construct(private PDO $db, ?TitleCatalog $titles = null)
+    {
+        $this->titles = $titles ?? new TitleCatalog($db);
+    }
 
     private function acknowledgeDevice(
         int $uid,
@@ -204,6 +209,12 @@ class Sync
             $this->db->rollBack();
             cinema_error('Sync push failed: ' . $e->getMessage(), $uid);
             fail(500, 'Senkronizasyon uygulanamadı.');
+        }
+        // TMDB HTTP transaction dışında: push cevabını bloke etmeden sınırlı refresh.
+        try {
+            $this->titles->flushPending();
+        } catch (Throwable $e) {
+            cinema_error('TitleCatalog flush failed: ' . $e->getMessage(), $uid);
         }
         json_out(200, ['server_time' => now_ms(), 'applied' => $applied]);
     }
@@ -394,86 +405,10 @@ class Sync
         return true;
     }
 
-    /** Store shared TMDB metadata once; stale clients cannot overwrite newer data. */
+    /** Shared titles: client fill-empty only; TMDB-canonical rows never overwritten. */
     private function upsertTitle(array $item, string $idKey, int $updatedAt, string $locale): void
     {
-        $tmdbId = (int) ($item[$idKey] ?? 0);
-        if ($tmdbId <= 0) return;
-        $isTv = !empty($item['is_tv']) ? 1 : 0;
-
-        // TMDB image paths must be root-relative and charset-safe (no URL injection).
-        foreach (['poster_path', 'backdrop_path'] as $pathField) {
-            if (!array_key_exists($pathField, $item)) continue;
-            $path = $item[$pathField];
-            if ($path === null || $path === '') continue;
-            if (!is_string($path) || !preg_match('#^/[A-Za-z0-9._/-]+$#', $path)) {
-                $item[$pathField] = null;
-            }
-        }
-
-        $fields = [
-            'title', 'poster_path', 'backdrop_path', 'overview', 'vote_average',
-            'release_date', 'popularity', 'genre_ids',
-        ];
-        $hasMetadata = false;
-        foreach ($fields as $field) {
-            if (array_key_exists($field, $item) && $item[$field] !== null && $item[$field] !== '') {
-                $hasMetadata = true;
-                break;
-            }
-        }
-        if (!$hasMetadata) return;
-
-        $select = $this->db->prepare('SELECT * FROM titles WHERE tmdb_id = ? AND is_tv = ? AND locale = ?');
-        $select->execute([$tmdbId, $isTv, $locale]);
-        $existing = $select->fetch(PDO::FETCH_ASSOC);
-        if ($existing !== false && $updatedAt < (int) $existing['metadata_updated_at']) return;
-
-        $values = ['tmdb_id' => $tmdbId, 'is_tv' => $isTv, 'locale' => $locale];
-        // title/overview: istemci metnine güvenme — sanitize + mevcut dolu alanı
-        // asla üzerine yazma (fill-empty). Diğer alanlar da fill-empty.
-        $textFields = ['title' => 512, 'overview' => 2000];
-        foreach ($fields as $field) {
-            $incoming = $item[$field] ?? null;
-            if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
-                $incoming = json_encode($incoming, JSON_UNESCAPED_UNICODE);
-            }
-            if (isset($textFields[$field])) {
-                $incoming = sanitize_title_text(
-                    is_string($incoming) || $incoming === null ? $incoming : (string) $incoming,
-                    $textFields[$field]
-                );
-            }
-            if ($existing !== false) {
-                $prev = $existing[$field] ?? null;
-                $prevEmpty = $prev === null || $prev === '';
-                if (!$prevEmpty) {
-                    $values[$field] = $prev;
-                    continue;
-                }
-            }
-            $values[$field] = ($incoming === null || $incoming === '') && $existing !== false
-                ? ($existing[$field] ?? null)
-                : $incoming;
-        }
-        $values['metadata_updated_at'] = max($updatedAt, (int) ($existing['metadata_updated_at'] ?? 0));
-
-        if ($existing === false) {
-            $columns = array_keys($values);
-            $list = '`' . implode('`, `', $columns) . '`';
-            $placeholders = implode(', ', array_fill(0, count($columns), '?'));
-            $this->db->prepare("INSERT INTO titles ($list) VALUES ($placeholders)")
-                     ->execute(array_values($values));
-            return;
-        }
-        $set = implode(', ', array_map(fn (string $field): string => "`$field` = ?", array_slice($fields, 0)));
-        $params = array_map(fn (string $field): mixed => $values[$field], $fields);
-        $params[] = $values['metadata_updated_at'];
-        $params[] = $tmdbId;
-        $params[] = $isTv;
-        $params[] = $locale;
-        $this->db->prepare("UPDATE titles SET $set, metadata_updated_at = ? WHERE tmdb_id = ? AND is_tv = ? AND locale = ?")
-                 ->execute($params);
+        $this->titles->ingestFromClient($item, $idKey, $updatedAt, $locale);
     }
 
     private static function metadataLocale(mixed $value): string

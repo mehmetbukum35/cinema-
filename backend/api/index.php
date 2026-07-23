@@ -33,6 +33,7 @@ require_once "$SRC/SocialWebRenderer.php";
 require_once "$SRC/Social.php";
 require_once "$SRC/Moderation.php";
 require_once "$SRC/Tmdb.php";
+require_once "$SRC/TitleCatalog.php";
 
 // Config web kök DIŞINDA. Yoksa örnek dosyadan kopyalanmamış demektir.
 $cfgFile = "$SRC/Config.php";
@@ -55,7 +56,8 @@ try {
 }
 
 $auth = new Auth($db, $cfg);
-$sync = new Sync($db);
+$tmdb = new Tmdb((string) ($cfg['tmdb_api_key'] ?? ''));
+$sync = new Sync($db, new TitleCatalog($db, $tmdb));
 
 // FCM yapılandırılmışsa push gönderimini etkinleştir (opsiyonel; yoksa sessizce devre dışı).
 $fcm = null;
@@ -68,7 +70,6 @@ if (!empty($cfg['fcm']['service_account'])) {
 }
 $social = new Social($db, null, $fcm);
 $moderation = new Moderation($db, (string) ($cfg['admin_key'] ?? ''));
-$tmdb = new Tmdb((string) ($cfg['tmdb_api_key'] ?? ''));
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
