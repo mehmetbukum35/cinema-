@@ -35,8 +35,26 @@ final class Maintenance
         $this->options['popular_limit'] = max(1, min(50, (int) $this->options['popular_limit']));
     }
 
-    /** @return array<string, int> affected row counts */
+    /**
+     * Temizlik + Popüler Top 20'yi birlikte koşar (geriye dönük uyumlu tek çağrı).
+     * Farklı cadence isteniyorsa runCleanup()/runPopular() ayrı ayrı çağrılır.
+     *
+     * @return array<string, int> affected row counts
+     */
     public function run(?int $nowMs = null): array
+    {
+        $nowMs ??= (int) round(microtime(true) * 1000);
+        return $this->runCleanup($nowMs) + $this->runPopular($nowMs);
+    }
+
+    /**
+     * Ana veritabanı housekeeping'i: tombstone/token/oturum temizliği + sync
+     * bakımı. Popüler Top 20 önhesabını İÇERMEZ (bkz. runPopular). Tek büyük
+     * transaction'da koşar; günlük gibi seyrek bir cadence'e uygundur.
+     *
+     * @return array<string, int> affected row counts
+     */
+    public function runCleanup(?int $nowMs = null): array
     {
         $nowMs ??= (int) round(microtime(true) * 1000);
         $result = [];
@@ -76,12 +94,21 @@ final class Maintenance
             throw $e;
         }
 
-        // Topluluk "Popüler Top 20" önhesabı ana bakım transaction'ının DIŞINDA
-        // koşar: favorites üzerindeki tam tablo GROUP BY'ı ana temizlik kilidiyle
-        // birleştirmemek için kendi (is_tv başına) transaction'ını kullanır.
-        $result['popular_titles_written'] = $this->recomputePopularTitles($nowMs);
-
         return $result;
+    }
+
+    /**
+     * Topluluk "Popüler Top 20" önhesabı. Temizlikten bağımsız; kendi (is_tv
+     * başına) transaction'ında koşar, o yüzden ayrı ve daha sık (ör. saatlik)
+     * bir cron cadence'ine binebilir. favorites üzerindeki tam tablo GROUP BY'ı
+     * ana temizlik kilidiyle birleştirmemek için bilinçli olarak ayrı tutulur.
+     *
+     * @return array<string, int> yazılan popular_titles satır sayısı
+     */
+    public function runPopular(?int $nowMs = null): array
+    {
+        $nowMs ??= (int) round(microtime(true) * 1000);
+        return ['popular_titles_written' => $this->recomputePopularTitles($nowMs)];
     }
 
     /// `favorites`'ı türe göre gruplayıp en çok favorilenen ilk N başlığı

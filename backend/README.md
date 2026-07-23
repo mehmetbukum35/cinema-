@@ -30,10 +30,24 @@ cron. The command is CLI-only and uses a lock file to prevent overlapping runs:
 
 ```bash
 php migrate.php
-php maintenance.php
+php maintenance.php          # all: cleanup + Popular Top 20
+php maintenance.php cleanup  # database housekeeping only
+php maintenance.php popular  # Popular Top 20 precompute only
 ```
 
-Example daily cron (replace with the real absolute paths):
+The mode argument lets cleanup and the community "Popular Top 20" precompute run
+on different cadences. They use separate lock files, so the hourly `popular` run
+never blocks (or is blocked by) the daily `cleanup` run.
+
+Example split cron — daily cleanup, hourly Top 20 (replace with real absolute
+paths):
+
+```cron
+20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php cleanup >> /home/USER/logs/cinema-maintenance.log 2>&1
+0 * * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php popular >> /home/USER/logs/cinema-popular.log 2>&1
+```
+
+Or keep a single daily run that does both (the previous behaviour):
 
 ```cron
 20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php >> /home/USER/logs/cinema-maintenance.log 2>&1
