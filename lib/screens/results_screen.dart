@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,7 +83,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   static String _getLanguageLabel(String code, String fallback) {
-    final isTr = ui.PlatformDispatcher.instance.locale.languageCode == 'tr';
+    final isTr = PrefsService.activeLanguageCode == 'tr';
     if (isTr) return fallback;
     switch (code) {
       case 'tr':

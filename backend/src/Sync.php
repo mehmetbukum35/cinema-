@@ -212,10 +212,13 @@ class Sync
     public function clearSearchHistory(int $uid): void
     {
         // Soft delete: senkronizasyonun diğer cihazlara da yansıması için.
+        // Pull `server_updated_at > since` ile filtreler — updated_at tek başına yetmez.
+        $now = now_ms();
         $st = $this->db->prepare(
-            'UPDATE search_history SET deleted = 1, updated_at = ? WHERE user_id = ? AND deleted = 0'
+            'UPDATE search_history SET deleted = 1, updated_at = ?, server_updated_at = ?
+             WHERE user_id = ? AND deleted = 0'
         );
-        $st->execute([now_ms(), $uid]);
+        $st->execute([$now, $now, $uid]);
         json_out(200, ['ok' => true, 'cleared' => $st->rowCount()]);
     }
 
@@ -227,10 +230,17 @@ class Sync
         try {
             foreach (self::TABLES as $table => $def) {
                 $st = $this->db->prepare(
-                    "UPDATE `$table` SET deleted = 1, updated_at = ? WHERE user_id = ? AND deleted = 0"
+                    "UPDATE `$table` SET deleted = 1, updated_at = ?, server_updated_at = ?
+                     WHERE user_id = ? AND deleted = 0"
                 );
-                $st->execute([$now, $uid]);
+                $st->execute([$now, $now, $uid]);
             }
+            // Diğer cihazlar tombstone'ları kaçırmasın diye tam yeniden çekmeye zorla.
+            $inv = $this->db->prepare(
+                'UPDATE sync_devices SET invalidated_at = ?
+                 WHERE user_id = ? AND invalidated_at IS NULL'
+            );
+            $inv->execute([$now, $uid]);
             $this->db->commit();
             json_out(200, ['ok' => true]);
         } catch (Throwable $e) {
@@ -266,7 +276,16 @@ class Sync
                 is_string($item['comment']) ? $item['comment'] : null
             );
         }
-        $updatedAt = (int) ($item['updated_at'] ?? now_ms());
+        // İstemci saati ileri kaçmışsa LWW / titles metadata sonsuza kilitlenmesin.
+        $serverNow = now_ms();
+        $skewMs = 5 * 60 * 1000; // 5 dk tolerans
+        $updatedAt = (int) ($item['updated_at'] ?? $serverNow);
+        if ($updatedAt > $serverNow + $skewMs) {
+            $updatedAt = $serverNow;
+        }
+        if ($updatedAt < 0) {
+            $updatedAt = $serverNow;
+        }
         $deleted   = !empty($item['deleted']) ? 1 : 0;
 
         if (isset($def['title_key']) && !$deleted) {

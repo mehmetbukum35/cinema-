@@ -41,12 +41,26 @@ trait SocialRecommendationsTrait
             );
             $up->execute([$note, $poster, $t, (int) $existingId]);
         } else {
-            $ins = $this->db->prepare(
-                'INSERT INTO recommendations
-                 (from_user_id, to_user_id, movie_id, is_tv, title, poster_path, note, seen, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'
-            );
-            $ins->execute([$uid, $friendId, $movieId, $isTv, $title, $poster, $note, $t]);
+            try {
+                $ins = $this->db->prepare(
+                    'INSERT INTO recommendations
+                     (from_user_id, to_user_id, movie_id, is_tv, title, poster_path, note, seen, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'
+                );
+                $ins->execute([$uid, $friendId, $movieId, $isTv, $title, $poster, $note, $t]);
+            } catch (PDOException $e) {
+                // Çift dokunuş: SELECT kaçırıp UNIQUE'e çarptıysa güncelle.
+                if ((int) ($e->errorInfo[1] ?? 0) !== 1062 && !str_contains($e->getMessage(), 'UNIQUE')) {
+                    throw $e;
+                }
+                $up = $this->db->prepare(
+                    'UPDATE recommendations
+                     SET note = ?, poster_path = ?, seen = 0,
+                         sender_deleted = 0, recipient_deleted = 0, created_at = ?
+                     WHERE from_user_id = ? AND to_user_id = ? AND movie_id = ? AND is_tv = ?'
+                );
+                $up->execute([$note, $poster, $t, $uid, $friendId, $movieId, $isTv]);
+            }
         }
 
         $this->notify($friendId, $uid, 'recommend', [

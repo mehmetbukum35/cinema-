@@ -163,7 +163,10 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
   /// Katılımcısı olduğum canlı oturumu sorgular (Together açılışı + resume).
   Future<void> checkActive() async {
-    if (!_ref.read(authProvider).isAuthenticated) return;
+    if (!_ref.read(authProvider).isAuthenticated) {
+      _apply(null);
+      return;
+    }
     final revision = _sessionRevision;
     try {
       final response = await _api.getActiveCouchSession();

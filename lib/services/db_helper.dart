@@ -5,6 +5,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/movie.dart';
 
+int _dbInt(Object? v, [int fallback = 0]) =>
+    v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? fallback);
+
+double _dbDouble(Object? v, [double fallback = 0]) =>
+    v is num ? v.toDouble() : (double.tryParse(v?.toString() ?? '') ?? fallback);
+
 class DatabaseHelper {
   /// saveRating'te alan verilmediğinde mevcut DB değerini korumak için işaretçi.
   static const unset = Object();
@@ -534,27 +540,27 @@ class DatabaseHelper {
     return maps.map((m) {
       final genreIdsList =
           (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
-              .map((e) => e as int)
+              .map((e) => _dbInt(e))
               .toList();
       return {
-        'id': m['movie_id'] as int,
-        'isTV': (m['is_tv'] as int) == 1,
-        'rating': m['rating'] as int,
+        'id': _dbInt(m['movie_id']),
+        'isTV': _dbInt(m['is_tv']) == 1,
+        'rating': _dbInt(m['rating']),
         'genreIds': genreIdsList,
-        'created_at': m['created_at'] as int,
-        'updated_at': m['updated_at'] as int,
-        'is_private': m['is_private'] as int? ?? 0,
+        'created_at': _dbInt(m['created_at']),
+        'updated_at': _dbInt(m['updated_at']),
+        'is_private': _dbInt(m['is_private']),
         'movie': Movie(
-          id: m['movie_id'] as int,
+          id: _dbInt(m['movie_id']),
           title: m['title'] as String? ?? '',
           posterPath: m['poster_path'] as String?,
           backdropPath: m['backdrop_path'] as String?,
           overview: m['overview'] as String? ?? '',
-          voteAverage: (m['vote_average'] as num? ?? 0).toDouble(),
+          voteAverage: _dbDouble(m['vote_average']),
           releaseDate: m['release_date'] as String?,
-          isTV: (m['is_tv'] as int) == 1,
+          isTV: _dbInt(m['is_tv']) == 1,
           genreIds: genreIdsList,
-          popularity: (m['popularity'] as num? ?? 0).toDouble(),
+          popularity: _dbDouble(m['popularity']),
         ),
       };
     }).toList();
@@ -806,9 +812,9 @@ class DatabaseHelper {
               'poster_path': m['poster_path'] as String?,
               'backdrop_path': m['backdrop_path'] as String?,
               'overview': m['overview'] as String,
-              'vote_average': m['vote_average'] as double,
+              'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
-              'isTV': (m['is_tv'] as int) == 1,
+              'isTV': (_dbInt(m['is_tv'])) == 1,
               'genre_ids':
                   jsonDecode(m['genre_ids'] as String) as List<dynamic>,
             }),
@@ -823,14 +829,14 @@ class DatabaseHelper {
     return maps
         .map(
           (m) => Movie.fromStorage({
-            'id': m['id'] as int,
+            'id': _dbInt(m['id']),
             'title': m['title'] as String,
             'poster_path': m['poster_path'] as String?,
             'backdrop_path': m['backdrop_path'] as String?,
             'overview': m['overview'] as String,
-            'vote_average': m['vote_average'] as double,
+            'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
-            'isTV': (m['is_tv'] as int) == 1,
+            'isTV': (_dbInt(m['is_tv'])) == 1,
             'genre_ids': jsonDecode(m['genre_ids'] as String) as List<dynamic>,
           }),
         )
@@ -1087,14 +1093,14 @@ class DatabaseHelper {
           .take(20)
           .map(
             (m) => Movie.fromStorage({
-              'id': m['id'] as int,
+              'id': _dbInt(m['id']),
               'title': m['title'] as String,
               'poster_path': m['poster_path'] as String?,
               'backdrop_path': m['backdrop_path'] as String?,
               'overview': m['overview'] as String,
-              'vote_average': m['vote_average'] as double,
+              'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
-              'isTV': (m['is_tv'] as int) == 1,
+              'isTV': _dbInt(m['is_tv']) == 1,
               'genre_ids':
                   jsonDecode(m['genre_ids'] as String) as List<dynamic>,
             }),
@@ -1111,14 +1117,14 @@ class DatabaseHelper {
         .take(20)
         .map(
           (m) => Movie.fromStorage({
-            'id': m['id'] as int,
+            'id': _dbInt(m['id']),
             'title': m['title'] as String,
             'poster_path': m['poster_path'] as String?,
             'backdrop_path': m['backdrop_path'] as String?,
             'overview': m['overview'] as String,
-            'vote_average': m['vote_average'] as double,
+            'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
-            'isTV': (m['is_tv'] as int) == 1,
+            'isTV': _dbInt(m['is_tv']) == 1,
             'genre_ids': jsonDecode(m['genre_ids'] as String) as List<dynamic>,
           }),
         )

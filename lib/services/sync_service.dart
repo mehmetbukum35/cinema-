@@ -20,6 +20,16 @@ import '../providers/social_provider.dart';
 int _asInt(Object? v) =>
     v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
 
+double _asDouble(Object? v) =>
+    v is num ? v.toDouble() : (double.tryParse(v?.toString() ?? '') ?? 0);
+
+/// JSON bool veya 0/1 int/string → SQLite deleted flag.
+int _asDeletedFlag(Object? v) {
+  if (v == true || v == 1 || v == '1') return 1;
+  if (v is num) return v.toInt() != 0 ? 1 : 0;
+  return 0;
+}
+
 List<dynamic> _decodeJsonList(Object? value) {
   if (value is List) return List<dynamic>.from(value);
   if (value is! String || value.trim().isEmpty) return const [];
@@ -145,9 +155,19 @@ class SyncService {
       debugPrint("Sync already in progress, coalescing request.");
       return _syncFuture;
     }
-    _syncFuture = _performSync();
+    // Coalesce the recovery wrapper so waiters also get reset recovery /
+    // session-change swallow — not the raw _performSync future.
+    _syncFuture = _syncWithRecovery();
     try {
       await _syncFuture;
+    } finally {
+      _syncFuture = null;
+    }
+  }
+
+  Future<void> _syncWithRecovery() async {
+    try {
+      await _performSync();
     } on _SyncSessionChanged {
       debugPrint('Sync cancelled because the authenticated user changed.');
     } on ApiException catch (e) {
@@ -156,22 +176,18 @@ class SyncService {
       final pendingLocalChanges = await _resetLocalSyncState();
       _declareLocalReset = true;
       try {
-        _syncFuture = _performSync();
-        await _syncFuture;
+        await _performSync();
         await _restorePendingLocalChanges(pendingLocalChanges);
         if (pendingLocalChanges.values.any((rows) => rows.isNotEmpty)) {
           // The full pull advances both cursors. Rewind only the push cursor so
           // the preserved offline edits are uploaded on a second pass.
           await PrefsService.setLastPushTime(0);
-          _syncFuture = _performSync();
-          await _syncFuture;
+          await _performSync();
         }
       } catch (e) {
         await _restorePendingLocalChanges(pendingLocalChanges);
         rethrow;
       }
-    } finally {
-      _syncFuture = null;
     }
   }
 
@@ -492,25 +508,25 @@ class SyncService {
           continue;
         }
         await txn.insert('ratings', {
-          'movie_id': r['movie_id'],
-          'is_tv': r['is_tv'],
+          'movie_id': _asInt(r['movie_id']),
+          'is_tv': _asInt(r['is_tv']),
           'metadata_locale':
               r['metadata_locale'] ?? PrefsService.activeLanguageCode,
-          'rating': r['rating'],
+          'rating': _asInt(r['rating']),
           'genre_ids': jsonEncode(_decodeJsonList(r['genre_ids'])),
           'title': r['title'],
           'poster_path': r['poster_path'],
           'backdrop_path': r['backdrop_path'],
           'overview': r['overview'],
-          'vote_average': r['vote_average'],
+          'vote_average': _asDouble(r['vote_average']),
           'release_date': r['release_date'],
-          'popularity': r['popularity'],
+          'popularity': _asDouble(r['popularity']),
           'comment': r['comment'],
-          'is_spoiler': r['is_spoiler'] ?? 0,
-          'is_private': r['is_private'] ?? 0,
-          'created_at': r['created_at'],
-          'updated_at': r['updated_at'],
-          'deleted': r['deleted'] ? 1 : 0,
+          'is_spoiler': _asInt(r['is_spoiler'] ?? 0),
+          'is_private': _asInt(r['is_private'] ?? 0),
+          'created_at': _asInt(r['created_at']),
+          'updated_at': _asInt(r['updated_at']),
+          'deleted': _asDeletedFlag(r['deleted']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
@@ -525,8 +541,8 @@ class SyncService {
           continue;
         }
         await txn.insert('watchlist', {
-          'id': w['id'],
-          'is_tv': w['is_tv'],
+          'id': _asInt(w['id']),
+          'is_tv': _asInt(w['is_tv']),
           'metadata_locale':
               w['metadata_locale'] ?? PrefsService.activeLanguageCode,
           // Compacted legacy tombstones may no longer have catalog metadata.
@@ -536,12 +552,12 @@ class SyncService {
           'poster_path': w['poster_path'],
           'backdrop_path': w['backdrop_path'],
           'overview': w['overview'],
-          'vote_average': w['vote_average'],
+          'vote_average': _asDouble(w['vote_average']),
           'release_date': w['release_date'],
           'genre_ids': jsonEncode(_decodeJsonList(w['genre_ids'])),
-          'created_at': w['created_at'],
-          'updated_at': w['updated_at'],
-          'deleted': w['deleted'] ? 1 : 0,
+          'created_at': _asInt(w['created_at']),
+          'updated_at': _asInt(w['updated_at']),
+          'deleted': _asDeletedFlag(w['deleted']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
@@ -556,8 +572,8 @@ class SyncService {
           continue;
         }
         await txn.insert('favorites', {
-          'id': f['id'],
-          'is_tv': f['is_tv'],
+          'id': _asInt(f['id']),
+          'is_tv': _asInt(f['is_tv']),
           'metadata_locale':
               f['metadata_locale'] ?? PrefsService.activeLanguageCode,
           // Favorites has the same legacy NOT NULL constraint as watchlist.
@@ -565,12 +581,12 @@ class SyncService {
           'poster_path': f['poster_path'],
           'backdrop_path': f['backdrop_path'],
           'overview': f['overview'],
-          'vote_average': f['vote_average'],
+          'vote_average': _asDouble(f['vote_average']),
           'release_date': f['release_date'],
           'genre_ids': jsonEncode(_decodeJsonList(f['genre_ids'])),
-          'created_at': f['created_at'],
-          'updated_at': f['updated_at'],
-          'deleted': f['deleted'] ? 1 : 0,
+          'created_at': _asInt(f['created_at']),
+          'updated_at': _asInt(f['updated_at']),
+          'deleted': _asDeletedFlag(f['deleted']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
@@ -589,10 +605,10 @@ class SyncService {
           continue;
         }
         await txn.insert('watched_seasons', {
-          'tv_id': ws['tv_id'],
-          'season_number': ws['season_number'],
-          'updated_at': ws['updated_at'],
-          'deleted': ws['deleted'] ? 1 : 0,
+          'tv_id': _asInt(ws['tv_id']),
+          'season_number': _asInt(ws['season_number']),
+          'updated_at': _asInt(ws['updated_at']),
+          'deleted': _asDeletedFlag(ws['deleted']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
@@ -608,9 +624,9 @@ class SyncService {
         }
         await txn.insert('search_history', {
           'query': sh['query'],
-          'created_at': sh['created_at'],
-          'updated_at': sh['updated_at'],
-          'deleted': sh['deleted'] ? 1 : 0,
+          'created_at': _asInt(sh['created_at']),
+          'updated_at': _asInt(sh['updated_at']),
+          'deleted': _asDeletedFlag(sh['deleted']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         appliedCount++;
       }
@@ -737,6 +753,13 @@ class SyncService {
     };
 
     final applied = await _pushPayloadInChunks(payload, sessionUserId);
+    final pushedMax = _maxUpdatedAtInPayload(payload);
+    if (pushedMax > 0) {
+      final lastPush = await PrefsService.getLastPushTime();
+      if (pushedMax > lastPush) {
+        await PrefsService.setLastPushTime(_overlappingCursor(pushedMax));
+      }
+    }
     debugPrint(
       'Sync pushed ${rows.length} favorites after cap normalize '
       '(applied=$applied).',

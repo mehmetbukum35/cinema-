@@ -16,7 +16,15 @@ class Auth
         if (!$payload || ($payload['typ'] ?? '') !== 'access') {
             fail(401, 'Geçersiz veya süresi dolmuş oturum.');
         }
-        return (int) $payload['sub'];
+        $uid = (int) $payload['sub'];
+        // Hesap silindikten sonra access JWT ~2 saat geçerli kalabilir; FK 500
+        // yerine oturumu düşür.
+        $st = $this->db->prepare('SELECT 1 FROM users WHERE id = ?');
+        $st->execute([$uid]);
+        if ($st->fetchColumn() === false) {
+            fail(401, 'Geçersiz veya süresi dolmuş oturum.');
+        }
+        return $uid;
     }
 
     // ─── POST /auth/register ────────────────────────────────────────────────

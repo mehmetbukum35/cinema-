@@ -35,7 +35,6 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
     // Oransız gösterilir.
   }
 
-  await PrefsService.markDnaMilestoneShown(threshold);
   if (!context.mounted) return;
   HapticFeedback.mediumImpact();
   await showModalBottomSheet<void>(
@@ -47,6 +46,8 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
       accuracyPercent: accuracyPercent,
     ),
   );
+  // Mark only after the sheet was actually presented (or dismissed).
+  await PrefsService.markDnaMilestoneShown(threshold);
 }
 
 class DnaMilestoneSheet extends StatelessWidget {

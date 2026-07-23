@@ -39,6 +39,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (ref.read(authProvider).loading) return;
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;

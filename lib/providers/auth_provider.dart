@@ -17,6 +17,7 @@ import 'watchlist_provider.dart';
 import 'top_list_provider.dart';
 import 'swipe_provider.dart';
 import 'social_provider.dart';
+import 'couch_provider.dart';
 import '../services/providers.dart';
 
 enum AuthStatus { success, conflict, error, cancelled, pendingVerification }
@@ -565,6 +566,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(topListProvider);
     _ref.invalidate(swipeProvider);
     _ref.invalidate(socialProvider);
+    _ref.invalidate(couchProvider);
     await _ref.read(recommendationEngineProvider).invalidateCache();
     _ref.read(browseRefreshTriggerProvider.notifier).state++;
   }

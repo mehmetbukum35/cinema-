@@ -635,6 +635,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final res = await _apiService.getRecommendationsPage(cursor: cursor);
       if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
+        if (mounted) {
+          state = state.copyWith(receivedRecommendationsLoadingMore: false);
+        }
         return;
       }
       final page = (res['recommendations'] as List<dynamic>? ?? const [])
@@ -673,6 +676,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final res = await _apiService.getSentRecommendationsPage(cursor: cursor);
       if (!mounted || generation != _sentRecommendationsLoadGeneration) {
+        if (mounted) {
+          state = state.copyWith(sentRecommendationsLoadingMore: false);
+        }
         return;
       }
       final page = (res['sent'] as List<dynamic>? ?? const [])
@@ -723,6 +729,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
         recommendations: state.recommendations
             .where((item) => item.id != recommendationId)
             .toList(),
+        receivedRecommendationsLoadingMore: false,
+        sentRecommendationsLoadingMore: false,
         unseenRecommendations:
             deletedInboxItem != null && !deletedInboxItem.seen
             ? (state.unseenRecommendations - 1).clamp(

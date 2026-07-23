@@ -78,8 +78,17 @@ trait SocialFriendsTrait
         }
 
         // Normal istek oluştur
-        $ins = $this->db->prepare('INSERT INTO friends (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, \'pending\', ?, ?)');
-        $ins->execute([$uid, $friendId, $t, $t]);
+        try {
+            $ins = $this->db->prepare('INSERT INTO friends (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, \'pending\', ?, ?)');
+            $ins->execute([$uid, $friendId, $t, $t]);
+        } catch (PDOException $e) {
+            // Çift dokunuş / paralel istek: UNIQUE → idempotent başarı.
+            if ((int) ($e->errorInfo[1] ?? 0) !== 1062 && !str_contains($e->getMessage(), 'UNIQUE')) {
+                throw $e;
+            }
+            json_out(200, ['ok' => true, 'status' => 'pending', 'message' => 'Arkadaşlık isteği gönderildi.']);
+            return;
+        }
 
         // Hedef kullanıcıya yeni istek bildirimi.
         $this->notify($friendId, $uid, 'request');
@@ -140,6 +149,14 @@ trait SocialFriendsTrait
         $del = $this->db->prepare('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)');
         $del->execute([$uid, $friendId, $friendId, $uid]);
         $this->cancelCouchSessionsBetween($uid, $friendId);
+
+        // Unfriend sonrası kişisel öneri notları inbox'ta kalmasın (block ile aynı).
+        $purge = $this->db->prepare(
+            'DELETE FROM recommendations
+              WHERE (to_user_id = ? AND from_user_id = ?)
+                 OR (to_user_id = ? AND from_user_id = ?)'
+        );
+        $purge->execute([$uid, $friendId, $friendId, $uid]);
 
         json_out(200, ['ok' => true]);
     }

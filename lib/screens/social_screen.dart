@@ -477,7 +477,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                       tr?.get('semantics_send_friend_request') ??
                       'Send friend request',
                   child: IconButton.filled(
-                    onPressed: _sendFriendRequest,
+                    onPressed: state.loading ? null : _sendFriendRequest,
                     style: IconButton.styleFrom(
                       backgroundColor: c.gold,
                       foregroundColor: Colors.black,

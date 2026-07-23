@@ -741,6 +741,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     if (ok == true) {
       await ref.read(watchlistProvider.notifier).remove(m.id, m.isTV);
       if (!mounted) return;
+      final notifier = ref.read(watchlistProvider.notifier);
       showAppSnackBar(
         context,
         AppLocalizations.of(
@@ -749,7 +750,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             '${m.title} removed from watchlist.',
         duration: const Duration(seconds: 3),
         actionLabel: AppLocalizations.of(context)?.get('undo') ?? 'Undo',
-        onAction: () => ref.read(watchlistProvider.notifier).add(m),
+        onAction: () => notifier.add(m),
       );
     }
   }

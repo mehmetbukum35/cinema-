@@ -153,7 +153,9 @@ class RecommendSheetState extends State<RecommendSheet> {
                               );
 
                           if (ok) {
-                            nav.pop();
+                            if (context.mounted) {
+                              nav.pop();
+                            }
                             // Film detayı modalı hâlâ açık: SnackBar onun
                             // arkasında kalırdı, toast üstte görünür.
                             if (widget.parentContext.mounted) {

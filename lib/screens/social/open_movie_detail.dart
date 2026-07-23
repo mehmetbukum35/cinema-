@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/movie.dart';
 import '../../services/providers.dart';
+import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_toast.dart';
 import '../../widgets/blocking_loading_dialog.dart';
@@ -17,6 +18,7 @@ Future<void> openMovieDetailById(
 ) async {
   final service = ref.read(tmdbServiceProvider);
   final c = context.c;
+  final tr = AppLocalizations.of(context);
 
   try {
     final details = await runWithBlockingLoadingDialog(
@@ -27,7 +29,12 @@ Future<void> openMovieDetailById(
 
     if (details == null) {
       if (context.mounted) {
-        showAppToast(context, 'Yapım detayları yüklenemedi.', success: false);
+        showAppToast(
+          context,
+          tr?.get('browse_conn_error') ??
+              'İnternet bağlantınızı kontrol edip tekrar deneyin.',
+          success: false,
+        );
       }
       return;
     }
@@ -43,7 +50,14 @@ Future<void> openMovieDetailById(
     }
   } catch (e) {
     if (context.mounted) {
-      showAppToast(context, 'Hata: $e', success: false);
+      showAppToast(
+        context,
+        (tr?.get('error_occurred_msg') ?? 'Hata oluştu: {}').replaceAll(
+          '{}',
+          '$e',
+        ),
+        success: false,
+      );
     }
   }
 }

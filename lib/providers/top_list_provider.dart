@@ -77,6 +77,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   /// Öğeyi listenin SONUNA ekler (en düşük sıra). Zaten varsa veya liste doluysa
   /// `false` döner.
   Future<bool> add(Movie movie) async {
+    await _persistTail.catchError((_) {});
     final current = state.value ?? const <Movie>[];
     if (current.any((m) => m.id == movie.id)) return false;
     if (current.length >= cap) return false;
@@ -85,6 +86,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   }
 
   Future<void> remove(int id) async {
+    await _persistTail.catchError((_) {});
     final current = state.value ?? const <Movie>[];
     await _persist(current.where((m) => m.id != id).toList());
   }
@@ -92,6 +94,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   /// ReorderableListView sözleşmesi: newIndex, öğe listeden çıkarılmadan ÖNCEki
   /// konumdur; aşağı taşımada bir azaltılır.
   Future<void> reorder(int oldIndex, int newIndex) async {
+    await _persistTail.catchError((_) {});
     final current = [...(state.value ?? const <Movie>[])];
     if (oldIndex < 0 || oldIndex >= current.length) return;
     if (newIndex > oldIndex) newIndex -= 1;

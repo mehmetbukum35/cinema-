@@ -30,11 +30,11 @@ final class MaintenanceTest extends TestCase
         $old = $this->now - 2 * 86400000;
         $this->db->exec(
             "INSERT INTO ratings VALUES
-             (1, 10, 0, 'comment', $old, 1),
-             (1, 11, 0, 'comment', $old, 0)"
+             (1, 10, 0, 'comment', $old, $old, 1),
+             (1, 11, 0, 'comment', $old, $old, 0)"
         );
-        $this->db->exec("INSERT INTO watchlist VALUES (1, 20, 0, $old, 1)");
-        $this->db->exec("INSERT INTO favorites VALUES (1, 30, 0, $old, 1)");
+        $this->db->exec("INSERT INTO watchlist VALUES (1, 20, 0, $old, $old, 1)");
+        $this->db->exec("INSERT INTO favorites VALUES (1, 30, 0, $old, $old, 1)");
 
         $staleOpen = $this->now - 25 * 3600000;
         $oldCancelled = $this->now - 8 * 86400000;
@@ -95,7 +95,7 @@ final class MaintenanceTest extends TestCase
     public function testDeletesOnlyTombstonesAcknowledgedByEveryActiveDevice(): void
     {
         $deletedAt = $this->now - 31 * 86400000;
-        $this->db->exec("INSERT INTO ratings VALUES (1, 77, 0, NULL, $deletedAt, 1)");
+        $this->db->exec("INSERT INTO ratings VALUES (1, 77, 0, NULL, $deletedAt, $deletedAt, 1)");
         $device = $this->db->prepare(
             'INSERT INTO sync_devices VALUES (1, ?, ?, ?, ?, NULL)'
         );
@@ -120,7 +120,7 @@ final class MaintenanceTest extends TestCase
     {
         $deletedAt = $this->now - 31 * 86400000;
         $lastSeen = $this->now - 91 * 86400000;
-        $this->db->exec("INSERT INTO favorites VALUES (1, 88, 0, $deletedAt, 1)");
+        $this->db->exec("INSERT INTO favorites VALUES (1, 88, 0, $deletedAt, $deletedAt, 1)");
         $device = $this->db->prepare(
             'INSERT INTO sync_devices VALUES (1, ?, 0, ?, ?, NULL)'
         );
@@ -138,11 +138,11 @@ final class MaintenanceTest extends TestCase
         $n = $this->now;
         $this->db->exec(
             "INSERT INTO favorites VALUES
-             (1, 100, 0, $n, 0), (2, 100, 0, $n, 0), (3, 100, 0, $n, 0),
-             (1, 200, 0, $n, 0), (2, 200, 0, $n, 0),
-             (1, 300, 0, $n, 1),
-             (1, 900, 1, $n, 0), (2, 900, 1, $n, 0),
-             (1, 901, 1, $n, 0)"
+             (1, 100, 0, $n, $n, 0), (2, 100, 0, $n, $n, 0), (3, 100, 0, $n, $n, 0),
+             (1, 200, 0, $n, $n, 0), (2, 200, 0, $n, $n, 0),
+             (1, 300, 0, $n, $n, 1),
+             (1, 900, 1, $n, $n, 0), (2, 900, 1, $n, $n, 0),
+             (1, 901, 1, $n, $n, 0)"
         );
 
         $result = (new Maintenance($this->db))->run($n);
@@ -167,8 +167,8 @@ final class MaintenanceTest extends TestCase
         $n = $this->now;
         $this->db->exec(
             "INSERT INTO favorites VALUES
-             (1, 100, 0, $n, 0), (2, 100, 0, $n, 0),
-             (1, 200, 0, $n, 0)"
+             (1, 100, 0, $n, $n, 0), (2, 100, 0, $n, $n, 0),
+             (1, 200, 0, $n, $n, 0)"
         );
 
         (new Maintenance($this->db, ['popular_min_votes' => 2]))->run($n);
@@ -185,13 +185,13 @@ final class MaintenanceTest extends TestCase
 
     private function createSchema(): void
     {
-        $this->db->exec('CREATE TABLE search_history (user_id INTEGER, query TEXT, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, query))');
-        $this->db->exec('CREATE TABLE ratings (user_id INTEGER, movie_id INTEGER, is_tv INTEGER, comment TEXT, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, movie_id, is_tv))');
+        $this->db->exec('CREATE TABLE search_history (user_id INTEGER, query TEXT, updated_at INTEGER, server_updated_at INTEGER NOT NULL DEFAULT 0, deleted INTEGER, PRIMARY KEY (user_id, query))');
+        $this->db->exec('CREATE TABLE ratings (user_id INTEGER, movie_id INTEGER, is_tv INTEGER, comment TEXT, updated_at INTEGER, server_updated_at INTEGER NOT NULL DEFAULT 0, deleted INTEGER, PRIMARY KEY (user_id, movie_id, is_tv))');
         foreach (['watchlist', 'favorites'] as $table) {
-            $this->db->exec("CREATE TABLE $table (user_id INTEGER, id INTEGER, is_tv INTEGER, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, id, is_tv))");
+            $this->db->exec("CREATE TABLE $table (user_id INTEGER, id INTEGER, is_tv INTEGER, updated_at INTEGER, server_updated_at INTEGER NOT NULL DEFAULT 0, deleted INTEGER, PRIMARY KEY (user_id, id, is_tv))");
         }
         $this->db->exec('CREATE TABLE popular_titles (is_tv INTEGER, `rank` INTEGER, tmdb_id INTEGER, votes INTEGER, computed_at INTEGER, PRIMARY KEY (is_tv, `rank`))');
-        $this->db->exec('CREATE TABLE watched_seasons (user_id INTEGER, tv_id INTEGER, season_number INTEGER, updated_at INTEGER, deleted INTEGER, PRIMARY KEY (user_id, tv_id, season_number))');
+        $this->db->exec('CREATE TABLE watched_seasons (user_id INTEGER, tv_id INTEGER, season_number INTEGER, updated_at INTEGER, server_updated_at INTEGER NOT NULL DEFAULT 0, deleted INTEGER, PRIMARY KEY (user_id, tv_id, season_number))');
         $this->db->exec('CREATE TABLE sync_devices (user_id INTEGER, device_id TEXT, last_ack_cursor INTEGER, last_seen_at INTEGER, created_at INTEGER, invalidated_at INTEGER, PRIMARY KEY (user_id, device_id))');
         $this->db->exec('CREATE TABLE sync_gc_state (user_id INTEGER PRIMARY KEY, gc_cursor INTEGER, updated_at INTEGER)');
         $this->db->exec('CREATE TABLE couch_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT, updated_at INTEGER)');

@@ -6,7 +6,9 @@ import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
+import '../services/sync_service.dart';
 import '../services/localization_service.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
@@ -114,6 +116,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     HapticFeedback.mediumImpact();
     await PrefsService.clearSearchHistory();
     if (mounted) setState(() => _history = []);
+    if (ref.read(authProvider).isLoggedIn) {
+      unawaited(ref.read(syncServiceProvider).sync());
+    }
   }
 
   void _openDetail(Movie movie) {

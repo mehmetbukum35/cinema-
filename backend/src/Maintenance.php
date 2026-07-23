@@ -195,17 +195,19 @@ final class Maintenance
         }
 
         $columns = implode(', ', array_map(fn (string $key): string => "d.`$key`", $keys));
+        // Ack imleci sunucu saati (server_updated_at) alanındadır; cihaz
+        // updated_at ile karşılaştırmak yavaş saatli tombstone'ları erken siler.
         $select = $this->db->prepare(
-            "SELECT d.user_id, $columns, d.updated_at
+            "SELECT d.user_id, $columns, d.server_updated_at
              FROM `$table` d
-             WHERE d.deleted = 1 AND d.updated_at < ?
+             WHERE d.deleted = 1 AND d.server_updated_at < ?
                AND NOT EXISTS (
                  SELECT 1 FROM sync_devices sd
                  WHERE sd.user_id = d.user_id
                    AND sd.invalidated_at IS NULL
-                   AND sd.last_ack_cursor < d.updated_at
+                   AND sd.last_ack_cursor < d.server_updated_at
                )
-             ORDER BY d.updated_at ASC
+             ORDER BY d.server_updated_at ASC
              LIMIT " . (int) $this->options['batch_limit']
         );
         $select->execute([$cutoff]);
@@ -224,7 +226,7 @@ final class Maintenance
             $delete->execute($params);
             $changed += $delete->rowCount();
             $uid = (int) $row['user_id'];
-            $gcByUser[$uid] = max($gcByUser[$uid] ?? 0, (int) $row['updated_at']);
+            $gcByUser[$uid] = max($gcByUser[$uid] ?? 0, (int) $row['server_updated_at']);
         }
 
         $findGc = $this->db->prepare('SELECT gc_cursor FROM sync_gc_state WHERE user_id = ?');
@@ -264,13 +266,13 @@ final class Maintenance
              LIMIT ' . (int) $batch . ' OFFSET ' . (int) $limit
         );
         $update = $this->db->prepare(
-            'UPDATE search_history SET deleted = 1, updated_at = ?
+            'UPDATE search_history SET deleted = 1, updated_at = ?, server_updated_at = ?
              WHERE user_id = ? AND query = ? AND deleted = 0'
         );
         foreach ($users as $userId) {
             $select->execute([(int) $userId]);
             foreach ($select->fetchAll(PDO::FETCH_COLUMN) as $query) {
-                $update->execute([$nowMs, (int) $userId, $query]);
+                $update->execute([$nowMs, $nowMs, (int) $userId, $query]);
                 $changed += $update->rowCount();
             }
         }

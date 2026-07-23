@@ -301,11 +301,22 @@ class ApiClient {
         if (response.statusCode == 200) {
           final data = _decodeJsonMap(response.body);
           final tokens = data['tokens'] as Map<String, dynamic>;
-          await PrefsService.saveTokens(
-            accessToken: tokens['access_token'] as String,
-            refreshToken: tokens['refresh_token'] as String,
-          );
-          completer.complete(RefreshOutcome.success);
+          // Logout / wipe can clear auth while refresh is in flight — never
+          // resurrect tokens into an empty session.
+          final stillRefresh = await PrefsService.getRefreshToken();
+          final stillUser = await PrefsService.getUserData();
+          if (stillRefresh == null || stillUser == null) {
+            completer.complete(RefreshOutcome.denied);
+          } else if (stillRefresh != refreshToken) {
+            // Another refresh already rotated the token; treat as success.
+            completer.complete(RefreshOutcome.success);
+          } else {
+            await PrefsService.saveTokens(
+              accessToken: tokens['access_token'] as String,
+              refreshToken: tokens['refresh_token'] as String,
+            );
+            completer.complete(RefreshOutcome.success);
+          }
         } else if (response.statusCode == 401 ||
             response.statusCode == 403 ||
             response.statusCode == 422) {
