@@ -10,11 +10,13 @@ import 'detail_section_label.dart';
 class RatingSection extends StatelessWidget {
   final int? currentRating;
   final Future<void> Function(int rating) onTap;
+  final bool busy;
 
   const RatingSection({
     super.key,
     required this.currentRating,
     required this.onTap,
+    this.busy = false,
   });
 
   @override
@@ -29,28 +31,31 @@ class RatingSection extends StatelessWidget {
     ];
     final colors = [c.rBerbat, c.rEh, c.rIyi, c.rHarika];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const DetailSectionLabel('detail_rate_title'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            for (var rating = 0; rating < 4; rating++) ...[
-              if (rating > 0) const SizedBox(width: 6),
-              Expanded(
-                child: _RatingButton(
-                  rating: rating,
-                  color: colors[rating],
-                  label: labels[rating],
-                  active: currentRating == rating,
-                  onTap: () => onTap(rating),
+    return Opacity(
+      opacity: busy ? 0.55 : 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const DetailSectionLabel('detail_rate_title'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (var rating = 0; rating < 4; rating++) ...[
+                if (rating > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _RatingButton(
+                    rating: rating,
+                    color: colors[rating],
+                    label: labels[rating],
+                    active: currentRating == rating,
+                    onTap: busy ? null : () => onTap(rating),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -60,7 +65,7 @@ class _RatingButton extends StatelessWidget {
   final Color color;
   final String label;
   final bool active;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _RatingButton({
     required this.rating,
@@ -90,6 +95,7 @@ class _RatingButton extends StatelessWidget {
       message: semanticsLabel,
       child: Semantics(
         button: true,
+        enabled: onTap != null,
         label: semanticsLabel,
         selected: active,
         child: SpringButton(

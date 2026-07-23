@@ -87,6 +87,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   List<dynamic> _communityReviews = [];
   bool _loadingFriendsReviews = false;
   bool _justSavedComment = false;
+  bool _ratingBusy = false;
   Map<String, dynamic>? _communityScore;
 
   @override
@@ -381,9 +382,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   /// Benzer/koleksiyon rayından seçilen yapım: bu sheet kapanır, yenisi açılır.
   void _openAnotherTitle(Movie m) {
-    Navigator.pop(context);
+    // Pop edilen route'un context'iyle yeniden sheet açma — parent navigator'ı
+    // pop'tan önce yakala (filter_sheet ile aynı desen).
+    final nav = Navigator.of(context);
+    nav.pop();
     showModalBottomSheet(
-      context: context,
+      context: nav.context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => MovieDetailSheet(movie: m, service: widget.service),
@@ -401,85 +405,93 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   /// Puan butonuna dokunuş: aktif puana tekrar basmak puanı (ve yorumu,
   /// onayla) kaldırır; yeni puan kaydedilir, telemetri ve sync tetiklenir.
   Future<void> _handleRatingTap(int rating) async {
+    if (_ratingBusy) return;
+    _ratingBusy = true;
+    if (mounted) setState(() {});
     HapticFeedback.lightImpact();
-    final active = _currentRating == rating;
-    if (active) {
-      // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
-      // götürür — kullanıcıdan onay al.
-      if (_commentController.text.trim().isNotEmpty) {
-        final confirmed = await confirmRatingDelete(context);
-        if (!confirmed) return;
+    try {
+      final active = _currentRating == rating;
+      if (active) {
+        // Yazılmış bir yorum varken puanı sessizce kaldırmak yorumu da
+        // götürür — kullanıcıdan onay al.
+        if (_commentController.text.trim().isNotEmpty) {
+          final confirmed = await confirmRatingDelete(context);
+          if (!confirmed) return;
+          if (!mounted) return;
+        }
+        final oldRating = _currentRating;
+        await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
         if (!mounted) return;
-      }
-      final oldRating = _currentRating;
-      await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
-      if (!mounted) return;
 
-      final recoSource = widget.movie.recoSource;
-      if (recoSource != null && oldRating != null) {
-        PrefsService.revertRecoOutcome(
-          source: recoSource,
-          liked: oldRating >= 2,
-        ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
-      }
+        final recoSource = widget.movie.recoSource;
+        if (recoSource != null && oldRating != null) {
+          PrefsService.revertRecoOutcome(
+            source: recoSource,
+            liked: oldRating >= 2,
+          ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+        }
 
-      ref
-          .read(recommendationEngineProvider)
-          .invalidateCache(isNegativeChange: true)
-          .catchError((_) => {});
-      setState(() {
-        _currentRating = null;
-        _commentController.clear();
-        _isSpoiler = false;
-        _isPrivate = false;
-      });
-    } else {
-      final commentText = _commentController.text.trim();
-      await PrefsService.saveRating(
-        movie: widget.movie,
-        rating: rating,
-        comment: commentText.isEmpty ? null : commentText,
-        isSpoiler: _isSpoiler ? 1 : 0,
-        isPrivate: _isPrivate ? 1 : 0,
-      );
-      if (!mounted) return;
-      ref
-          .read(recommendationEngineProvider)
-          .invalidateCache(isNegativeChange: rating <= 1)
-          .catchError((_) => {});
-
-      // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
-      // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
-      // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
-      final recoSource = widget.movie.recoSource;
-      if (recoSource != null) {
-        PrefsService.recordRecoOutcome(
-          source: recoSource,
-          liked: rating >= 2,
-        ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
-      }
-
-      setState(() {
-        _currentRating = rating;
-      });
-
-      if (mounted && !ref.read(authProvider).isLoggedIn) {
-        final tr = AppLocalizations.of(context);
-        showAppToast(
-          context,
-          tr?.locale.languageCode == 'tr'
-              ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
-              : 'Rating saved locally. Will sync when logged in.',
-          success: false,
+        ref
+            .read(recommendationEngineProvider)
+            .invalidateCache(isNegativeChange: true)
+            .catchError((_) => {});
+        setState(() {
+          _currentRating = null;
+          _commentController.clear();
+          _isSpoiler = false;
+          _isPrivate = false;
+        });
+      } else {
+        final commentText = _commentController.text.trim();
+        await PrefsService.saveRating(
+          movie: widget.movie,
+          rating: rating,
+          comment: commentText.isEmpty ? null : commentText,
+          isSpoiler: _isSpoiler ? 1 : 0,
+          isPrivate: _isPrivate ? 1 : 0,
         );
+        if (!mounted) return;
+        ref
+            .read(recommendationEngineProvider)
+            .invalidateCache(isNegativeChange: rating <= 1)
+            .catchError((_) => {});
+
+        // İsabet telemetrisi: yalnızca öneri motoru atıflı yapımlar sayılır
+        // (discover/seed/friend/explore). Arama gibi atıfsız yüzeyler
+        // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
+        final recoSource = widget.movie.recoSource;
+        if (recoSource != null) {
+          PrefsService.recordRecoOutcome(
+            source: recoSource,
+            liked: rating >= 2,
+          ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
+        }
+
+        setState(() {
+          _currentRating = rating;
+        });
+
+        if (mounted && !ref.read(authProvider).isLoggedIn) {
+          final tr = AppLocalizations.of(context);
+          showAppToast(
+            context,
+            tr?.locale.languageCode == 'tr'
+                ? 'Puanınız yerel kaydedildi. Giriş yapınca eşitlenecektir.'
+                : 'Rating saved locally. Will sync when logged in.',
+            success: false,
+          );
+        }
       }
+      if (!mounted) return;
+      ref.invalidate(statsProvider);
+      if (ref.exists(swipeProvider)) {
+        ref.read(swipeProvider.notifier).refreshRatedIds().catchError((_) => {});
+      }
+      ref.read(syncServiceProvider).sync();
+    } finally {
+      _ratingBusy = false;
+      if (mounted) setState(() {});
     }
-    if (!mounted) return;
-    ref.invalidate(statsProvider);
-    if (ref.exists(swipeProvider)) {
-      ref.read(swipeProvider.notifier).refreshRatedIds().catchError((_) => {});
-    }
-    ref.read(syncServiceProvider).sync();
   }
 
   /// Spoiler/private bayraklarını hemen kaydet (Save butonunu bekleme).
@@ -605,6 +617,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
               const SizedBox(height: 16),
               RatingSection(
                 currentRating: _currentRating,
+                busy: _ratingBusy,
                 onTap: _handleRatingTap,
               ),
               if (_currentRating != null)

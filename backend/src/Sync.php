@@ -430,13 +430,30 @@ class Sync
         if ($existing !== false && $updatedAt < (int) $existing['metadata_updated_at']) return;
 
         $values = ['tmdb_id' => $tmdbId, 'is_tv' => $isTv, 'locale' => $locale];
+        // title/overview: istemci metnine güvenme — sanitize + mevcut dolu alanı
+        // asla üzerine yazma (fill-empty). Diğer alanlar da fill-empty.
+        $textFields = ['title' => 512, 'overview' => 2000];
         foreach ($fields as $field) {
             $incoming = $item[$field] ?? null;
             if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
                 $incoming = json_encode($incoming, JSON_UNESCAPED_UNICODE);
             }
+            if (isset($textFields[$field])) {
+                $incoming = sanitize_title_text(
+                    is_string($incoming) || $incoming === null ? $incoming : (string) $incoming,
+                    $textFields[$field]
+                );
+            }
+            if ($existing !== false) {
+                $prev = $existing[$field] ?? null;
+                $prevEmpty = $prev === null || $prev === '';
+                if (!$prevEmpty) {
+                    $values[$field] = $prev;
+                    continue;
+                }
+            }
             $values[$field] = ($incoming === null || $incoming === '') && $existing !== false
-                ? $existing[$field]
+                ? ($existing[$field] ?? null)
                 : $incoming;
         }
         $values['metadata_updated_at'] = max($updatedAt, (int) ($existing['metadata_updated_at'] ?? 0));

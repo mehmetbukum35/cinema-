@@ -159,6 +159,22 @@ function sanitize_comment(?string $c): ?string
     return function_exists('mb_substr') ? mb_substr($c, 0, 280, 'UTF-8') : substr($c, 0, 280);
 }
 
+/**
+ * Paylaşımlı titles tablosuna yazılan metin alanları. Kontrol karakteri + URL
+ * strip; title kısa, overview daha uzun tutulur. Boş → null.
+ */
+function sanitize_title_text(?string $t, int $maxLen = 512): ?string
+{
+    if ($t === null) return null;
+    if (!is_string($t)) $t = (string) $t;
+    $t = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $t) ?? '';
+    $t = preg_replace('~(?:https?://|www\.)[^\s]+~iu', '', $t) ?? '';
+    $t = preg_replace('/\s+/u', ' ', $t) ?? '';
+    $t = trim($t);
+    if ($t === '') return null;
+    return function_exists('mb_substr') ? mb_substr($t, 0, $maxLen, 'UTF-8') : substr($t, 0, $maxLen);
+}
+
 /** Leetspeak / rakam taklidi → harf (küfür normalizasyonu). */
 function profanity_decode_leet(string $s): string
 {

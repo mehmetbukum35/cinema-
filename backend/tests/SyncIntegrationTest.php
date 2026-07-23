@@ -93,8 +93,41 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(1, $applied);
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(3, (int) $row['rating']);
-        $this->assertSame('New Title', $this->titleRow(603, 0)['title']);
+        // Shared titles: dolu title istemciyle overwrite edilmez (fill-empty).
+        $this->assertSame('Old Title', $this->titleRow(603, 0)['title']);
         $this->assertSame(2000, (int) $row['updated_at']);
+    }
+
+    public function testTitleFillEmptyAndSanitize(): void
+    {
+        // Boş overview olan satır: sonraki push overview doldurabilir.
+        $this->db->exec(
+            "INSERT INTO titles (tmdb_id, is_tv, locale, title, overview, metadata_updated_at)
+             VALUES (777, 0, 'und', 'Keep Me', NULL, 1000)"
+        );
+
+        $this->push(1, 'ratings', [
+            [
+                'movie_id' => 777, 'is_tv' => 0, 'rating' => 2,
+                'title' => 'http://spam.example Poison',
+                'overview' => "Nice film\x00 www.evil.com more text",
+                'updated_at' => 2000,
+            ],
+        ]);
+
+        $title = $this->titleRow(777, 0);
+        $this->assertSame('Keep Me', $title['title']); // dolu title korunur
+        $this->assertSame('Nice film more text', $title['overview']); // boş overview doldurulur, URL/kontrol strip
+
+        // İlk insert'te title sanitize edilir.
+        $this->push(1, 'ratings', [
+            [
+                'movie_id' => 778, 'is_tv' => 0, 'rating' => 1,
+                'title' => "  Cool\x01Movie https://x.test  ",
+                'updated_at' => 1000,
+            ],
+        ]);
+        $this->assertSame('CoolMovie', $this->titleRow(778, 0)['title']);
     }
 
     // ─── last-write-wins: ESKİ veri yok sayılır ──────────────────────────────
@@ -152,7 +185,7 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame(1, $applied);
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(2, (int) $row['rating']);
-        $this->assertSame('After', $this->titleRow(603, 0)['title']);
+        $this->assertSame('Before', $this->titleRow(603, 0)['title']);
     }
 
     // ─── Soft delete senkronu ────────────────────────────────────────────────
@@ -185,7 +218,8 @@ class SyncIntegrationTest extends TestCase
         // Alice için yeni kayıt eklenmeli
         $alice = $this->rowForUser('ratings', 1, 'movie_id', 603);
         $this->assertSame(3, (int) $alice['rating']);
-        $this->assertSame('Alice rating', $this->titleRow(603, 0)['title']);
+        // İlk yazılan shared title korunur; Alice spam'i üzerine yazamaz.
+        $this->assertSame('Bob rating', $this->titleRow(603, 0)['title']);
     }
 
     // ─── Veri kolonu olmayan tablo (watched_seasons) + string anahtar (search) ─

@@ -37,7 +37,7 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
 
   if (!context.mounted) return;
   HapticFeedback.mediumImpact();
-  await showModalBottomSheet<void>(
+  final action = await showModalBottomSheet<String>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (_) => DnaMilestoneSheet(
@@ -48,6 +48,11 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
   );
   // Mark only after the sheet was actually presented (or dismissed).
   await PrefsService.markDnaMilestoneShown(threshold);
+  if (action == 'open_dna' && context.mounted) {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TasteDnaScreen()),
+    );
+  }
 }
 
 class DnaMilestoneSheet extends StatelessWidget {
@@ -173,10 +178,7 @@ class DnaMilestoneSheet extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TasteDnaScreen()),
-                    );
+                    Navigator.pop(context, 'open_dna');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
