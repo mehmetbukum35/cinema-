@@ -69,7 +69,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
       final auth = ref.read(authProvider);
       if (auth.user != null) {
         setState(() {
-          _usernameCtrl.text = auth.user!['username'] ?? '';
+          _usernameCtrl.text = auth.user!['username'] as String? ?? '';
           _isPublic = (auth.user!['is_public'] ?? 1) == 1;
         });
       }
@@ -171,7 +171,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
                   child: IconButton(
                     icon: Icon(Icons.share_rounded, color: c.gold),
                     onPressed: () {
-                      final username = authUser['username'];
+                      final username = authUser['username'].toString();
                       final profileUrl = ApiService.webProfileUrl(
                         username,
                         lang: isTr ? 'tr' : 'en',

@@ -43,7 +43,7 @@ Future<void> _bootstrap() async {
   ) async {
     try {
       final jsonStr = await rootBundle.loadString(asset);
-      final Map<String, dynamic> decoded = json.decode(jsonStr);
+      final decoded = json.decode(jsonStr) as Map<String, dynamic>;
       assign(decoded.map((k, v) => MapEntry(k, v.toString())));
     } catch (e) {
       debugPrint('Failed to load $asset at startup: $e');

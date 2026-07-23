@@ -158,7 +158,7 @@ class TasteDna {
                 (k, v) => MapEntry(
                   k,
                   (v is List ? v : const [])
-                      .whereType<Map>()
+                      .whereType<Map<Object?, Object?>>()
                       .map(
                         (e) =>
                             DnaMovieRef.fromJson(Map<String, dynamic>.from(e)),

@@ -213,7 +213,8 @@ class SynergyBadge extends StatelessWidget {
               movie.voteAverage / 10.0,
               c.gold,
             ),
-            if (communityScore != null && communityScore!['total'] > 0)
+            if (communityScore != null &&
+                ((communityScore!['total'] as num?) ?? 0) > 0)
               _buildDialogRow(
                 context,
                 AppLocalizations.of(context)?.get('cinema_member_score') ??

@@ -9,6 +9,15 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  language:
+    # Sunucudan/SQLite'tan gelen `dynamic` değerlerin sessizce tipli konuma
+    # sızmasını engeller. Bu proje aynı hata ailesinden birden çok kez ısırıldı
+    # (boş display name'de avatar crash'i, JSON olmayan hata gövdesinde
+    # FormatException); artık analiz zamanında yakalanıyor.
+    strict-casts: true
+    strict-raw-types: true
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
@@ -20,9 +29,16 @@ linter:
   # or a specific dart file by using the `// ignore: name_of_lint` and
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
+  #
+  # Aşağıdaki kuralların hepsi eklendiği anda sıfır ihlalle geçiyordu; amaçları
+  # mevcut kodu düzeltmek değil, kazanılmış davranışı regresyona karşı kilitlemek.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    - cancel_subscriptions
+    - close_sinks
+    - no_adjacent_strings_in_list
+    - only_throw_errors
+    - test_types_in_equals
+    - throw_in_finally
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

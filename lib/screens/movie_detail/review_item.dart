@@ -29,7 +29,8 @@ class ReviewItem extends StatelessWidget {
     final int? ratingVal = rev['rating'] is int
         ? rev['rating'] as int
         : int.tryParse(rev['rating']?.toString() ?? '');
-    final reviewerName = rev['friend_name'] ?? rev['friend_username'] ?? 'User';
+    final String reviewerName =
+        (rev['friend_name'] ?? rev['friend_username'] ?? 'User').toString();
     final comment = rev['comment'] as String? ?? '';
     final isSpoiler = (rev['is_spoiler'] ?? 0) == 1;
     final hasMenu = onReport != null || onBlock != null;

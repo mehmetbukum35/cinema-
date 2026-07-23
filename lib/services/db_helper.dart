@@ -1353,7 +1353,7 @@ class DatabaseHelper {
     final expiryLimit = DateTime.now().millisecondsSinceEpoch - maxAgeMs;
     final db = await database;
     if (db == null) {
-      _mockTmdbCache.removeWhere((e) => e['fetched_at'] < expiryLimit);
+      _mockTmdbCache.removeWhere((e) => _dbInt(e['fetched_at']) < expiryLimit);
       return;
     }
     await db.delete(

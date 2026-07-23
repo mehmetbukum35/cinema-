@@ -548,7 +548,10 @@ class PrefsService {
     final favorites = await db.getFavoritesRaw();
     for (final fav in favorites) {
       final String genreIdsRaw = fav['genre_ids'] as String? ?? '[]';
-      final List<dynamic> genreIds = jsonDecode(genreIdsRaw);
+      final decodedGenreIds = jsonDecode(genreIdsRaw);
+      final List<dynamic> genreIds = decodedGenreIds is List
+          ? decodedGenreIds
+          : const [];
       final int rank = fav['created_at'] as int? ?? 0;
       final double w = _favoriteGenreBase * favoriteRankWeight(rank);
       for (final id in genreIds) {
