@@ -239,8 +239,15 @@ class ApiClient {
   Map<String, dynamic> _decodeJsonMap(String body) {
     final trimmed = body.trim();
     if (trimmed.isEmpty) return {};
-    final decoded = jsonDecode(trimmed);
-    return decoded is Map<String, dynamic> ? decoded : {};
+    try {
+      final decoded = jsonDecode(trimmed);
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } on FormatException {
+      // Sunucu (ya da araya giren bir proxy) düz metin döndürebilir; ör. yenileme
+      // reddedildikten sonra gelen "Unauthorized". Gövdeyi boş kabul et ki çağıran
+      // durum koduna göre tipli ApiException fırlatsın, FormatException sızmasın.
+      return {};
+    }
   }
 
   Never _throwRateLimited(http.Response response) {

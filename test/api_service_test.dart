@@ -18,6 +18,9 @@ void main() {
       accessToken: 'initial_access',
       refreshToken: 'initial_refresh',
     );
+    // Refresh, boş bir oturuma token diriltmemek için kullanıcı verisi de arar;
+    // gerçek bir açık oturumu temsil etmek için ikisini birlikte kur.
+    await PrefsService.saveUserData({'id': 1, 'email': 'user@example.com'});
   });
 
   group('ApiService Tests', () {
@@ -362,6 +365,60 @@ void main() {
 
       expect(refreshCount, 1);
       expect(protectedCount, 2);
+    });
+
+    test(
+      'refresh must not resurrect tokens after the session is wiped',
+      () async {
+        var refreshCount = 0;
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/api/auth/refresh') {
+            refreshCount++;
+            // Yenileme uçuşta iken oturum siliniyor (çıkış / hesap silme).
+            await PrefsService.clearAuthData();
+            return http.Response(
+              jsonEncode({
+                'tokens': {
+                  'access_token': 'resurrected_access',
+                  'refresh_token': 'resurrected_refresh',
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response('Unauthorized', 401);
+        });
+
+        var sessionExpired = false;
+        final apiService = ApiService(client: mockClient)
+          ..onSessionExpired = () => sessionExpired = true;
+
+        await expectLater(
+          apiService.getFriends(),
+          throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401),
+          ),
+        );
+
+        expect(refreshCount, 1);
+        expect(sessionExpired, isTrue);
+        expect(await PrefsService.getAccessToken(), isNull);
+        expect(await PrefsService.getRefreshToken(), isNull);
+      },
+    );
+
+    test('non-JSON error body should surface as ApiException', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('<html>502 Bad Gateway</html>', 502);
+      });
+      final apiService = ApiService(client: mockClient);
+
+      await expectLater(
+        apiService.getFriends(),
+        throwsA(
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 502),
+        ),
+      );
     });
 
     test('duplicate concurrent GET requests should share one flight', () async {

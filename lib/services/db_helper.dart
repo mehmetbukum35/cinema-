@@ -8,8 +8,9 @@ import '../models/movie.dart';
 int _dbInt(Object? v, [int fallback = 0]) =>
     v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? fallback);
 
-double _dbDouble(Object? v, [double fallback = 0]) =>
-    v is num ? v.toDouble() : (double.tryParse(v?.toString() ?? '') ?? fallback);
+double _dbDouble(Object? v, [double fallback = 0]) => v is num
+    ? v.toDouble()
+    : (double.tryParse(v?.toString() ?? '') ?? fallback);
 
 class DatabaseHelper {
   /// saveRating'te alan verilmediğinde mevcut DB değerini korumak için işaretçi.
