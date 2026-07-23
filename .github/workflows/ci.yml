@@ -21,10 +21,10 @@ jobs:
         run: flutter analyze
       - name: Run unit/widget tests
         run: flutter test --coverage
-      - name: Check Dart coverage threshold (≥50% on logic layers)
+      - name: Check Dart coverage threshold (≥70% on logic layers)
         # Yalnız iş mantığını ölç: services / providers / models.
-        # UI ekranları (lib/screens) kasıtlı olarak hariç. Mevcut kapsam ~%55;
-        # eşik %50 (tampon). Test ekledikçe bu sayıyı yukarı çek (ratchet).
+        # UI ekranları (lib/screens) kasıtlı olarak hariç. Mevcut kapsam ~%74;
+        # eşik %70 (tampon). Test ekledikçe bu sayıyı yukarı çek (ratchet).
         # gsub ile yol ayracı normalize edilir (Windows '\' / Linux '/').
         run: |
           awk '
@@ -35,7 +35,7 @@ jobs:
               if (lf==0) { print "Kapsam verisi yok, atlanıyor."; exit 0 }
               pct=int(lh*100/lf)
               printf "Dart mantik katmani kapsami: %d/%d (%d%%)\n", lh, lf, pct
-              if (pct<50) { print "50% esiginin altinda!"; exit 1 }
+              if (pct<70) { print "70% esiginin altinda!"; exit 1 }
             }
           ' coverage/lcov.info
       - name: Upload Flutter coverage
