@@ -485,7 +485,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       if (!mounted) return;
       ref.invalidate(statsProvider);
       if (ref.exists(swipeProvider)) {
-        ref.read(swipeProvider.notifier).refreshRatedIds().catchError((_) => {});
+        ref
+            .read(swipeProvider.notifier)
+            .refreshRatedIds()
+            .catchError((_) => {});
       }
       ref.read(syncServiceProvider).sync();
     } finally {

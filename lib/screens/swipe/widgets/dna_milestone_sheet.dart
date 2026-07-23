@@ -49,9 +49,9 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
   // Mark only after the sheet was actually presented (or dismissed).
   await PrefsService.markDnaMilestoneShown(threshold);
   if (action == 'open_dna' && context.mounted) {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TasteDnaScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const TasteDnaScreen()));
   }
 }
 
