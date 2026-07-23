@@ -20,6 +20,14 @@ final class TitleCatalog
         'overview' => 2000,
     ];
 
+    private const IMAGE_PATH_FIELDS = ['poster_path', 'backdrop_path'];
+
+    /** TMDB oy ortalaması 0-10 aralığındadır; dışı veri hatasıdır. */
+    private const VOTE_AVERAGE_MAX = 10.0;
+
+    /** Gerçek TMDB popülerliği binler mertebesinde; tavan yalnız saçma değerleri keser. */
+    private const POPULARITY_MAX = 1000000.0;
+
     /** @var array<string, array{tmdb_id:int,is_tv:int,locale:string}> */
     private array $pendingRefresh = [];
 
@@ -43,16 +51,11 @@ final class TitleCatalog
         }
         $isTv = !empty($item['is_tv']) ? 1 : 0;
 
-        foreach (['poster_path', 'backdrop_path'] as $pathField) {
-            if (!array_key_exists($pathField, $item)) {
-                continue;
-            }
-            $path = $item[$pathField];
-            if ($path === null || $path === '') {
-                continue;
-            }
-            if (!is_string($path) || !preg_match('#^/[A-Za-z0-9._/-]+$#', $path)) {
-                $item[$pathField] = null;
+        // Geçersiz yol, aşağıdaki "hiç metadata yok" kontrolünden önce düşmeli;
+        // yoksa yalnızca bozuk poster taşıyan bir push boş satır yaratır.
+        foreach (self::IMAGE_PATH_FIELDS as $pathField) {
+            if (array_key_exists($pathField, $item)) {
+                $item[$pathField] = self::sanitizeImagePath($item[$pathField]);
             }
         }
 
@@ -89,16 +92,7 @@ final class TitleCatalog
         ];
 
         foreach (self::FIELDS as $field) {
-            $incoming = $item[$field] ?? null;
-            if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
-                $incoming = json_encode($incoming, JSON_UNESCAPED_UNICODE);
-            }
-            if (isset(self::TEXT_LIMITS[$field])) {
-                $incoming = sanitize_title_text(
-                    is_string($incoming) || $incoming === null ? $incoming : (string) $incoming,
-                    self::TEXT_LIMITS[$field]
-                );
-            }
+            $incoming = $this->normalizeField($field, $item[$field] ?? null);
             if ($existing !== false) {
                 $prev = $existing[$field] ?? null;
                 $prevEmpty = $prev === null || $prev === '';
@@ -229,24 +223,7 @@ final class TitleCatalog
         ];
 
         foreach (self::FIELDS as $field) {
-            $incoming = $fields[$field] ?? null;
-            if ($field === 'genre_ids' && $incoming !== null && !is_string($incoming)) {
-                $incoming = json_encode($incoming, JSON_UNESCAPED_UNICODE);
-            }
-            if (in_array($field, ['poster_path', 'backdrop_path'], true)) {
-                if ($incoming !== null && $incoming !== '') {
-                    if (!is_string($incoming) || !preg_match('#^/[A-Za-z0-9._/-]+$#', $incoming)) {
-                        $incoming = null;
-                    }
-                }
-            }
-            if (isset(self::TEXT_LIMITS[$field])) {
-                $incoming = sanitize_title_text(
-                    is_string($incoming) || $incoming === null ? $incoming : (string) $incoming,
-                    self::TEXT_LIMITS[$field]
-                );
-            }
-            $values[$field] = $incoming;
+            $values[$field] = $this->normalizeField($field, $fields[$field] ?? null);
         }
 
         $select = $this->db->prepare(
@@ -280,6 +257,78 @@ final class TitleCatalog
              WHERE tmdb_id = ? AND is_tv = ? AND locale = ?"
         )->execute($params);
         return true;
+    }
+
+    /**
+     * Tek bir alanı depolanabilir hâle getirir. Client ve TMDB yolları aynı
+     * normalizasyondan geçer: kanonik kaynak da bozuk değer dönebilir ve iki
+     * ayrı kural kümesi zamanla birbirinden ayrışır.
+     */
+    private function normalizeField(string $field, mixed $incoming): mixed
+    {
+        if ($field === 'genre_ids') {
+            if ($incoming === null || $incoming === '') {
+                return null;
+            }
+            return is_string($incoming)
+                ? $incoming
+                : json_encode($incoming, JSON_UNESCAPED_UNICODE);
+        }
+        if (in_array($field, self::IMAGE_PATH_FIELDS, true)) {
+            return self::sanitizeImagePath($incoming);
+        }
+        if (isset(self::TEXT_LIMITS[$field])) {
+            return sanitize_title_text(
+                is_string($incoming) || $incoming === null ? $incoming : (string) $incoming,
+                self::TEXT_LIMITS[$field]
+            );
+        }
+        return match ($field) {
+            'vote_average' => self::clampNumber($incoming, 0.0, self::VOTE_AVERAGE_MAX),
+            'popularity' => self::clampNumber($incoming, 0.0, self::POPULARITY_MAX),
+            'release_date' => self::sanitizeDate($incoming),
+            default => $incoming,
+        };
+    }
+
+    /**
+     * TMDB göreli görsel yolu. `..` içeren değerler reddedilir: karakter sınıfı
+     * hem `.` hem `/` içerdiği için desen tek başına `/../../x.jpg`'yi kabul eder.
+     */
+    private static function sanitizeImagePath(mixed $path): ?string
+    {
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+        if (str_contains($path, '..')) {
+            return null;
+        }
+        return preg_match('#^/[A-Za-z0-9._/-]+$#', $path) === 1 ? $path : null;
+    }
+
+    /** Sayısal olmayan veya sonsuz değerler düşer; geri kalanı aralığa sıkışır. */
+    private static function clampNumber(mixed $value, float $min, float $max): ?float
+    {
+        if ($value === null || $value === '' || is_bool($value)) {
+            return null;
+        }
+        if (!is_int($value) && !is_float($value) && !(is_string($value) && is_numeric($value))) {
+            return null;
+        }
+        $number = (float) $value;
+        if (!is_finite($number)) {
+            return null;
+        }
+        return max($min, min($max, $number));
+    }
+
+    /** Yalnız YYYY-AA-GG kabul edilir; TMDB yayınlanmamış yapımlar için '' döner. */
+    private static function sanitizeDate(mixed $value): ?string
+    {
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : null;
     }
 
     private function refreshOne(int $tmdbId, int $isTv, string $locale, ?int $nowMs = null): bool
