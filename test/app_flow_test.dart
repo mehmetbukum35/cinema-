@@ -94,6 +94,9 @@ Future<void> runLoginAndSyncFlowTest(WidgetTester tester) async {
   expect(mockApi.pullCalled, isTrue);
   expect(mockApi.pushCalled, isTrue);
   expect(find.text(kEnStrings['sync_success']!), findsOneWidget);
+
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
 }
 
 Future<void> runOnboardingSkipFlowTest(WidgetTester tester) async {
@@ -122,6 +125,9 @@ Future<void> runOnboardingSkipFlowTest(WidgetTester tester) async {
   await settleUi(tester);
 
   expect(find.text(kEnStrings['tab_browse']!), findsOneWidget);
+
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
 }
 
 Future<void> runRateTabFlowTest(WidgetTester tester) async {
@@ -146,11 +152,15 @@ Future<void> runRateTabFlowTest(WidgetTester tester) async {
   await tester.tap(rateTabFinder);
   await settleUi(tester, steps: 30);
 
-  expect(find.text('Swipe Integration Test Movie'), findsOneWidget);
-
   final container = ProviderScope.containerOf(
     tester.element(find.byType(NeIzlesemApp)),
   );
+  for (var i = 0; i < 100; i++) {
+    if (container.read(swipeProvider).queue.isNotEmpty) break;
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(find.text('Swipe Integration Test Movie'), findsOneWidget);
+
   await container.read(swipeProvider.notifier).rate(3);
   await settleUi(tester, steps: 15);
 
@@ -225,6 +235,11 @@ void main() {
 
   group('App flow integration (VM)', () {
     testWidgets(
+      'Should navigate to Rate tab and submit a rating',
+      runRateTabFlowTest,
+    );
+
+    testWidgets(
       'Should start application, navigate to profile, log in, and run cloud sync',
       runLoginAndSyncFlowTest,
     );
@@ -232,11 +247,6 @@ void main() {
     testWidgets(
       'Should start application with onboarding, click skip, and land on Browse screen',
       runOnboardingSkipFlowTest,
-    );
-
-    testWidgets(
-      'Should navigate to Rate tab and submit a rating',
-      runRateTabFlowTest,
     );
 
     testWidgets(

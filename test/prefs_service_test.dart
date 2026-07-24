@@ -252,5 +252,14 @@ void main() {
       expect(telemetry['discover']?['shown'], 50);
       expect(telemetry['discover']?['liked'], 25);
     });
+
+    test('resetAll invalidates cached genre weights', () async {
+      await PrefsService.saveInitialGenres([28]);
+      expect(await PrefsService.getGenreWeights(), contains(28));
+
+      await PrefsService.resetAll();
+
+      expect(await PrefsService.getGenreWeights(), isEmpty);
+    });
   });
 }

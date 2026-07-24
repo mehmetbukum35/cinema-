@@ -771,6 +771,7 @@ class PrefsService {
     }
     final prefs = await SharedPreferences.getInstance();
     _cachedAccessToken = null;
+    invalidateGenreWeights();
     await prefs.clear();
     await _secureStorage.deleteAll();
     await DatabaseHelper().clearAllData();
