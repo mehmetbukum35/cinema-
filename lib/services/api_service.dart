@@ -255,8 +255,8 @@ class ApiClient {
     String? code;
     try {
       final data = _decodeJsonMap(response.body);
-      code = data['code'] as String?;
-      final serverMsg = data['error'] as String?;
+      code = data['code']?.toString();
+      final serverMsg = data['error']?.toString();
       // Yeni sunucu 'rate_limited' kodu döner; kod yoksa (eski sunucu)
       // bilinen Türkçe mesajlar yerel anahtara eşlenir, gerisi aynen geçer.
       if (code == null &&
@@ -377,6 +377,31 @@ class ApiException implements Exception {
   final String? code;
 
   ApiException({required this.statusCode, required this.message, this.code});
+
+  factory ApiException.fromData(
+    Map<String, dynamic> data, {
+    required int statusCode,
+    required String fallbackMessage,
+  }) {
+    final rawError = data['error'];
+    String message = fallbackMessage;
+    if (rawError is String && rawError.trim().isNotEmpty) {
+      message = rawError.trim();
+    } else if (rawError is Map) {
+      final msg = rawError['message'] ?? rawError['error'];
+      if (msg != null && msg.toString().trim().isNotEmpty) {
+        message = msg.toString().trim();
+      }
+    } else if (rawError != null) {
+      final str = rawError.toString().trim();
+      if (str.isNotEmpty) message = str;
+    }
+
+    final rawCode = data['code'];
+    final code = rawCode?.toString();
+
+    return ApiException(statusCode: statusCode, message: message, code: code);
+  }
 
   @override
   String toString() => 'ApiException: [$statusCode] $message';

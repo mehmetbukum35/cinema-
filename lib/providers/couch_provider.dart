@@ -45,11 +45,14 @@ class CouchSession {
         : double.tryParse(value?.toString() ?? '') ?? 0;
     Movie deckMovie(Map<String, dynamic> d) => Movie(
       id: asInt(d['movie_id']),
-      title: d['title'] as String? ?? '',
-      posterPath: d['poster_path'] as String?,
+      title: d['title']?.toString() ?? '',
+      posterPath: d['poster_path']?.toString(),
       overview: '',
       voteAverage: asDouble(d['vote_average']),
-      isTV: d['is_tv'] == 1 || d['is_tv'] == true || d['is_tv'] == '1',
+      isTV:
+          d['is_tv'] == 1 ||
+          d['is_tv'] == true ||
+          d['is_tv']?.toString() == '1',
     );
 
     // Savunmacı parse: PHP boş assoc dizileri JSON'a `[]` (liste) yazabilir —
@@ -59,15 +62,16 @@ class CouchSession {
         v is Map ? Map<String, dynamic>.from(v) : const {};
 
     final friend = asMap(json['friend']);
+    final displayNameStr = friend['display_name']?.toString();
     final friendName =
-        (friend['display_name'] as String?)?.trim().isNotEmpty == true
-        ? friend['display_name'] as String
-        : '@${friend['username'] ?? '?'}';
+        (displayNameStr != null && displayNameStr.trim().isNotEmpty)
+        ? displayNameStr
+        : '@${friend['username']?.toString() ?? '?'}';
 
     final rawMatched = json['matched'];
     return CouchSession(
       id: asInt(json['id']),
-      status: json['status'] as String? ?? 'cancelled',
+      status: json['status']?.toString() ?? 'cancelled',
       isHost: json['is_host'] == true,
       friendId: asInt(friend['id']),
       friendName: friendName,
@@ -224,7 +228,10 @@ class CouchNotifier extends StateNotifier<CouchState> {
       try {
         final inter = await _api.getWatchlistIntersection(friend.id);
         addAll(
-          inter.map((e) => Movie.fromJson(e as Map<String, dynamic>)).take(8),
+          inter
+              .whereType<Map<dynamic, dynamic>>()
+              .map((e) => Movie.fromJson(Map<String, dynamic>.from(e)))
+              .take(8),
         );
       } catch (e) {
         debugPrint('Couch deck intersection failed (skipped): $e');

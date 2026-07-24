@@ -18,12 +18,10 @@ mixin SyncApi on ApiClient {
     if (response.statusCode == 200) {
       return data;
     } else {
-      throw ApiException(
+      throw ApiException.fromData(
+        data,
         statusCode: response.statusCode,
-        message:
-            data['error'] as String? ??
-            'Veri senkronizasyonu (pull) başarısız.',
-        code: data['code'] as String?,
+        fallbackMessage: 'Veri senkronizasyonu (pull) başarısız.',
       );
     }
   }
@@ -43,12 +41,10 @@ mixin SyncApi on ApiClient {
     if (response.statusCode == 200) {
       return data;
     } else {
-      throw ApiException(
+      throw ApiException.fromData(
+        data,
         statusCode: response.statusCode,
-        message:
-            data['error'] as String? ??
-            'Veri senkronizasyonu (push) başarısız.',
-        code: data['code'] as String?,
+        fallbackMessage: 'Veri senkronizasyonu (push) başarısız.',
       );
     }
   }
@@ -61,11 +57,10 @@ mixin SyncApi on ApiClient {
     );
     if (response.statusCode != 200) {
       final data = _decodeJsonMap(response.body);
-      throw ApiException(
+      throw ApiException.fromData(
+        data,
         statusCode: response.statusCode,
-        message:
-            data['error'] as String? ?? 'Arama geçmişi sunucudan silinemedi.',
-        code: data['code'] as String?,
+        fallbackMessage: 'Arama geçmişi sunucudan silinemedi.',
       );
     }
   }
@@ -74,10 +69,10 @@ mixin SyncApi on ApiClient {
     final response = await _request('DELETE', '/sync', requireAuth: true);
     if (response.statusCode != 200) {
       final data = _decodeJsonMap(response.body);
-      throw ApiException(
+      throw ApiException.fromData(
+        data,
         statusCode: response.statusCode,
-        message: data['error'] as String? ?? 'Bulut verileri sıfırlanamadı.',
-        code: data['code'] as String?,
+        fallbackMessage: 'Bulut verileri sıfırlanamadı.',
       );
     }
   }

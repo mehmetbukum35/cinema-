@@ -39,13 +39,16 @@ class PopularTitle {
       votes: asInt(m['votes']),
       movie: Movie(
         id: asInt(m['tmdb_id']),
-        title: (m['title'] as String?) ?? '',
-        posterPath: m['poster_path'] as String?,
-        backdropPath: m['backdrop_path'] as String?,
-        overview: (m['overview'] as String?) ?? '',
+        title: m['title']?.toString() ?? '',
+        posterPath: m['poster_path']?.toString(),
+        backdropPath: m['backdrop_path']?.toString(),
+        overview: m['overview']?.toString() ?? '',
         voteAverage: asDouble(m['vote_average']),
-        releaseDate: m['release_date'] as String?,
-        isTV: m['is_tv'] == true || m['is_tv'] == 1 || m['is_tv'] == '1',
+        releaseDate: m['release_date']?.toString(),
+        isTV:
+            m['is_tv'] == true ||
+            m['is_tv'] == 1 ||
+            m['is_tv']?.toString() == '1',
         genreIds: genres,
         popularity: asDouble(m['popularity']),
       ),
@@ -63,7 +66,7 @@ final popularTitlesProvider = FutureProvider.family<List<PopularTitle>, bool>((
   final api = ref.read(apiServiceProvider);
   final raw = await api.getPopularTitles(isTV);
   return raw
-      .whereType<Map<String, dynamic>>()
-      .map(PopularTitle.fromJson)
+      .whereType<Map<dynamic, dynamic>>()
+      .map((m) => PopularTitle.fromJson(Map<String, dynamic>.from(m)))
       .toList(growable: false);
 });

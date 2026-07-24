@@ -210,21 +210,24 @@ class SocialNotifier extends StateNotifier<SocialState> {
       final res = await _apiService.getFriends();
       if (!mounted || generation != _friendsLoadGeneration) return;
 
-      final friendsList =
-          (res['friends'] as List<dynamic>?)
-              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const [];
-      final pendingReceivedList =
-          (res['pending_received'] as List<dynamic>?)
-              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const [];
-      final pendingSentList =
-          (res['pending_sent'] as List<dynamic>?)
-              ?.map((x) => Friend.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const [];
+      final friendsList = (res['friends'] is List)
+          ? (res['friends'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map((x) => Friend.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+          : const <Friend>[];
+      final pendingReceivedList = (res['pending_received'] is List)
+          ? (res['pending_received'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map((x) => Friend.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+          : const <Friend>[];
+      final pendingSentList = (res['pending_sent'] is List)
+          ? (res['pending_sent'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map((x) => Friend.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+          : const <Friend>[];
 
       state = state.copyWith(
         friends: friendsList,
@@ -296,7 +299,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
       final page = await _apiService.getActivityFeedPage(cursor: cursor);
       if (!mounted || generation != _activityLoadGeneration) return;
       final incoming = page.items
-          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .whereType<Map<dynamic, dynamic>>()
+          .map((x) => ActivityItem.fromJson(Map<String, dynamic>.from(x)))
           .toList();
       state = state.copyWith(
         activityFeed: [...state.activityFeed, ...incoming],
@@ -337,7 +341,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
         return;
       }
       final feedList = page.items
-          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .whereType<Map<dynamic, dynamic>>()
+          .map((x) => ActivityItem.fromJson(Map<String, dynamic>.from(x)))
           .toList();
       final map = Map<int, List<ActivityItem>>.from(state.friendActivities);
       map[friendId] = feedList;
@@ -376,7 +381,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
         return;
       }
       final incoming = page.items
-          .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
+          .whereType<Map<dynamic, dynamic>>()
+          .map((x) => ActivityItem.fromJson(Map<String, dynamic>.from(x)))
           .toList();
       final existing = state.friendActivities[friendId] ?? const [];
       final map = Map<int, List<ActivityItem>>.from(state.friendActivities);
@@ -406,12 +412,14 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.setupProfile(username, isPublic);
+      final profileUsername = res['username']?.toString() ?? username;
+      final profileIsPublic =
+          res['is_public'] == 1 ||
+          res['is_public'] == true ||
+          res['is_public']?.toString() == '1';
       await _ref
           .read(authProvider.notifier)
-          .updateUserProfile(
-            res['username'] as String,
-            (res['is_public'] as int) == 1,
-          );
+          .updateUserProfile(profileUsername, profileIsPublic);
       state = state.copyWith(loading: false);
       unawaited(loadFriends());
       unawaited(loadActivityFeed());
@@ -514,8 +522,11 @@ class SocialNotifier extends StateNotifier<SocialState> {
       if (id == 0) continue;
       try {
         final res = await _apiService.getTasteMatch(id);
-        if (res['has_data'] == true) {
-          scores[id] = (res['score'] as num).toInt();
+        final scoreVal = res['score'];
+        if (scoreVal != null) {
+          scores[id] = scoreVal is num
+              ? scoreVal.toInt()
+              : int.tryParse(scoreVal.toString()) ?? 0;
         }
       } catch (e, st) {
         // Skorsuz devam et.
@@ -533,14 +544,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final res = await _apiService.getRecommendations();
       if (!mounted || generation != _recommendationsLoadGeneration) return;
-      final recList =
-          (res['recommendations'] as List<dynamic>?)
-              ?.map(
-                (x) =>
-                    RecommendationInboxItem.fromJson(x as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [];
+      final recList = (res['recommendations'] is List)
+          ? (res['recommendations'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) => RecommendationInboxItem.fromJson(
+                    Map<String, dynamic>.from(x),
+                  ),
+                )
+                .toList()
+          : const <RecommendationInboxItem>[];
       state = state.copyWith(
         recommendations: recList,
         unseenRecommendations:
@@ -579,15 +592,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
       if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
         return;
       }
-      final list =
-          (res['recommendations'] as List<dynamic>?)
-              ?.map(
-                (x) => ReceivedRecommendationItem.fromJson(
-                  x as Map<String, dynamic>,
-                ),
-              )
-              .toList() ??
-          const [];
+      final list = (res['recommendations'] is List)
+          ? (res['recommendations'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) => ReceivedRecommendationItem.fromJson(
+                    Map<String, dynamic>.from(x),
+                  ),
+                )
+                .toList()
+          : const <ReceivedRecommendationItem>[];
       state = state.copyWith(
         receivedRecommendations: list,
         receivedRecommendationsCursor: () => res['next_cursor'] as String?,
@@ -605,14 +619,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final res = await _apiService.getSentRecommendations();
       if (!mounted || generation != _sentRecommendationsLoadGeneration) return;
-      final list =
-          (res['sent'] as List<dynamic>?)
-              ?.map(
-                (x) =>
-                    SentRecommendationItem.fromJson(x as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [];
+      final list = (res['sent'] is List)
+          ? (res['sent'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) => SentRecommendationItem.fromJson(
+                    Map<String, dynamic>.from(x),
+                  ),
+                )
+                .toList()
+          : const <SentRecommendationItem>[];
       state = state.copyWith(
         sentRecommendations: list,
         sentRecommendationsCursor: () => res['next_cursor'] as String?,
@@ -640,12 +656,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
         }
         return;
       }
-      final page = (res['recommendations'] as List<dynamic>? ?? const [])
-          .map(
-            (x) =>
-                ReceivedRecommendationItem.fromJson(x as Map<String, dynamic>),
-          )
-          .toList();
+      final page = (res['recommendations'] is List)
+          ? (res['recommendations'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) => ReceivedRecommendationItem.fromJson(
+                    Map<String, dynamic>.from(x),
+                  ),
+                )
+                .toList()
+          : const <ReceivedRecommendationItem>[];
       final ids = state.receivedRecommendations.map((item) => item.id).toSet();
       state = state.copyWith(
         receivedRecommendations: [
@@ -681,11 +701,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
         }
         return;
       }
-      final page = (res['sent'] as List<dynamic>? ?? const [])
-          .map(
-            (x) => SentRecommendationItem.fromJson(x as Map<String, dynamic>),
-          )
-          .toList();
+      final page = (res['sent'] is List)
+          ? (res['sent'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) => SentRecommendationItem.fromJson(
+                    Map<String, dynamic>.from(x),
+                  ),
+                )
+                .toList()
+          : const <SentRecommendationItem>[];
       final ids = state.sentRecommendations.map((item) => item.id).toSet();
       state = state.copyWith(
         sentRecommendations: [
@@ -780,11 +805,12 @@ class SocialNotifier extends StateNotifier<SocialState> {
     try {
       final res = await _apiService.getTopProfiles();
       if (!mounted || generation != _topProfilesLoadGeneration) return;
-      final list =
-          (res['profiles'] as List<dynamic>?)
-              ?.map((x) => TopProfile.fromJson(x as Map<String, dynamic>))
-              .toList() ??
-          const <TopProfile>[];
+      final list = (res['profiles'] is List)
+          ? (res['profiles'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map((x) => TopProfile.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+          : const <TopProfile>[];
       state = state.copyWith(topProfiles: list, topProfilesLoading: false);
     } catch (e, st) {
       // Popüler profiller arkadaş listesinin arka plan verisidir; geçici ağ
@@ -870,7 +896,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
       final list = await _apiService.getWatchlistIntersection(friendId);
       if (!mounted || generation != _intersectionLoadGeneration) return;
       final movies = list
-          .map((e) => Movie.fromJson(e as Map<String, dynamic>))
+          .whereType<Map<dynamic, dynamic>>()
+          .map((e) => Movie.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       state = state.copyWith(intersection: movies, loading: false);
     } on ApiException catch (e) {

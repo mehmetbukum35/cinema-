@@ -192,15 +192,19 @@ class RecommendationEngine {
       // En son 15 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
       final sortedRatings = ratings.toList()
         ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
+          (a, b) => (int.tryParse(b['created_at']?.toString() ?? '') ?? 0)
+              .compareTo(int.tryParse(a['created_at']?.toString() ?? '') ?? 0),
         );
       final seeds = sortedRatings.take(15).toList();
       final nowMs = DateTime.now().millisecondsSinceEpoch;
 
       final kwLists = await Future.wait(
         seeds.map((r) {
-          final id = r['id'] as int;
-          final isTV = r['isTV'] as bool? ?? false;
+          final id = int.tryParse(r['id']?.toString() ?? '') ?? 0;
+          final isTV =
+              r['isTV'] == true ||
+              r['is_tv'] == 1 ||
+              r['is_tv']?.toString() == '1';
           return _service
               .getKeywordIds(id, isTV: isTV)
               .catchError((_) => <int>[]);
@@ -209,7 +213,7 @@ class RecommendationEngine {
 
       for (var i = 0; i < seeds.length; i++) {
         final r = seeds[i];
-        final rating = r['rating'] as int;
+        final rating = int.tryParse(r['rating']?.toString() ?? '') ?? -1;
         // Harika -> +2.0, İyi -> +1.0, Eh -> -1.0, Berbat -> -2.0
         final double base;
         if (rating == 3) {
@@ -224,7 +228,7 @@ class RecommendationEngine {
           continue;
         }
 
-        final createdAt = r['created_at'] as int;
+        final createdAt = int.tryParse(r['created_at']?.toString() ?? '') ?? 0;
         final days = (nowMs - createdAt) / 86400000.0;
         final decay = exp(-0.00385 * days);
         final w = base * decay;
@@ -338,14 +342,30 @@ class RecommendationEngine {
       }
 
       // 1. Oylamalardan tohumlar: Harika (3) ve İyi (2)
-      final harikaSeeds = ratings.where((r) => r['rating'] == 3).toList()
-        ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
-        );
-      final iyiSeeds = ratings.where((r) => r['rating'] == 2).toList()
-        ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
-        );
+      final harikaSeeds =
+          ratings
+              .where(
+                (r) => (int.tryParse(r['rating']?.toString() ?? '') ?? -1) == 3,
+              )
+              .toList()
+            ..sort(
+              (a, b) => (int.tryParse(b['created_at']?.toString() ?? '') ?? 0)
+                  .compareTo(
+                    int.tryParse(a['created_at']?.toString() ?? '') ?? 0,
+                  ),
+            );
+      final iyiSeeds =
+          ratings
+              .where(
+                (r) => (int.tryParse(r['rating']?.toString() ?? '') ?? -1) == 2,
+              )
+              .toList()
+            ..sort(
+              (a, b) => (int.tryParse(b['created_at']?.toString() ?? '') ?? 0)
+                  .compareTo(
+                    int.tryParse(a['created_at']?.toString() ?? '') ?? 0,
+                  ),
+            );
 
       List<Map<String, dynamic>> ratingSeeds = [...harikaSeeds, ...iyiSeeds];
 
@@ -519,11 +539,13 @@ class RecommendationEngine {
       final ratings = await _getRatings();
       final disliked =
           ratings.where((r) {
-            final rating = r['rating'] as int;
+            final rating = int.tryParse(r['rating']?.toString() ?? '') ?? -1;
             return rating == 0 || rating == 1;
           }).toList()..sort(
-            (a, b) =>
-                (b['created_at'] as int).compareTo(a['created_at'] as int),
+            (a, b) => (int.tryParse(b['created_at']?.toString() ?? '') ?? 0)
+                .compareTo(
+                  int.tryParse(a['created_at']?.toString() ?? '') ?? 0,
+                ),
           );
       final seeds = disliked.take(3).toList();
       if (seeds.isEmpty) {
@@ -533,8 +555,11 @@ class RecommendationEngine {
 
       final results = await Future.wait(
         seeds.map((s) {
-          final int id = s['id'] as int;
-          final bool isTV = s['isTV'] as bool? ?? false;
+          final id = int.tryParse(s['id']?.toString() ?? '') ?? 0;
+          final isTV =
+              s['isTV'] == true ||
+              s['is_tv'] == 1 ||
+              s['is_tv']?.toString() == '1';
           return Future.wait([
             _service
                 .getRecommendations(id, isTV: isTV)
@@ -545,7 +570,7 @@ class RecommendationEngine {
       );
 
       for (var i = 0; i < seeds.length; i++) {
-        final rating = seeds[i]['rating'] as int;
+        final rating = int.tryParse(seeds[i]['rating']?.toString() ?? '') ?? -1;
         final targetSet = rating == 0 ? berbatKeys : ehKeys;
         for (final list in results[i]) {
           for (final m in list) {
@@ -585,7 +610,7 @@ class RecommendationEngine {
     // Berbat (0) oylanan filmlerin franchise/seri isimlerini yükle (Prefix bastırma için)
     final ratings = await _getRatings();
     final berbatTitles = ratings
-        .where((r) => (r['rating'] as int) == 0)
+        .where((r) => (int.tryParse(r['rating']?.toString() ?? '') ?? -1) == 0)
         .map((r) => _normTitle((r['movie'] as Movie?)?.title ?? ''))
         .where((t) => t.length >= 5)
         .toList();
