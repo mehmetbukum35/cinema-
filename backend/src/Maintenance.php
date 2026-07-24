@@ -12,11 +12,12 @@ final class Maintenance
 {
     private const DEFAULTS = [
         'batch_limit' => 500,
-        'search_history_limit' => 50,
+        'search_history_limit' => 10,
         'couch_open_hours' => 24,
         'couch_cancelled_days' => 7,
         'couch_terminal_days' => 30,
         'tombstone_retention_days' => 30,
+        'search_history_tombstone_retention_days' => 7,
         'sync_device_inactive_days' => 90,
         'popular_min_votes' => 1,
         'popular_limit' => 20,
@@ -34,6 +35,10 @@ final class Maintenance
         $this->options['batch_limit'] = max(1, min(5000, (int) $this->options['batch_limit']));
         $this->options['search_history_limit'] = max(0, min(500, (int) $this->options['search_history_limit']));
         $this->options['tombstone_retention_days'] = max(7, min(365, (int) $this->options['tombstone_retention_days']));
+        $this->options['search_history_tombstone_retention_days'] = max(
+            1,
+            min(365, (int) $this->options['search_history_tombstone_retention_days'])
+        );
         $this->options['sync_device_inactive_days'] = max(30, min(730, (int) $this->options['sync_device_inactive_days']));
         $this->options['popular_min_votes'] = max(1, min(100000, (int) $this->options['popular_min_votes']));
         $this->options['popular_limit'] = max(1, min(50, (int) $this->options['popular_limit']));
@@ -72,6 +77,8 @@ final class Maintenance
             $result['watchlist_tombstones_compacted'] = 0;
             $result['favorites_tombstones_compacted'] = 0;
             $tombstoneCutoff = $nowMs - ((int) $this->options['tombstone_retention_days'] * 86400000);
+            $searchHistoryTombstoneCutoff = $nowMs
+                - ((int) $this->options['search_history_tombstone_retention_days'] * 86400000);
             $result['ratings_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
                 'ratings', ['movie_id', 'is_tv'], $tombstoneCutoff, $nowMs
             );
@@ -85,7 +92,7 @@ final class Maintenance
                 'watched_seasons', ['tv_id', 'season_number'], $tombstoneCutoff, $nowMs
             );
             $result['search_history_tombstones_deleted'] = $this->deleteAcknowledgedTombstones(
-                'search_history', ['query'], $tombstoneCutoff, $nowMs
+                'search_history', ['query'], $searchHistoryTombstoneCutoff, $nowMs
             );
             $result['couch_sessions_expired'] = $this->expireOpenCouchSessions($nowMs);
             $result['couch_sessions_deleted'] = $this->deleteOldCouchSessions($nowMs);

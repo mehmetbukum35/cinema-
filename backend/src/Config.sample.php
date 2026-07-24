@@ -39,11 +39,13 @@ return [
     // Sync tombstones are retained for offline deletion propagation.
     'maintenance' => [
         'batch_limit' => 500,
-        'search_history_limit' => 50,
+        'search_history_limit' => 10,
         'couch_open_hours' => 24,
         'couch_cancelled_days' => 7,
         'couch_terminal_days' => 30,
         'tombstone_retention_days' => 30,
+        // Arama geçmişi düşük riskli ve yüksek hacimli; yalnız silinmiş kayıtlar.
+        'search_history_tombstone_retention_days' => 7,
         'sync_device_inactive_days' => 90,
         // Client-sourced titles backfill: php maintenance.php titles
         'titles_refresh_batch' => 20,

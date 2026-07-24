@@ -54,8 +54,8 @@ final class MaintenanceTest extends TestCase
 
         $result = (new Maintenance($this->db, ['batch_limit' => 500]))->run($this->now);
 
-        self::assertSame(5, $result['search_history_tombstoned']);
-        self::assertSame(50, (int) $this->db->query('SELECT COUNT(*) FROM search_history WHERE deleted = 0')->fetchColumn());
+        self::assertSame(45, $result['search_history_tombstoned']);
+        self::assertSame(10, (int) $this->db->query('SELECT COUNT(*) FROM search_history WHERE deleted = 0')->fetchColumn());
         self::assertSame(55, (int) $this->db->query('SELECT COUNT(*) FROM search_history')->fetchColumn());
 
         $deletedRating = $this->db->query('SELECT * FROM ratings WHERE movie_id = 10')->fetch();
@@ -114,6 +114,28 @@ final class MaintenanceTest extends TestCase
             $deletedAt,
             (int) $this->db->query('SELECT gc_cursor FROM sync_gc_state WHERE user_id = 1')->fetchColumn()
         );
+    }
+
+    public function testSearchHistoryUsesShorterTombstoneRetention(): void
+    {
+        $deletedAt = $this->now - 8 * 86400000;
+        $search = $this->db->prepare(
+            'INSERT INTO search_history
+             (user_id, query, updated_at, server_updated_at, deleted)
+             VALUES (1, ?, ?, ?, 1)'
+        );
+        $search->execute(['old-query', $deletedAt, $deletedAt]);
+        $this->db->exec(
+            "INSERT INTO ratings VALUES
+             (1, 77, 0, NULL, $deletedAt, $deletedAt, 1)"
+        );
+
+        $result = (new Maintenance($this->db))->runCleanup($this->now);
+
+        self::assertSame(1, $result['search_history_tombstones_deleted']);
+        self::assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM search_history')->fetchColumn());
+        self::assertSame(0, $result['ratings_tombstones_deleted']);
+        self::assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM ratings')->fetchColumn());
     }
 
     public function testInvalidatesDormantDeviceBeforeGarbageCollection(): void

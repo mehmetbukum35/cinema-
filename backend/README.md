@@ -53,11 +53,12 @@ Or keep a single daily run that does both (the previous behaviour):
 20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php >> /home/USER/logs/cinema-maintenance.log 2>&1
 ```
 
-Maintenance caps active search history at 50 rows per user, expires old Couch
-sessions, and removes expired temporary authentication records. After migration
-021, tombstones older than 30 days are physically deleted only when every active
-device has acknowledged them. Devices inactive for 90 days must perform a safe
-full resync before pushing again.
+Maintenance caps active search history at 10 rows per user, expires old Couch
+sessions, and removes expired temporary authentication records. Search-history
+tombstones are retained for 7 days; ratings, watchlist, favorites, and watched
+season tombstones retain the safer 30-day window. Physical deletion still waits
+until every active device has acknowledged the tombstone. Devices inactive for
+90 days must perform a safe full resync before pushing again.
 
 ## Device-aware tombstone cleanup rollout
 
