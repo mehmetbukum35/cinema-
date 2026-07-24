@@ -6,6 +6,11 @@
 -- Üretim Zamanı: 29 Haz 2026, 15:17:56
 -- Sunucu sürümü: 10.6.25-MariaDB-cll-lve-log
 -- PHP Sürümü: 8.4.21
+--
+-- Şema anlık görüntüsü: 24 Temmuz 2026
+-- 026_sync_origin_tiebreak.sql dahil üretim migration'ları bu temiz kurulum
+-- dosyasına katlanmıştır. Üretim verisi, token ve AUTO_INCREMENT sayaçları
+-- bilerek dahil edilmemiştir.
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -32,7 +37,8 @@ CREATE TABLE `favorites` (
   `is_tv` tinyint(1) NOT NULL,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `server_updated_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -49,7 +55,7 @@ CREATE TABLE `titles` (
   `vote_average` double DEFAULT NULL,
   `release_date` varchar(20) DEFAULT NULL,
   `popularity` double DEFAULT NULL,
-  `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`genre_ids`)),
+  `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `metadata_updated_at` bigint(20) NOT NULL DEFAULT 0,
   `source` varchar(10) NOT NULL DEFAULT 'client',
   `refreshed_at` bigint(20) NOT NULL DEFAULT 0,
@@ -110,12 +116,13 @@ CREATE TABLE `ratings` (
   `is_tv` tinyint(1) NOT NULL,
   `rating` int(11) NOT NULL,
   `comment` text DEFAULT NULL,
-  `is_spoiler` tinyint(1) NOT NULL DEFAULT 0,
+  `is_spoiler` tinyint(4) NOT NULL DEFAULT 0,
   `is_private` tinyint(1) NOT NULL DEFAULT 0,
   `is_hidden` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `server_updated_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -164,7 +171,8 @@ CREATE TABLE `search_history` (
   `query` varchar(255) NOT NULL,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `server_updated_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -214,7 +222,8 @@ CREATE TABLE `users` (
   `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
   `google_sub` varchar(255) DEFAULT NULL,
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
-  `review_banned` tinyint(1) NOT NULL DEFAULT 0
+  `review_banned` tinyint(1) NOT NULL DEFAULT 0,
+  `apple_sub` varchar(64) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -242,7 +251,8 @@ CREATE TABLE `watched_seasons` (
   `tv_id` int(11) NOT NULL,
   `season_number` int(11) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `server_updated_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -257,7 +267,8 @@ CREATE TABLE `watchlist` (
   `is_tv` tinyint(1) NOT NULL,
   `created_at` bigint(20) NOT NULL,
   `updated_at` bigint(20) NOT NULL,
-  `deleted` tinyint(1) NOT NULL DEFAULT 0
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `server_updated_at` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -269,7 +280,9 @@ CREATE TABLE `watchlist` (
 --
 ALTER TABLE `favorites`
   ADD PRIMARY KEY (`user_id`,`id`,`is_tv`),
-  ADD KEY `idx_favorites_sync` (`user_id`,`updated_at`);
+  ADD KEY `idx_favorites_sync` (`user_id`,`updated_at`),
+  ADD KEY `idx_favorites_popular` (`is_tv`,`deleted`,`id`),
+  ADD KEY `idx_favorites_server_sync` (`user_id`,`server_updated_at`);
 
 --
 -- Tablo için indeksler `friends`
@@ -283,13 +296,15 @@ ALTER TABLE `friends`
 -- Tablo için indeksler `password_resets`
 --
 ALTER TABLE `password_resets`
-  ADD PRIMARY KEY (`email`);
+  ADD PRIMARY KEY (`email`),
+  ADD KEY `idx_password_resets_expiry` (`expires_at`);
 
 --
 -- Tablo için indeksler `email_verifications`
 --
 ALTER TABLE `email_verifications`
-  ADD PRIMARY KEY (`email`);
+  ADD PRIMARY KEY (`email`),
+  ADD KEY `idx_email_verifications_expiry` (`expires_at`);
 
 --
 -- Tablo için indeksler `ratings`
@@ -298,7 +313,9 @@ ALTER TABLE `ratings`
   ADD PRIMARY KEY (`user_id`,`movie_id`,`is_tv`),
   ADD KEY `idx_ratings_sync` (`user_id`,`updated_at`),
   ADD KEY `idx_ratings_title` (`movie_id`,`is_tv`),
-  ADD KEY `idx_ratings_social_feed` (`user_id`,`deleted`,`is_private`,`updated_at`);
+  ADD KEY `idx_ratings_social_feed` (`user_id`,`deleted`,`is_private`,`updated_at`),
+  ADD KEY `idx_ratings_tombstone` (`deleted`,`updated_at`),
+  ADD KEY `idx_ratings_server_sync` (`user_id`,`server_updated_at`);
 
 --
 -- Tablo için indeksler `recommendations`
@@ -314,14 +331,17 @@ ALTER TABLE `recommendations`
 ALTER TABLE `refresh_tokens`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_rt_hash` (`token_hash`),
-  ADD KEY `idx_rt_user` (`user_id`);
+  ADD KEY `idx_rt_user` (`user_id`),
+  ADD KEY `idx_refresh_tokens_expiry` (`expires_at`);
 
 --
 -- Tablo için indeksler `search_history`
 --
 ALTER TABLE `search_history`
   ADD PRIMARY KEY (`user_id`,`query`),
-  ADD KEY `idx_sh_sync` (`user_id`,`updated_at`);
+  ADD KEY `idx_sh_sync` (`user_id`,`updated_at`),
+  ADD KEY `idx_search_history_retention` (`user_id`,`deleted`,`updated_at`),
+  ADD KEY `idx_sh_server_sync` (`user_id`,`server_updated_at`);
 
 --
 -- Tablo için indeksler `review_reports`
@@ -346,6 +366,7 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `uq_users_email` (`email`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `idx_users_google_sub` (`google_sub`),
+  ADD UNIQUE KEY `idx_users_apple_sub` (`apple_sub`),
   ADD KEY `idx_users_public_profiles` (`is_public`,`id`);
 
 --
@@ -353,14 +374,16 @@ ALTER TABLE `users`
 --
 ALTER TABLE `watched_seasons`
   ADD PRIMARY KEY (`user_id`,`tv_id`,`season_number`),
-  ADD KEY `idx_ws_sync` (`user_id`,`updated_at`);
+  ADD KEY `idx_ws_sync` (`user_id`,`updated_at`),
+  ADD KEY `idx_ws_server_sync` (`user_id`,`server_updated_at`);
 
 --
 -- Tablo için indeksler `watchlist`
 --
 ALTER TABLE `watchlist`
   ADD PRIMARY KEY (`user_id`,`id`,`is_tv`),
-  ADD KEY `idx_watchlist_sync` (`user_id`,`updated_at`);
+  ADD KEY `idx_watchlist_sync` (`user_id`,`updated_at`),
+  ADD KEY `idx_watchlist_server_sync` (`user_id`,`server_updated_at`);
 
 --
 -- Dökümü yapılmış tablolar için AUTO_INCREMENT değeri
@@ -469,6 +492,26 @@ CREATE TABLE `device_tokens` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- Live "Birlikte Seç" sessions (server schema, without production data).
+
+CREATE TABLE `couch_sessions` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `host_id` int(10) UNSIGNED NOT NULL,
+  `guest_id` int(10) UNSIGNED NOT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'pending',
+  `deck` longtext NOT NULL,
+  `host_votes` mediumtext NOT NULL,
+  `guest_votes` mediumtext NOT NULL,
+  `matched_key` varchar(32) DEFAULT NULL,
+  `created_at` bigint(20) NOT NULL,
+  `updated_at` bigint(20) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_couch_host_status` (`host_id`,`status`),
+  KEY `idx_couch_guest_status` (`guest_id`,`status`),
+  KEY `idx_couch_lifecycle` (`status`,`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 -- Device acknowledgement cursors for safe tombstone garbage collection.
 
 CREATE TABLE `sync_devices` (
@@ -491,7 +534,7 @@ CREATE TABLE `sync_origins` (
   `device_id` varchar(128) NOT NULL,
   PRIMARY KEY (`user_id`, `table_name`, `record_key`),
   CONSTRAINT `fk_sync_origins_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `sync_gc_state` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
