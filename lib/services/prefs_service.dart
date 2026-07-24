@@ -360,11 +360,6 @@ class PrefsService {
 
   /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
-    try {
-      await _recoTelemetryTail;
-    } catch (_) {
-      // Return the last successfully persisted snapshot after a failed write.
-    }
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
     final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
@@ -764,11 +759,7 @@ class PrefsService {
   static const _secureStorage = FlutterSecureStorage();
 
   static Future<void> resetAll() async {
-    try {
-      await _recoTelemetryTail;
-    } catch (_) {
-      // Reset still clears the last successfully persisted snapshot.
-    }
+    _recoTelemetryTail = Future<void>.value();
     final prefs = await SharedPreferences.getInstance();
     _cachedAccessToken = null;
     invalidateGenreWeights();

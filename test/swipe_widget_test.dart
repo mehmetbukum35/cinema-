@@ -12,6 +12,16 @@ import 'package:ne_izlesem/screens/swipe_screen.dart';
 import 'package:ne_izlesem/services/localization_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
+Future<void> pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int maxPumps = 50,
+}) async {
+  for (var i = 0; i < maxPumps && finder.evaluate().isEmpty; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   setupSecureStorageMock();
 
@@ -70,8 +80,7 @@ void main() {
       );
 
       // Wait for initialization and network requests to resolve
-      await tester.pump(const Duration(milliseconds: 150));
-      await tester.pump(); // trigger anim frame
+      await pumpUntilFound(tester, find.text('Swipe Widget Test Movie'));
 
       // Loading should end and movie title should render
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -91,6 +100,8 @@ void main() {
       // Verify that rating is saved in shared preferences mock database
       final ratedIds = await PrefsService.getRatedIds();
       expect(ratedIds.contains('movie_1001'), isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
 
     testWidgets('rapid double-tap rates only one card (re-entrancy guard)', (
@@ -143,8 +154,7 @@ void main() {
         ),
       );
 
-      await tester.pump(const Duration(milliseconds: 150));
-      await tester.pump();
+      await pumpUntilFound(tester, find.text('Reentrancy Movie One'));
 
       expect(find.text('0 değerlendirme'), findsOneWidget);
 
@@ -161,6 +171,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
+      await pumpUntilFound(tester, find.text('1 değerlendirme'));
 
       // Yalnızca BİR kart puanlanmış olmalı (guard yoksa "2 değerlendirme"
       // ve ikinci kart atlanırdı).
@@ -168,6 +179,8 @@ void main() {
       expect(find.text('2 değerlendirme'), findsNothing);
       final ratedIds = await PrefsService.getRatedIds();
       expect(ratedIds.length, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
 
     testWidgets(
