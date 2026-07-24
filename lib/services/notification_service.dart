@@ -49,6 +49,10 @@ class NotificationService {
   Future<void> Function()? _deleteTokenOverride;
   Future<void> Function()? _authReadyHandler;
   bool _ready = false;
+  Future<void>? _initFlight;
+  StreamSubscription<RemoteMessage>? _foregroundMessages;
+  StreamSubscription<RemoteMessage>? _openedMessages;
+  StreamSubscription<String>? _tokenRefreshes;
   Future<bool>? _tzInit;
 
   /// Saat dilimi veritabanını bir kez kurar; zamanlanmış bildirimler için
@@ -114,11 +118,24 @@ class NotificationService {
   }
 
   /// Uygulama açılışında bir kez çağrılır. Birden çok çağrı güvenlidir.
-  Future<void> init(ApiService api) async {
+  Future<void> init(ApiService api) {
     _api = api;
-    if (_ready) return;
-    _ready = true;
+    if (_ready) return Future.value();
+    final activeFlight = _initFlight;
+    if (activeFlight != null) return activeFlight;
 
+    late final Future<void> flight;
+    flight = _initialize().whenComplete(() {
+      if (identical(_initFlight, flight)) {
+        _initFlight = null;
+      }
+    });
+    _initFlight = flight;
+    return flight;
+  }
+
+  Future<void> _initialize() async {
+    String? localLaunchPayload;
     try {
       // Yerel bildirim eklentisi
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -135,9 +152,7 @@ class NotificationService {
       // açıldıysa callback tek başına çalışmaz; launch payloadunu ayrıca tüket.
       final localLaunch = await _local.getNotificationAppLaunchDetails();
       if (localLaunch?.didNotificationLaunchApp == true) {
-        _routeInitialPayloadWhenReady(
-          localLaunch?.notificationResponse?.payload,
-        );
+        localLaunchPayload = localLaunch?.notificationResponse?.payload;
       }
 
       // Android bildirim kanalları
@@ -175,29 +190,44 @@ class NotificationService {
       }
 
       // Foreground mesajları → yerel bildirim olarak göster
-      FirebaseMessaging.onMessage.listen(_showForeground);
+      _foregroundMessages = FirebaseMessaging.onMessage.listen(_showForeground);
 
       // Bildirime tıklanınca (uygulama arka plandayken)
-      FirebaseMessaging.onMessageOpenedApp.listen(
+      _openedMessages = FirebaseMessaging.onMessageOpenedApp.listen(
         (m) => _routeFromPayload(payloadFromData(m.data)),
       );
 
       // Soğuk başlatma: uygulama bir bildirime tıklanarak açıldıysa
       final initial = await FirebaseMessaging.instance.getInitialMessage();
-      if (initial != null) {
-        _routeInitialPayloadWhenReady(payloadFromData(initial.data));
-      }
+      final remoteLaunchPayload = initial == null
+          ? null
+          : payloadFromData(initial.data);
 
       // Token yenilenince sunucuya tekrar kaydet
-      FirebaseMessaging.instance.onTokenRefresh.listen(_sendToken);
+      _tokenRefreshes = FirebaseMessaging.instance.onTokenRefresh.listen(
+        _sendToken,
+      );
+      _ready = true;
+      _routeInitialPayloadWhenReady(
+        selectInitialPayload(
+          remote: remoteLaunchPayload,
+          local: localLaunchPayload,
+        ),
+      );
 
       if (kDebugMode) {
-        final debugToken = await FirebaseMessaging.instance.getToken();
-        debugPrint(
-          'FCM token acquired (${debugToken?.length ?? 0} chars; value redacted).',
-        );
+        try {
+          final debugToken = await FirebaseMessaging.instance.getToken();
+          debugPrint(
+            'FCM token acquired (${debugToken?.length ?? 0} chars; value redacted).',
+          );
+        } catch (e) {
+          debugPrint('FCM debug token lookup failed: $e');
+        }
       }
     } catch (e, st) {
+      _ready = false;
+      await _cancelMessagingSubscriptions();
       // Firebase yapılandırılmamış olabilir; sessizce geç.
       final isTest =
           const bool.fromEnvironment('dart.library.io') &&
@@ -206,6 +236,15 @@ class NotificationService {
         debugPrint('Firebase messaging init failed: $e\n$st');
       }
     }
+  }
+
+  Future<void> _cancelMessagingSubscriptions() async {
+    await _foregroundMessages?.cancel();
+    await _openedMessages?.cancel();
+    await _tokenRefreshes?.cancel();
+    _foregroundMessages = null;
+    _openedMessages = null;
+    _tokenRefreshes = null;
   }
 
   /// Giriş/kayıt veya oturum geri yüklendikten sonra çağrılır:
@@ -472,6 +511,12 @@ class NotificationService {
     required int attempt,
     int maxAttempts = 120,
   }) => !navigatorReady && attempt < maxAttempts;
+
+  @visibleForTesting
+  static String? selectInitialPayload({
+    required String? remote,
+    required String? local,
+  }) => remote ?? local;
 
   Future<void> _routeInitialPayloadWhenReady(String? payload) async {
     if (payload == null || payload.isEmpty) return;

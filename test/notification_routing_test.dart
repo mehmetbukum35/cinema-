@@ -88,6 +88,26 @@ void main() {
   });
 
   group('cold-start notification routing', () {
+    test(
+      'routes only one payload when remote and local launch data coexist',
+      () {
+        expect(
+          NotificationService.selectInitialPayload(
+            remote: 'friend_request',
+            local: 'release|550|0',
+          ),
+          'friend_request',
+        );
+        expect(
+          NotificationService.selectInitialPayload(
+            remote: null,
+            local: 'release|550|0',
+          ),
+          'release|550|0',
+        );
+      },
+    );
+
     test('retries while the navigator is still starting', () {
       expect(
         NotificationService.shouldRetryInitialRoute(
