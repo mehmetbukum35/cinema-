@@ -226,7 +226,12 @@ class PrefsService {
   static Future<List<int>> getInitialGenres() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyInitialGenres) ?? '[]';
-    return (jsonDecode(raw) as List<dynamic>).map((e) => e as int).toList();
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return [];
+    return decoded
+        .map((e) => e is num ? e.toInt() : (int.tryParse(e.toString()) ?? 0))
+        .where((e) => e > 0)
+        .toList();
   }
 
   // ─── Favourite movies / shows ────────────────────────────────────────────────
@@ -320,6 +325,9 @@ class PrefsService {
     return current;
   }
 
+  static int _asInt(Object? v) =>
+      v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
+
   static Future<void> recordRecoOutcome({
     required String source,
     required bool liked,
@@ -327,11 +335,16 @@ class PrefsService {
     return _enqueueRecoTelemetry(() async {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-      final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
-      final Map<String, dynamic> bucket =
-          (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
-      bucket['shown'] = (bucket['shown'] as int) + 1;
-      if (liked) bucket['liked'] = (bucket['liked'] as int) + 1;
+      final decoded = jsonDecode(raw);
+      final Map<String, dynamic> data = decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : {};
+      final srcVal = data[source];
+      final Map<String, dynamic> bucket = srcVal is Map
+          ? Map<String, dynamic>.from(srcVal)
+          : {'shown': 0, 'liked': 0};
+      bucket['shown'] = _asInt(bucket['shown']) + 1;
+      if (liked) bucket['liked'] = _asInt(bucket['liked']) + 1;
       data[source] = bucket;
       await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
     });
@@ -344,14 +357,21 @@ class PrefsService {
     return _enqueueRecoTelemetry(() async {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-      final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
-      final Map<String, dynamic> bucket =
-          (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
-      if ((bucket['shown'] as int) > 0) {
-        bucket['shown'] = (bucket['shown'] as int) - 1;
+      final decoded = jsonDecode(raw);
+      final Map<String, dynamic> data = decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : {};
+      final srcVal = data[source];
+      final Map<String, dynamic> bucket = srcVal is Map
+          ? Map<String, dynamic>.from(srcVal)
+          : {'shown': 0, 'liked': 0};
+      final shown = _asInt(bucket['shown']);
+      final currentLiked = _asInt(bucket['liked']);
+      if (shown > 0) {
+        bucket['shown'] = shown - 1;
       }
-      if (liked && (bucket['liked'] as int) > 0) {
-        bucket['liked'] = (bucket['liked'] as int) - 1;
+      if (liked && currentLiked > 0) {
+        bucket['liked'] = currentLiked - 1;
       }
       data[source] = bucket;
       await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
@@ -362,11 +382,18 @@ class PrefsService {
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+    final decoded = jsonDecode(raw);
+    final Map<String, dynamic> data = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : {};
     return data.map(
       (k, v) => MapEntry(
         k,
-        (v as Map<String, dynamic>).map((k2, v2) => MapEntry(k2, v2 as int)),
+        v is Map
+            ? Map<String, dynamic>.from(
+                v,
+              ).map((k2, v2) => MapEntry(k2, _asInt(v2)))
+            : <String, int>{},
       ),
     );
   }

@@ -585,11 +585,11 @@ class DatabaseHelper {
           .where((m) => m['deleted'] != 1)
           .map(
             (m) => {
-              'id': m['movie_id'] as int,
-              'isTV': (m['is_tv'] as int) == 1,
-              'rating': m['rating'] as int,
+              'id': _dbInt(m['movie_id']),
+              'isTV': _dbInt(m['is_tv']) == 1,
+              'rating': _dbInt(m['rating']),
               'genreIds': _dbIntList(m['genre_ids']),
-              'created_at': m['created_at'] as int,
+              'created_at': _dbInt(m['created_at']),
             },
           )
           .toList();
@@ -602,11 +602,11 @@ class DatabaseHelper {
     return maps.map((m) {
       final genreIdsList = _dbIntList(m['genre_ids']);
       return {
-        'id': m['movie_id'] as int,
-        'isTV': (m['is_tv'] as int) == 1,
-        'rating': m['rating'] as int,
+        'id': _dbInt(m['movie_id']),
+        'isTV': _dbInt(m['is_tv']) == 1,
+        'rating': _dbInt(m['rating']),
         'genreIds': genreIdsList,
-        'created_at': m['created_at'] as int,
+        'created_at': _dbInt(m['created_at']),
       };
     }).toList();
   }
@@ -618,7 +618,7 @@ class DatabaseHelper {
           .where((m) => m['deleted'] != 1)
           .map(
             (m) =>
-                "${(m['is_tv'] as int) == 1 ? 'tv' : 'movie'}_${m['movie_id']}",
+                "${_dbInt(m['is_tv']) == 1 ? 'tv' : 'movie'}_${_dbInt(m['movie_id'])}",
           )
           .toSet();
     }
@@ -630,7 +630,7 @@ class DatabaseHelper {
     return maps
         .map(
           (m) =>
-              "${(m['is_tv'] as int) == 1 ? 'tv' : 'movie'}_${m['movie_id']}",
+              "${_dbInt(m['is_tv']) == 1 ? 'tv' : 'movie'}_${_dbInt(m['movie_id'])}",
         )
         .toSet();
   }
@@ -693,7 +693,7 @@ class DatabaseHelper {
           .map((m) => Map<String, dynamic>.from(m))
           .toList();
       list.sort(
-        (a, b) => (b['updated_at'] as int).compareTo(a['updated_at'] as int),
+        (a, b) => _dbInt(b['updated_at']).compareTo(_dbInt(a['updated_at'])),
       );
       return list;
     }
