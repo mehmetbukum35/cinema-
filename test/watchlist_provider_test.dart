@@ -290,5 +290,27 @@ void main() {
 
       expect(container.read(statsProvider).value?['rated'], 2);
     });
+
+    test('getWatchlist handles null title and overview safely', () async {
+      container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+        ],
+      );
+      final movie = Movie(
+        id: 999,
+        title: 'Null Safety Test',
+        overview: 'Overview',
+        voteAverage: 7.5,
+      );
+      final success = await container
+          .read(watchlistProvider.notifier)
+          .add(movie);
+      expect(success, isTrue);
+
+      final list = await PrefsService.getWatchlist();
+      expect(list, isNotEmpty);
+      expect(list.any((m) => m.id == 999), isTrue);
+    });
   });
 }

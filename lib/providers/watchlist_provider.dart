@@ -77,20 +77,28 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       }
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
-      NotificationService.instance
-          .scheduleReleaseReminder(movie)
-          .catchError((_) {});
+      try {
+        NotificationService.instance
+            .scheduleReleaseReminder(movie)
+            .catchError((_) {});
+      } catch (e) {
+        debugPrint('Failed to schedule release reminder: $e');
+      }
 
       // Background push sync
-      final auth = ref.read(authProvider);
-      if (auth.isAuthenticated) {
-        ref.read(syncProvider.notifier).performSync().catchError((e) {
-          debugPrint('Background sync failed on watchlist add: $e');
-        });
+      try {
+        final auth = ref.read(authProvider);
+        if (auth.isAuthenticated) {
+          ref.read(syncProvider.notifier).performSync().catchError((e) {
+            debugPrint('Background sync failed on watchlist add: $e');
+          });
+        }
+      } catch (e) {
+        debugPrint('Background sync trigger failed on watchlist add: $e');
       }
       return true;
-    } catch (e) {
-      debugPrint('Failed to add watchlist item: $e');
+    } catch (e, st) {
+      debugPrint('Failed to add watchlist item: $e\n$st');
       return false;
     }
   }
@@ -107,20 +115,28 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       }
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
-      NotificationService.instance
-          .cancelReleaseReminder(id, isTV)
-          .catchError((_) {});
+      try {
+        NotificationService.instance
+            .cancelReleaseReminder(id, isTV)
+            .catchError((_) {});
+      } catch (e) {
+        debugPrint('Failed to cancel release reminder: $e');
+      }
 
       // Background push sync
-      final auth = ref.read(authProvider);
-      if (auth.isAuthenticated) {
-        ref.read(syncProvider.notifier).performSync().catchError((e) {
-          debugPrint('Background sync failed on watchlist remove: $e');
-        });
+      try {
+        final auth = ref.read(authProvider);
+        if (auth.isAuthenticated) {
+          ref.read(syncProvider.notifier).performSync().catchError((e) {
+            debugPrint('Background sync failed on watchlist remove: $e');
+          });
+        }
+      } catch (e) {
+        debugPrint('Background sync trigger failed on watchlist remove: $e');
       }
       return true;
-    } catch (e) {
-      debugPrint('Failed to remove watchlist item: $e');
+    } catch (e, st) {
+      debugPrint('Failed to remove watchlist item: $e\n$st');
       return false;
     }
   }

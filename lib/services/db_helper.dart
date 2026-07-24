@@ -807,17 +807,17 @@ class DatabaseHelper {
     if (db == null) {
       final sorted = List<Map<String, dynamic>>.from(_mockWatchlist)
         ..sort(
-          (a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int),
+          (a, b) => _dbInt(b['created_at']).compareTo(_dbInt(a['created_at'])),
         ); // newest first
       return sorted
           .where((m) => m['deleted'] != 1)
           .map(
             (m) => Movie.fromStorage({
-              'id': m['id'] as int,
-              'title': m['title'] as String,
+              'id': _dbInt(m['id']),
+              'title': m['title'] as String? ?? '',
               'poster_path': m['poster_path'] as String?,
               'backdrop_path': m['backdrop_path'] as String?,
-              'overview': m['overview'] as String,
+              'overview': m['overview'] as String? ?? '',
               'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
               'isTV': (_dbInt(m['is_tv'])) == 1,
@@ -835,10 +835,10 @@ class DatabaseHelper {
         .map(
           (m) => Movie.fromStorage({
             'id': _dbInt(m['id']),
-            'title': m['title'] as String,
+            'title': m['title'] as String? ?? '',
             'poster_path': m['poster_path'] as String?,
             'backdrop_path': m['backdrop_path'] as String?,
-            'overview': m['overview'] as String,
+            'overview': m['overview'] as String? ?? '',
             'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
             'isTV': (_dbInt(m['is_tv'])) == 1,
@@ -1088,21 +1088,24 @@ class DatabaseHelper {
     if (db == null) {
       final filtered =
           _mockFavorites
-              .where((e) => e['is_tv'] == (isTV ? 1 : 0) && e['deleted'] != 1)
+              .where(
+                (e) =>
+                    _dbInt(e['is_tv']) == (isTV ? 1 : 0) && e['deleted'] != 1,
+              )
               .toList()
             ..sort(
               (a, b) =>
-                  (a['created_at'] as int).compareTo(b['created_at'] as int),
+                  _dbInt(a['created_at']).compareTo(_dbInt(b['created_at'])),
             );
       return filtered
           .take(20)
           .map(
             (m) => Movie.fromStorage({
               'id': _dbInt(m['id']),
-              'title': m['title'] as String,
+              'title': m['title'] as String? ?? '',
               'poster_path': m['poster_path'] as String?,
               'backdrop_path': m['backdrop_path'] as String?,
-              'overview': m['overview'] as String,
+              'overview': m['overview'] as String? ?? '',
               'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
               'isTV': _dbInt(m['is_tv']) == 1,
@@ -1122,10 +1125,10 @@ class DatabaseHelper {
         .map(
           (m) => Movie.fromStorage({
             'id': _dbInt(m['id']),
-            'title': m['title'] as String,
+            'title': m['title'] as String? ?? '',
             'poster_path': m['poster_path'] as String?,
             'backdrop_path': m['backdrop_path'] as String?,
-            'overview': m['overview'] as String,
+            'overview': m['overview'] as String? ?? '',
             'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
             'isTV': _dbInt(m['is_tv']) == 1,
