@@ -528,10 +528,13 @@ class TmdbService {
         params: {'api_key': _apiKey, 'language': _language},
       );
       if (trJson != null) {
-        final results =
-            (((trJson as Map<String, dynamic>)['results'] as List<dynamic>?) ??
-                    [])
-                .cast<Map<String, dynamic>>();
+        final rawResults = (trJson is Map) ? trJson['results'] : null;
+        final results = rawResults is List
+            ? rawResults
+                  .whereType<Map<dynamic, dynamic>>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList()
+            : <Map<String, dynamic>>[];
         final key = pickKey(results);
         if (key != null) return key;
       }
@@ -540,10 +543,13 @@ class TmdbService {
       final enParams = {'api_key': _apiKey, 'language': 'en-US'};
       final enJson = await _fetchRawWithCache(path: path, params: enParams);
       if (enJson != null) {
-        final results =
-            (((enJson as Map<String, dynamic>)['results'] as List<dynamic>?) ??
-                    [])
-                .cast<Map<String, dynamic>>();
+        final rawResults = (enJson is Map) ? enJson['results'] : null;
+        final results = rawResults is List
+            ? rawResults
+                  .whereType<Map<dynamic, dynamic>>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList()
+            : <Map<String, dynamic>>[];
         final key = pickKey(results);
         if (key != null) {
           // TR miss + EN hit: cache EN payload under the primary language key
@@ -589,19 +595,28 @@ class TmdbService {
     );
     if (json == null) return [];
     final rawResults = json['results'];
-    final Map<String, dynamic>? resultsByRegion =
-        rawResults is Map<String, dynamic> ? rawResults : null;
-    final regionalData =
-        resultsByRegion?[_region.toUpperCase()] as Map<String, dynamic>?;
+    final Map<String, dynamic>? resultsByRegion = rawResults is Map
+        ? Map<String, dynamic>.from(rawResults)
+        : null;
+    final rawRegional = resultsByRegion?[_region.toUpperCase()];
+    final regionalData = rawRegional is Map
+        ? Map<String, dynamic>.from(rawRegional)
+        : null;
     final flatrate = regionalData?['flatrate'] as List<dynamic>? ?? [];
     final rent = regionalData?['rent'] as List<dynamic>? ?? [];
     final buy = regionalData?['buy'] as List<dynamic>? ?? [];
     final seen = <int>{};
-    return [...flatrate, ...rent, ...buy]
-        .cast<Map<String, dynamic>>()
-        .where((p) => seen.add(p['provider_id'] as int))
-        .map(WatchProvider.fromJson)
-        .toList();
+    final list = <WatchProvider>[];
+    for (final item in [...flatrate, ...rent, ...buy]) {
+      if (item is Map) {
+        final map = Map<String, dynamic>.from(item);
+        final pid = int.tryParse(map['provider_id']?.toString() ?? '');
+        if (pid != null && seen.add(pid)) {
+          list.add(WatchProvider.fromJson(map));
+        }
+      }
+    }
+    return list;
   }
 
   // ─── Credits ─────────────────────────────────────────────────────────────────
@@ -614,9 +629,15 @@ class TmdbService {
       params: {'api_key': _apiKey, 'language': _language},
     );
     if (json == null) return [];
-    final cast = (json['cast'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
-    return cast.take(15).map(CastMember.fromJson).toList();
+    final rawCast = json['cast'];
+    if (rawCast is! List) return [];
+    final list = <CastMember>[];
+    for (final item in rawCast.take(15)) {
+      if (item is Map) {
+        list.add(CastMember.fromJson(Map<String, dynamic>.from(item)));
+      }
+    }
+    return list;
   }
 
   // ─── Trending ────────────────────────────────────────────────────────────────
@@ -673,24 +694,30 @@ class TmdbService {
     try {
       final response = await _client.get(uri).timeout(_kTimeout);
       _handleNon200Response(response);
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final cast = (data['cast'] as List<dynamic>? ?? [])
-          .cast<Map<String, dynamic>>();
+      final decoded = jsonDecode(response.body);
+      final data = decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : <String, dynamic>{};
+      final rawCast = data['cast'];
+      if (rawCast is! List) return [];
       final seen = <int>{};
-      final movies =
-          cast
-              .where(
-                (e) =>
-                    e['poster_path'] != null &&
-                    (e['vote_count'] as int? ?? 0) > 50 &&
-                    seen.add(e['id'] as int),
-              )
-              .map((e) {
-                final isTV = (e['media_type'] as String?) == 'tv';
-                return Movie.fromJson(e, isTV: isTV);
-              })
-              .toList()
-            ..sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
+      final movies = <Movie>[];
+      for (final e in rawCast) {
+        if (e is Map) {
+          final item = Map<String, dynamic>.from(e);
+          final id = int.tryParse(item['id']?.toString() ?? '');
+          final voteCount =
+              int.tryParse(item['vote_count']?.toString() ?? '') ?? 0;
+          if (item['poster_path'] != null &&
+              id != null &&
+              voteCount > 50 &&
+              seen.add(id)) {
+            final isTV = item['media_type']?.toString() == 'tv';
+            movies.add(Movie.fromJson(item, isTV: isTV));
+          }
+        }
+      }
+      movies.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
       return _sanitizeList(movies.take(20).toList());
     } catch (e) {
       if (e is TmdbApiException) rethrow;
