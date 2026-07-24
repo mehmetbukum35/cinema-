@@ -3,6 +3,26 @@ declare(strict_types=1);
 
 trait SocialFriendsTrait
 {
+    /** İki yönlü engel: var ise "bulunamadı" (enumerasyon sızdırmamak için). */
+    private function failIfBlocked(int $uid, int $otherId): void
+    {
+        $blk = $this->db->prepare(
+            'SELECT 1 FROM user_blocks
+              WHERE (user_id = ? AND blocked_user_id = ?)
+                 OR (user_id = ? AND blocked_user_id = ?)'
+        );
+        $blk->execute([$uid, $otherId, $otherId, $uid]);
+        if ($blk->fetch()) {
+            fail(404, 'Kullanıcı bulunamadı.');
+        }
+    }
+
+    private function friendsRowLockSuffix(): string
+    {
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        return $driver !== 'sqlite' ? ' FOR UPDATE' : '';
+    }
+
     // ─── POST /social/friends/request ───────────────────────────────────────
     public function sendFriendRequest(int $uid, array $in): void
     {
@@ -23,19 +43,7 @@ trait SocialFriendsTrait
         }
 
         $friendId = (int) $target['id'];
-
-        // Engel kontrolü (iki yönlü): engellenen kişi engelleyene istek atamaz,
-        // engelleyen de engellediğine atamaz. Engellendiğini belli etmemek için
-        // "bulunamadı" ile aynı yanıt döner (taciz edenin doğrulama yapmasını önler).
-        $blk = $this->db->prepare(
-            'SELECT 1 FROM user_blocks
-              WHERE (user_id = ? AND blocked_user_id = ?)
-                 OR (user_id = ? AND blocked_user_id = ?)'
-        );
-        $blk->execute([$uid, $friendId, $friendId, $uid]);
-        if ($blk->fetch()) {
-            fail(404, 'Kullanıcı bulunamadı.');
-        }
+        $this->failIfBlocked($uid, $friendId);
 
         // Zaten arkadaş veya istek var mı kontrol et
         $check = $this->db->prepare('SELECT status FROM friends WHERE user_id = ? AND friend_id = ?');
@@ -59,11 +67,31 @@ trait SocialFriendsTrait
         if ($revRel && $revRel['status'] === 'pending') {
             $this->db->beginTransaction();
             try {
-                // Karşılıklı onay durumuna getir
-                $up = $this->db->prepare('UPDATE friends SET status = \'accepted\', updated_at = ? WHERE user_id = ? AND friend_id = ?');
-                $up->execute([$t, $friendId, $uid]);
+                // Engel / silinmiş pending ile yarış: lock + yeniden doğrula.
+                $this->failIfBlocked($uid, $friendId);
+                $lock = $this->friendsRowLockSuffix();
+                $pending = $this->db->prepare(
+                    'SELECT 1 FROM friends
+                      WHERE user_id = ? AND friend_id = ? AND status = \'pending\'' . $lock
+                );
+                $pending->execute([$friendId, $uid]);
+                if (!$pending->fetch()) {
+                    fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
+                }
 
-                $ins = $this->db->prepare('INSERT INTO friends (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, \'accepted\', ?, ?)');
+                $up = $this->db->prepare(
+                    'UPDATE friends SET status = \'accepted\', updated_at = ?
+                     WHERE user_id = ? AND friend_id = ? AND status = \'pending\''
+                );
+                $up->execute([$t, $friendId, $uid]);
+                if ($up->rowCount() < 1) {
+                    fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
+                }
+
+                $ins = $this->db->prepare(
+                    'INSERT INTO friends (user_id, friend_id, status, created_at, updated_at)
+                     VALUES (?, ?, \'accepted\', ?, ?)'
+                );
                 $ins->execute([$uid, $friendId, $t, $t]);
 
                 $this->db->commit();
@@ -72,7 +100,9 @@ trait SocialFriendsTrait
                 json_out(200, ['ok' => true, 'status' => 'accepted', 'message' => 'Arkadaşlık isteği karşılıklı olarak kabul edildi.']);
                 return;
             } catch (Throwable $e) {
-                $this->db->rollBack();
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
                 throw $e;
             }
         }
@@ -101,25 +131,38 @@ trait SocialFriendsTrait
         $friendId = (int) ($in['friend_id'] ?? 0);
         if ($friendId === 0) fail(422, 'friend_id gerekli.');
 
-        // Bize gelen pending istek var mı doğrula
-        $st = $this->db->prepare('SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? AND status = \'pending\'');
-        $st->execute([$friendId, $uid]);
-        if (!$st->fetch()) {
-            fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
-        }
-
         $this->db->beginTransaction();
         try {
-            $t = now_ms();
-            // İsteği kabul et
-            $up = $this->db->prepare('UPDATE friends SET status = \'accepted\', updated_at = ? WHERE user_id = ? AND friend_id = ?');
-            $up->execute([$t, $friendId, $uid]);
+            // Engelleme / reject ile yarış: pending yoksa arkadaşlık UYDURMA.
+            $this->failIfBlocked($uid, $friendId);
 
-            // Karşılıklı kayıt var mı kontrol et
+            $lock = $this->friendsRowLockSuffix();
+            $st = $this->db->prepare(
+                'SELECT 1 FROM friends
+                  WHERE user_id = ? AND friend_id = ? AND status = \'pending\'' . $lock
+            );
+            $st->execute([$friendId, $uid]);
+            if (!$st->fetch()) {
+                fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
+            }
+
+            $t = now_ms();
+            $up = $this->db->prepare(
+                'UPDATE friends SET status = \'accepted\', updated_at = ?
+                 WHERE user_id = ? AND friend_id = ? AND status = \'pending\''
+            );
+            $up->execute([$t, $friendId, $uid]);
+            if ($up->rowCount() < 1) {
+                fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
+            }
+
             $check = $this->db->prepare('SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ?');
             $check->execute([$uid, $friendId]);
             if ($check->fetch()) {
-                $up2 = $this->db->prepare('UPDATE friends SET status = \'accepted\', updated_at = ? WHERE user_id = ? AND friend_id = ?');
+                $up2 = $this->db->prepare(
+                    'UPDATE friends SET status = \'accepted\', updated_at = ?
+                     WHERE user_id = ? AND friend_id = ?'
+                );
                 $up2->execute([$t, $uid, $friendId]);
             } else {
                 $ins = $this->db->prepare(
@@ -134,7 +177,9 @@ trait SocialFriendsTrait
             $this->notify($friendId, $uid, 'accept');
             json_out(200, ['ok' => true]);
         } catch (Throwable $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             throw $e;
         }
     }

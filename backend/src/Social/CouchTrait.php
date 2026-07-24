@@ -173,7 +173,7 @@ trait SocialCouchTrait
                     "UPDATE couch_sessions SET `$col` = ?, updated_at = ? WHERE id = ?"
                 );
                 $up->execute([json_encode($votes), now_ms(), $sessionId]);
-                $row = $this->resolveCouchOutcome($this->loadCouchSession($sessionId));
+                $row = $this->resolveCouchOutcome($this->loadCouchSession($sessionId), $uid);
             }
             $this->db->commit();
         } catch (Throwable $e) {
@@ -261,8 +261,11 @@ trait SocialCouchTrait
     /**
      * Oturum sonucunu çözer: karşılıklı beğeni varsa 'matched' (+ karşı tarafa
      * push), iki taraf da desteyi bitirmiş ve eşleşme yoksa 'ended'.
+     *
+     * @param int|null $exceptUserId Oyunu tetikleyen kullanıcı — zaten ekranda;
+     *                               push yalnızca karşı tarafa gider.
      */
-    private function resolveCouchOutcome(array $row): array
+    private function resolveCouchOutcome(array $row, ?int $exceptUserId = null): array
     {
         if ($row['status'] !== 'active' && $row['status'] !== 'pending') {
             return $row;
@@ -282,15 +285,20 @@ trait SocialCouchTrait
                 $up->execute([$key, now_ms(), (int) $row['id']]);
                 if ($up->rowCount() > 0) {
                     // Eşleşmeyi çözen istek zaten kendi ekranında görecek;
-                    // push, KARŞI tarafı uygulamaya geri çağırır.
-                    $this->notify((int) $row['host_id'], (int) $row['guest_id'], 'couch_match', [
+                    // push, KARŞI tarafı uygulamaya geri çağırır. Poll yolu
+                    // (exceptUserId=null) her iki tarafa da bildirebilir.
+                    $hostId = (int) $row['host_id'];
+                    $guestId = (int) $row['guest_id'];
+                    $payload = [
                         'title'      => (string) $item['title'],
                         'session_id' => (int) $row['id'],
-                    ]);
-                    $this->notify((int) $row['guest_id'], (int) $row['host_id'], 'couch_match', [
-                        'title'      => (string) $item['title'],
-                        'session_id' => (int) $row['id'],
-                    ]);
+                    ];
+                    if ($exceptUserId !== $hostId) {
+                        $this->notify($hostId, $guestId, 'couch_match', $payload);
+                    }
+                    if ($exceptUserId !== $guestId) {
+                        $this->notify($guestId, $hostId, 'couch_match', $payload);
+                    }
                 }
                 $row['status'] = 'matched';
                 $row['matched_key'] = $key;

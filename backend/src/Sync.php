@@ -313,8 +313,11 @@ class Sync
         }
         $whereSql = implode(' AND ', $whereParts);
 
-        // Mevcut kaydı oku (varsa).
-        $sel = $this->db->prepare("SELECT * FROM `$table` WHERE $whereSql");
+        // Mevcut kaydı oku (varsa). Push zaten transaction içinde; MySQL'de
+        // satır kilidi eşzamanlı LWW yarışını azaltır (SQLite no-op).
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $lock = $driver !== 'sqlite' ? ' FOR UPDATE' : '';
+        $sel = $this->db->prepare("SELECT * FROM `$table` WHERE $whereSql" . $lock);
         $sel->execute($whereVals);
         $existing = $sel->fetch(PDO::FETCH_ASSOC);
 
@@ -365,17 +368,28 @@ class Sync
         }
         $values = array_merge($values, $extraCols);
 
-        // Sunucu-otoriter senkron imleci: YALNIZ satır gerçekten ilerlediğinde
-        // (yeni kayıt ya da kesinlikle daha yeni updated_at) sunucu saatiyle
-        // damgalanır. Aynı updated_at'li idempotent bir re-push bunu "now"a
-        // çekseydi, satır gönderen cihaza geri pull'lanır ve SONSUZ sync döngüsü
-        // oluşurdu: aynı updated_at'li satırlar 1ms örtüşme (_overlappingCursor)
-        // yüzünden her turda yeniden push edilir; her push server_updated_at'i
-        // ilerletseydi pull onları sürekli geri döndürürdü. Çakışma çözümü
-        // (hangi satır kazanır) yine client updated_at'iyle yapılır.
+        // Sunucu-otoriter senkron imleci: yeni kayıt, daha yeni updated_at VEYA
+        // eşit stamp'te gerçek içerik değişimi bumplar. Idempotent re-push
+        // (aynı içerik + aynı updated_at) bumplamaz — aksi halde 1ms örtüşme
+        // (_overlappingCursor) ile sonsuz sync döngüsü oluşur.
         $serverNow = now_ms();
+        $contentChanged = false;
+        if ($existing !== false) {
+            $compareCols = array_merge($def['cols'], ['deleted'], array_keys($extraCols));
+            foreach ($compareCols as $c) {
+                $old = $existing[$c] ?? null;
+                $new = $values[$c] ?? null;
+                // SQLite/MySQL int/string farkını yok say.
+                if ((string) ($old ?? '') !== (string) ($new ?? '')) {
+                    $contentChanged = true;
+                    break;
+                }
+            }
+        }
         $bumpServerCursor =
-            $existing === false || $updatedAt > (int) $existing['updated_at'];
+            $existing === false
+            || $updatedAt > (int) $existing['updated_at']
+            || ($updatedAt === (int) $existing['updated_at'] && $contentChanged);
 
         if ($existing === false) {
             // Yeni kayıt → INSERT

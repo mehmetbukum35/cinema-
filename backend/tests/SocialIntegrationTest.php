@@ -218,6 +218,50 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('accepted', $this->friendStatus(2, 1));
     }
 
+    public function testAcceptDoesNotRecreateFriendshipAfterPendingRemoved(): void
+    {
+        // Eski bug: pending SELECT sonrası silinince UPDATE 0 satır etkiler,
+        // ardından INSERT accepted yine de arkadaşlık uydururdu.
+        $this->social->sendFriendRequest(1, ['search_query' => 'bob']);
+        $this->assertSame('pending', $this->friendStatus(1, 2));
+
+        $this->db->exec('DELETE FROM friends');
+        $this->db->prepare(
+            'INSERT INTO user_blocks (user_id, blocked_user_id, created_at) VALUES (1, 2, ?)'
+        )->execute([now_ms()]);
+
+        TestHelperRegistry::reset();
+        try {
+            $this->social->acceptFriendRequest(2, ['friend_id' => 1]);
+            $this->fail('Pending yokken / engelli kabul arkadaşlık açmamalı.');
+        } catch (TestExitException $e) {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+        }
+
+        $this->assertNull($this->friendStatus(1, 2));
+        $this->assertNull($this->friendStatus(2, 1));
+    }
+
+    public function testAcceptFailsWhenBlockedEvenIfPendingExists(): void
+    {
+        $this->social->sendFriendRequest(1, ['search_query' => 'bob']);
+        // Tutarsız durum simülasyonu: engel var ama pending silinmedi.
+        $this->db->prepare(
+            'INSERT INTO user_blocks (user_id, blocked_user_id, created_at) VALUES (1, 2, ?)'
+        )->execute([now_ms()]);
+
+        TestHelperRegistry::reset();
+        try {
+            $this->social->acceptFriendRequest(2, ['friend_id' => 1]);
+            $this->fail('Engelli kabul reddedilmeliydi.');
+        } catch (TestExitException $e) {
+            $this->assertSame(404, TestHelperRegistry::$lastStatus);
+        }
+
+        $this->assertSame('pending', $this->friendStatus(1, 2));
+        $this->assertNull($this->friendStatus(2, 1));
+    }
+
     public function testDeviceRegistrationAndUnregistration(): void
     {
         // 1. Register a new device token

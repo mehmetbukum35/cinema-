@@ -157,15 +157,18 @@ final class TitleCatalog
         $max ??= $this->lazyRefreshMax;
         $max = max(0, min(20, $max));
         $count = 0;
-        foreach ($this->pendingRefresh as $item) {
+        $remaining = [];
+        foreach ($this->pendingRefresh as $key => $item) {
             if ($count >= $max) {
-                break;
+                $remaining[$key] = $item;
+                continue;
             }
+            // Başarısız deneme cron'a (source=client) kalır; aynı istekte yeniden deneme.
             if ($this->refreshOne($item['tmdb_id'], $item['is_tv'], $item['locale'])) {
                 $count++;
             }
         }
-        $this->pendingRefresh = [];
+        $this->pendingRefresh = $remaining;
         return $count;
     }
 

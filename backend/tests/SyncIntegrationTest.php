@@ -235,6 +235,7 @@ class SyncIntegrationTest extends TestCase
     public function testEqualTimestampOverwrites(): void
     {
         $this->seedRating(1, 603, 0, 1, 'Before', 1500);
+        $this->db->exec('UPDATE ratings SET server_updated_at = 5 WHERE movie_id = 603');
 
         $applied = $this->push(1, 'ratings', [
             ['movie_id' => 603, 'is_tv' => 0, 'rating' => 2, 'title' => 'After', 'updated_at' => 1500],
@@ -244,6 +245,8 @@ class SyncIntegrationTest extends TestCase
         $row = $this->row('ratings', 'movie_id', 603);
         $this->assertSame(2, (int) $row['rating']);
         $this->assertSame('Before', $this->titleRow(603, 0)['title']);
+        // Eşit stamp + içerik değişimi diğer cihazlara yansısın.
+        $this->assertGreaterThan(5, (int) $row['server_updated_at']);
     }
 
     // ─── Soft delete senkronu ────────────────────────────────────────────────
