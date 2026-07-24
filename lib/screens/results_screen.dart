@@ -19,6 +19,12 @@ bool shouldContinueDiscoverPagination({
   required int freshLength,
 }) => batchLength > 0 && freshLength > 0;
 
+@visibleForTesting
+bool isCurrentDiscoverRequest({
+  required int requestGeneration,
+  required int currentGeneration,
+}) => requestGeneration == currentGeneration;
+
 class ResultsScreen extends ConsumerStatefulWidget {
   final String? genreStr;
   final int? maxRuntime;
@@ -72,6 +78,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   bool _loadingMore = false; // sonraki sayfa yükleniyor
   bool _hasMore = true;
   bool _hasError = false;
+  int _loadGeneration = 0;
 
   // Filter state
   late final int _currentYear = DateTime.now().year;
@@ -178,8 +185,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   /// Filtreleri uygula ya da ilk açılış: listeyi sıfırla, baştan yükle.
   Future<void> _loadFirstPage() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
+      _loadingMore = false;
       _hasError = false;
       _movies.clear();
       _seenIds.clear();
@@ -188,7 +197,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     });
     try {
       final batch = await _personalRankBatch(await _fetchDiscover(1));
-      if (!mounted) return;
+      if (!mounted ||
+          !isCurrentDiscoverRequest(
+            requestGeneration: generation,
+            currentGeneration: _loadGeneration,
+          )) {
+        return;
+      }
       setState(() {
         _movies.addAll(
           batch.where(
@@ -199,7 +214,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted ||
+          !isCurrentDiscoverRequest(
+            requestGeneration: generation,
+            currentGeneration: _loadGeneration,
+          )) {
+        return;
+      }
       setState(() {
         _hasError = true;
         _hasMore = false;
@@ -234,11 +255,18 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   Future<void> _loadMore() async {
+    final generation = _loadGeneration;
     setState(() => _loadingMore = true);
     final nextPage = _page + 1;
     try {
       final batch = await _personalRankBatch(await _fetchDiscover(nextPage));
-      if (!mounted) return;
+      if (!mounted ||
+          !isCurrentDiscoverRequest(
+            requestGeneration: generation,
+            currentGeneration: _loadGeneration,
+          )) {
+        return;
+      }
       final fresh = batch
           .where((m) => _seenIds.add('${m.isTV ? 'tv' : 'movie'}_${m.id}'))
           .toList();
@@ -254,7 +282,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       });
     } catch (e, st) {
       debugPrint("Error loading more results: $e\n$st");
-      if (!mounted) return;
+      if (!mounted ||
+          !isCurrentDiscoverRequest(
+            requestGeneration: generation,
+            currentGeneration: _loadGeneration,
+          )) {
+        return;
+      }
       setState(() => _loadingMore = false);
     }
   }

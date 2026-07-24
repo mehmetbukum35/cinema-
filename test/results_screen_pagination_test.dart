@@ -23,5 +23,16 @@ void main() {
         isFalse,
       );
     });
+
+    test('ignores responses from an older filter generation', () {
+      expect(
+        isCurrentDiscoverRequest(requestGeneration: 3, currentGeneration: 4),
+        isFalse,
+      );
+      expect(
+        isCurrentDiscoverRequest(requestGeneration: 4, currentGeneration: 4),
+        isTrue,
+      );
+    });
   });
 }
