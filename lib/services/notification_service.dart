@@ -47,7 +47,13 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   ApiService? _api;
   Future<void> Function()? _deleteTokenOverride;
+  Future<String?> Function()? _getTokenOverride;
+  Future<void> Function(String token)? _registerTokenOverride;
+  Future<void> Function(String token)? _unregisterTokenOverride;
   Future<void> Function()? _authReadyHandler;
+  Future<void> _tokenOperationTail = Future.value();
+  bool _tokenRegistrationEnabled = false;
+  int _tokenRegistrationGeneration = 0;
   bool _ready = false;
   Future<void>? _initFlight;
   StreamSubscription<RemoteMessage>? _foregroundMessages;
@@ -250,15 +256,21 @@ class NotificationService {
   /// Giriş/kayıt veya oturum geri yüklendikten sonra çağrılır:
   /// mevcut FCM token'ını sunucuya kaydeder.
   Future<void> registerToken() async {
+    _tokenRegistrationEnabled = true;
+    final generation = ++_tokenRegistrationGeneration;
     try {
-      final token = await FirebaseMessaging.instance.getToken();
+      final token = await _getToken();
       if (kDebugMode) {
         final tokenPreview = token?.substring(0, token.length.clamp(0, 20));
         debugPrint(
           'FCM registerToken: ${token == null ? "NULL (APNs/Firebase yapılandırmasını kontrol edin)" : "$tokenPreview..."}',
         );
       }
-      if (token != null) await _sendToken(token);
+      if (token != null &&
+          _tokenRegistrationEnabled &&
+          generation == _tokenRegistrationGeneration) {
+        await _sendToken(token);
+      }
     } catch (e, st) {
       final isTest =
           const bool.fromEnvironment('dart.library.io') &&
@@ -272,9 +284,20 @@ class NotificationService {
   /// Çıkış yapmadan ÖNCE çağrılır: token'ı sunucudan siler ki kullanıcı
   /// artık bu cihaza bildirim almasın.
   Future<void> unregisterToken() async {
+    _tokenRegistrationEnabled = false;
+    ++_tokenRegistrationGeneration;
     try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await _api?.unregisterDevice(token);
+      final token = await _getToken();
+      if (token != null) {
+        await _enqueueTokenOperation(() async {
+          final override = _unregisterTokenOverride;
+          if (override != null) {
+            await override(token);
+          } else {
+            await _api?.unregisterDevice(token);
+          }
+        });
+      }
     } catch (e, st) {
       final isTest =
           const bool.fromEnvironment('dart.library.io') &&
@@ -288,6 +311,8 @@ class NotificationService {
   /// Invalidates this installation's token when authenticated unregister is
   /// no longer possible (for example after a refresh token is rejected).
   Future<void> invalidateLocalToken() async {
+    _tokenRegistrationEnabled = false;
+    ++_tokenRegistrationGeneration;
     try {
       final override = _deleteTokenOverride;
       if (override != null) {
@@ -310,6 +335,22 @@ class NotificationService {
     _deleteTokenOverride = handler;
   }
 
+  @visibleForTesting
+  void debugSetTokenHandlers({
+    Future<String?> Function()? getToken,
+    Future<void> Function(String token)? register,
+    Future<void> Function(String token)? unregister,
+  }) {
+    _getTokenOverride = getToken;
+    _registerTokenOverride = register;
+    _unregisterTokenOverride = unregister;
+    _tokenRegistrationEnabled = false;
+    ++_tokenRegistrationGeneration;
+  }
+
+  @visibleForTesting
+  Future<void> debugHandleTokenRefresh(String token) => _sendToken(token);
+
   /// Cold-start deep link'lerinin yerel oturum geri yüklenmeden çalışmasını
   /// engeller. Auth katmanı kendi hazır olma future'ını burada sağlar.
   void setAuthReadyHandler(Future<void> Function()? handler) {
@@ -317,14 +358,46 @@ class NotificationService {
   }
 
   Future<void> _sendToken(String token) async {
+    if (!_tokenRegistrationEnabled) return;
+    final generation = _tokenRegistrationGeneration;
     try {
-      final platform = Platform.isIOS
-          ? 'ios'
-          : (Platform.isAndroid ? 'android' : 'web');
-      await _api?.registerDevice(token, platform: platform);
+      await _enqueueTokenOperation(() async {
+        if (!_tokenRegistrationEnabled ||
+            generation != _tokenRegistrationGeneration) {
+          return;
+        }
+        final override = _registerTokenOverride;
+        if (override != null) {
+          await override(token);
+          return;
+        }
+        final platform = Platform.isIOS
+            ? 'ios'
+            : (Platform.isAndroid ? 'android' : 'web');
+        await _api?.registerDevice(token, platform: platform);
+      });
     } catch (e, st) {
       debugPrint('Failed to send FCM token to API: $e\n$st');
     }
+  }
+
+  Future<String?> _getToken() {
+    final override = _getTokenOverride;
+    return override?.call() ?? FirebaseMessaging.instance.getToken();
+  }
+
+  Future<void> _enqueueTokenOperation(Future<void> Function() operation) {
+    final previous = _tokenOperationTail;
+    final next = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Bir önceki best-effort token işlemi sonraki temizliği engellemesin.
+      }
+      await operation();
+    }();
+    _tokenOperationTail = next;
+    return next;
   }
 
   Future<void> _showForeground(RemoteMessage m) async {
