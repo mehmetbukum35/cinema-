@@ -484,6 +484,15 @@ CREATE TABLE `sync_devices` (
   CONSTRAINT `fk_sync_devices_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `sync_origins` (
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `table_name` varchar(32) NOT NULL,
+  `record_key` varchar(255) NOT NULL,
+  `device_id` varchar(128) NOT NULL,
+  PRIMARY KEY (`user_id`, `table_name`, `record_key`),
+  CONSTRAINT `fk_sync_origins_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE `sync_gc_state` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `gc_cursor` bigint(20) NOT NULL DEFAULT 0,

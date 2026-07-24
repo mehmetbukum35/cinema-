@@ -325,7 +325,7 @@ class GoogleAuthTest extends TestCase
         try {
             $this->auth->unlinkGoogle($uid, ['password' => '']);
         } finally {
-            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
         }
     }
 }

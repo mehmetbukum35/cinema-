@@ -153,6 +153,12 @@ const Map<String, String> kTrStrings = {
   'auth_conflict_cancel': 'Girişi İptal Et',
   'auth_delete_account': 'Hesabı Sil',
   'auth_delete_password': 'Mevcut parolanız',
+  'auth_delete_social_reauth': '{} ile yeniden doğrulama yapılacaktır.',
+  'google_unlink_reauth_desc':
+      'Devam etmek için Google hesabınızı yeniden doğrulayın.',
+  'apple_unlink_reauth_desc':
+      'Devam etmek için Apple hesabınızı yeniden doğrulayın.',
+  'auth_unlink_new_password': 'Yeni hesap parolası',
   'auth_delete_confirm':
       'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',
   'auth_delete_ack': 'Bu işlemin geri alınamayacağını anlıyorum.',

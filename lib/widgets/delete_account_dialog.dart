@@ -43,15 +43,22 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
   }
 
   Future<void> _confirmDelete() async {
+    final user = widget.parentRef.read(authProvider).user;
+    final provider = (user?['google_sub'] as String?)?.isNotEmpty == true
+        ? 'google'
+        : ((user?['apple_sub'] as String?)?.isNotEmpty == true
+              ? 'apple'
+              : null);
     final password = _passwordController.text;
-    if (_busy || !_ack || password.isEmpty) return;
+    if (_busy || !_ack || (provider == null && password.isEmpty)) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
 
     final tr = AppLocalizations.of(context);
-    final ok = await widget.parentRef
-        .read(authProvider.notifier)
-        .deleteAccount(password);
+    final notifier = widget.parentRef.read(authProvider.notifier);
+    final ok = provider == null
+        ? await notifier.deleteAccount(password)
+        : await notifier.deleteAccountWithSocialProvider(provider);
 
     if (!mounted) return;
     // Toast kök Overlay'de yaşar; dialog kapansa da görünür kalır.
@@ -71,6 +78,12 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
   Widget build(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
+    final user = widget.parentRef.watch(authProvider).user;
+    final socialProvider = (user?['google_sub'] as String?)?.isNotEmpty == true
+        ? 'Google'
+        : ((user?['apple_sub'] as String?)?.isNotEmpty == true
+              ? 'Apple'
+              : null);
 
     return AlertDialog(
       backgroundColor: c.surface,
@@ -92,29 +105,39 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            enabled: !_busy,
-            autofillHints: const [AutofillHints.password],
-            textInputAction: TextInputAction.done,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _confirmDelete(),
-            decoration: InputDecoration(
-              labelText: tr?.get('auth_delete_password') ?? 'Mevcut parolanız',
-              suffixIcon: IconButton(
-                onPressed: _busy
-                    ? null
-                    : () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_rounded
-                      : Icons.visibility_off_rounded,
+          if (socialProvider == null)
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              enabled: !_busy,
+              autofillHints: const [AutofillHints.password],
+              textInputAction: TextInputAction.done,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _confirmDelete(),
+              decoration: InputDecoration(
+                labelText:
+                    tr?.get('auth_delete_password') ?? 'Mevcut parolanız',
+                suffixIcon: IconButton(
+                  onPressed: _busy
+                      ? null
+                      : () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
+                  ),
                 ),
               ),
+            )
+          else
+            Text(
+              (tr?.get('auth_delete_social_reauth') ??
+                      'You will reauthenticate with {}.')
+                  .replaceAll('{}', socialProvider),
+              style: TextStyle(color: c.dim, fontSize: 13),
             ),
-          ),
           const SizedBox(height: 12),
           InkWell(
             onTap: _busy ? null : () => setState(() => _ack = !_ack),
@@ -164,7 +187,10 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           ),
         ),
         TextButton(
-          onPressed: (_busy || !_ack || _passwordController.text.isEmpty)
+          onPressed:
+              (_busy ||
+                  !_ack ||
+                  (socialProvider == null && _passwordController.text.isEmpty))
               ? null
               : _confirmDelete,
           child: _busy

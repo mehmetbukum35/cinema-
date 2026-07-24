@@ -611,13 +611,29 @@ class Auth
             }
             $uid = (int) $row['user_id'];
 
-            // Gerçek tek-kullanımlı rotasyon: kilit altındaki eski token yeni token
-            // üretilmeden önce transaction içinde tüketilir. issueTokens başarısız
-            // olursa rollback eski tokenı geri getirir; başarılı olursa aynı token
-            // ikinci kez yeni bir oturum üretemez.
-            $del = $this->db->prepare('DELETE FROM refresh_tokens WHERE token_hash = ?');
-            $del->execute([$hash]);
-            $tokens = $this->issueTokens($uid);
+            // İdempotent rotasyon: yanıt ağda kaybolursa aynı eski token grace
+            // penceresinde AYNI halef refresh tokenı döndürür. Böylece replay yeni
+            // token dalları üretmez, fakat meşru istemci oturumunu kurtarabilir.
+            $graceExpires = min((int) $row['expires_at'], time() + 60);
+            $this->db->prepare(
+                'UPDATE refresh_tokens SET expires_at = ? WHERE token_hash = ?'
+            )->execute([$graceExpires, $hash]);
+
+            $successor = hash_hmac(
+                'sha256',
+                'refresh-rotation:' . $rt,
+                (string) $this->cfg['jwt_secret']
+            );
+            $successorHash = hash('sha256', $successor);
+            $exists = $this->db->prepare(
+                'SELECT 1 FROM refresh_tokens WHERE token_hash = ?'
+            );
+            $exists->execute([$successorHash]);
+            $tokens = $this->issueTokens(
+                $uid,
+                $successor,
+                $exists->fetchColumn() === false
+            );
             $this->db->commit();
         } catch (Throwable $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
@@ -655,7 +671,7 @@ class Auth
     // ─── DELETE /auth/google/link *(Bearer)* ─────────────────────────────────
     // Google hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
     // mevcut parola zorunludur.
-    public function unlinkGoogle(int $uid, array $in): void
+    public function unlinkGoogle(int $uid, array $in, ?callable $verifier = null): void
     {
         $st = $this->db->prepare('SELECT google_sub, password_hash FROM users WHERE id = ?');
         $st->execute([$uid]);
@@ -665,22 +681,36 @@ class Auth
         }
 
         $pass = (string) ($in['password'] ?? '');
-        if ($pass === '') {
-            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.', 'google_unlink_failed');
+        $verified = $pass !== '' && password_verify($pass, $u['password_hash']);
+        if (!$verified && isset($in['identity_token'])) {
+            $clientIds = (array) ($this->cfg['google']['client_ids'] ?? []);
+            $verifier ??= fn (string $token) => GoogleAuth::verifyIdToken($token, $clientIds);
+            $claims = $verifier((string) $in['identity_token']);
+            $verified = is_array($claims)
+                && hash_equals((string) $u['google_sub'], (string) ($claims['sub'] ?? ''));
         }
-        if (!password_verify($pass, $u['password_hash'])) {
-            fail(401, 'Mevcut parola hatalı.', 'wrong_password');
+        if (!$verified) {
+            fail(401, 'Google hesabı yeniden doğrulanamadı.', 'reauth_failed');
+        }
+        if (isset($in['identity_token'])) {
+            $newPassword = (string) ($in['new_password'] ?? '');
+            if (strlen($newPassword) < 8) {
+                fail(422, 'Yeni parola en az 8 karakter olmalıdır.', 'password_too_short');
+            }
+            $u['password_hash'] = password_hash($newPassword, PASSWORD_BCRYPT);
         }
 
-        $up = $this->db->prepare('UPDATE users SET google_sub = NULL, updated_at = ? WHERE id = ?');
-        $up->execute([now_ms(), $uid]);
+        $up = $this->db->prepare(
+            'UPDATE users SET google_sub = NULL, password_hash = ?, updated_at = ? WHERE id = ?'
+        );
+        $up->execute([$u['password_hash'], now_ms(), $uid]);
         json_out(200, ['ok' => true]);
     }
 
     // ─── DELETE /auth/apple/link *(Bearer)* ──────────────────────────────────
     // Apple hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
     // mevcut parola zorunludur.
-    public function unlinkApple(int $uid, array $in): void
+    public function unlinkApple(int $uid, array $in, ?callable $verifier = null): void
     {
         $st = $this->db->prepare('SELECT apple_sub, password_hash FROM users WHERE id = ?');
         $st->execute([$uid]);
@@ -690,15 +720,29 @@ class Auth
         }
 
         $pass = (string) ($in['password'] ?? '');
-        if ($pass === '') {
-            fail(422, 'Bağlantıyı kaldırmak için parola gerekli.', 'apple_unlink_failed');
+        $verified = $pass !== '' && password_verify($pass, $u['password_hash']);
+        if (!$verified && isset($in['identity_token'])) {
+            $bundleIds = (array) ($this->cfg['apple']['bundle_ids'] ?? []);
+            $verifier ??= fn (string $token) => AppleAuth::verifyIdentityToken($token, $bundleIds);
+            $claims = $verifier((string) $in['identity_token']);
+            $verified = is_array($claims)
+                && hash_equals((string) $u['apple_sub'], (string) ($claims['sub'] ?? ''));
         }
-        if (!password_verify($pass, $u['password_hash'])) {
-            fail(401, 'Mevcut parola hatalı.', 'wrong_password');
+        if (!$verified) {
+            fail(401, 'Apple hesabı yeniden doğrulanamadı.', 'reauth_failed');
+        }
+        if (isset($in['identity_token'])) {
+            $newPassword = (string) ($in['new_password'] ?? '');
+            if (strlen($newPassword) < 8) {
+                fail(422, 'Yeni parola en az 8 karakter olmalıdır.', 'password_too_short');
+            }
+            $u['password_hash'] = password_hash($newPassword, PASSWORD_BCRYPT);
         }
 
-        $up = $this->db->prepare('UPDATE users SET apple_sub = NULL, updated_at = ? WHERE id = ?');
-        $up->execute([now_ms(), $uid]);
+        $up = $this->db->prepare(
+            'UPDATE users SET apple_sub = NULL, password_hash = ?, updated_at = ? WHERE id = ?'
+        );
+        $up->execute([$u['password_hash'], now_ms(), $uid]);
         json_out(200, ['ok' => true]);
     }
      // ─── POST /auth/change-password (nadir/tekil işlem) ─────────────────────
@@ -731,17 +775,41 @@ class Auth
     }
 
     // ─── DELETE /me (hesap silme — nadir/tekil işlem) ───────────────────────
-    public function deleteAccount(int $uid, array $in): void
+    public function deleteAccount(
+        int $uid,
+        array $in,
+        ?callable $googleVerifier = null,
+        ?callable $appleVerifier = null
+    ): void
     {
-        $password = (string) ($in['password'] ?? '');
-        if ($password === '') {
-            fail(422, 'Hesabı silmek için parolanızı girin.', 'password_required');
-        }
-        $st = $this->db->prepare('SELECT password_hash FROM users WHERE id = ?');
+        $st = $this->db->prepare(
+            'SELECT password_hash, google_sub, apple_sub FROM users WHERE id = ?'
+        );
         $st->execute([$uid]);
-        $hash = $st->fetchColumn();
-        if (!is_string($hash) || !password_verify($password, $hash)) {
-            fail(403, 'Parola yanlış.', 'wrong_password');
+        $user = $st->fetch();
+        if (!$user) fail(404, 'Kullanıcı bulunamadı.', 'user_not_found');
+
+        $verified = false;
+        $password = (string) ($in['password'] ?? '');
+        if ($password !== '') {
+            $verified = password_verify($password, (string) $user['password_hash']);
+        } elseif (($in['provider'] ?? '') === 'google' && !empty($user['google_sub'])) {
+            $clientIds = (array) ($this->cfg['google']['client_ids'] ?? []);
+            $googleVerifier ??= fn (string $token) =>
+                GoogleAuth::verifyIdToken($token, $clientIds);
+            $claims = $googleVerifier((string) ($in['identity_token'] ?? ''));
+            $verified = is_array($claims)
+                && hash_equals((string) $user['google_sub'], (string) ($claims['sub'] ?? ''));
+        } elseif (($in['provider'] ?? '') === 'apple' && !empty($user['apple_sub'])) {
+            $bundleIds = (array) ($this->cfg['apple']['bundle_ids'] ?? []);
+            $appleVerifier ??= fn (string $token) =>
+                AppleAuth::verifyIdentityToken($token, $bundleIds);
+            $claims = $appleVerifier((string) ($in['identity_token'] ?? ''));
+            $verified = is_array($claims)
+                && hash_equals((string) $user['apple_sub'], (string) ($claims['sub'] ?? ''));
+        }
+        if (!$verified) {
+            fail(403, 'Hesap yeniden doğrulanamadı.', 'reauth_failed');
         }
 
         // FK ON DELETE CASCADE sayesinde tüm kullanıcı verisi de silinir.
@@ -915,7 +983,11 @@ class Auth
     }
 
     // ─── Yardımcı: access + refresh üret, refresh'i hash'leyip sakla ────────
-    private function issueTokens(int $uid): array
+    private function issueTokens(
+        int $uid,
+        ?string $refreshOverride = null,
+        bool $storeRefresh = true
+    ): array
     {
         $now = time();
 
@@ -937,13 +1009,15 @@ class Auth
             'exp' => $now + (int) $this->cfg['access_ttl'],
         ], $this->cfg['jwt_secret']);
 
-        $refresh = bin2hex(random_bytes(32));
+        $refresh = $refreshOverride ?? bin2hex(random_bytes(32));
         $expires = $now + (int) $this->cfg['refresh_ttl'];
-        $ins = $this->db->prepare(
-            'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
-             VALUES (?, ?, ?, ?)'
-        );
-        $ins->execute([$uid, hash('sha256', $refresh), $expires, now_ms()]);
+        if ($storeRefresh) {
+            $ins = $this->db->prepare(
+                'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
+                 VALUES (?, ?, ?, ?)'
+            );
+            $ins->execute([$uid, hash('sha256', $refresh), $expires, now_ms()]);
+        }
 
         return [
             'access_token'  => $access,

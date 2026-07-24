@@ -131,6 +131,14 @@ class NotificationService {
         onDidReceiveNotificationResponse: (resp) =>
             _routeFromPayload(resp.payload),
       );
+      // Uygulama tamamen kapalıyken zamanlanmış/yerel bildirime dokunularak
+      // açıldıysa callback tek başına çalışmaz; launch payloadunu ayrıca tüket.
+      final localLaunch = await _local.getNotificationAppLaunchDetails();
+      if (localLaunch?.didNotificationLaunchApp == true) {
+        _routeInitialPayloadWhenReady(
+          localLaunch?.notificationResponse?.payload,
+        );
+      }
 
       // Android bildirim kanalları
       final androidPlugin = _local

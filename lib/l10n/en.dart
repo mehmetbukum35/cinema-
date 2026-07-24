@@ -152,6 +152,11 @@ const Map<String, String> kEnStrings = {
   'auth_conflict_cancel': 'Cancel Login',
   'auth_delete_account': 'Delete Account',
   'auth_delete_password': 'Current password',
+  'auth_delete_social_reauth': 'You will reauthenticate with {}.',
+  'google_unlink_reauth_desc':
+      'Reauthenticate your Google account to continue.',
+  'apple_unlink_reauth_desc': 'Reauthenticate your Apple account to continue.',
+  'auth_unlink_new_password': 'New account password',
   'auth_delete_confirm':
       'This will permanently delete your account and all associated cloud data. Are you sure?',
   'auth_delete_ack': 'I understand this action cannot be undone.',

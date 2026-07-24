@@ -185,10 +185,24 @@ mixin AuthApi on ApiClient {
   }
 
   Future<void> deleteAccount(String password) async {
+    await _deleteAccountWithBody({'password': password});
+  }
+
+  Future<void> deleteAccountWithProvider({
+    required String provider,
+    required String identityToken,
+  }) async {
+    await _deleteAccountWithBody({
+      'provider': provider,
+      'identity_token': identityToken,
+    });
+  }
+
+  Future<void> _deleteAccountWithBody(Map<String, dynamic> body) async {
     final response = await _request(
       'DELETE',
       '/me',
-      body: {'password': password},
+      body: body,
       requireAuth: true,
     );
     if (response.statusCode != 200) {
@@ -280,10 +294,24 @@ mixin AuthApi on ApiClient {
   }
 
   Future<void> unlinkGoogle({required String password}) async {
+    await _unlinkGoogleBody({'password': password});
+  }
+
+  Future<void> unlinkGoogleWithIdentityToken(
+    String identityToken,
+    String newPassword,
+  ) async {
+    await _unlinkGoogleBody({
+      'identity_token': identityToken,
+      'new_password': newPassword,
+    });
+  }
+
+  Future<void> _unlinkGoogleBody(Map<String, dynamic> body) async {
     final response = await _request(
       'DELETE',
       '/auth/google/link',
-      body: {'password': password},
+      body: body,
       requireAuth: true,
     );
     if (response.statusCode != 200) {
@@ -297,10 +325,24 @@ mixin AuthApi on ApiClient {
   }
 
   Future<void> unlinkApple({required String password}) async {
+    await _unlinkAppleBody({'password': password});
+  }
+
+  Future<void> unlinkAppleWithIdentityToken(
+    String identityToken,
+    String newPassword,
+  ) async {
+    await _unlinkAppleBody({
+      'identity_token': identityToken,
+      'new_password': newPassword,
+    });
+  }
+
+  Future<void> _unlinkAppleBody(Map<String, dynamic> body) async {
     final response = await _request(
       'DELETE',
       '/auth/apple/link',
-      body: {'password': password},
+      body: body,
       requireAuth: true,
     );
     if (response.statusCode != 200) {

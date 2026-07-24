@@ -177,6 +177,7 @@ class Sync
 
     public function push(int $uid, array $in, bool $requireDevice = false): void
     {
+        $originDevice = trim((string) ($in['device_id'] ?? ''));
         $this->acknowledgeDevice(
             $uid,
             isset($in['device_id']) ? (string) $in['device_id'] : null,
@@ -201,7 +202,14 @@ class Sync
                 if (!is_array($items)) continue;
                 foreach ($items as $item) {
                     if (!is_array($item)) continue;
-                    $applied += $this->upsert($uid, $table, $def, $item, $locale) ? 1 : 0;
+                    $applied += $this->upsert(
+                        $uid,
+                        $table,
+                        $def,
+                        $item,
+                        $locale,
+                        $originDevice
+                    ) ? 1 : 0;
                 }
             }
             $this->db->commit();
@@ -266,7 +274,14 @@ class Sync
     // SQLite'ta çalışır (MySQL'e özgü `ON DUPLICATE KEY UPDATE` kullanılmaz).
     // Dönüş: kayıt yazıldı/güncellendiyse true; gelen veri eski olduğu için
     // yok sayıldıysa false (böylece `applied` sayacı gerçekten uygulananları sayar).
-    private function upsert(int $uid, string $table, array $def, array $item, string $locale): bool
+    private function upsert(
+        int $uid,
+        string $table,
+        array $def,
+        array $item,
+        string $locale,
+        string $originDevice
+    ): bool
     {
         // Anahtarlar zorunlu
         foreach ($def['keys'] as $k) {
@@ -386,6 +401,31 @@ class Sync
                 }
             }
         }
+        $recordKey = implode('|', array_map(
+            static fn (string $key): string => (string) $item[$key],
+            $def['keys']
+        ));
+        if (
+            $existing !== false
+            && $updatedAt === (int) $existing['updated_at']
+            && $contentChanged
+            && $originDevice !== ''
+        ) {
+            $origin = $this->db->prepare(
+                'SELECT device_id FROM sync_origins
+                 WHERE user_id = ? AND table_name = ? AND record_key = ?'
+            );
+            $origin->execute([$uid, $table, $recordKey]);
+            $existingDevice = (string) ($origin->fetchColumn() ?: '');
+            if ($existingDevice !== '' && strcmp($originDevice, $existingDevice) <= 0) {
+                // Kaybeden eşit-zaman yazımı içeriği değiştirmez; cursor'u bump
+                // ederek istemcinin kazanan sunucu kopyasını sonraki pull'da almasını sağlar.
+                $this->db->prepare(
+                    "UPDATE `$table` SET server_updated_at = ? WHERE $whereSql"
+                )->execute(array_merge([$serverNow], $whereVals));
+                return false;
+            }
+        }
         $bumpServerCursor =
             $existing === false
             || $updatedAt > (int) $existing['updated_at']
@@ -399,6 +439,7 @@ class Sync
             $colList  = '`' . implode('`, `', $colNames) . '`';
             $this->db->prepare("INSERT INTO `$table` ($colList) VALUES ($place)")
                      ->execute(array_values($values));
+            $this->storeSyncOrigin($uid, $table, $recordKey, $originDevice);
             return true;
         }
 
@@ -416,7 +457,27 @@ class Sync
         }
         $this->db->prepare("UPDATE `$table` SET " . implode(', ', $setParts) . " WHERE $whereSql")
                  ->execute(array_merge($setVals, $whereVals));
+        $this->storeSyncOrigin($uid, $table, $recordKey, $originDevice);
         return true;
+    }
+
+    private function storeSyncOrigin(
+        int $uid,
+        string $table,
+        string $recordKey,
+        string $deviceId
+    ): void {
+        if ($deviceId === '') return;
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $sql = $driver === 'sqlite'
+            ? 'INSERT INTO sync_origins (user_id, table_name, record_key, device_id)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(user_id, table_name, record_key)
+               DO UPDATE SET device_id = excluded.device_id'
+            : 'INSERT INTO sync_origins (user_id, table_name, record_key, device_id)
+               VALUES (?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE device_id = VALUES(device_id)';
+        $this->db->prepare($sql)->execute([$uid, $table, $recordKey, $deviceId]);
     }
 
     /** Shared titles: client fill-empty only; TMDB-canonical rows never overwritten. */

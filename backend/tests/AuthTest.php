@@ -215,9 +215,11 @@ class AuthTest extends TestCase
     public function testDeleteAccount(): void
     {
         $stmt = $this->createMock(PDOStatement::class);
-        $stmt->method('fetchColumn')->willReturn(
-            password_hash('password123', PASSWORD_BCRYPT)
-        );
+        $stmt->method('fetch')->willReturn([
+            'password_hash' => password_hash('password123', PASSWORD_BCRYPT),
+            'google_sub' => null,
+            'apple_sub' => null,
+        ]);
         $this->db->method('prepare')->willReturn($stmt);
 
         $auth = new Auth($this->db, $this->cfg);

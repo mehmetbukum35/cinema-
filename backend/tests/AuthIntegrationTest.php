@@ -124,6 +124,23 @@ class AuthIntegrationTest extends TestCase
         }
     }
 
+    public function testSocialAccountCanBeDeletedAfterProviderReauthentication(): void
+    {
+        $uid = $this->seedUser('social-delete@example.com');
+        $this->db->prepare('UPDATE users SET google_sub = ? WHERE id = ?')
+            ->execute(['google-sub-123', $uid]);
+
+        $this->auth->deleteAccount(
+            $uid,
+            ['provider' => 'google', 'identity_token' => 'verified-token'],
+            static fn (string $token): ?array =>
+                $token === 'verified-token' ? ['sub' => 'google-sub-123'] : null
+        );
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn());
+    }
+
     // ── Kayıt + e-posta doğrulama akışı ─────────────────────────────────────
 
     public function testRegisterCreatesUnverifiedUserWithCodeAndNoTokens(): void
@@ -480,7 +497,7 @@ class AuthIntegrationTest extends TestCase
         }
     }
 
-    public function testRefreshTokenCannotBeReplayedAfterSuccessfulRotation(): void
+    public function testRefreshRetryReturnsSameSuccessorWithoutCreatingAnotherToken(): void
     {
         $uid = $this->seedUser('refresh-replay@example.com');
         $refreshToken = 'single-use-refresh-token';
@@ -491,14 +508,19 @@ class AuthIntegrationTest extends TestCase
 
         $this->auth->refresh(['refresh_token' => $refreshToken]);
         $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $firstSuccessor = TestHelperRegistry::$lastBody['tokens']['refresh_token'];
 
         TestHelperRegistry::reset();
-        try {
-            $this->auth->refresh(['refresh_token' => $refreshToken]);
-            $this->fail('Tüketilmiş refresh token ikinci kez kabul edilmemeliydi.');
-        } catch (TestExitException) {
-            $this->assertSame(401, TestHelperRegistry::$lastStatus);
-        }
+        $this->auth->refresh(['refresh_token' => $refreshToken]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertSame(
+            $firstSuccessor,
+            TestHelperRegistry::$lastBody['tokens']['refresh_token']
+        );
+        $this->assertSame(
+            2,
+            (int) $this->db->query('SELECT COUNT(*) FROM refresh_tokens')->fetchColumn()
+        );
     }
 
     public function testResetPasswordRollsBackWhenTokenRevocationFails(): void
@@ -621,7 +643,7 @@ class AuthIntegrationTest extends TestCase
         try {
             $this->auth->unlinkApple($uid, ['password' => '']);
         } finally {
-            $this->assertSame(422, TestHelperRegistry::$lastStatus);
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
         }
     }
 

@@ -715,8 +715,8 @@ class ProfileScreen extends ConsumerWidget {
                       tr?.get('google_unlink_title') ??
                       'Google Bağlantısını Kaldır',
                   subtitle:
-                      tr?.get('google_unlink_desc') ??
-                      'Devam etmek için hesap parolanızı girin.',
+                      tr?.get('google_unlink_reauth_desc') ??
+                      'Reauthenticate your Google account to continue.',
                   onTap: () {
                     showModalBottomSheet(
                       context: context,
@@ -748,8 +748,8 @@ class ProfileScreen extends ConsumerWidget {
                       tr?.get('apple_unlink_title') ??
                       'Apple Bağlantısını Kaldır',
                   subtitle:
-                      tr?.get('apple_unlink_desc') ??
-                      'Devam etmek için hesap parolanızı girin.',
+                      tr?.get('apple_unlink_reauth_desc') ??
+                      'Reauthenticate your Apple account to continue.',
                   onTap: () {
                     showModalBottomSheet(
                       context: context,

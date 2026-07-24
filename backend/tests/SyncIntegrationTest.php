@@ -629,6 +629,33 @@ class SyncIntegrationTest extends TestCase
         return $row;
     }
 
+    public function testEqualTimestampUsesStableDeviceTieBreaker(): void
+    {
+        $payload = static fn (string $device, int $rating): array => [
+            'device_id' => $device,
+            'ratings' => [[
+                'movie_id' => 777,
+                'is_tv' => 0,
+                'rating' => $rating,
+                'updated_at' => 5000,
+            ]],
+        ];
+
+        $this->sync->push(1, $payload('device-00000000b', 3));
+        TestHelperRegistry::reset();
+        $this->sync->push(1, $payload('device-00000000a', 1));
+        $this->assertSame(3, (int) $this->row('ratings', 'movie_id', 777)['rating']);
+
+        TestHelperRegistry::reset();
+        $this->sync->push(1, $payload('device-00000000c', 2));
+        $this->assertSame(2, (int) $this->row('ratings', 'movie_id', 777)['rating']);
+        $origin = $this->db->query(
+            "SELECT device_id FROM sync_origins
+             WHERE user_id = 1 AND table_name = 'ratings' AND record_key = '777|0'"
+        )->fetchColumn();
+        $this->assertSame('device-00000000c', $origin);
+    }
+
     private function createSchema(): void
     {
         // Sync::isReviewBanned kullanıcı tablosuna bakar (yorum yasağı).
@@ -737,6 +764,15 @@ class SyncIntegrationTest extends TestCase
                 user_id INTEGER PRIMARY KEY,
                 gc_cursor INTEGER NOT NULL DEFAULT 0,
                 updated_at INTEGER NOT NULL
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE sync_origins (
+                user_id INTEGER NOT NULL,
+                table_name TEXT NOT NULL,
+                record_key TEXT NOT NULL,
+                device_id TEXT NOT NULL,
+                PRIMARY KEY (user_id, table_name, record_key)
             )'
         );
     }

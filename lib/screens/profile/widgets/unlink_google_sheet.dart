@@ -16,7 +16,6 @@ class UnlinkGoogleSheet extends StatefulWidget {
 
 class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
   final _passwordCtrl = TextEditingController();
-  bool _obscure = true;
   String? _localError;
   bool _isLoading = false;
 
@@ -28,12 +27,11 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
 
   Future<void> _submit() async {
     final tr = AppLocalizations.of(context);
-    final pass = _passwordCtrl.text.trim();
-
-    if (pass.isEmpty) {
+    if (_passwordCtrl.text.length < 8) {
       setState(() {
         _localError =
-            tr?.get('auth_forgot_err_name_empty') ?? 'Boş alan bırakılamaz.';
+            tr?.get('auth_forgot_err_pass_length') ??
+            'Password must be at least 8 characters.';
       });
       return;
     }
@@ -45,7 +43,7 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
 
     final success = await widget.ref
         .read(authProvider.notifier)
-        .unlinkGoogle(pass);
+        .unlinkGoogleWithReauth(_passwordCtrl.text);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -107,8 +105,8 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            tr?.get('google_unlink_desc') ??
-                'Devam etmek için hesap parolanızı girin.',
+            tr?.get('google_unlink_reauth_desc') ??
+                'Reauthenticate your Google account to continue.',
             style: TextStyle(color: c.dim, fontSize: 12),
             textAlign: TextAlign.center,
           ),
@@ -135,37 +133,11 @@ class _UnlinkGoogleSheetState extends State<UnlinkGoogleSheet> {
           ],
           TextField(
             controller: _passwordCtrl,
-            obscureText: _obscure,
+            obscureText: true,
             decoration: InputDecoration(
               labelText:
-                  tr?.get('change_password_old_password') ?? 'Mevcut Şifre',
-              labelStyle: TextStyle(color: c.dim, fontSize: 13),
-              filled: true,
-              fillColor: c.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.borderSoft),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.borderSoft),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.gold, width: 1.5),
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscure
-                      ? Icons.visibility_off_rounded
-                      : Icons.visibility_rounded,
-                  color: c.dim,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              ),
+                  tr?.get('auth_unlink_new_password') ?? 'New account password',
             ),
-            style: TextStyle(color: c.ink, fontSize: 14),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
