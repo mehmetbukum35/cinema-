@@ -57,6 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _googleSignIn() async {
+    if (ref.read(authProvider).loading) return;
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus();
     final result = await ref.read(authProvider.notifier).signInWithGoogle();
@@ -64,6 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _appleSignIn() async {
+    if (ref.read(authProvider).loading) return;
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus();
     final result = await ref.read(authProvider.notifier).signInWithApple();
