@@ -185,19 +185,61 @@ trait SocialCouchTrait
 
     // ─── POST /social/couch/{id}/cancel ─────────────────────────────────────
     // Eşleşmiş oturumda 'kapat' = finish (ended); açık oturumda iptal.
+    // Match ile Leave yarışında matched asla cancelled'e düşmez.
     public function cancelCouchSession(int $uid, int $sessionId): void
     {
-        $row = $this->requireCouchParticipant($uid, $sessionId);
-        $newStatus = $row['status'] === 'matched' ? 'ended' : 'cancelled';
-        if ($row['status'] === 'ended' || $row['status'] === 'cancelled') {
-            $newStatus = $row['status'];
-        } else {
-            $up = $this->db->prepare(
-                'UPDATE couch_sessions SET status = ?, updated_at = ? WHERE id = ?'
-            );
-            $up->execute([$newStatus, now_ms(), $sessionId]);
+        $this->db->beginTransaction();
+        try {
+            $row = $this->loadCouchSession($sessionId, true);
+            if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
+                fail(403, 'Bu oturuma erişim yetkin yok.');
+            }
+            $this->assertCouchFriendshipForRow($row, $uid);
+
+            $status = (string) $row['status'];
+            if ($status === 'ended' || $status === 'cancelled') {
+                $this->db->commit();
+                json_out(200, ['ok' => true, 'status' => $status]);
+                return;
+            }
+
+            $t = now_ms();
+            if ($status === 'matched') {
+                $up = $this->db->prepare(
+                    "UPDATE couch_sessions SET status = 'ended', updated_at = ?
+                     WHERE id = ? AND status = 'matched'"
+                );
+                $up->execute([$t, $sessionId]);
+                $newStatus = 'ended';
+            } else {
+                $up = $this->db->prepare(
+                    "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+                     WHERE id = ? AND status IN ('pending', 'active')"
+                );
+                $up->execute([$t, $sessionId]);
+                if ($up->rowCount() < 1) {
+                    // Oy eşleşmeyi kazandı — iptal yerine oturumu bitir.
+                    $up2 = $this->db->prepare(
+                        "UPDATE couch_sessions SET status = 'ended', updated_at = ?
+                         WHERE id = ? AND status = 'matched'"
+                    );
+                    $up2->execute([$t, $sessionId]);
+                    $newStatus = $up2->rowCount() > 0
+                        ? 'ended'
+                        : (string) ($this->loadCouchSession($sessionId)['status'] ?? 'cancelled');
+                } else {
+                    $newStatus = 'cancelled';
+                }
+            }
+
+            $this->db->commit();
+            json_out(200, ['ok' => true, 'status' => $newStatus]);
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
         }
-        json_out(200, ['ok' => true, 'status' => $newStatus]);
     }
 
     // ─── Yardımcılar ────────────────────────────────────────────────────────
@@ -253,7 +295,12 @@ trait SocialCouchTrait
                 "UPDATE couch_sessions SET status = 'active', updated_at = ? WHERE id = ? AND status = 'pending'"
             );
             $up->execute([now_ms(), (int) $row['id']]);
-            $row['status'] = 'active';
+            if ($up->rowCount() > 0) {
+                $row['status'] = 'active';
+            } else {
+                // İptal/eşleşme yarışı: istemciye hayalet 'active' gösterme.
+                $row = $this->loadCouchSession((int) $row['id']);
+            }
         }
         return $row;
     }

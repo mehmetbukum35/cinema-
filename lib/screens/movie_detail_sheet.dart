@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -261,12 +263,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       await ref.read(apiServiceProvider).blockUser(reviewerId);
       _showToast(tr?.get('review_blocked') ?? 'Kullanıcı engellendi');
       // Engellenen kullanıcının yorumları listeden düşsün; arkadaşlık da
-      // sunucuda koparıldığı için aktivite akışı yenilenir.
+      // sunucuda koparıldığı için arkadaş listesi / sinyaller / akış yenilenir.
       _loadFriendsReviews();
-      ref
-          .read(socialProvider.notifier)
-          .loadActivityFeed()
-          .catchError((_) => {});
+      final social = ref.read(socialProvider.notifier);
+      unawaited(social.loadFriends());
+      unawaited(social.loadFriendSignals());
+      unawaited(social.loadActivityFeed().catchError((_) {}));
     } catch (e) {
       _showToast(
         tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',
@@ -502,7 +504,15 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     required bool isSpoiler,
     required bool isPrivate,
   }) async {
-    if (_currentRating == null) return;
+    // Puan silme ile yarışmasın; silinmiş/yok satırı deleted:0 ile diriltme.
+    if (_ratingBusy || _currentRating == null) return;
+    final existing = await PrefsService.getRating(
+      widget.movie.id,
+      widget.movie.isTV,
+    );
+    if (!mounted || _ratingBusy || _currentRating == null) return;
+    if (existing == null || (existing['deleted'] as int? ?? 0) == 1) return;
+
     final commentText = _commentController.text.trim();
     await PrefsService.saveRating(
       movie: widget.movie,

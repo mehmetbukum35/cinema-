@@ -1395,6 +1395,34 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('ended', TestHelperRegistry::$lastBody['status']);
     }
 
+    public function testCouchCancelDuringMatchBecomesEndedNotCancelled(): void
+    {
+        $id = $this->createCouch();
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->social->voteCouchSession(2, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->assertSame('matched', TestHelperRegistry::$lastBody['session']['status']);
+
+        // Leave after match must finish (ended), never demote to cancelled.
+        TestHelperRegistry::reset();
+        $this->social->cancelCouchSession(2, $id);
+        $this->assertSame('ended', TestHelperRegistry::$lastBody['status']);
+        $st = $this->db->prepare('SELECT status FROM couch_sessions WHERE id = ?');
+        $st->execute([$id]);
+        $this->assertSame('ended', $st->fetchColumn());
+    }
+
+    public function testCouchGuestPollDoesNotGhostActiveAfterCancel(): void
+    {
+        $id = $this->createCouch();
+        // Host iptal eder; misafir poll pending görüp activate etmeye çalışır.
+        $this->social->cancelCouchSession(1, $id);
+        $this->assertSame('cancelled', TestHelperRegistry::$lastBody['status']);
+
+        TestHelperRegistry::reset();
+        $this->social->getCouchSession(2, $id);
+        $this->assertSame('cancelled', TestHelperRegistry::$lastBody['session']['status']);
+    }
+
     public function testCouchParticipantVotesAccumulateWithoutOverwriting(): void
     {
         $id = $this->createCouch();

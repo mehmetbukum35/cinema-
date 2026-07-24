@@ -30,6 +30,9 @@ int _asDeletedFlag(Object? v) {
   return 0;
 }
 
+/// Sunucu ile aynı tolerans (Sync.php clock clamp).
+const int _clockSkewMs = 5 * 60 * 1000;
+
 List<dynamic> _decodeJsonList(Object? value) {
   if (value is List) return List<dynamic>.from(value);
   if (value is! String || value.trim().isEmpty) return const [];
@@ -322,6 +325,19 @@ class SyncService {
 
     debugPrint("Starting sync. pull since: $lastPull, push since: $lastPush");
 
+    // İlk sync veya boş imleç: push'tan ÖNCE sunucu saatini alıp sapmış
+    // yerel damgaları kırp — yoksa ileri saatli cihaz LWW'yi bir kez bile çalar.
+    Map<String, dynamic>? earlyPull;
+    if (lastPull <= 0) {
+      await _ensureSession(sessionUserId);
+      earlyPull = await _apiService.pull(0, localReset: _declareLocalReset);
+      await _ensureSession(sessionUserId);
+      final earlyServer = _asInt(earlyPull['server_time']);
+      await _healSkewedLocalTimestamps(db, earlyServer);
+    } else {
+      await _healSkewedLocalTimestamps(db, lastPull + 1);
+    }
+
     // 1. Build and PUSH local changes
     final payload = <String, dynamic>{
       'metadata_locale': PrefsService.activeLanguageCode,
@@ -461,12 +477,11 @@ class SyncService {
       await PrefsService.setLastPushTime(nextPushCursor);
     }
 
-    // 2. PULL remote changes
+    // 2. PULL remote changes (ilk sync'te earlyPull zaten alındı).
     await _ensureSession(sessionUserId);
-    final pullResult = await _apiService.pull(
-      lastPull,
-      localReset: _declareLocalReset,
-    );
+    final pullResult =
+        earlyPull ??
+        await _apiService.pull(lastPull, localReset: _declareLocalReset);
     await _ensureSession(sessionUserId);
     final serverTime = _asInt(pullResult['server_time']);
 
@@ -491,6 +506,9 @@ class SyncService {
       if (rows.isEmpty) return true;
       final local = _asInt(rows.first['updated_at']);
       final remote = _asInt(remoteUpdatedAt);
+      // Yerel damga saati sapmışsa (sunucudan >> ileride) remote'u kabul et;
+      // aksi halde sapmış cihaz karşı tarafın yazımını sonsuza kadar reddeder.
+      if (local > serverTime + _clockSkewMs) return true;
       return remote >= local;
     }
 
@@ -635,6 +653,9 @@ class SyncService {
       await _ensureSession(sessionUserId);
     });
 
+    // Pull sonrası sapmış yerel damgaları sunucu saatine çek (bir sonraki push için).
+    await _healSkewedLocalTimestamps(db, serverTime);
+
     // Birleşik pull sonrası Top 20 tavanını ve sıra indekslerini toparla.
     // Trim/remap updated_at stamps happen AFTER the main push, so push those
     // favorites in the same sync turn (tombstones + remapped ranks).
@@ -711,6 +732,28 @@ class SyncService {
         debugPrint("Sync auto-publish DNA failed: $e");
       }
     });
+  }
+
+  /// İleri saatli cihaz damgalarını sunucu çapasının +skew üstüne kırpar.
+  /// Böylece sapmış updated_at LWW'yi kalıcı kilitlemez.
+  Future<void> _healSkewedLocalTimestamps(
+    Database db,
+    int serverAnchorMs,
+  ) async {
+    if (serverAnchorMs <= 0) return;
+    final cap = serverAnchorMs + _clockSkewMs;
+    for (final table in const [
+      'ratings',
+      'watchlist',
+      'favorites',
+      'watched_seasons',
+      'search_history',
+    ]) {
+      await db.rawUpdate(
+        'UPDATE $table SET updated_at = ? WHERE updated_at > ?',
+        [serverAnchorMs, cap],
+      );
+    }
   }
 
   /// Push favorites rows touched at/after [sinceMs] (cap trim tombstones +
