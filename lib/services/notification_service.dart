@@ -52,6 +52,7 @@ class NotificationService {
   Future<void> Function(String token)? _unregisterTokenOverride;
   Future<void> Function()? _authReadyHandler;
   Future<void> _tokenOperationTail = Future.value();
+  Future<void> _reminderOperationTail = Future.value();
   bool _tokenRegistrationEnabled = false;
   int _tokenRegistrationGeneration = 0;
   bool _ready = false;
@@ -439,7 +440,11 @@ class NotificationService {
       (isTV ? _releaseIdTv : _releaseIdMovie) | (movieId & 0x0FFFFFFF);
 
   /// Çıkış tarihi gelecekteyse o gün saat 10:00'a bildirim planlar.
-  Future<void> scheduleReleaseReminder(Movie movie) async {
+  Future<void> scheduleReleaseReminder(Movie movie) {
+    return _enqueueReminderOperation(() => _scheduleReleaseReminder(movie));
+  }
+
+  Future<void> _scheduleReleaseReminder(Movie movie) async {
     if (!await _ensureTimezone()) return;
     try {
       final raw = movie.releaseDate;
@@ -491,7 +496,13 @@ class NotificationService {
     }
   }
 
-  Future<void> cancelReleaseReminder(int movieId, bool isTV) async {
+  Future<void> cancelReleaseReminder(int movieId, bool isTV) {
+    return _enqueueReminderOperation(
+      () => _cancelReleaseReminder(movieId, isTV),
+    );
+  }
+
+  Future<void> _cancelReleaseReminder(int movieId, bool isTV) async {
     try {
       await _local.cancel(id: _releaseNotifId(movieId, isTV));
     } catch (e) {
@@ -507,7 +518,12 @@ class NotificationService {
   /// Planlanmış hatırlatıcıları watchlist ile hizalar: listeden çıkanları
   /// iptal eder, eksik olanları planlar. Cihazlar arası senkron sonrası
   /// (başka cihazda eklenen/çıkarılan yapımlar) tutarlılık için çağrılır.
-  Future<void> syncReleaseReminders(List<Movie> watchlist) async {
+  Future<void> syncReleaseReminders(List<Movie> watchlist) {
+    final snapshot = List<Movie>.of(watchlist);
+    return _enqueueReminderOperation(() => _syncReleaseReminders(snapshot));
+  }
+
+  Future<void> _syncReleaseReminders(List<Movie> watchlist) async {
     if (!await _ensureTimezone()) return;
     try {
       final expected = <int, Movie>{
@@ -528,7 +544,7 @@ class NotificationService {
       for (final entry in expected.entries) {
         if (!scheduled.contains(entry.key)) {
           // Geçmiş tarihli olanları scheduleReleaseReminder kendisi eler.
-          await scheduleReleaseReminder(entry.value);
+          await _scheduleReleaseReminder(entry.value);
         }
       }
     } catch (e, st) {
@@ -540,6 +556,25 @@ class NotificationService {
       }
     }
   }
+
+  Future<void> _enqueueReminderOperation(Future<void> Function() operation) {
+    final previous = _reminderOperationTail;
+    final next = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Bir hatırlatıcı hatası sonraki ekleme/çıkarma işlemini engellemesin.
+      }
+      await operation();
+    }();
+    _reminderOperationTail = next;
+    return next;
+  }
+
+  @visibleForTesting
+  Future<void> debugEnqueueReminderOperation(
+    Future<void> Function() operation,
+  ) => _enqueueReminderOperation(operation);
 
   /// FCM `data` haritasından yerel bildirim / deep-link payload'u üretir.
   @visibleForTesting
