@@ -11,6 +11,7 @@ if (!is_dir($SRC)) {
 }
 
 require_once "$SRC/Helpers.php";
+cinema_send_security_headers('api');
 cinema_send_request_id_header();
 set_exception_handler(static function (Throwable $error): void {
     cinema_log('critical', 'Unhandled backend exception', [

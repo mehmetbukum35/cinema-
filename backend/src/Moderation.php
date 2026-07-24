@@ -80,6 +80,7 @@ class Moderation
     private function renderLogin(bool $failed): never
     {
         if ($this->adminKey === '') fail(404, 'Bilinmeyen uç.');
+        cinema_send_security_headers('moderation');
         header('Content-Type: text/html; charset=utf-8');
         header('X-Robots-Tag: noindex, nofollow');
         $error = $failed ? '<p style="color:#e86868">Anahtar geçersiz.</p>' : '';
@@ -96,6 +97,7 @@ class Moderation
     // ─── GET /admin/moderation ───────────────────────────────────────────────
     public function renderPanel(): void
     {
+        cinema_send_security_headers('moderation');
         $key = $this->requireKey();
 
         // Açık şikayetler: yorum başına gruplanır, şikayet sayısına göre sıralanır.

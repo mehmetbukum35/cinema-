@@ -21,6 +21,56 @@ if (!function_exists('invalidate_top_profiles_cache')) {
     }
 }
 
+/**
+ * Security headers shared by API and server-rendered web surfaces.
+ *
+ * @return array<string, string>
+ */
+function cinema_security_headers(string $surface = 'api', ?bool $https = null): array
+{
+    $https ??= !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+
+    $policies = [
+        'api' => "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        'profile' => "default-src 'none'; base-uri 'none'; form-action 'none'; "
+            . "frame-ancestors 'none'; img-src https://image.tmdb.org data:; "
+            . "style-src 'unsafe-inline' https://fonts.googleapis.com; "
+            . "font-src https://fonts.gstatic.com",
+        'download' => "default-src 'none'; base-uri 'none'; form-action 'none'; "
+            . "frame-ancestors 'none'; script-src 'unsafe-inline'; "
+            . "style-src 'unsafe-inline' https://fonts.googleapis.com; "
+            . "font-src https://fonts.gstatic.com",
+        'error' => "default-src 'none'; base-uri 'none'; form-action 'none'; "
+            . "frame-ancestors 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; "
+            . "font-src https://fonts.gstatic.com",
+        'moderation' => "default-src 'none'; base-uri 'none'; form-action 'self'; "
+            . "frame-ancestors 'none'; style-src 'unsafe-inline'",
+    ];
+
+    $headers = [
+        'Content-Security-Policy' => $policies[$surface] ?? $policies['api'],
+        'X-Content-Type-Options' => 'nosniff',
+        'X-Frame-Options' => 'DENY',
+        'Referrer-Policy' => 'no-referrer',
+        'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()',
+        'Cross-Origin-Opener-Policy' => 'same-origin',
+    ];
+    if ($https) {
+        $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+    }
+    return $headers;
+}
+
+function cinema_send_security_headers(string $surface = 'api'): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    foreach (cinema_security_headers($surface) as $name => $value) {
+        header("$name: $value", true);
+    }
+}
+
 if (!function_exists('json_out')) {
     function json_out(int $status, array $body): void
     {

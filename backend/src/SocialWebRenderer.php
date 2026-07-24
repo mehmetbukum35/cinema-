@@ -9,6 +9,7 @@ class SocialWebRenderer
 
     public function renderPublicWebProfile(string $username): void
     {
+        cinema_send_security_headers('profile');
         // Sayfa dili: uygulama ?lang=en|tr ile açık seçer; doğrudan tarayıcı
         // ziyaretinde Accept-Language (tr → TR, aksi halde EN).
         $lang = self::resolveWebProfileLang();
@@ -299,6 +300,7 @@ class SocialWebRenderer
     // Yardımcı: Şık Hata Sayfası oluşturucu (Web için)
     private function renderWebError(string $title, string $desc): void
     {
+        cinema_send_security_headers('error');
         $templatePath = __DIR__ . '/templates/error.template.php';
         if (is_file($templatePath)) {
             require $templatePath;
@@ -311,6 +313,7 @@ class SocialWebRenderer
     // ─── GET /social/friends/signals ────────────────────────────────────────
     public function renderDownloadPage(): void
     {
+        cinema_send_security_headers('download');
         $templatePath = __DIR__ . '/templates/download.template.php';
         if (is_file($templatePath)) {
             require $templatePath;

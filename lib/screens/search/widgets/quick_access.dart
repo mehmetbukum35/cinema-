@@ -118,20 +118,32 @@ class SearchQuickAccess extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: onClearHistory,
-                  child: Semantics(
-                    button: true,
-                    label:
-                        AppLocalizations.of(context)?.get('search_clear') ??
-                        'Clear',
-                    child: Text(
-                      AppLocalizations.of(context)?.get('search_clear') ??
-                          'Clear',
-                      style: TextStyle(
-                        color: c.dim,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                Semantics(
+                  key: const ValueKey('clear_search_history_semantics'),
+                  button: true,
+                  excludeSemantics: true,
+                  label:
+                      tr?.get('semantics_clear_search_history') ??
+                      'Clear search history',
+                  child: GestureDetector(
+                    key: const ValueKey('clear_search_history_touch_target'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onClearHistory,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          tr?.get('search_clear') ?? 'Clear',
+                          style: TextStyle(
+                            color: c.dim,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ),

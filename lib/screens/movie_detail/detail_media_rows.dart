@@ -5,6 +5,7 @@ import '../../models/movie.dart';
 import '../../models/cast_member.dart';
 import '../../models/watch_provider.dart';
 import '../../services/tmdb_service.dart';
+import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../person_screen.dart';
 
@@ -102,61 +103,71 @@ class DetailCastRow extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final pal = ctx.c;
           final c = cast[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.push(
+          final semanticsLabel =
+              AppLocalizations.of(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => PersonScreen(
-                    personId: c.id,
-                    personName: c.name,
-                    service: service,
+              )?.get('semantics_open_person').replaceAll('{}', c.name) ??
+              'Open ${c.name} cast profile';
+          return Semantics(
+            button: true,
+            label: semanticsLabel,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PersonScreen(
+                      personId: c.id,
+                      personName: c.name,
+                      service: service,
+                    ),
                   ),
-                ),
-              );
-            },
-            child: Container(
-              width: 64,
-              margin: const EdgeInsets.only(right: 10),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: AppCachedNetworkImage(
-                        imageUrl: c.profileUrl,
-                        fit: BoxFit.cover,
-                        preset: AppImageCachePreset.avatar,
-                        placeholder: (context, url) =>
-                            _avatarPlaceholder(ctx, c.name),
-                        errorWidget: (context, url, error) =>
-                            _avatarPlaceholder(ctx, c.name),
+                );
+              },
+              child: Container(
+                width: 64,
+                margin: const EdgeInsets.only(right: 10),
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: AppCachedNetworkImage(
+                          imageUrl: c.profileUrl,
+                          fit: BoxFit.cover,
+                          preset: AppImageCachePreset.avatar,
+                          placeholder: (context, url) =>
+                              _avatarPlaceholder(ctx, c.name),
+                          errorWidget: (context, url, error) =>
+                              _avatarPlaceholder(ctx, c.name),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    c.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: pal.ink,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 4),
+                    Text(
+                      c.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: pal.ink,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    c.character,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: pal.dim, fontSize: 8),
-                  ),
-                ],
+                    Text(
+                      c.character,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: pal.dim, fontSize: 8),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -188,23 +199,33 @@ class SimilarTitlesRow extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final c = ctx.c;
           final s = movies[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onMovieTap(s);
-            },
-            child: Container(
-              width: 90,
-              margin: const EdgeInsets.only(right: 10),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: AppCachedNetworkImage(
-                  imageUrl: s.posterUrl,
-                  fit: BoxFit.cover,
-                  preset: AppImageCachePreset.poster,
-                  placeholder: (context, url) => ColoredBox(color: c.card),
-                  errorWidget: (context, url, error) =>
-                      ColoredBox(color: c.card),
+          final semanticsLabel =
+              AppLocalizations.of(
+                context,
+              )?.get('semantics_open_title').replaceAll('{}', s.title) ??
+              'Open details for ${s.title}';
+          return Semantics(
+            button: true,
+            label: semanticsLabel,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onMovieTap(s);
+              },
+              child: Container(
+                width: 90,
+                margin: const EdgeInsets.only(right: 10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AppCachedNetworkImage(
+                    imageUrl: s.posterUrl,
+                    fit: BoxFit.cover,
+                    preset: AppImageCachePreset.poster,
+                    placeholder: (context, url) => ColoredBox(color: c.card),
+                    errorWidget: (context, url, error) =>
+                        ColoredBox(color: c.card),
+                  ),
                 ),
               ),
             ),
@@ -236,34 +257,44 @@ class CollectionRow extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final c = ctx.c;
           final m = movies[i];
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onMovieTap(m);
-            },
-            child: Container(
-              width: 90,
-              margin: const EdgeInsets.only(right: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: AppCachedNetworkImage(
-                        imageUrl: m.posterUrl,
-                        fit: BoxFit.cover,
-                        preset: AppImageCachePreset.poster,
-                        placeholder: (context, url) =>
-                            ColoredBox(color: c.card),
-                        errorWidget: (context, url, error) =>
-                            ColoredBox(color: c.card),
+          final semanticsLabel =
+              AppLocalizations.of(
+                context,
+              )?.get('semantics_open_title').replaceAll('{}', m.title) ??
+              'Open details for ${m.title}';
+          return Semantics(
+            button: true,
+            label: semanticsLabel,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onMovieTap(m);
+              },
+              child: Container(
+                width: 90,
+                margin: const EdgeInsets.only(right: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: AppCachedNetworkImage(
+                          imageUrl: m.posterUrl,
+                          fit: BoxFit.cover,
+                          preset: AppImageCachePreset.poster,
+                          placeholder: (context, url) =>
+                              ColoredBox(color: c.card),
+                          errorWidget: (context, url, error) =>
+                              ColoredBox(color: c.card),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(m.year, style: TextStyle(color: c.dim, fontSize: 9)),
-                ],
+                    const SizedBox(height: 4),
+                    Text(m.year, style: TextStyle(color: c.dim, fontSize: 9)),
+                  ],
+                ),
               ),
             ),
           );

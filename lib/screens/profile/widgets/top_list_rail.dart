@@ -68,7 +68,7 @@ class TopListRail extends ConsumerWidget {
       children: [
         // Ray etiketi: "TOP 20 FİLM · N/20" + Düzenle hapı
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           child: Row(
             children: [
               Container(
@@ -96,37 +96,47 @@ class TopListRail extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _openEdit(context),
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.red.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: c.red.withValues(alpha: 0.45),
-                      width: 1,
+              Semantics(
+                button: true,
+                label:
+                    tr
+                        ?.get('semantics_edit_top_list')
+                        .replaceAll('{}', label) ??
+                    'Edit $label',
+                child: GestureDetector(
+                  onTap: () => _openEdit(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        tr?.get('top_list_edit') ?? 'Düzenle',
-                        style: TextStyle(
-                          color: c.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.2,
-                        ),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: c.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: c.red.withValues(alpha: 0.45),
+                        width: 1,
                       ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.tune_rounded, color: c.red, size: 13),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tr?.get('top_list_edit') ?? 'Düzenle',
+                          style: TextStyle(
+                            color: c.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.tune_rounded, color: c.red, size: 13),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -220,49 +230,59 @@ class _RankedPosterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 126,
-        margin: const EdgeInsets.only(right: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    AppCachedNetworkImage(
-                      imageUrl: movie.posterUrl,
-                      fit: BoxFit.cover,
-                      preset: AppImageCachePreset.poster,
-                      placeholder: (ctx, url) => ColoredBox(color: c.card),
-                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
-                    ),
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: TopRankBadge(rank: rank, size: 26),
-                    ),
-                  ],
+    final semanticsLabel =
+        AppLocalizations.of(
+          context,
+        )?.get('semantics_open_title').replaceAll('{}', movie.title) ??
+        'Open details for ${movie.title}';
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 126,
+          margin: const EdgeInsets.only(right: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      AppCachedNetworkImage(
+                        imageUrl: movie.posterUrl,
+                        fit: BoxFit.cover,
+                        preset: AppImageCachePreset.poster,
+                        placeholder: (ctx, url) => ColoredBox(color: c.card),
+                        errorWidget: (ctx, url, err) =>
+                            ColoredBox(color: c.card),
+                      ),
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: TopRankBadge(rank: rank, size: 26),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              movie.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 6),
+              Text(
+                movie.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: c.ink,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            Text(movie.year, style: TextStyle(color: c.dim, fontSize: 12)),
-          ],
+              Text(movie.year, style: TextStyle(color: c.dim, fontSize: 12)),
+            ],
+          ),
         ),
       ),
     );

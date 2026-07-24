@@ -25,154 +25,170 @@ class FriendListTile extends StatelessWidget {
     final c = context.c;
     final name = friend.displayName ?? friend.username;
     final handle = friend.username;
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.push(
+    final openLabel =
+        AppLocalizations.of(
           context,
-          MaterialPageRoute(
-            builder: (_) => FriendActivityScreen(
-              friendId: friend.id,
-              friendName: name,
-              friendUsername: handle,
-              tasteScore: tasteScore,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.borderSoft),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: CinemaGradients.crimson,
+        )?.get('semantics_open_public_profile').replaceAll('{}', name) ??
+        'Open $name profile';
+
+    return Semantics(
+      button: true,
+      label: openLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FriendActivityScreen(
+                friendId: friend.id,
+                friendName: name,
+                friendUsername: handle,
+                tasteScore: tasteScore,
               ),
-              alignment: Alignment.center,
-              child: Text(
-                avatarInitial(name),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
+            ),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.borderSoft),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: CinemaGradients.crimson,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  avatarInitial(name),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: c.ink,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  if (handle.isNotEmpty)
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      '@$handle',
-                      style: TextStyle(color: c.dim, fontSize: 12),
+                      name,
+                      style: TextStyle(
+                        color: c.ink,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
-                  if (tasteScore != null) ...[
-                    const SizedBox(height: 6),
-                    // Zevk uyumu rozeti (0-100)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                    if (handle.isNotEmpty)
+                      Text(
+                        '@$handle',
+                        style: TextStyle(color: c.dim, fontSize: 12),
                       ),
-                      decoration: BoxDecoration(
-                        color: c.gold.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: c.gold.withValues(alpha: 0.35),
+                    if (tasteScore != null) ...[
+                      const SizedBox(height: 6),
+                      // Zevk uyumu rozeti (0-100)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.favorite_rounded, color: c.gold, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)
-                                    ?.get('taste_score_match')
-                                    .replaceAll('{}', '$tasteScore') ??
-                                '$tasteScore% match',
-                            style: TextStyle(
-                              color: c.gold,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        decoration: BoxDecoration(
+                          color: c.gold.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: c.gold.withValues(alpha: 0.35),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.person_remove_rounded,
-                color: c.red.withValues(alpha: 0.7),
-              ),
-              tooltip:
-                  AppLocalizations.of(context)?.get('remove_friend') ??
-                  'Remove Friend',
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: c.surface,
-                    title: Text(
-                      AppLocalizations.of(context)?.get('remove_friend') ??
-                          'Remove Friend',
-                    ),
-                    content: Text(
-                      AppLocalizations.of(context)
-                              ?.get('remove_friend_confirm_msg')
-                              .replaceAll('{}', name) ??
-                          'Are you sure you want to remove $name from friends?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(
-                          AppLocalizations.of(context)?.get('profile_cancel') ??
-                              'Cancel',
-                          style: TextStyle(color: c.dim),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          await onRemove();
-                        },
-                        child: Text(
-                          AppLocalizations.of(context)?.get('remove') ??
-                              'Remove',
-                          style: TextStyle(color: c.red),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite_rounded,
+                              color: c.gold,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)
+                                      ?.get('taste_score_match')
+                                      .replaceAll('{}', '$tasteScore') ??
+                                  '$tasteScore% match',
+                              style: TextStyle(
+                                color: c.gold,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                );
-              },
-            ),
-          ],
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.person_remove_rounded,
+                  color: c.red.withValues(alpha: 0.7),
+                ),
+                tooltip:
+                    AppLocalizations.of(context)?.get('remove_friend') ??
+                    'Remove Friend',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: c.surface,
+                      title: Text(
+                        AppLocalizations.of(context)?.get('remove_friend') ??
+                            'Remove Friend',
+                      ),
+                      content: Text(
+                        AppLocalizations.of(context)
+                                ?.get('remove_friend_confirm_msg')
+                                .replaceAll('{}', name) ??
+                            'Are you sure you want to remove $name from friends?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            AppLocalizations.of(
+                                  context,
+                                )?.get('profile_cancel') ??
+                                'Cancel',
+                            style: TextStyle(color: c.dim),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await onRemove();
+                          },
+                          child: Text(
+                            AppLocalizations.of(context)?.get('remove') ??
+                                'Remove',
+                            style: TextStyle(color: c.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

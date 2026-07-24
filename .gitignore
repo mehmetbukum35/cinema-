@@ -56,3 +56,6 @@ app.*.map.json
 .cursor/
 .env
 
+# Backend runtime configuration — contains database, JWT and API secrets.
+/backend/src/Config.php
+

@@ -27,4 +27,32 @@ final class ObservabilityTest extends TestCase
         self::assertMatchesRegularExpression('/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/', cinema_request_id());
         self::assertSame(cinema_request_id(), cinema_request_id());
     }
+
+    public function testApiSecurityPolicyDeniesBrowserCapabilities(): void
+    {
+        $headers = cinema_security_headers('api', false);
+
+        self::assertSame('nosniff', $headers['X-Content-Type-Options']);
+        self::assertSame('DENY', $headers['X-Frame-Options']);
+        self::assertSame('no-referrer', $headers['Referrer-Policy']);
+        self::assertStringContainsString("default-src 'none'", $headers['Content-Security-Policy']);
+        self::assertStringContainsString("frame-ancestors 'none'", $headers['Content-Security-Policy']);
+        self::assertArrayNotHasKey('Strict-Transport-Security', $headers);
+    }
+
+    public function testWebPoliciesAllowOnlyResourcesNeededByEachSurface(): void
+    {
+        $profile = cinema_security_headers('profile', true);
+        $download = cinema_security_headers('download', true);
+        $moderation = cinema_security_headers('moderation', true);
+
+        self::assertStringContainsString('https://image.tmdb.org', $profile['Content-Security-Policy']);
+        self::assertStringNotContainsString("script-src 'unsafe-inline'", $profile['Content-Security-Policy']);
+        self::assertStringContainsString("script-src 'unsafe-inline'", $download['Content-Security-Policy']);
+        self::assertStringContainsString("form-action 'self'", $moderation['Content-Security-Policy']);
+        self::assertSame(
+            'max-age=31536000; includeSubDomains',
+            $profile['Strict-Transport-Security']
+        );
+    }
 }
