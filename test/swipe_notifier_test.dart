@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -295,6 +296,65 @@ void main() {
         expect(notifier.state.queue.any((m) => m.id == 400), isTrue);
       },
     );
+
+    test('stale filter failure cannot stop a newer filter load', () async {
+      final oldMovie = Completer<http.Response>();
+      final oldTv = Completer<http.Response>();
+      final freshMovie = Completer<http.Response>();
+      final freshTv = Completer<http.Response>();
+      var oldCalls = 0;
+      var freshCalls = 0;
+
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/3/movie/popular') ||
+            request.url.path.endsWith('/3/tv/popular')) {
+          return http.Response(jsonEncode({'results': []}), 200);
+        }
+        final language = request.url.queryParameters['with_original_language'];
+        final isMovie = request.url.path.endsWith('/3/discover/movie');
+        if (language == 'zz_old') {
+          oldCalls++;
+          return isMovie ? oldMovie.future : oldTv.future;
+        }
+        if (language == 'zz_new') {
+          freshCalls++;
+          return isMovie ? freshMovie.future : freshTv.future;
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final service = TmdbService(client: client);
+      final notifier = SwipeNotifier(service, RecommendationEngine(service));
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final staleLoad = notifier.updateFilters(languageFilter: 'zz_old');
+      while (oldCalls < 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final freshLoad = notifier.updateFilters(languageFilter: 'zz_new');
+      while (freshCalls < 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      oldMovie.complete(http.Response('old failure', 500));
+      oldTv.complete(http.Response('old failure', 500));
+      await staleLoad;
+
+      expect(notifier.state.languageFilter, 'zz_new');
+      expect(notifier.state.loading, isTrue);
+      expect(notifier.state.loadingMore, isTrue);
+      expect(notifier.state.error, isNull);
+
+      final empty = http.Response(jsonEncode({'results': []}), 200);
+      freshMovie.complete(empty);
+      freshTv.complete(empty);
+      await freshLoad;
+
+      expect(notifier.state.loading, isFalse);
+      expect(notifier.state.loadingMore, isFalse);
+      expect(notifier.state.error, isNull);
+    });
+
     test('should handle "no more content" condition correctly', () async {
       // Mock API returning empty results
       final client = MockClient((request) async {

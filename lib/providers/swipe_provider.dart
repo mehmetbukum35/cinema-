@@ -70,6 +70,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   final RecommendationEngine _engine;
   final Ref? ref;
   final void Function()? onRated;
+  int _loadGeneration = 0;
 
   SwipeNotifier(this._service, this._engine, {this.ref, this.onRated})
     : super(
@@ -88,6 +89,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   }
 
   Future<void> init() async {
+    final generation = _loadGeneration;
     try {
       final rated = await PrefsService.getRatedIds();
       if (mounted) {
@@ -95,7 +97,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         await loadMore();
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         state = state.copyWith(loading: false, error: () => e.toString());
       }
     }
@@ -106,6 +108,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     int? providerFilter,
   }) async {
     if (mounted) {
+      ++_loadGeneration;
       state = state.copyWith(
         queue: [],
         page: 1,
@@ -122,6 +125,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
   Future<void> loadMore() async {
     if (state.loadingMore) return;
+    final generation = ++_loadGeneration;
     final startPage = state.page;
     final startLang = state.languageFilter;
     final startProv = state.providerFilter;
@@ -212,6 +216,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
       // Check if state changed/reset during network call
       if (!mounted ||
+          generation != _loadGeneration ||
           state.page != startPage ||
           state.languageFilter != startLang ||
           state.providerFilter != startProv) {
@@ -249,6 +254,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       );
 
       if (mounted &&
+          generation == _loadGeneration &&
           state.page == startPage &&
           state.languageFilter == startLang &&
           state.providerFilter == startProv) {
@@ -261,7 +267,11 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted &&
+          generation == _loadGeneration &&
+          state.page == startPage &&
+          state.languageFilter == startLang &&
+          state.providerFilter == startProv) {
         state = state.copyWith(
           loading: false,
           loadingMore: false,
