@@ -32,6 +32,7 @@ class _FriendActivityScreenState extends ConsumerState<FriendActivityScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(socialProvider.notifier).loadFriendActivity(widget.friendId);
     });
   }

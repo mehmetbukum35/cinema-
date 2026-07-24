@@ -54,6 +54,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     super.initState();
     _matchMode = widget.initialMode;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         ref.read(syncServiceProvider).sync().catchError((_) {});

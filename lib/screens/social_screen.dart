@@ -61,6 +61,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
 
     // Initial data load
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(socialProvider.notifier).loadFriends();
       ref.read(socialProvider.notifier).loadActivityFeed();
       ref.read(socialProvider.notifier).loadRecommendations();

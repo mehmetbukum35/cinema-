@@ -39,44 +39,46 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
   /// şey öner" niyeti her sekmede geçerli).
   Future<void> _luckyPick() async {
     if (_luckyBusy) return;
+    _luckyBusy = true;
     HapticFeedback.lightImpact();
 
-    final isFirst = await PrefsService.isFirstTimeDice();
-    if (isFirst && mounted) {
-      final tr = AppLocalizations.of(context);
-      final c = context.c;
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: c.surface,
-          title: Text(
-            tr?.get('browse_surprise_title') ?? 'Lucky Pick 🎲',
-            style: TextStyle(
-              color: c.ink,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Text(
-            tr?.get('browse_surprise_desc') ??
-                'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
-            style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                tr?.get('got_it') ?? 'Got it',
-                style: TextStyle(color: c.gold, fontWeight: FontWeight.w700),
+    try {
+      final isFirst = await PrefsService.isFirstTimeDice();
+      if (!mounted) return;
+      if (isFirst) {
+        final tr = AppLocalizations.of(context);
+        final c = context.c;
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: c.surface,
+            title: Text(
+              tr?.get('browse_surprise_title') ?? 'Lucky Pick 🎲',
+              style: TextStyle(
+                color: c.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
-      );
-    }
+            content: Text(
+              tr?.get('browse_surprise_desc') ??
+                  'This dice button selects a random movie tailored to your tastes based on the films you have rated. Use it whenever you want to be surprised!',
+              style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  tr?.get('got_it') ?? 'Got it',
+                  style: TextStyle(color: c.gold, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+      }
 
-    _luckyBusy = true;
-    try {
       final service = ref.read(tmdbServiceProvider);
       final likedGenres = await PrefsService.getLikedGenreIds();
       var results = await service.discoverByGenres(likedGenres, isTV: false);
