@@ -334,6 +334,26 @@ void main() {
       });
 
       test(
+        'corrupt rating genre metadata does not break rating reads',
+        () async {
+          await helper.saveRating(movie: movie(1, 'Bozuk Tür'), rating: 2);
+          await db.update(
+            'ratings',
+            {'genre_ids': 'not-json'},
+            where: 'movie_id = ? AND is_tv = ?',
+            whereArgs: [1, 0],
+          );
+
+          final ratings = await helper.getRatings();
+          final weights = await helper.getRatingsForWeights();
+
+          expect(ratings.single['genreIds'], isEmpty);
+          expect((ratings.single['movie'] as Movie).genreIds, isEmpty);
+          expect(weights.single['genreIds'], isEmpty);
+        },
+      );
+
+      test(
         'getRatingsForWeights and getRatedIds exclude deleted rows',
         () async {
           await helper.saveRating(movie: movie(1, 'Kalan'), rating: 3);
@@ -377,6 +397,19 @@ void main() {
         final list = await helper.getWatchlist();
         expect(list.map((m) => m.title).toList(), ['Yeni', 'Eski']);
         expect(list.first.genreIds, [18, 28]);
+      });
+
+      test('non-list watchlist genre metadata falls back to empty', () async {
+        await helper.addToWatchlist(movie(1, 'Bozuk Liste'));
+        await db.update(
+          'watchlist',
+          {'genre_ids': '{"unexpected":true}'},
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [1, 0],
+        );
+
+        final list = await helper.getWatchlist();
+        expect(list.single.genreIds, isEmpty);
       });
 
       test('remove is a soft delete, re-adding resurrects', () async {

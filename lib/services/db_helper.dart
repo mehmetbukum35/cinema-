@@ -12,6 +12,23 @@ double _dbDouble(Object? v, [double fallback = 0]) => v is num
     ? v.toDouble()
     : (double.tryParse(v?.toString() ?? '') ?? fallback);
 
+List<int> _dbIntList(Object? value) {
+  Object? decoded = value;
+  if (value is String) {
+    try {
+      decoded = jsonDecode(value);
+    } on FormatException {
+      return const [];
+    }
+  }
+  if (decoded is! List) return const [];
+  return decoded
+      .map((e) => e is num ? e.toInt() : int.tryParse(e.toString()))
+      .whereType<int>()
+      .where((id) => id > 0)
+      .toList();
+}
+
 class DatabaseHelper {
   /// saveRating'te alan verilmediğinde mevcut DB değerini korumak için işaretçi.
   static const unset = Object();
@@ -506,10 +523,7 @@ class DatabaseHelper {
           (a, b) => (a['created_at'] as int).compareTo(b['created_at'] as int),
         );
       return sorted.where((m) => m['deleted'] != 1).map((m) {
-        final genreIdsList =
-            (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
-                .map((e) => e as int)
-                .toList();
+        final genreIdsList = _dbIntList(m['genre_ids']);
         return {
           'id': m['movie_id'] as int,
           'isTV': (m['is_tv'] as int) == 1,
@@ -539,10 +553,7 @@ class DatabaseHelper {
       orderBy: 'created_at ASC',
     );
     return maps.map((m) {
-      final genreIdsList =
-          (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
-              .map((e) => _dbInt(e))
-              .toList();
+      final genreIdsList = _dbIntList(m['genre_ids']);
       return {
         'id': _dbInt(m['movie_id']),
         'isTV': _dbInt(m['is_tv']) == 1,
@@ -577,10 +588,7 @@ class DatabaseHelper {
               'id': m['movie_id'] as int,
               'isTV': (m['is_tv'] as int) == 1,
               'rating': m['rating'] as int,
-              'genreIds':
-                  (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
-                      .map((e) => e as int)
-                      .toList(),
+              'genreIds': _dbIntList(m['genre_ids']),
               'created_at': m['created_at'] as int,
             },
           )
@@ -592,10 +600,7 @@ class DatabaseHelper {
       where: 'deleted = 0',
     );
     return maps.map((m) {
-      final genreIdsList =
-          (jsonDecode(m['genre_ids'] as String) as List<dynamic>)
-              .map((e) => e as int)
-              .toList();
+      final genreIdsList = _dbIntList(m['genre_ids']);
       return {
         'id': m['movie_id'] as int,
         'isTV': (m['is_tv'] as int) == 1,
@@ -816,8 +821,7 @@ class DatabaseHelper {
               'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
               'isTV': (_dbInt(m['is_tv'])) == 1,
-              'genre_ids':
-                  jsonDecode(m['genre_ids'] as String) as List<dynamic>,
+              'genre_ids': _dbIntList(m['genre_ids']),
             }),
           )
           .toList();
@@ -838,7 +842,7 @@ class DatabaseHelper {
             'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
             'isTV': (_dbInt(m['is_tv'])) == 1,
-            'genre_ids': jsonDecode(m['genre_ids'] as String) as List<dynamic>,
+            'genre_ids': _dbIntList(m['genre_ids']),
           }),
         )
         .toList();
@@ -1102,8 +1106,7 @@ class DatabaseHelper {
               'vote_average': _dbDouble(m['vote_average']),
               'release_date': m['release_date'] as String?,
               'isTV': _dbInt(m['is_tv']) == 1,
-              'genre_ids':
-                  jsonDecode(m['genre_ids'] as String) as List<dynamic>,
+              'genre_ids': _dbIntList(m['genre_ids']),
             }),
           )
           .toList();
@@ -1126,7 +1129,7 @@ class DatabaseHelper {
             'vote_average': _dbDouble(m['vote_average']),
             'release_date': m['release_date'] as String?,
             'isTV': _dbInt(m['is_tv']) == 1,
-            'genre_ids': jsonDecode(m['genre_ids'] as String) as List<dynamic>,
+            'genre_ids': _dbIntList(m['genre_ids']),
           }),
         )
         .toList();
