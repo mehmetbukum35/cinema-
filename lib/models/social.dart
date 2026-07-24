@@ -31,8 +31,8 @@ class Friend {
   factory Friend.fromJson(Map<String, dynamic> json) {
     return Friend(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      username: json['username'] as String? ?? '',
-      displayName: json['display_name'] as String?,
+      username: json['username']?.toString() ?? '',
+      displayName: json['display_name']?.toString(),
     );
   }
 
@@ -78,17 +78,17 @@ class ActivityItem {
           json['is_tv'] == 1 ||
           json['is_tv']?.toString() == '1',
       rating: int.tryParse(json['rating']?.toString() ?? '') ?? 0,
-      title: json['title'] as String? ?? '',
-      posterPath: json['poster_path'] as String?,
+      title: json['title']?.toString() ?? '',
+      posterPath: json['poster_path']?.toString(),
       updatedAt: int.tryParse(json['updated_at']?.toString() ?? '') ?? 0,
-      comment: json['comment'] as String?,
+      comment: json['comment']?.toString(),
       isSpoiler:
           json['is_spoiler'] == true ||
           json['is_spoiler'] == 1 ||
           json['is_spoiler']?.toString() == '1',
       friendId: int.tryParse(json['friend_id']?.toString() ?? '') ?? 0,
-      friendName: json['friend_name'] as String?,
-      friendUsername: json['friend_username'] as String? ?? '',
+      friendName: json['friend_name']?.toString(),
+      friendUsername: json['friend_username']?.toString() ?? '',
     );
   }
 
@@ -142,17 +142,17 @@ class RecommendationInboxItem {
           json['is_tv'] == true ||
           json['is_tv'] == 1 ||
           json['is_tv']?.toString() == '1',
-      title: json['title'] as String? ?? '',
-      posterPath: json['poster_path'] as String?,
-      note: json['note'] as String?,
+      title: json['title']?.toString() ?? '',
+      posterPath: json['poster_path']?.toString(),
+      note: json['note']?.toString(),
       seen:
           json['seen'] == true ||
           json['seen'] == 1 ||
           json['seen']?.toString() == '1',
       createdAt: int.tryParse(json['created_at']?.toString() ?? '') ?? 0,
       fromId: int.tryParse(json['from_id']?.toString() ?? '') ?? 0,
-      fromName: json['from_name'] as String?,
-      fromUsername: json['from_username'] as String? ?? '',
+      fromName: json['from_name']?.toString(),
+      fromUsername: json['from_username']?.toString() ?? '',
     );
   }
 
@@ -207,13 +207,13 @@ class SentRecommendationItem {
           json['is_tv'] == true ||
           json['is_tv'] == 1 ||
           json['is_tv']?.toString() == '1',
-      title: json['title'] as String? ?? '',
-      posterPath: json['poster_path'] as String?,
-      note: json['note'] as String?,
+      title: json['title']?.toString() ?? '',
+      posterPath: json['poster_path']?.toString(),
+      note: json['note']?.toString(),
       createdAt: int.tryParse(json['created_at']?.toString() ?? '') ?? 0,
       toId: int.tryParse(json['to_id']?.toString() ?? '') ?? 0,
-      toName: json['to_name'] as String?,
-      toUsername: json['to_username'] as String? ?? '',
+      toName: json['to_name']?.toString(),
+      toUsername: json['to_username']?.toString() ?? '',
     );
   }
 
@@ -270,13 +270,13 @@ class ReceivedRecommendationItem {
           json['is_tv'] == true ||
           json['is_tv'] == 1 ||
           json['is_tv']?.toString() == '1',
-      title: json['title'] as String? ?? '',
-      posterPath: json['poster_path'] as String?,
-      note: json['note'] as String?,
+      title: json['title']?.toString() ?? '',
+      posterPath: json['poster_path']?.toString(),
+      note: json['note']?.toString(),
       createdAt: int.tryParse(json['created_at']?.toString() ?? '') ?? 0,
       fromId: int.tryParse(json['from_id']?.toString() ?? '') ?? 0,
-      fromName: json['from_name'] as String?,
-      fromUsername: json['from_username'] as String? ?? '',
+      fromName: json['from_name']?.toString(),
+      fromUsername: json['from_username']?.toString() ?? '',
       seen:
           json['seen'] == true ||
           json['seen'] == 1 ||
@@ -318,8 +318,8 @@ class TopProfilePreview {
 
   factory TopProfilePreview.fromJson(Map<String, dynamic> json) {
     return TopProfilePreview(
-      title: json['title'] as String?,
-      posterPath: json['poster_path'] as String?,
+      title: json['title']?.toString(),
+      posterPath: json['poster_path']?.toString(),
       movieId: int.tryParse(json['movie_id']?.toString() ?? '') ?? 0,
       isTv:
           json['is_tv'] == true ||
@@ -372,8 +372,8 @@ class TopProfile {
   factory TopProfile.fromJson(Map<String, dynamic> json) {
     return TopProfile(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      username: json['username'] as String? ?? '',
-      displayName: json['display_name'] as String?,
+      username: json['username']?.toString() ?? '',
+      displayName: json['display_name']?.toString(),
       likeCount: int.tryParse(json['like_count']?.toString() ?? '') ?? 0,
       meLiked:
           json['me_liked'] == true ||
@@ -384,13 +384,15 @@ class TopProfile {
           json['is_me'] == 1 ||
           json['is_me']?.toString() == '1',
       likedTitles: int.tryParse(json['liked_titles']?.toString() ?? '') ?? 0,
-      previews:
-          (json['previews'] as List<dynamic>?)
-              ?.map(
-                (x) => TopProfilePreview.fromJson(x as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [],
+      previews: json['previews'] is List
+          ? (json['previews'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map(
+                  (x) =>
+                      TopProfilePreview.fromJson(Map<String, dynamic>.from(x)),
+                )
+                .toList()
+          : const [],
     );
   }
 }

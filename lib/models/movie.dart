@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Movie {
   final int id;
   final String title;
@@ -112,25 +114,43 @@ class Movie {
     'adult': adult,
   };
 
-  factory Movie.fromStorage(Map<String, dynamic> json) => Movie(
-    id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
-    title: json['title'] as String? ?? '',
-    posterPath: json['poster_path'] as String?,
-    backdropPath: json['backdrop_path'] as String?,
-    overview: json['overview'] as String? ?? '',
-    voteAverage: double.tryParse(json['vote_average']?.toString() ?? '') ?? 0,
-    releaseDate: json['release_date'] as String?,
-    isTV: json['isTV'] == true || json['isTV'] == 1 || json['isTV'] == '1',
-    genreIds:
-        (json['genre_ids'] as List<dynamic>?)
-            ?.map((e) => int.tryParse(e.toString()))
-            .whereType<int>()
-            .toList() ??
-        const [],
-    popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0,
-    voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
-    adult: json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
-  );
+  factory Movie.fromStorage(Map<String, dynamic> json) {
+    final rawGenreIds = json['genre_ids'];
+    List<int> parsedGenreIds = const [];
+    if (rawGenreIds is List) {
+      parsedGenreIds = rawGenreIds
+          .map((e) => int.tryParse(e.toString()))
+          .whereType<int>()
+          .toList();
+    } else if (rawGenreIds is String && rawGenreIds.trim().startsWith('[')) {
+      try {
+        final decoded = jsonDecode(rawGenreIds.trim());
+        if (decoded is List) {
+          parsedGenreIds = decoded
+              .map((e) => int.tryParse(e.toString()))
+              .whereType<int>()
+              .toList();
+        }
+      } catch (_) {}
+    }
+
+    return Movie(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      title: json['title']?.toString() ?? '',
+      posterPath: json['poster_path']?.toString(),
+      backdropPath: json['backdrop_path']?.toString(),
+      overview: json['overview']?.toString() ?? '',
+      voteAverage:
+          double.tryParse(json['vote_average']?.toString() ?? '') ?? 0.0,
+      releaseDate: json['release_date']?.toString(),
+      isTV: json['isTV'] == true || json['isTV'] == 1 || json['isTV'] == '1',
+      genreIds: parsedGenreIds,
+      popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0.0,
+      voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
+      adult:
+          json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
+    );
+  }
 
   Movie clone() {
     final m = Movie(
