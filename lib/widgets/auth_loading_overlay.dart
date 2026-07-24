@@ -38,9 +38,19 @@ class _AuthLoadingOverlayState extends State<AuthLoadingOverlay>
     _scaleAnim = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
     );
+    _animController.addStatusListener(_handleAnimationStatus);
 
     if (widget.visible) {
       _animController.forward();
+    }
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    // Reverse tamamlandığında saydam tam ekran katmanı ağaçtan çıkar.
+    // Aksi halde katmanın çocukları görünmez olsalar da hit-test'e katılıp
+    // alttaki ekranın kaydırma ve dokunmalarını engelleyebilir.
+    if (status == AnimationStatus.dismissed && mounted) {
+      setState(() {});
     }
   }
 
@@ -58,6 +68,7 @@ class _AuthLoadingOverlayState extends State<AuthLoadingOverlay>
 
   @override
   void dispose() {
+    _animController.removeStatusListener(_handleAnimationStatus);
     _animController.dispose();
     super.dispose();
   }
@@ -78,10 +89,12 @@ class _AuthLoadingOverlayState extends State<AuthLoadingOverlay>
         'Giriş yapılıyor...';
 
     return Positioned.fill(
-      child: FadeTransition(
-        opacity: _fadeAnim,
-        child: AbsorbPointer(
-          absorbing: widget.visible,
+      child: IgnorePointer(
+        // Kapanış animasyonu sürerken bile alttaki ekran hemen etkileşimli
+        // olmalı; görünmez bir modal katman geride kalmamalı.
+        ignoring: !widget.visible,
+        child: FadeTransition(
+          opacity: _fadeAnim,
           child: Stack(
             fit: StackFit.expand,
             children: [

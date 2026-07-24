@@ -89,13 +89,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
 
-    final identity = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data?.toUpperCase().contains('CINEMA') ?? false) ||
-              (w.data?.toUpperCase().contains('KIMLI') ?? false) ||
-              (w.data?.toUpperCase().contains('KİMLİ') ?? false)),
-    );
+    final identity = find.text('YOUR CINEMA IDENTITY');
     await tester.scrollUntilVisible(
       identity,
       300,
@@ -135,13 +129,7 @@ void main() {
 
       expect(find.text('Google'), findsOneWidget);
 
-      final googleUnlinkText = find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            w.data != null &&
-            (w.data!.contains('Google Bağlantısını Kaldır') ||
-                w.data!.contains('Unlink Google Account')),
-      );
+      final googleUnlinkText = find.text('Unlink Google Account');
       await tester.scrollUntilVisible(
         googleUnlinkText,
         300,
@@ -150,13 +138,7 @@ void main() {
       expect(googleUnlinkText, findsWidgets);
 
       expect(find.text('Apple'), findsNothing);
-      final appleUnlinkText = find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            w.data != null &&
-            (w.data!.contains('Apple Bağlantısını Kaldır') ||
-                w.data!.contains('Unlink Apple Account')),
-      );
+      final appleUnlinkText = find.text('Unlink Apple Account');
       expect(appleUnlinkText, findsNothing);
     },
   );
@@ -192,13 +174,7 @@ void main() {
 
       expect(find.text('Apple'), findsOneWidget);
 
-      final appleUnlinkText = find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            w.data != null &&
-            (w.data!.contains('Apple Bağlantısını Kaldır') ||
-                w.data!.contains('Unlink Apple Account')),
-      );
+      final appleUnlinkText = find.text('Unlink Apple Account');
       await tester.scrollUntilVisible(
         appleUnlinkText,
         300,
@@ -207,13 +183,7 @@ void main() {
       expect(appleUnlinkText, findsWidgets);
 
       expect(find.text('Google'), findsNothing);
-      final googleUnlinkText = find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            w.data != null &&
-            (w.data!.contains('Google Bağlantısını Kaldır') ||
-                w.data!.contains('Unlink Google Account')),
-      );
+      final googleUnlinkText = find.text('Unlink Google Account');
       expect(googleUnlinkText, findsNothing);
     },
   );
