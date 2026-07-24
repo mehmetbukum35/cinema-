@@ -36,30 +36,33 @@ class Movie {
         json['is_tv'] == '1' ||
         json['is_tv'] == true ||
         isTV;
+    final rawTitle = parsedIsTv
+        ? (json['name'] ?? json['title'])
+        : (json['title'] ?? json['name']);
+    final rawReleaseDate = parsedIsTv
+        ? (json['first_air_date'] ?? json['release_date'])
+        : (json['release_date'] ?? json['first_air_date']);
+    final rawGenreIds = json['genre_ids'];
     return Movie(
       id: parsedId,
-      title:
-          (parsedIsTv
-                  ? (json['name'] ?? json['title'])
-                  : (json['title'] ?? json['name']))
-              as String? ??
-          '',
-      posterPath: json['poster_path'] as String?,
-      backdropPath: json['backdrop_path'] as String?,
-      overview: json['overview'] as String? ?? '',
+      title: rawTitle is String ? rawTitle : '',
+      posterPath: json['poster_path'] is String
+          ? json['poster_path'] as String
+          : null,
+      backdropPath: json['backdrop_path'] is String
+          ? json['backdrop_path'] as String
+          : null,
+      overview: json['overview'] is String ? json['overview'] as String : '',
       voteAverage:
           double.tryParse(json['vote_average']?.toString() ?? '') ?? 0.0,
-      releaseDate:
-          (parsedIsTv
-                  ? (json['first_air_date'] ?? json['release_date'])
-                  : (json['release_date'] ?? json['first_air_date']))
-              as String?,
+      releaseDate: rawReleaseDate is String ? rawReleaseDate : null,
       isTV: parsedIsTv,
-      genreIds:
-          (json['genre_ids'] as List<dynamic>?)
-              ?.map((e) => int.tryParse(e.toString()) ?? 0)
-              .toList() ??
-          const [],
+      genreIds: rawGenreIds is List
+          ? rawGenreIds
+                .map((e) => int.tryParse(e.toString()))
+                .whereType<int>()
+                .toList()
+          : const [],
       popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0.0,
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
       adult:

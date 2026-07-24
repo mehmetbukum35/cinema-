@@ -79,6 +79,31 @@ void main() {
       expect(movie.year, '');
     });
 
+    test('Movie.fromJson tolerates malformed optional API fields', () {
+      final movie = Movie.fromJson({
+        'id': '42',
+        'title': 123,
+        'poster_path': false,
+        'backdrop_path': 7,
+        'overview': {'unexpected': true},
+        'release_date': 20260724,
+        'genre_ids': ['28', 'bad', 878],
+      });
+
+      expect(movie.id, 42);
+      expect(movie.title, isEmpty);
+      expect(movie.posterPath, isNull);
+      expect(movie.backdropPath, isNull);
+      expect(movie.overview, isEmpty);
+      expect(movie.releaseDate, isNull);
+      expect(movie.genreIds, [28, 878]);
+
+      expect(
+        Movie.fromJson({'id': 1, 'title': 'Safe', 'genre_ids': '28'}).genreIds,
+        isEmpty,
+      );
+    });
+
     test(
       'toStorage and fromStorage should serialize and deserialize correctly',
       () {
