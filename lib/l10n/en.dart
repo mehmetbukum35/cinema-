@@ -151,6 +151,7 @@ const Map<String, String> kEnStrings = {
   'auth_conflict_delete': 'Delete Local Data & Load Cloud Data',
   'auth_conflict_cancel': 'Cancel Login',
   'auth_delete_account': 'Delete Account',
+  'auth_delete_password': 'Current password',
   'auth_delete_confirm':
       'This will permanently delete your account and all associated cloud data. Are you sure?',
   'auth_delete_ack': 'I understand this action cannot be undone.',

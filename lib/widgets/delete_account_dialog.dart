@@ -31,18 +31,27 @@ class _DeleteAccountDialog extends ConsumerStatefulWidget {
 }
 
 class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
+  final _passwordController = TextEditingController();
   bool _ack = false;
   bool _busy = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _confirmDelete() async {
-    if (_busy || !_ack) return;
+    final password = _passwordController.text;
+    if (_busy || !_ack || password.isEmpty) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
 
     final tr = AppLocalizations.of(context);
     final ok = await widget.parentRef
         .read(authProvider.notifier)
-        .deleteAccount();
+        .deleteAccount(password);
 
     if (!mounted) return;
     // Toast kök Overlay'de yaşar; dialog kapansa da görünür kalır.
@@ -81,6 +90,30 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             tr?.get('auth_delete_confirm') ??
                 'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',
             style: TextStyle(color: c.dim, fontSize: 13.5, height: 1.45),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            enabled: !_busy,
+            autofillHints: const [AutofillHints.password],
+            textInputAction: TextInputAction.done,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _confirmDelete(),
+            decoration: InputDecoration(
+              labelText: tr?.get('auth_delete_password') ?? 'Mevcut parolanız',
+              suffixIcon: IconButton(
+                onPressed: _busy
+                    ? null
+                    : () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_rounded
+                      : Icons.visibility_off_rounded,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           InkWell(
@@ -131,7 +164,9 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           ),
         ),
         TextButton(
-          onPressed: (_busy || !_ack) ? null : _confirmDelete,
+          onPressed: (_busy || !_ack || _passwordController.text.isEmpty)
+              ? null
+              : _confirmDelete,
           child: _busy
               ? SizedBox(
                   width: 18,

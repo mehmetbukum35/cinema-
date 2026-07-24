@@ -267,7 +267,7 @@ switch (true) {
     case $route === 'DELETE /me':
         $uid = $auth->requireUser();
         rate_limit('delete_account_u' . $uid, 5, true);
-        $auth->deleteAccount($uid);
+        $auth->deleteAccount($uid, read_json());
         break;
 
     case $route === 'POST /auth/change-password':

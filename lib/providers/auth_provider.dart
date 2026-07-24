@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,9 +78,13 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final ApiService _apiService;
   final Ref _ref;
+  final Completer<void> _sessionReady = Completer<void>();
 
   AuthNotifier(this._apiService, this._ref) : super(AuthState()) {
     _apiService.onSessionExpired = clearSession;
+    NotificationService.instance.setAuthReadyHandler(
+      () => _sessionReady.future,
+    );
     // Push bildirim dinleyicilerini bir kez kur (best-effort).
     NotificationService.instance.init(_apiService);
     _initSession();
@@ -192,7 +198,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Error restoring session: $e\n$st");
       if (!mounted) return;
       state = state.copyWith(loading: false);
+    } finally {
+      if (!_sessionReady.isCompleted) {
+        _sessionReady.complete();
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.setAuthReadyHandler(null);
+    if (!_sessionReady.isCompleted) {
+      _sessionReady.complete();
+    }
+    super.dispose();
   }
 
   /// Sunucudan gelen {user, tokens} yanıtını oturuma çevirir: farklı hesaptan
@@ -661,10 +680,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   // DELETE /me
-  Future<bool> deleteAccount() async {
+  Future<bool> deleteAccount(String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
-      await _apiService.deleteAccount();
+      await _apiService.deleteAccount(password);
       await _endLocalSession(wipeLocalData: true);
       return true;
     } on ApiException catch (e) {

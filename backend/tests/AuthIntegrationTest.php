@@ -103,11 +103,25 @@ class AuthIntegrationTest extends TestCase
         $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cinema_top_profiles_tr.json';
         file_put_contents($cacheFile, '[{"id":' . $uid . '}]');
 
-        $this->auth->deleteAccount($uid);
+        $this->auth->deleteAccount($uid, ['password' => 'password123']);
 
         $this->assertFileDoesNotExist($cacheFile);
         $remaining = $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn();
         $this->assertSame(0, (int) $remaining);
+    }
+
+    public function testDeleteAccountRejectsWrongPassword(): void
+    {
+        $uid = $this->seedUser('delete-protected@example.com', 'correct-password');
+
+        try {
+            $this->auth->deleteAccount($uid, ['password' => 'wrong-password']);
+            $this->fail('Yanlış parola ile hesap silinmemeliydi.');
+        } catch (TestExitException) {
+            $this->assertSame(403, TestHelperRegistry::$lastStatus);
+            $remaining = $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn();
+            $this->assertSame(1, (int) $remaining);
+        }
     }
 
     // ── Kayıt + e-posta doğrulama akışı ─────────────────────────────────────
@@ -439,7 +453,7 @@ class AuthIntegrationTest extends TestCase
         }
     }
 
-    public function testRefreshRollsBackGracePeriodWhenTokenCreationFails(): void
+    public function testRefreshRollsBackTokenConsumptionWhenTokenCreationFails(): void
     {
         $uid = $this->seedUser('atomic-refresh@example.com');
         $refreshToken = 'known-refresh-token';
@@ -463,6 +477,27 @@ class AuthIntegrationTest extends TestCase
             )->fetchColumn();
             $this->assertSame($originalExpiry, (int) $expiry);
             $this->assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM refresh_tokens')->fetchColumn());
+        }
+    }
+
+    public function testRefreshTokenCannotBeReplayedAfterSuccessfulRotation(): void
+    {
+        $uid = $this->seedUser('refresh-replay@example.com');
+        $refreshToken = 'single-use-refresh-token';
+        $this->db->prepare(
+            'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (?, ?, ?, ?)'
+        )->execute([$uid, hash('sha256', $refreshToken), time() + 86400, time()]);
+
+        $this->auth->refresh(['refresh_token' => $refreshToken]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+
+        TestHelperRegistry::reset();
+        try {
+            $this->auth->refresh(['refresh_token' => $refreshToken]);
+            $this->fail('Tüketilmiş refresh token ikinci kez kabul edilmemeliydi.');
+        } catch (TestExitException) {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
         }
     }
 

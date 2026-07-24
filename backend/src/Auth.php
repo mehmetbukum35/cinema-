@@ -611,12 +611,12 @@ class Auth
             }
             $uid = (int) $row['user_id'];
 
-            // Rotasyon + grace penceresi: eski refresh HEMEN silinmez; ömrü 60
-            // saniyeye kısaltılır. Yeni token üretilemezse transaction eski
-            // tokenın kalan ömrünü korur.
-            $graceExpires = min((int) $row['expires_at'], time() + 60);
-            $up = $this->db->prepare('UPDATE refresh_tokens SET expires_at = ? WHERE token_hash = ?');
-            $up->execute([$graceExpires, $hash]);
+            // Gerçek tek-kullanımlı rotasyon: kilit altındaki eski token yeni token
+            // üretilmeden önce transaction içinde tüketilir. issueTokens başarısız
+            // olursa rollback eski tokenı geri getirir; başarılı olursa aynı token
+            // ikinci kez yeni bir oturum üretemez.
+            $del = $this->db->prepare('DELETE FROM refresh_tokens WHERE token_hash = ?');
+            $del->execute([$hash]);
             $tokens = $this->issueTokens($uid);
             $this->db->commit();
         } catch (Throwable $e) {
@@ -731,8 +731,19 @@ class Auth
     }
 
     // ─── DELETE /me (hesap silme — nadir/tekil işlem) ───────────────────────
-    public function deleteAccount(int $uid): void
+    public function deleteAccount(int $uid, array $in): void
     {
+        $password = (string) ($in['password'] ?? '');
+        if ($password === '') {
+            fail(422, 'Hesabı silmek için parolanızı girin.', 'password_required');
+        }
+        $st = $this->db->prepare('SELECT password_hash FROM users WHERE id = ?');
+        $st->execute([$uid]);
+        $hash = $st->fetchColumn();
+        if (!is_string($hash) || !password_verify($password, $hash)) {
+            fail(403, 'Parola yanlış.', 'wrong_password');
+        }
+
         // FK ON DELETE CASCADE sayesinde tüm kullanıcı verisi de silinir.
         $this->db->prepare('DELETE FROM users WHERE id = ?')->execute([$uid]);
         invalidate_top_profiles_cache();
@@ -750,20 +761,31 @@ class Auth
             fail(422, 'Geçersiz e-posta formatı.', 'email_invalid');
         }
 
+        $isTest = defined('PHPUNIT_TESTING')
+            || class_exists('PHPUnit\Framework\TestCase', false);
+        // SMTP işi request içinde sürerken yanıtı gerçekten kapatamayan SAPIs
+        // kullanıcı var/yok süresini açığa çıkarır. Güvenli bir kuyruk olmadan
+        // sahte bir "erken yanıt" vermek yerine bu ortamda özelliği kapat.
+        if (!$isTest && !function_exists('fastcgi_finish_request')) {
+            fail(
+                503,
+                'Parola sıfırlama hizmeti geçici olarak kullanılamıyor.',
+                'password_reset_unavailable'
+            );
+        }
+
         $st = $this->db->prepare('SELECT id FROM users WHERE email = ?');
         $st->execute([$email]);
         $u = $st->fetch();
 
         // Send 200 OK response instantly to close client connection and eliminate timing attacks
-        if (function_exists('json_out') && (defined('PHPUNIT_TESTING') || class_exists('PHPUnit\Framework\TestCase', false))) {
+        if ($isTest) {
             json_out(200, ['ok' => true]);
         } else {
             http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-            if (function_exists('fastcgi_finish_request')) {
-                fastcgi_finish_request();
-            }
+            fastcgi_finish_request();
         }
 
         // If the user doesn't exist, stop background execution

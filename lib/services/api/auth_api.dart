@@ -184,8 +184,13 @@ mixin AuthApi on ApiClient {
     return _decodeJsonMap(response.body);
   }
 
-  Future<void> deleteAccount() async {
-    final response = await _request('DELETE', '/me', requireAuth: true);
+  Future<void> deleteAccount(String password) async {
+    final response = await _request(
+      'DELETE',
+      '/me',
+      body: {'password': password},
+      requireAuth: true,
+    );
     if (response.statusCode != 200) {
       final data = _decodeJsonMap(response.body);
       throw ApiException(

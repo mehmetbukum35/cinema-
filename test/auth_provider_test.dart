@@ -72,7 +72,7 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount(String password) async {
     deleteAccountCalled = true;
   }
 
@@ -386,7 +386,7 @@ void main() {
       await notifier.login('test@example.com', 'secret123');
       expect(container.read(authProvider).isAuthenticated, isTrue);
 
-      final success = await notifier.deleteAccount();
+      final success = await notifier.deleteAccount('secret123');
 
       expect(success, isTrue);
       expect(mockApi.deleteAccountCalled, isTrue);

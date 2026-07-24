@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -46,6 +47,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   ApiService? _api;
   Future<void> Function()? _deleteTokenOverride;
+  Future<void> Function()? _authReadyHandler;
   bool _ready = false;
   Future<bool>? _tzInit;
 
@@ -261,6 +263,12 @@ class NotificationService {
     _deleteTokenOverride = handler;
   }
 
+  /// Cold-start deep link'lerinin yerel oturum geri yüklenmeden çalışmasını
+  /// engeller. Auth katmanı kendi hazır olma future'ını burada sağlar.
+  void setAuthReadyHandler(Future<void> Function()? handler) {
+    _authReadyHandler = handler;
+  }
+
   Future<void> _sendToken(String token) async {
     try {
       final platform = Platform.isIOS
@@ -459,6 +467,15 @@ class NotificationService {
 
   Future<void> _routeInitialPayloadWhenReady(String? payload) async {
     if (payload == null || payload.isEmpty) return;
+    final authReady = _authReadyHandler;
+    if (authReady != null) {
+      try {
+        await authReady().timeout(const Duration(seconds: 30));
+      } on TimeoutException {
+        debugPrint('Initial notification route expired before auth restored.');
+        return;
+      }
+    }
     const retryDelay = Duration(milliseconds: 250);
     const maxAttempts = 120;
     for (var attempt = 0; attempt <= maxAttempts; attempt++) {

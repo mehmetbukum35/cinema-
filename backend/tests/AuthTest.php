@@ -215,10 +215,13 @@ class AuthTest extends TestCase
     public function testDeleteAccount(): void
     {
         $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetchColumn')->willReturn(
+            password_hash('password123', PASSWORD_BCRYPT)
+        );
         $this->db->method('prepare')->willReturn($stmt);
 
         $auth = new Auth($this->db, $this->cfg);
-        $auth->deleteAccount(42);
+        $auth->deleteAccount(42, ['password' => 'password123']);
 
         $this->assertEquals(200, TestHelperRegistry::$lastStatus);
         $this->assertEquals(['ok' => true], TestHelperRegistry::$lastBody);
@@ -292,18 +295,18 @@ class AuthTest extends TestCase
             'expires_at' => time() + 3600,
         ]);
 
-        // Update stmt for grace period
-        $stmtUpdate = $this->createMock(PDOStatement::class);
+        // Delete stmt consumes the old token during rotation
+        $stmtDelete = $this->createMock(PDOStatement::class);
 
         // Insert new token stmt (called inside issueTokens)
         $stmtInsert = $this->createMock(PDOStatement::class);
 
-        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtSelect, $stmtUpdate, $stmtInsert) {
+        $this->db->method('prepare')->willReturnCallback(function ($sql) use ($stmtSelect, $stmtDelete, $stmtInsert) {
             if (str_contains($sql, 'SELECT user_id, expires_at')) {
                 return $stmtSelect;
             }
-            if (str_contains($sql, 'UPDATE refresh_tokens SET expires_at')) {
-                return $stmtUpdate;
+            if (str_contains($sql, 'DELETE FROM refresh_tokens')) {
+                return $stmtDelete;
             }
             if (str_contains($sql, 'INSERT INTO refresh_tokens')) {
                 return $stmtInsert;

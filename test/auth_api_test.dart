@@ -269,10 +269,11 @@ void main() {
       await seedSession();
       final api = apiWith(200, {'deleted': true});
 
-      await api.deleteAccount();
+      await api.deleteAccount('current-password');
 
       expect(recorder.last!.method, 'DELETE');
       expect(recorder.last!.url.path, '/api/me');
+      expect(sentBody(), {'password': 'current-password'});
       expect(await PrefsService.getRefreshToken(), isNull);
       expect(await PrefsService.getUserData(), isNull);
     });
@@ -281,7 +282,10 @@ void main() {
       await seedSession();
       final api = apiWith(403, {'error': 'no', 'code': 'forbidden'});
 
-      await expectLater(api.deleteAccount(), throwsA(isA<ApiException>()));
+      await expectLater(
+        api.deleteAccount('current-password'),
+        throwsA(isA<ApiException>()),
+      );
 
       expect(await PrefsService.getRefreshToken(), 'refresh');
     });

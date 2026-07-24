@@ -152,6 +152,7 @@ const Map<String, String> kTrStrings = {
   'auth_conflict_delete': 'Cihazdakileri Sil & Buluttan Yükle',
   'auth_conflict_cancel': 'Girişi İptal Et',
   'auth_delete_account': 'Hesabı Sil',
+  'auth_delete_password': 'Mevcut parolanız',
   'auth_delete_confirm':
       'Bu işlem hesabınızı ve tüm bulut verilerinizi kalıcı olarak silecektir. Emin misiniz?',
   'auth_delete_ack': 'Bu işlemin geri alınamayacağını anlıyorum.',
