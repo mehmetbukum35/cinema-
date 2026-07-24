@@ -304,43 +304,67 @@ class PrefsService {
   // "önerdik → beğendi mi?" dönüşümü. Yalnızca cihazda tutulur.
 
   static const _keyRecoTelemetry = 'reco_telemetry_v1';
+  static Future<void> _recoTelemetryTail = Future<void>.value();
+
+  static Future<void> _enqueueRecoTelemetry(Future<void> Function() operation) {
+    final previous = _recoTelemetryTail;
+    final current = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // A failed write must not permanently block later telemetry updates.
+      }
+      await operation();
+    }();
+    _recoTelemetryTail = current;
+    return current;
+  }
 
   static Future<void> recordRecoOutcome({
     required String source,
     required bool liked,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
-    final Map<String, dynamic> bucket =
-        (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
-    bucket['shown'] = (bucket['shown'] as int) + 1;
-    if (liked) bucket['liked'] = (bucket['liked'] as int) + 1;
-    data[source] = bucket;
-    await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+  }) {
+    return _enqueueRecoTelemetry(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
+      final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> bucket =
+          (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
+      bucket['shown'] = (bucket['shown'] as int) + 1;
+      if (liked) bucket['liked'] = (bucket['liked'] as int) + 1;
+      data[source] = bucket;
+      await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+    });
   }
 
   static Future<void> revertRecoOutcome({
     required String source,
     required bool liked,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
-    final Map<String, dynamic> bucket =
-        (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
-    if ((bucket['shown'] as int) > 0) {
-      bucket['shown'] = (bucket['shown'] as int) - 1;
-    }
-    if (liked && (bucket['liked'] as int) > 0) {
-      bucket['liked'] = (bucket['liked'] as int) - 1;
-    }
-    data[source] = bucket;
-    await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+  }) {
+    return _enqueueRecoTelemetry(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
+      final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> bucket =
+          (data[source] as Map<String, dynamic>?) ?? {'shown': 0, 'liked': 0};
+      if ((bucket['shown'] as int) > 0) {
+        bucket['shown'] = (bucket['shown'] as int) - 1;
+      }
+      if (liked && (bucket['liked'] as int) > 0) {
+        bucket['liked'] = (bucket['liked'] as int) - 1;
+      }
+      data[source] = bucket;
+      await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+    });
   }
 
   /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
+    try {
+      await _recoTelemetryTail;
+    } catch (_) {
+      // Return the last successfully persisted snapshot after a failed write.
+    }
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
     final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
@@ -740,6 +764,11 @@ class PrefsService {
   static const _secureStorage = FlutterSecureStorage();
 
   static Future<void> resetAll() async {
+    try {
+      await _recoTelemetryTail;
+    } catch (_) {
+      // Reset still clears the last successfully persisted snapshot.
+    }
     final prefs = await SharedPreferences.getInstance();
     _cachedAccessToken = null;
     await prefs.clear();

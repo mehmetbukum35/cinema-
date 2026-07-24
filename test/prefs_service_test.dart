@@ -236,5 +236,21 @@ void main() {
         expect(telemetry['discover']?['liked'], 0);
       },
     );
+
+    test('concurrent recommendation outcomes do not lose increments', () async {
+      await Future.wait(
+        List.generate(
+          50,
+          (index) => PrefsService.recordRecoOutcome(
+            source: 'discover',
+            liked: index.isEven,
+          ),
+        ),
+      );
+
+      final telemetry = await PrefsService.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 50);
+      expect(telemetry['discover']?['liked'], 25);
+    });
   });
 }
