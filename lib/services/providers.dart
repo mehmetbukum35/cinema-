@@ -141,36 +141,43 @@ final browseRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
 class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
   Timer? _timer;
+  final Future<bool> Function() _probe;
+  var _checkGeneration = 0;
+  var _observing = false;
 
-  OfflineNotifier() : super(false) {
-    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+  OfflineNotifier({Future<bool> Function()? probe, bool autoStart = true})
+    : _probe = probe ?? _probeApi,
+      super(false) {
+    if (!autoStart || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    _observing = true;
     WidgetsBinding.instance.addObserver(this);
-    _checkConnectivity();
-    _timer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _checkConnectivity(),
-    );
+    checkNow();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => checkNow());
+  }
+
+  static Future<bool> _probeApi() async {
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/health');
+    final response = await http.get(uri).timeout(const Duration(seconds: 3));
+    return response.statusCode == 200 && response.body.contains('"ok"');
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _checkConnectivity();
+      checkNow();
     }
   }
 
-  Future<void> _checkConnectivity() async {
+  Future<void> checkNow() async {
+    final generation = ++_checkGeneration;
     try {
-      final uri = Uri.parse('${AppConfig.apiBaseUrl}/health');
-      final response = await http.get(uri).timeout(const Duration(seconds: 3));
-      final isOnline =
-          response.statusCode == 200 && response.body.contains('"ok"');
-      if (mounted) {
+      final isOnline = await _probe();
+      if (mounted && generation == _checkGeneration) {
         state = !isOnline;
       }
     } catch (e) {
       // API erişimi başarısız olduysa veya zaman aşımına uğradıysa cihaz çevrimdışıdır.
-      if (mounted) {
+      if (mounted && generation == _checkGeneration) {
         state = true;
       }
     }
@@ -178,7 +185,9 @@ class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    if (_observing) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
     _timer?.cancel();
     super.dispose();
   }
