@@ -61,14 +61,20 @@ class MockCouchApi implements ApiService {
   Completer<List<dynamic>>? intersectionGate;
   int createCalls = 0;
   int intersectionCalls = 0;
+  int sessionCalls = 0;
+  int activeCalls = 0;
 
   @override
-  Future<Map<String, dynamic>?> getActiveCouchSession() async =>
-      activeGate?.future ?? activeResponse;
+  Future<Map<String, dynamic>?> getActiveCouchSession() async {
+    activeCalls++;
+    return activeGate?.future ?? activeResponse;
+  }
 
   @override
-  Future<Map<String, dynamic>> getCouchSession(int sessionId) async =>
-      sessionGate?.future ?? getResponse ?? sessionJson();
+  Future<Map<String, dynamic>> getCouchSession(int sessionId) async {
+    sessionCalls++;
+    return sessionGate?.future ?? getResponse ?? sessionJson();
+  }
 
   @override
   Future<Map<String, dynamic>> voteCouchSession({
@@ -295,6 +301,23 @@ void main() {
       expect(container.read(couchProvider).error, 'couch_session_closed');
     });
 
+    test('concurrent refresh calls share one server request', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(status: 'active'));
+      mockApi.sessionGate = Completer<Map<String, dynamic>>();
+
+      final first = notifier.refresh();
+      final second = notifier.refresh();
+
+      expect(mockApi.sessionCalls, 1);
+      mockApi.sessionGate!.complete(
+        sessionJson(status: 'active', theirProgress: 2),
+      );
+      await Future.wait([first, second]);
+
+      expect(container.read(couchProvider).session!.theirProgress, 2);
+    });
+
     test('leave does not set session closed error', () async {
       final notifier = container.read(couchProvider.notifier);
       notifier.debugSetSession(sessionJson(status: 'active'));
@@ -349,6 +372,20 @@ void main() {
       expect(container.read(couchProvider).session!.id, 20);
     });
 
+    test('concurrent active checks share one server request', () async {
+      final notifier = container.read(couchProvider.notifier);
+      mockApi.activeGate = Completer<Map<String, dynamic>?>();
+
+      final first = notifier.checkActive();
+      final second = notifier.checkActive();
+
+      expect(mockApi.activeCalls, 1);
+      mockApi.activeGate!.complete(sessionJson(id: 10));
+      await Future.wait([first, second]);
+
+      expect(container.read(couchProvider).session!.id, 10);
+    });
+
     test('stale refresh cannot overwrite a switched session', () async {
       final notifier = container.read(couchProvider.notifier);
       notifier.debugSetSession(sessionJson(id: 10));
@@ -360,6 +397,28 @@ void main() {
       await pending;
 
       expect(container.read(couchProvider).session!.id, 20);
+    });
+
+    test('refresh starts a new request after the session changes', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10));
+      final oldGate = Completer<Map<String, dynamic>>();
+      mockApi.sessionGate = oldGate;
+      final oldRefresh = notifier.refresh();
+
+      notifier.debugSetSession(sessionJson(id: 20));
+      final newGate = Completer<Map<String, dynamic>>();
+      mockApi.sessionGate = newGate;
+      final newRefresh = notifier.refresh();
+
+      expect(mockApi.sessionCalls, 2);
+      newGate.complete(sessionJson(id: 20, theirProgress: 2));
+      await newRefresh;
+      oldGate.complete(sessionJson(id: 10, status: 'matched'));
+      await oldRefresh;
+
+      expect(container.read(couchProvider).session!.id, 20);
+      expect(container.read(couchProvider).session!.theirProgress, 2);
     });
 
     test('late vote response cannot reopen a left session', () async {

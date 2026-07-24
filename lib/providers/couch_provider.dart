@@ -129,6 +129,10 @@ class CouchNotifier extends StateNotifier<CouchState> {
   Timer? _pollTimer;
   int _sessionRevision = 0;
   bool _startInFlight = false;
+  Future<void>? _activeCheckFlight;
+  int? _activeCheckRevision;
+  Future<void>? _refreshFlight;
+  int? _refreshRevision;
 
   CouchNotifier(this._api, this._ref) : super(const CouchState());
 
@@ -162,7 +166,25 @@ class CouchNotifier extends StateNotifier<CouchState> {
   }
 
   /// Katılımcısı olduğum canlı oturumu sorgular (Together açılışı + resume).
-  Future<void> checkActive() async {
+  Future<void> checkActive() {
+    final activeFlight = _activeCheckFlight;
+    if (activeFlight != null && _activeCheckRevision == _sessionRevision) {
+      return activeFlight;
+    }
+
+    late final Future<void> flight;
+    flight = _performActiveCheck().whenComplete(() {
+      if (identical(_activeCheckFlight, flight)) {
+        _activeCheckFlight = null;
+        _activeCheckRevision = null;
+      }
+    });
+    _activeCheckFlight = flight;
+    _activeCheckRevision = _sessionRevision;
+    return flight;
+  }
+
+  Future<void> _performActiveCheck() async {
     if (!_ref.read(authProvider).isAuthenticated) {
       _apply(null);
       return;
@@ -304,7 +326,25 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
   bool _voteInFlight = false;
 
-  Future<void> refresh() async {
+  Future<void> refresh() {
+    final activeFlight = _refreshFlight;
+    if (activeFlight != null && _refreshRevision == _sessionRevision) {
+      return activeFlight;
+    }
+
+    late final Future<void> flight;
+    flight = _performRefresh().whenComplete(() {
+      if (identical(_refreshFlight, flight)) {
+        _refreshFlight = null;
+        _refreshRevision = null;
+      }
+    });
+    _refreshFlight = flight;
+    _refreshRevision = _sessionRevision;
+    return flight;
+  }
+
+  Future<void> _performRefresh() async {
     final session = state.session;
     if (session == null) return;
     final revision = _sessionRevision;
