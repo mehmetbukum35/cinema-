@@ -69,8 +69,15 @@ class NotificationService {
     return _tzInit ??= () async {
       try {
         tzdata.initializeTimeZones();
-        final localTz = await FlutterTimezone.getLocalTimezone();
-        tz.setLocalLocation(tz.getLocation(localTz.identifier));
+        final Object rawTz = await FlutterTimezone.getLocalTimezone();
+        final String localTz = rawTz is String
+            ? rawTz
+            : (rawTz as dynamic)?.identifier?.toString() ?? 'UTC';
+        try {
+          tz.setLocalLocation(tz.getLocation(localTz));
+        } catch (_) {
+          tz.setLocalLocation(tz.getLocation('UTC'));
+        }
         return true;
       } catch (e) {
         final isTest =

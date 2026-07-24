@@ -284,9 +284,9 @@ class ApiClient {
     _refreshFuture = completer.future;
 
     try {
-      final refreshToken = await PrefsService.getRefreshToken();
+      final initialRefreshToken = await PrefsService.getRefreshToken();
       final userData = await PrefsService.getUserData();
-      if (refreshToken == null) {
+      if (initialRefreshToken == null) {
         if (userData != null) {
           debugPrint(
             "Refresh token is null but user data exists. Treating as transient storage failure.",
@@ -301,26 +301,33 @@ class ApiClient {
           _client.post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'refresh_token': refreshToken}),
+            body: jsonEncode({'refresh_token': initialRefreshToken}),
           ),
         );
 
         if (response.statusCode == 200) {
           final data = _decodeJsonMap(response.body);
-          final tokens = data['tokens'] as Map<String, dynamic>;
+          final tokens = data['tokens'] is Map
+              ? Map<String, dynamic>.from(data['tokens'] as Map)
+              : null;
+          final newAccessToken = tokens?['access_token']?.toString();
+          final newRefreshToken = tokens?['refresh_token']?.toString();
           // Logout / wipe can clear auth while refresh is in flight — never
           // resurrect tokens into an empty session.
           final stillRefresh = await PrefsService.getRefreshToken();
           final stillUser = await PrefsService.getUserData();
-          if (stillRefresh == null || stillUser == null) {
+          if (stillRefresh == null ||
+              stillUser == null ||
+              newAccessToken == null ||
+              newRefreshToken == null) {
             completer.complete(RefreshOutcome.denied);
-          } else if (stillRefresh != refreshToken) {
+          } else if (stillRefresh != initialRefreshToken) {
             // Another refresh already rotated the token; treat as success.
             completer.complete(RefreshOutcome.success);
           } else {
             await PrefsService.saveTokens(
-              accessToken: tokens['access_token'] as String,
-              refreshToken: tokens['refresh_token'] as String,
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
             );
             completer.complete(RefreshOutcome.success);
           }
