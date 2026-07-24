@@ -366,7 +366,19 @@ final swipeProvider =
 
       Timer? syncTimer;
       ref.onDispose(() {
-        syncTimer?.cancel();
+        if (syncTimer?.isActive == true) {
+          syncTimer?.cancel();
+          try {
+            final auth = ref.read(authProvider);
+            if (auth.isAuthenticated) {
+              ref.read(syncProvider.notifier).performSync().catchError((e) {
+                debugPrint("Background sync failed on swipe dispose flush: $e");
+              });
+            }
+          } catch (e) {
+            debugPrint("Failed to flush swipe sync on dispose: $e");
+          }
+        }
       });
 
       return SwipeNotifier(

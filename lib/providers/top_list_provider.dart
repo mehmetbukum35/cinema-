@@ -20,6 +20,8 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final Future<void> Function(List<Movie>) _writeList;
   Future<void> _persistTail = Future<void>.value();
   int _loadGeneration = 0;
+  List<Movie>? _activeList;
+  Future<List<Movie>>? _readFuture;
 
   /// Panteon sınırı: liste en fazla 20 öğe tutar.
   static const cap = PrefsService.favoritesCap;
@@ -51,6 +53,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       // (bkz. WatchlistNotifier.load).
       var list = await _read();
       if (mounted && generation == _loadGeneration) {
+        _activeList = list;
         state = AsyncValue.data(list);
       }
       if (!mounted || generation != _loadGeneration) return;
@@ -61,6 +64,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           await ref.read(syncProvider.notifier).performSync();
           list = await _read();
           if (mounted && generation == _loadGeneration) {
+            _activeList = list;
             state = AsyncValue.data(list);
           }
         } catch (_) {
@@ -77,38 +81,47 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   /// Öğeyi listenin SONUNA ekler (en düşük sıra). Zaten varsa veya liste doluysa
   /// `false` döner.
   Future<bool> add(Movie movie) async {
-    await _persistTail.catchError((_) {});
-    final current = state.value ?? const <Movie>[];
+    final base = _activeList ?? state.value ?? await _read();
+    final current = _activeList ?? state.value ?? base;
     if (current.any((m) => m.id == movie.id)) return false;
     if (current.length >= cap) return false;
-    await _persist([...current, movie]);
+    final newList = [...current, movie];
+    _activeList = newList;
+    await _persist(newList);
     return true;
   }
 
   Future<void> remove(int id) async {
-    await _persistTail.catchError((_) {});
-    final current = state.value ?? const <Movie>[];
-    await _persist(current.where((m) => m.id != id).toList());
+    final base = _activeList ?? state.value ?? await _read();
+    final current = _activeList ?? state.value ?? base;
+    final newList = current.where((m) => m.id != id).toList();
+    _activeList = newList;
+    await _persist(newList);
   }
 
   /// ReorderableListView sözleşmesi: newIndex, öğe listeden çıkarılmadan ÖNCEki
   /// konumdur; aşağı taşımada bir azaltılır.
   Future<void> reorder(int oldIndex, int newIndex) async {
-    await _persistTail.catchError((_) {});
-    final current = [...(state.value ?? const <Movie>[])];
+    final base = _activeList ?? state.value ?? await _read();
+    final current = [...(_activeList ?? state.value ?? base)];
     if (oldIndex < 0 || oldIndex >= current.length) return;
     if (newIndex > oldIndex) newIndex -= 1;
     newIndex = newIndex.clamp(0, current.length - 1);
     if (newIndex == oldIndex) return;
     final item = current.removeAt(oldIndex);
     current.insert(newIndex, item);
+    _activeList = current;
     await _persist(current);
   }
 
-  Future<List<Movie>> _read() => _readList();
+  Future<List<Movie>> _read() {
+    _readFuture ??= _readList().whenComplete(() => _readFuture = null);
+    return _readFuture!;
+  }
 
   Future<void> _persist(List<Movie> list) async {
     ++_loadGeneration;
+    _activeList = list;
     if (mounted) state = AsyncValue.data(list);
     final previous = _persistTail;
     final operation = previous.catchError((_) {}).then((_) => _writeList(list));

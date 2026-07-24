@@ -520,8 +520,8 @@ class SyncService {
       final remoteRatings = pullResult['ratings'] as List<dynamic>? ?? [];
       for (final r in remoteRatings) {
         if (!await shouldApply(txn, 'ratings', 'movie_id = ? AND is_tv = ?', [
-          r['movie_id'],
-          r['is_tv'],
+          _asInt(r['movie_id']),
+          _asInt(r['is_tv']),
         ], r['updated_at'])) {
           continue;
         }
@@ -553,8 +553,8 @@ class SyncService {
       final remoteWatchlist = pullResult['watchlist'] as List<dynamic>? ?? [];
       for (final w in remoteWatchlist) {
         if (!await shouldApply(txn, 'watchlist', 'id = ? AND is_tv = ?', [
-          w['id'],
-          w['is_tv'],
+          _asInt(w['id']),
+          _asInt(w['is_tv']),
         ], w['updated_at'])) {
           continue;
         }
@@ -584,8 +584,8 @@ class SyncService {
       final remoteFavorites = pullResult['favorites'] as List<dynamic>? ?? [];
       for (final f in remoteFavorites) {
         if (!await shouldApply(txn, 'favorites', 'id = ? AND is_tv = ?', [
-          f['id'],
-          f['is_tv'],
+          _asInt(f['id']),
+          _asInt(f['is_tv']),
         ], f['updated_at'])) {
           continue;
         }
@@ -617,7 +617,7 @@ class SyncService {
           txn,
           'watched_seasons',
           'tv_id = ? AND season_number = ?',
-          [ws['tv_id'], ws['season_number']],
+          [_asInt(ws['tv_id']), _asInt(ws['season_number'])],
           ws['updated_at'],
         )) {
           continue;

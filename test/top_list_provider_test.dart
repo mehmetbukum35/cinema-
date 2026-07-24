@@ -124,8 +124,9 @@ void main() {
       final notifier = container.read(topListProvider(false).notifier);
       final pendingLoad = notifier.load();
 
-      await notifier.add(_movie(42));
+      final pendingAdd = notifier.add(_movie(42));
       staleRead.complete(const []);
+      await pendingAdd;
       await pendingLoad;
 
       expect(container.read(topListProvider(false)).value?.single.id, 42);
@@ -246,6 +247,19 @@ void main() {
       final result = await PrefsService.getFavoriteMovies();
       expect(result, hasLength(20));
       expect(result.every((m) => m.id <= 20), isTrue);
+    });
+
+    test('add while loading preserves existing items', () async {
+      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2)]);
+      container = buildContainer(authed: false);
+
+      final notifier = container.read(topListProvider(false).notifier);
+      // add called before load() resolves
+      final added = await notifier.add(_movie(3));
+      expect(added, isTrue);
+
+      final list = await PrefsService.getFavoriteMovies();
+      expect(list.map((m) => m.id).toList(), [1, 2, 3]);
     });
   });
 }
