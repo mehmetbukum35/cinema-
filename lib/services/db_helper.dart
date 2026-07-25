@@ -851,12 +851,21 @@ class DatabaseHelper {
   // ─── Search History Operations ────────────────────────────────────────────────
 
   Future<void> addSearchHistory(String query) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.length < 2) return;
     final db = await database;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final cqLower = cleanQuery.toLowerCase();
+
     if (db == null) {
-      _mockSearchHistory.removeWhere((e) => e['query'] == query);
+      _mockSearchHistory.removeWhere((e) {
+        final existing = (e['query'] as String? ?? '').toLowerCase();
+        return existing == cqLower ||
+            cqLower.startsWith(existing) ||
+            existing.startsWith(cqLower);
+      });
       _mockSearchHistory.add({
-        'query': query,
+        'query': cleanQuery,
         'created_at': now,
         'updated_at': now,
         'deleted': 0,
@@ -869,8 +878,24 @@ class DatabaseHelper {
       }
       return;
     }
+
+    final allHistory = await db.query('search_history', where: 'deleted = 0');
+    for (final row in allHistory) {
+      final existing = (row['query'] as String? ?? '').toLowerCase();
+      if (existing == cqLower ||
+          cqLower.startsWith(existing) ||
+          existing.startsWith(cqLower)) {
+        await db.update(
+          'search_history',
+          {'deleted': 1, 'updated_at': now},
+          where: 'query = ?',
+          whereArgs: [row['query']],
+        );
+      }
+    }
+
     await db.insert('search_history', {
-      'query': query,
+      'query': cleanQuery,
       'created_at': now,
       'updated_at': now,
       'deleted': 0,

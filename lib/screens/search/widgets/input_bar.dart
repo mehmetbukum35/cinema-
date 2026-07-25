@@ -8,6 +8,7 @@ import '../../../widgets/search_year_hint.dart';
 class SearchInputBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback onClear;
   final VoidCallback onOpenFilters;
   final bool hasActiveFilters;
@@ -16,6 +17,7 @@ class SearchInputBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onChanged,
+    this.onSubmitted,
     required this.onClear,
     required this.onOpenFilters,
     required this.hasActiveFilters,
@@ -58,6 +60,7 @@ class SearchInputBar extends StatelessWidget {
                     child: TextField(
                       controller: controller,
                       onChanged: onChanged,
+                      onSubmitted: onSubmitted,
                       autofocus: false,
                       style: TextStyle(color: c.ink, fontSize: 15),
                       decoration: InputDecoration(

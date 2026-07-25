@@ -87,13 +87,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       try {
         final results = await _service.searchMulti(q);
         if (!mounted || requestId != _searchRequestId) return;
-        await PrefsService.addSearchHistory(q.trim());
-        final history = await PrefsService.getSearchHistory();
-        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _results = results;
           _searching = false;
-          _history = history;
         });
       } catch (e) {
         if (!mounted || requestId != _searchRequestId) return;
@@ -106,9 +102,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
+  Future<void> _saveToHistory(String q) async {
+    final clean = q.trim();
+    if (clean.length < 2) return;
+    await PrefsService.addSearchHistory(clean);
+    final history = await PrefsService.getSearchHistory();
+    if (mounted) {
+      setState(() => _history = history);
+    }
+  }
+
   void _searchFromHistory(String q) {
     HapticFeedback.lightImpact();
     _ctrl.text = q;
+    _saveToHistory(q);
     _search(q);
   }
 
@@ -122,6 +129,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _openDetail(Movie movie) {
+    if (_ctrl.text.trim().isNotEmpty) {
+      _saveToHistory(_ctrl.text);
+    }
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
@@ -201,6 +211,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               SearchInputBar(
                 controller: _ctrl,
                 onChanged: _search,
+                onSubmitted: _saveToHistory,
                 onClear: () {
                   _ctrl.clear();
                   setState(() {

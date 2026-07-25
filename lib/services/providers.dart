@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show
         Locale,
@@ -148,7 +149,8 @@ class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
   OfflineNotifier({Future<bool> Function()? probe, bool autoStart = true})
     : _probe = probe ?? _probeApi,
       super(false) {
-    if (!autoStart || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (!autoStart || isTest) return;
     _observing = true;
     WidgetsBinding.instance.addObserver(this);
     checkNow();
