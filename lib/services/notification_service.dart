@@ -666,33 +666,71 @@ class NotificationService {
     }
   }
 
-  /// Bildirim payload'una göre ilgili ekrana yönlendirir.
-  void _routeFromPayload(String? payload) {
-    if (payload == null || payload.isEmpty) return;
+  /// Bir payload'un hangi hedefe gideceğini çözer. Navigasyondan ayrı tutulur ki
+  /// deep-link ayrıştırma kuralları context olmadan doğrulanabilsin.
+  ///
+  /// `socialTab` doluysa Social ekranı, `couch` true ise Couch ekranı, `movieId`
+  /// doluysa film detayı açılır. Tanınmayan tip, eksik parça veya çözümlenemeyen
+  /// film kimliği null döndürür (yönlendirme yapılmaz).
+  @visibleForTesting
+  static ({int? socialTab, bool couch, int? movieId, bool isTV})?
+  routeForPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return null;
     final parts = payload.split('|');
-    if (parts.isEmpty) return;
+    if (parts.isEmpty) return null;
     final type = parts[0];
+
     final socialTab = socialTabForNotificationType(type);
     if (socialTab != null) {
-      final nav = navigatorKey.currentState;
-      if (nav == null) return;
-      nav.push(
-        MaterialPageRoute(builder: (_) => SocialScreen(initialTab: socialTab)),
-      );
-    } else if (type == 'couch_invite' || type == 'couch_match') {
-      final nav = navigatorKey.currentState;
-      if (nav == null) return;
-      nav.push(MaterialPageRoute(builder: (_) => const CouchScreen()));
-    } else if (type == 'release' ||
+      return (socialTab: socialTab, couch: false, movieId: null, isTV: false);
+    }
+
+    if (type == 'couch_invite' || type == 'couch_match') {
+      return (socialTab: null, couch: true, movieId: null, isTV: false);
+    }
+
+    if (type == 'release' ||
         type == 'movie_recommend' ||
         type == 'recommendation' ||
         type == 'movie_recommendation' ||
         type == 'friend_recommend') {
-      if (parts.length < 3) return;
+      if (parts.length < 3) return null;
       final movieId = int.tryParse(parts[1]) ?? 0;
-      final isTV = parts[2] == '1' || parts[2] == 'true';
-      if (movieId == 0) return;
-      _openMovieDetailDirectly(movieId, isTV);
+      if (movieId == 0) return null;
+      return (
+        socialTab: null,
+        couch: false,
+        movieId: movieId,
+        isTV: parts[2] == '1' || parts[2] == 'true',
+      );
+    }
+
+    return null;
+  }
+
+  /// Bildirim payload'una göre ilgili ekrana yönlendirir.
+  void _routeFromPayload(String? payload) {
+    final route = routeForPayload(payload);
+    if (route == null) return;
+    final nav = navigatorKey.currentState;
+    if (nav == null) return;
+
+    final socialTab = route.socialTab;
+    if (socialTab != null) {
+      nav.push(
+        MaterialPageRoute(builder: (_) => SocialScreen(initialTab: socialTab)),
+      );
+      return;
+    }
+
+    if (route.couch) {
+      nav.push(MaterialPageRoute(builder: (_) => const CouchScreen()));
+      return;
+    }
+
+    final movieId = route.movieId;
+    if (movieId != null) {
+      _openMovieDetailDirectly(movieId, route.isTV);
     }
   }
 

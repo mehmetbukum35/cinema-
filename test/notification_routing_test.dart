@@ -47,6 +47,136 @@ void main() {
         'friend_recommend|550|0',
       );
     });
+
+    test('returns null when the data carries no type', () {
+      expect(NotificationService.payloadFromData({}), isNull);
+      expect(NotificationService.payloadFromData({'type': ''}), isNull);
+      expect(NotificationService.payloadFromData({'movie_id': '550'}), isNull);
+    });
+
+    test('returns null when couch match payload lacks session_id', () {
+      expect(
+        NotificationService.payloadFromData({'type': 'couch_match'}),
+        isNull,
+      );
+    });
+
+    test('accepts the legacy isTV key as an is_tv fallback', () {
+      expect(
+        NotificationService.payloadFromData({
+          'type': 'release',
+          'movie_id': '550',
+          'isTV': '1',
+        }),
+        'release|550|1',
+      );
+    });
+
+    test('coerces non-string ids sent by the backend', () {
+      expect(
+        NotificationService.payloadFromData({
+          'type': 'release',
+          'movie_id': 550,
+          'is_tv': true,
+        }),
+        'release|550|true',
+      );
+      expect(
+        NotificationService.payloadFromData({
+          'type': 'couch_invite',
+          'session_id': 42,
+        }),
+        'couch_invite|42',
+      );
+    });
+  });
+
+  group('NotificationService.routeForPayload', () {
+    test('ignores an absent or empty payload', () {
+      expect(NotificationService.routeForPayload(null), isNull);
+      expect(NotificationService.routeForPayload(''), isNull);
+    });
+
+    test('sends friendship notifications to their social tab', () {
+      expect(NotificationService.routeForPayload('friend_request'), (
+        socialTab: 1,
+        couch: false,
+        movieId: null,
+        isTV: false,
+      ));
+      expect(NotificationService.routeForPayload('friend_accept'), (
+        socialTab: 0,
+        couch: false,
+        movieId: null,
+        isTV: false,
+      ));
+    });
+
+    test('sends both couch notification types to the couch screen', () {
+      const couchRoute = (
+        socialTab: null,
+        couch: true,
+        movieId: null,
+        isTV: false,
+      );
+      expect(
+        NotificationService.routeForPayload('couch_invite|42'),
+        couchRoute,
+      );
+      expect(NotificationService.routeForPayload('couch_match|7'), couchRoute);
+    });
+
+    test('opens movie detail for every recommendation type', () {
+      for (final type in const [
+        'release',
+        'movie_recommend',
+        'recommendation',
+        'movie_recommendation',
+        'friend_recommend',
+      ]) {
+        expect(
+          NotificationService.routeForPayload('$type|550|0'),
+          (socialTab: null, couch: false, movieId: 550, isTV: false),
+          reason: '$type should deep-link into movie detail',
+        );
+      }
+    });
+
+    test('treats both 1 and true as a TV title', () {
+      expect(
+        NotificationService.routeForPayload('release|1399|1')?.isTV,
+        isTrue,
+      );
+      expect(
+        NotificationService.routeForPayload('release|1399|true')?.isTV,
+        isTrue,
+      );
+      expect(
+        NotificationService.routeForPayload('release|1399|0')?.isTV,
+        isFalse,
+      );
+      // Beklenmeyen bir değer film olarak yorumlanır (TV'ye kaymaz).
+      expect(
+        NotificationService.routeForPayload('release|1399|yes')?.isTV,
+        isFalse,
+      );
+    });
+
+    test('drops a deep link that is missing the is_tv segment', () {
+      expect(NotificationService.routeForPayload('release'), isNull);
+      expect(NotificationService.routeForPayload('release|550'), isNull);
+    });
+
+    test('drops a deep link whose movie id is unusable', () {
+      expect(NotificationService.routeForPayload('release|0|0'), isNull);
+      expect(NotificationService.routeForPayload('release|abc|0'), isNull);
+      expect(NotificationService.routeForPayload('release||0'), isNull);
+    });
+
+    test('ignores notification types that have no destination', () {
+      expect(NotificationService.routeForPayload('unknown_type|550|0'), isNull);
+      expect(NotificationService.routeForPayload('digest'), isNull);
+    });
   });
 
   group('NotificationService.socialTabForNotificationType', () {
