@@ -4,7 +4,62 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
-_Nothing yet._
+Post-1.0.0 hardening. No new features: this line is a type-safety, race-condition,
+and security sweep over what 1.0.0 shipped.
+
+### Fixed
+
+**Type safety** — `strict-casts` and `strict-raw-types` were turned on in
+`analysis_options.yaml`, and every `dynamic` that leaked from the network or
+SQLite into a typed position was closed:
+
+- `Movie` and `Social` deserializers reject malformed payload fields instead of throwing
+- `tmdb_service` guards null and non-map responses
+- API, social, couch, and recommendation service layers convert explicitly
+- Token refresh extraction and timezone initialization are type-safe
+- Sync query parameters are sanitized before being sent
+- Rating and telemetry values convert safely on the storage path
+- Watchlist updates tolerate null metadata
+
+**Races and stale responses** — an out-of-order or interrupted async result can no
+longer overwrite newer state:
+
+- Stale filter responses in results, swipe, and connectivity checks are ignored
+- Recommendation telemetry writes, release-reminder updates, and FCM token
+  registration teardown are serialized
+- Interrupted notification initialization recovers on the next attempt
+- Concurrent couch session polling is coalesced into one request
+- Swipe sync flushes on dispose; top-list active memory state stays in sync
+- Async screen lifecycle races are guarded
+- Friend accept and mutual-accept re-check blocks and pending rows under lock
+- Equal-`updated_at` content changes bump `server_updated_at` so last-write-wins
+  cannot stall
+- Future-dated local timestamps are healed before push, and remote wins when the
+  local clock is skewed
+- Deleted ratings are no longer resurrected by a flag toggle
+- Couch match notifies only the counterparty; cancel and activate are guarded by status
+
+**Security and session handling**
+
+- Session and account flows hardened
+- Web response headers hardened
+- Duplicate social sign-in taps are ignored
+- The login route is preserved while authentication is in flight
+- Reauth and sync recovery hardened
+- Profile interaction is restored after the auth loading overlay clears
+
+**Data reset** — a data wipe now also resets the telemetry queue and clears the
+genre cache; malformed genre metadata is tolerated on read.
+
+**Search UI** — the advanced filters sheet scrolls instead of overflowing on small
+screens, and debounced keystrokes no longer clutter the request stream (also fixes
+a web platform error).
+
+### Changed
+
+- Search history retention reduced
+- Bootstrap database schema aligned with production
+- Compatible Flutter package updates
 
 ## [1.0.0] — 2026-07-24
 
