@@ -71,10 +71,14 @@ if (!empty($cfg['fcm']['service_account'])) {
     }
 }
 $social = new Social($db, null, $fcm);
-$moderation = new Moderation($db, (string) ($cfg['admin_key'] ?? ''));
 $recommendationAnalytics = new RecommendationAnalytics(
     $db,
     (string) ($cfg['admin_key'] ?? ''),
+);
+$moderation = new Moderation(
+    $db,
+    (string) ($cfg['admin_key'] ?? ''),
+    $recommendationAnalytics,
 );
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
