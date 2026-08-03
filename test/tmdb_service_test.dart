@@ -641,5 +641,32 @@ void main() {
         expect(providers[0].providerId, 8);
       },
     );
+
+    test(
+      'getKeywords and getKeywordIds handle malformed or null entries safely',
+      () async {
+        final mockResponse = {
+          'keywords': [
+            {'id': 10, 'name': 'action'},
+            {'id': '20', 'name': null}, // string id, null name
+            null, // null entry in list
+            {'id': 30, 'name': 'thriller'},
+          ],
+        };
+
+        final client = MockClient((request) async {
+          return http.Response(jsonEncode(mockResponse), 200);
+        });
+
+        final service = TmdbService(client: client);
+        final keywords = await service.getKeywords(1);
+        final keywordIds = await service.getKeywordIds(1);
+
+        expect(keywords, contains('action'));
+        expect(keywords, contains('thriller'));
+        expect(keywordIds, contains(10));
+        expect(keywordIds, contains(30));
+      },
+    );
   });
 }

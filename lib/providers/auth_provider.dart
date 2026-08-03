@@ -561,18 +561,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Logout path Top 20'yi invalidate eder; login da etmeli — aksi halde
     // misafir listesi / hardClear sonrası hayalet Top 20 kalır.
     _ref.invalidate(topListProvider);
-    await Future.wait([
-      _ref.read(watchlistProvider.notifier).load(),
-      _ref.read(statsProvider.notifier).load(),
-    ]);
-    await Future.wait([
-      _ref.read(socialProvider.notifier).loadFriends(),
-      _ref.read(socialProvider.notifier).loadActivityFeed(),
-      _ref.read(socialProvider.notifier).loadRecommendations(),
-      _ref.read(socialProvider.notifier).loadSentRecommendations(),
-      _ref.read(socialProvider.notifier).loadReceivedRecommendations(),
-      _ref.read(socialProvider.notifier).loadTopProfiles(),
-    ]);
+    // Giriş ekranını yalnızca temel bulut eşitlemesi bekletsin. Sosyal uçlardan
+    // biri yavaşladığında/yanıt vermediğinde kullanıcı girişte sonsuza kadar
+    // spinner arkasında kalmamalı.
+    await _ref.read(syncProvider.notifier).performSync();
+    _ref.invalidate(watchlistProvider);
+    _ref.invalidate(statsProvider);
+    _ref.invalidate(topListProvider);
+
+    unawaited(
+      Future.wait([
+        _ref.read(socialProvider.notifier).loadFriends(),
+        _ref.read(socialProvider.notifier).loadActivityFeed(),
+        _ref.read(socialProvider.notifier).loadRecommendations(),
+        _ref.read(socialProvider.notifier).loadSentRecommendations(),
+        _ref.read(socialProvider.notifier).loadReceivedRecommendations(),
+        _ref.read(socialProvider.notifier).loadTopProfiles(),
+      ]).catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Post-login social refresh failed: $error\n$stackTrace');
+        return <void>[];
+      }),
+    );
     await _ref.read(recommendationEngineProvider).invalidateCache();
     _ref.invalidate(swipeProvider);
     // Buluttan gelen puan/liste + arkadaş sinyalleri Keşfet'i besler.
@@ -593,7 +602,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
   Future<void> _endLocalSession({required bool wipeLocalData}) async {
     state = AuthState();
-    _ref.read(syncProvider.notifier).resetStatus();
+    _ref.read(syncProvider.notifier).resetForSessionChange();
     await NotificationService.instance.invalidateLocalToken();
     await PrefsService.clearAuthData();
     if (wipeLocalData) {

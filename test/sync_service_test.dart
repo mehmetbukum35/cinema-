@@ -342,6 +342,36 @@ void main() {
       expect(mockApi.pullCount, 1);
     });
 
+    test('session reset lets a new sync bypass a stuck old sync', () async {
+      mockApi.pushStarted = Completer<void>();
+      final oldPushGate = Completer<void>();
+      mockApi.pushGate = oldPushGate;
+      mockApi.pullResponse = {
+        'server_time': 3000,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      final oldSync = syncService.sync();
+      await mockApi.pushStarted!.future;
+
+      syncService.abandonInFlightSync();
+      mockApi.pushStarted = null;
+      mockApi.pushGate = null;
+
+      // Yeni oturumun sync'i eski ağ kapısı açılmadan tamamlanabilmeli.
+      await syncService.sync();
+      expect(mockApi.pushCount, 2);
+      expect(mockApi.pullCount, 1);
+
+      oldPushGate.complete();
+      await oldSync;
+      expect(mockApi.pullCount, 2);
+    });
+
     test('should cancel stale sync when authenticated user changes', () async {
       await PrefsService.saveUserData({'id': 1, 'email': 'one@example.com'});
       mockApi.pushStarted = Completer<void>();

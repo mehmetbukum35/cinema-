@@ -424,13 +424,14 @@ class TasteDnaService {
           rawRatings
               .where(
                 (r) =>
-                    (r['rating'] as int) >= 2 &&
-                    (r['is_private'] as int? ?? 0) == 0,
+                    ((r['rating'] as num?)?.toInt() ?? 0) >= 2 &&
+                    ((r['is_private'] as num?)?.toInt() ?? 0) == 0,
               )
               .toList()
             ..sort(
-              (a, b) =>
-                  (b['created_at'] as int).compareTo(a['created_at'] as int),
+              (a, b) => ((b['created_at'] as num?)?.toInt() ?? 0).compareTo(
+                (a['created_at'] as num?)?.toInt() ?? 0,
+              ),
             );
 
       // Adaptif seed: Beğeni sayısına göre 8 ile 20 arası.
@@ -448,8 +449,12 @@ class TasteDnaService {
 
       final lists = await Future.wait(
         seeds.map((r) {
-          final id = r['id'] as int;
-          final isTV = r['isTV'] as bool? ?? false;
+          final id =
+              (r['id'] as num?)?.toInt() ??
+              (r['movie_id'] as num?)?.toInt() ??
+              0;
+          final isTV =
+              r['isTV'] as bool? ?? ((r['is_tv'] as num?)?.toInt() == 1);
           return _service
               .getKeywords(id, isTV: isTV)
               .catchError((_) => <String>[]);

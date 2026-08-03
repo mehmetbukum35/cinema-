@@ -520,29 +520,29 @@ class DatabaseHelper {
     if (db == null) {
       final sorted = List<Map<String, dynamic>>.from(_mockRatings)
         ..sort(
-          (a, b) => (a['created_at'] as int).compareTo(b['created_at'] as int),
+          (a, b) => _dbInt(a['created_at']).compareTo(_dbInt(b['created_at'])),
         );
-      return sorted.where((m) => m['deleted'] != 1).map((m) {
+      return sorted.where((m) => _dbInt(m['deleted']) != 1).map((m) {
         final genreIdsList = _dbIntList(m['genre_ids']);
         return {
-          'id': m['movie_id'] as int,
-          'isTV': (m['is_tv'] as int) == 1,
-          'rating': m['rating'] as int,
+          'id': _dbInt(m['movie_id']),
+          'isTV': _dbInt(m['is_tv']) == 1,
+          'rating': _dbInt(m['rating']),
           'genreIds': genreIdsList,
-          'created_at': m['created_at'] as int,
-          'updated_at': m['updated_at'] as int? ?? m['created_at'] as int,
-          'is_private': m['is_private'] as int? ?? 0,
+          'created_at': _dbInt(m['created_at']),
+          'updated_at': _dbInt(m['updated_at'], _dbInt(m['created_at'])),
+          'is_private': _dbInt(m['is_private']),
           'movie': Movie(
-            id: m['movie_id'] as int,
+            id: _dbInt(m['movie_id']),
             title: m['title'] as String? ?? '',
             posterPath: m['poster_path'] as String?,
             backdropPath: m['backdrop_path'] as String?,
             overview: m['overview'] as String? ?? '',
-            voteAverage: (m['vote_average'] as num? ?? 0).toDouble(),
+            voteAverage: _dbDouble(m['vote_average']),
             releaseDate: m['release_date'] as String?,
-            isTV: (m['is_tv'] as int) == 1,
+            isTV: _dbInt(m['is_tv']) == 1,
             genreIds: genreIdsList,
-            popularity: (m['popularity'] as num? ?? 0).toDouble(),
+            popularity: _dbDouble(m['popularity']),
           ),
         };
       }).toList();

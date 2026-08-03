@@ -825,8 +825,10 @@ class TmdbService {
         (json['results'] as List<dynamic>?) ??
         [];
     return list
-        .cast<Map<String, dynamic>>()
-        .map((k) => k['name'] as String)
+        .whereType<Map<String, dynamic>>()
+        .map((k) => k['name'] as String?)
+        .whereType<String>()
+        .where((name) => name.trim().isNotEmpty)
         .take(10)
         .toList();
   }
@@ -851,8 +853,14 @@ class TmdbService {
         (json['results'] as List<dynamic>?) ??
         [];
     final ids = list
-        .cast<Map<String, dynamic>>()
-        .map((k) => k['id'] as int)
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (k) => k['id'] is num
+              ? (k['id'] as num).toInt()
+              : int.tryParse(k['id']?.toString() ?? ''),
+        )
+        .whereType<int>()
+        .where((id) => id > 0)
         .take(15)
         .toList();
     _writeMemoryCache(_keywordIdsCache, cacheKey, ids);

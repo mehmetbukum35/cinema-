@@ -95,6 +95,16 @@ class SyncService {
 
   SyncService(this._apiService, [this._ref]);
 
+  /// Oturum kapanırken eski ağ işini yeni girişin önünde kilit olarak bırakma.
+  ///
+  /// Devam eden Future gerçekten iptal edilemez; ancak `_ensureSession` oturum
+  /// değişimini fark edip eski işin SQLite transaction'ını commit etmesini
+  /// engeller. Referansı bırakmak yeni oturumun kendi sync'ini hemen başlatır.
+  void abandonInFlightSync() {
+    _syncFuture = null;
+    _declareLocalReset = false;
+  }
+
   Future<String?> _currentUserId() async {
     final user = await PrefsService.getUserData();
     return user?['id']?.toString();
@@ -180,11 +190,16 @@ class SyncService {
     }
     // Coalesce the recovery wrapper so waiters also get reset recovery /
     // session-change swallow — not the raw _performSync future.
-    _syncFuture = _syncWithRecovery();
+    final currentSync = _syncWithRecovery();
+    _syncFuture = currentSync;
     try {
-      await _syncFuture;
+      await currentSync;
     } finally {
-      _syncFuture = null;
+      // Çıkış + yeniden giriş arada yeni bir sync başlatmış olabilir. Eski
+      // Future tamamlanınca yeni oturumun kilidini yanlışlıkla temizleme.
+      if (identical(_syncFuture, currentSync)) {
+        _syncFuture = null;
+      }
     }
   }
 
@@ -900,6 +915,11 @@ class SyncNotifier extends StateNotifier<SyncStatus> {
   }
 
   void resetStatus() {
+    state = SyncStatus.idle;
+  }
+
+  void resetForSessionChange() {
+    _syncService.abandonInFlightSync();
     state = SyncStatus.idle;
   }
 }
