@@ -238,7 +238,52 @@ class TasteDnaPresenter {
       );
     }
 
+    // Sinema coğrafyası
+    if (dna.topCultures.isNotEmpty) {
+      final labels = dna.topCultures
+          .map((key) => _t('culture_short_$key', _cultureShortFallback(key)))
+          .join(' + ');
+      out.add(
+        TasteDnaSignal(
+          icon: 'culture',
+          text: _t(
+            'dna_culture',
+            'Sinema coğrafyan: {cultures}.',
+          ).replaceFirst('{cultures}', labels),
+        ),
+      );
+    }
+
     return out;
+  }
+
+  String _cultureShortFallback(String key) {
+    if (_isEn) {
+      return switch (key) {
+        'hollywood' => 'Hollywood',
+        'turkish' => 'Turkish',
+        'korean' => 'Korean',
+        'japanese' => 'Japanese',
+        'indian' => 'Indian',
+        'iranian' => 'Iranian',
+        'european' => 'European',
+        'latin_american' => 'Latin American',
+        'east_asian' => 'East Asian',
+        _ => key,
+      };
+    }
+    return switch (key) {
+      'hollywood' => 'Hollywood',
+      'turkish' => 'Türk',
+      'korean' => 'Kore',
+      'japanese' => 'Japon',
+      'indian' => 'Hint',
+      'iranian' => 'İran',
+      'european' => 'Avrupa',
+      'latin_american' => 'Latin Amerika',
+      'east_asian' => 'Uzak Doğu',
+      _ => key,
+    };
   }
 
   // ── Tema çipleri: yalnızca kontrollü sözlükteki kavramlar gösterilir.

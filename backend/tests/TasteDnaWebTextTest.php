@@ -266,4 +266,26 @@ class TasteDnaWebTextTest extends TestCase
         $this->assertSame('The Dark Chronicler + The World Explorer', $view['archetype']);
         $this->assertStringContainsString('Extraordinary universes', $view['essence']);
     }
+
+    public function testCultureGeographySignal(): void
+    {
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'top_cultures' => ['korean', 'european'],
+        ], 'tr');
+
+        $joined = implode(' | ', $view['signals']);
+        $this->assertStringContainsString('Sinema coğrafyası: Kore + Avrupa.', $joined);
+
+        $en = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'top_cultures' => ['korean', 'european'],
+        ], 'en');
+        $this->assertStringContainsString(
+            'Cinema geography: Korean + European.',
+            implode(' | ', $en['signals'])
+        );
+    }
 }

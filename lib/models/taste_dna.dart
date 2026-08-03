@@ -82,6 +82,10 @@ class TasteDna {
   /// Toplam puanlama sayısı — DNA'nın "olgunluğu".
   final int totalRated;
 
+  /// Baskın sinema coğrafyaları (kültür anahtarları: korean, european, …).
+  /// Tercihler + beğenilen puanlamaların sınıflandırmasından türetilir.
+  final List<String> topCultures;
+
   /// Üretim anı (ms). Snapshot tazeliği için.
   final int generatedAt;
 
@@ -102,6 +106,7 @@ class TasteDna {
     required this.accuracy,
     required this.accuracySample,
     required this.totalRated,
+    this.topCultures = const [],
     required this.generatedAt,
   });
 
@@ -127,6 +132,7 @@ class TasteDna {
     'accuracy': accuracy,
     'accuracy_sample': accuracySample,
     'total_rated': totalRated,
+    'top_cultures': topCultures,
     'generated_at': generatedAt,
   };
 
@@ -177,6 +183,12 @@ class TasteDna {
       accuracy: asDouble(json['accuracy']),
       accuracySample: asInt(json['accuracy_sample']) ?? 0,
       totalRated: asInt(json['total_rated']) ?? 0,
+      topCultures:
+          (json['top_cultures'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          const [],
       generatedAt: asInt(json['generated_at']) ?? 0,
     );
   }

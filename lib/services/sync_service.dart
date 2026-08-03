@@ -578,6 +578,25 @@ class SyncService {
         ], r['updated_at'])) {
           continue;
         }
+        // Dil/ülke sunucu senkronunda yok; REPLACE ile silinmesin diye yereli koru.
+        String? originalLanguage = r['original_language'] as String?;
+        Object? originCountries = r['origin_countries'];
+        if (originalLanguage == null || originCountries == null) {
+          final existing = await txn.query(
+            'ratings',
+            columns: ['original_language', 'origin_countries'],
+            where: 'movie_id = ? AND is_tv = ?',
+            whereArgs: [_asInt(r['movie_id']), _asInt(r['is_tv'])],
+            limit: 1,
+          );
+          if (existing.isNotEmpty) {
+            originalLanguage ??= existing.first['original_language'] as String?;
+            originCountries ??= existing.first['origin_countries'];
+          }
+        }
+        final originCountriesJson = originCountries is List
+            ? jsonEncode(originCountries)
+            : originCountries as String?;
         await txn.insert('ratings', {
           'movie_id': _asInt(r['movie_id']),
           'is_tv': _asInt(r['is_tv']),
@@ -595,6 +614,8 @@ class SyncService {
           'comment': r['comment'],
           'is_spoiler': _asInt(r['is_spoiler'] ?? 0),
           'is_private': _asInt(r['is_private'] ?? 0),
+          'original_language': originalLanguage,
+          'origin_countries': originCountriesJson,
           'created_at': _asInt(r['created_at']),
           'updated_at': _asInt(r['updated_at']),
           'deleted': _asDeletedFlag(r['deleted']),

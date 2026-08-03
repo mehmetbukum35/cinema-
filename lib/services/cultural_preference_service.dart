@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/cultural_preferences.dart';
+import '../models/movie.dart';
+import 'cultural_classifier.dart';
+import 'cultural_preference_learner.dart';
+import 'db_helper.dart';
 
 class CulturalPreferenceService {
   static const storageKey = 'cultural_preferences_v1';
@@ -43,5 +47,30 @@ class CulturalPreferenceService {
   static Future<void> saveSnapshot(CulturalPreferences value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(storageKey, jsonEncode(value.toJson()));
+  }
+
+  /// Puanlamalardan kültürel tercihleri yumuşak günceller. Değişiklik olduysa true.
+  static Future<bool> learnFromRatings() async {
+    final current = await load();
+    final raw = await DatabaseHelper().getRatings();
+    final classified = <({Set<String> cultures, int rating})>[];
+    for (final row in raw) {
+      final movie = row['movie'];
+      if (movie is! Movie) continue;
+      final cultures = CulturalClassifier.classify(movie);
+      if (cultures.isEmpty) continue;
+      final rating = row['rating'];
+      final ratingInt = rating is int
+          ? rating
+          : int.tryParse(rating?.toString() ?? '') ?? -1;
+      classified.add((cultures: cultures, rating: ratingInt));
+    }
+    final suggested = CulturalPreferenceLearner.suggest(
+      current: current,
+      classifiedRatings: classified,
+    );
+    if (suggested == null) return false;
+    await saveSnapshot(suggested);
+    return true;
   }
 }

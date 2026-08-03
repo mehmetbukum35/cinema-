@@ -3,8 +3,11 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/cultural_preferences.dart';
 import '../models/movie.dart';
 import '../models/taste_dna.dart';
+import 'cultural_classifier.dart';
+import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
 import 'tmdb_service.dart';
@@ -16,6 +19,7 @@ typedef DnaRating = ({
   int createdAt,
   int? year,
   double popularity,
+  List<String> cultures,
 });
 
 /// "Sinema DNA'sı" — kullanıcının zevkini deterministik, doğru ve spesifik bir
@@ -88,6 +92,7 @@ class TasteDnaService {
     required double? accuracy,
     required int accuracySample,
     List<({List<int> genreIds, double weight})> favorites = const [],
+    CulturalPreferences? culturalPreferences,
     int? nowMs,
   }) {
     final now = nowMs ?? DateTime.now().millisecondsSinceEpoch;
@@ -246,6 +251,11 @@ class TasteDnaService {
       }
     }
 
+    final topCultures = _topCultures(
+      ratings: ratings,
+      preferences: culturalPreferences,
+    );
+
     return TasteDna(
       archetypeKey: archetype,
       secondaryArchetypeKey: secondaryArchetype,
@@ -263,8 +273,48 @@ class TasteDnaService {
       accuracy: accuracySample >= 8 ? accuracy : null,
       accuracySample: accuracySample,
       totalRated: total,
+      topCultures: topCultures,
       generatedAt: now,
     );
+  }
+
+  /// Beğenilen puanlamalar + beyan edilen tercihler → en fazla 3 kültür anahtarı.
+  static List<String> _topCultures({
+    required List<DnaRating> ratings,
+    CulturalPreferences? preferences,
+  }) {
+    final scores = <String, double>{};
+
+    for (final r in ratings) {
+      if (r.rating < 2 || r.cultures.isEmpty) continue;
+      final weight = r.rating == 3 ? 2.0 : 1.0;
+      for (final culture in r.cultures) {
+        scores[culture] = (scores[culture] ?? 0) + weight;
+      }
+    }
+
+    if (preferences != null) {
+      for (final entry in preferences.levels.entries) {
+        switch (entry.value) {
+          case CulturePreferenceLevel.prefer:
+            scores[entry.key] = (scores[entry.key] ?? 0) + 3.0;
+          case CulturePreferenceLevel.explore:
+            scores[entry.key] = (scores[entry.key] ?? 0) + 1.5;
+          case CulturePreferenceLevel.avoid:
+            scores[entry.key] = (scores[entry.key] ?? 0) - 2.0;
+          case CulturePreferenceLevel.neutral:
+            break;
+        }
+      }
+    }
+
+    final ranked =
+        (scores.entries.where((e) => e.value >= 2.0).toList()
+              ..sort((a, b) => b.value.compareTo(a.value)))
+            .map((e) => e.key)
+            .take(3)
+            .toList();
+    return ranked;
   }
 
   /// İki rank-sıralı favori listesini harmanlar (film[0], dizi[0], film[1]…) →
@@ -299,6 +349,7 @@ class TasteDnaService {
   Future<({TasteDna dna, String hash})> generate({String? userId}) async {
     final db = DatabaseHelper();
     final raw = await db.getRatings();
+    final culturalPreferences = await CulturalPreferenceService.load();
 
     // Favoriler (Top 20), rank sırasında. compute'a tür katkısı, temalara tohum
     // olarak girerler; ayrıca hash'e katılır ki Top 20 değişince DNA yenilensin.
@@ -322,6 +373,11 @@ class TasteDnaService {
       for (var i = 0; i < favMovies.length; i++) 'm${favMovies[i].id}#$i',
       for (var i = 0; i < favShows.length; i++) 't${favShows[i].id}#$i',
     ].join(',');
+    final cultureSig =
+        (culturalPreferences.levels.entries.toList()
+              ..sort((a, b) => a.key.compareTo(b.key)))
+            .map((e) => '${e.key}:${e.value.value}')
+            .join(',');
 
     final telemetry = await PrefsService.getRecoTelemetry();
     var shown = 0;
@@ -346,7 +402,7 @@ class TasteDnaService {
       ),
     );
     final inputHash =
-        "$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig";
+        "$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig|$cultureSig";
 
     final cachedData = await PrefsService.getCachedDna();
     if (cachedData != null && cachedData['hash'] == inputHash) {
@@ -381,6 +437,9 @@ class TasteDnaService {
         }
         pop = (r['popularity'] as num?)?.toDouble() ?? 0.0;
       }
+      final cultures = movie is Movie
+          ? CulturalClassifier.classify(movie).toList()
+          : const <String>[];
       ratings.add((
         rating: r['rating'] as int,
         genreIds:
@@ -388,6 +447,7 @@ class TasteDnaService {
         createdAt: r['created_at'] as int,
         year: year,
         popularity: pop,
+        cultures: cultures,
       ));
     }
 
@@ -400,6 +460,7 @@ class TasteDnaService {
       accuracy: accuracy,
       accuracySample: shown,
       favorites: favGenres,
+      culturalPreferences: culturalPreferences,
     );
 
     // Cache the result

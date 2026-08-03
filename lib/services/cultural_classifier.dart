@@ -1,6 +1,10 @@
 import '../models/movie.dart';
 
 class CulturalClassifier {
+  /// İngilizce konuşulan ana akım sinema (Hollywood ekseni).
+  /// GB/IE Avrupa kümesinde kalır — ortak yapımlar her iki etiketi de alabilir.
+  static const _hollywoodCountries = {'US', 'AU', 'CA', 'NZ'};
+
   static const _europeanCountries = {
     'AT',
     'BE',
@@ -59,7 +63,8 @@ class CulturalClassifier {
       result.add('indian');
     }
     if (countries.contains('IR') || language == 'fa') result.add('iranian');
-    if (countries.contains('US') || (language == 'en' && countries.isEmpty)) {
+    if (countries.any(_hollywoodCountries.contains) ||
+        (language == 'en' && countries.isEmpty)) {
       result.add('hollywood');
     }
     if (countries.any(_europeanCountries.contains)) result.add('european');

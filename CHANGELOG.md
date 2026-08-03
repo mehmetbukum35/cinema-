@@ -4,8 +4,20 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
-Post-1.0.0 hardening. No new features: this line is a type-safety, race-condition,
-and security sweep over what 1.0.0 shipped.
+### Added
+
+**Cultural personalization** — onboarding and profile preferences for cinema
+regions (Korean, European, Hollywood, Turkish, …) now shape recommendations and
+Taste DNA:
+
+- Cultural preference levels (`prefer` / `explore` / `avoid`) sync across devices
+- Recommendation scoring applies a fading cultural boost as ratings accumulate
+- Taste DNA surfaces a cinema-geography signal from declared prefs + liked titles
+- Soft behavior learning nudges prefs from ratings (never auto-sets `avoid`)
+- Classifier maps AU/CA/NZ to the Hollywood axis; GB/IE stay European
+
+**Recommendation loop** — impression attribution, dismiss feedback, adaptive
+telemetry, and admin analytics for recommendation quality.
 
 ### Fixed
 

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/models/taste_dna.dart';
 import 'package:ne_izlesem/services/taste_dna_service.dart';
 
@@ -11,6 +12,7 @@ DnaRating _r({
   int daysAgo = 1,
   int? year,
   double popularity = 50,
+  List<String> cultures = const [],
 }) {
   return (
     rating: rating,
@@ -18,6 +20,7 @@ DnaRating _r({
     createdAt: _now - daysAgo * 86400000,
     year: year,
     popularity: popularity,
+    cultures: cultures,
   );
 }
 
@@ -468,7 +471,55 @@ void main() {
       expect(round.criticKey, dna.criticKey);
       expect(round.accuracy, dna.accuracy);
       expect(round.totalRated, dna.totalRated);
+      expect(round.topCultures, dna.topCultures);
       expect(round.isReady, isTrue);
+    });
+  });
+
+  group('TasteDnaService.compute — kültür', () {
+    test('merges preferred cultures with liked rating cultures', () {
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: 3, cultures: const ['korean']),
+          _r(rating: 3, cultures: const ['korean']),
+          _r(rating: 2, cultures: const ['european']),
+          _r(rating: 2, cultures: const ['european']),
+          _r(rating: 2, cultures: const ['hollywood']),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        culturalPreferences: const CulturalPreferences(
+          levels: {
+            'korean': CulturePreferenceLevel.prefer,
+            'hollywood': CulturePreferenceLevel.avoid,
+          },
+        ),
+        nowMs: _now,
+      );
+      expect(dna.topCultures.first, 'korean');
+      expect(dna.topCultures, contains('european'));
+      expect(dna.topCultures, isNot(contains('hollywood')));
+    });
+
+    test('shows declared prefer even without rated culture metadata', () {
+      final dna = TasteDnaService.compute(
+        ratings: [
+          _r(rating: 3),
+          _r(rating: 3),
+          _r(rating: 2),
+          _r(rating: 2),
+          _r(rating: 2),
+        ],
+        themes: const [],
+        accuracy: null,
+        accuracySample: 0,
+        culturalPreferences: const CulturalPreferences(
+          levels: {'turkish': CulturePreferenceLevel.prefer},
+        ),
+        nowMs: _now,
+      );
+      expect(dna.topCultures, ['turkish']);
     });
   });
 }

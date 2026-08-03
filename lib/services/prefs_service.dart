@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../models/movie.dart';
+import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 
 class PrefsService {
@@ -481,6 +483,13 @@ class PrefsService {
       metadataLocale: activeLanguageCode,
     );
     invalidateGenreWeights();
+    // Best-effort: yeterli sınıflandırılmış beğeni birikince kültürel tercihleri
+    // yumuşak güncelle. Hata öneri akışını bozmasın.
+    try {
+      await CulturalPreferenceService.learnFromRatings();
+    } catch (e) {
+      debugPrint('Cultural preference learning failed: $e');
+    }
   }
 
   static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) async {

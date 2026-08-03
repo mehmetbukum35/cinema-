@@ -87,6 +87,23 @@ class TasteDnaWebText
         return $map[$id] ?? (self::isEn($lang) ? 'Unknown' : 'Bilinmeyen');
     }
 
+    private static function cultureShort(string $key, string $lang): string
+    {
+        $en = self::isEn($lang);
+        return match ($key) {
+            'hollywood' => 'Hollywood',
+            'turkish' => $en ? 'Turkish' : 'Türk',
+            'korean' => $en ? 'Korean' : 'Kore',
+            'japanese' => $en ? 'Japanese' : 'Japon',
+            'indian' => $en ? 'Indian' : 'Hint',
+            'iranian' => $en ? 'Iranian' : 'İran',
+            'european' => $en ? 'European' : 'Avrupa',
+            'latin_american' => $en ? 'Latin American' : 'Latin Amerika',
+            'east_asian' => $en ? 'East Asian' : 'Uzak Doğu',
+            default => $key,
+        };
+    }
+
     private static function pct(float $v, string $lang): string
     {
         $n = (int) round($v * 100);
@@ -257,6 +274,19 @@ class TasteDnaWebText
             $signals[] = $en
                 ? 'Taste has drifted from ' . $from . ' to ' . $to . '.'
                 : 'Zevkinin rotası: ' . $from . ' → ' . $to . '.';
+        }
+
+        $topCultures = [];
+        foreach ((array) ($dna['top_cultures'] ?? []) as $culture) {
+            if (is_string($culture) && $culture !== '') {
+                $topCultures[] = self::cultureShort($culture, $lang);
+            }
+        }
+        if ($topCultures !== []) {
+            $joined = implode(' + ', $topCultures);
+            $signals[] = $en
+                ? 'Cinema geography: ' . $joined . '.'
+                : 'Sinema coğrafyası: ' . $joined . '.';
         }
 
         $accuracy = null;

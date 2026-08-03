@@ -29,6 +29,22 @@ List<int> _dbIntList(Object? value) {
       .toList();
 }
 
+List<String> _dbStringList(Object? value) {
+  Object? decoded = value;
+  if (value is String) {
+    try {
+      decoded = jsonDecode(value);
+    } on FormatException {
+      return const [];
+    }
+  }
+  if (decoded is! List) return const [];
+  return decoded
+      .map((e) => e.toString().trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+}
+
 class DatabaseHelper {
   /// saveRating'te alan verilmediğinde mevcut DB değerini korumak için işaretçi.
   static const unset = Object();
@@ -91,7 +107,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 9,
+      version: 10,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
     );
@@ -139,6 +155,8 @@ class DatabaseHelper {
         comment TEXT,
         is_spoiler INTEGER NOT NULL DEFAULT 0,
         is_private INTEGER NOT NULL DEFAULT 0,
+        original_language TEXT,
+        origin_countries TEXT,
         PRIMARY KEY (movie_id, is_tv)
       )
     ''');
@@ -406,6 +424,20 @@ class DatabaseHelper {
         debugPrint('Error migrating database to v9 (metadata locale): $e');
       }
     }
+    if (oldVersion < 10) {
+      try {
+        await db.execute(
+          'ALTER TABLE ratings ADD COLUMN original_language TEXT',
+        );
+        await db.execute(
+          'ALTER TABLE ratings ADD COLUMN origin_countries TEXT',
+        );
+      } catch (e) {
+        debugPrint(
+          'Error migrating database to v10 (rating culture metadata): $e',
+        );
+      }
+    }
   }
 
   // ─── Ratings Operations ──────────────────────────────────────────────────────
@@ -442,6 +474,12 @@ class DatabaseHelper {
         ? (existing?['is_private'] as int? ?? 0)
         : isPrivate as int;
 
+    final originalLanguage =
+        movie?.originalLanguage ?? existing?['original_language'] as String?;
+    final originCountriesJson = movie != null
+        ? jsonEncode(movie.originCountries)
+        : existing?['origin_countries'] as String?;
+
     if (db == null) {
       _mockRatings.removeWhere(
         (e) =>
@@ -468,6 +506,8 @@ class DatabaseHelper {
         'comment': finalComment,
         'is_spoiler': finalIsSpoiler,
         'is_private': finalIsPrivate,
+        'original_language': originalLanguage,
+        'origin_countries': originCountriesJson,
       });
       return;
     }
@@ -492,6 +532,8 @@ class DatabaseHelper {
       'comment': finalComment,
       'is_spoiler': finalIsSpoiler,
       'is_private': finalIsPrivate,
+      'original_language': originalLanguage,
+      'origin_countries': originCountriesJson,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -543,6 +585,8 @@ class DatabaseHelper {
             isTV: _dbInt(m['is_tv']) == 1,
             genreIds: genreIdsList,
             popularity: _dbDouble(m['popularity']),
+            originalLanguage: m['original_language'] as String?,
+            originCountries: _dbStringList(m['origin_countries']),
           ),
         };
       }).toList();
@@ -573,6 +617,8 @@ class DatabaseHelper {
           isTV: _dbInt(m['is_tv']) == 1,
           genreIds: genreIdsList,
           popularity: _dbDouble(m['popularity']),
+          originalLanguage: m['original_language'] as String?,
+          originCountries: _dbStringList(m['origin_countries']),
         ),
       };
     }).toList();

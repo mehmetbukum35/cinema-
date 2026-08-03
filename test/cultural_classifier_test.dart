@@ -31,6 +31,27 @@ void main() {
     test('does not guess a culture without evidence', () {
       expect(CulturalClassifier.classify(movie()), isEmpty);
     });
+
+    test('maps AU/CA/NZ English-speaking cinema to hollywood', () {
+      expect(CulturalClassifier.classify(movie(countries: const ['AU'])), {
+        'hollywood',
+      });
+      expect(CulturalClassifier.classify(movie(countries: const ['CA'])), {
+        'hollywood',
+      });
+      expect(CulturalClassifier.classify(movie(countries: const ['NZ'])), {
+        'hollywood',
+      });
+    });
+
+    test('keeps British cinema in the european bucket', () {
+      expect(
+        CulturalClassifier.classify(
+          movie(language: 'en', countries: const ['GB']),
+        ),
+        {'european'},
+      );
+    });
   });
 
   group('RecommendationEngine cultural scoring', () {
