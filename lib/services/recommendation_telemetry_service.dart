@@ -4,9 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/movie.dart';
+import 'recommendation_experiment_service.dart';
 
 class RecommendationTelemetryService {
-  static const modelVersion = 'recommendation_v4_ab_control';
+  static const modelVersion = 'recommendation_v5_ab_control';
   static const _queueKey = 'recommendation_event_queue_v1';
   static const _latestKey = 'recommendation_latest_impressions_v1';
   static const _uuid = Uuid();
@@ -23,16 +24,18 @@ class RecommendationTelemetryService {
     final queue = _readList(prefs.getString(_queueKey));
     final latest = _readMap(prefs.getString(_latestKey));
     final now = DateTime.now().millisecondsSinceEpoch;
+    final experiment = await RecommendationExperimentService.current();
 
     for (final movie in movies) {
       final impressionId = _uuid.v4();
+      final assignedModelVersion =
+          movie.recommendationModelVersion ?? experiment.modelVersion;
       movie
         ..recommendationImpressionId = impressionId
-        ..recommendationModelVersion =
-            movie.recommendationModelVersion ?? modelVersion;
+        ..recommendationModelVersion = assignedModelVersion;
       latest[movieKey(movie)] = {
         'impression_id': impressionId,
-        'model_version': movie.recommendationModelVersion,
+        'model_version': assignedModelVersion,
         'shown_at': now,
       };
       queue.add(
@@ -64,6 +67,11 @@ class RecommendationTelemetryService {
             ? latestForMovie['impression_id']?.toString()
             : null);
     if (impressionId == null) return;
+    final attributedModelVersion =
+        movie.recommendationModelVersion ??
+        (latestForMovie is Map
+            ? latestForMovie['model_version']?.toString()
+            : null);
     queue.add(
       _event(
         movie: movie,
@@ -72,6 +80,7 @@ class RecommendationTelemetryService {
         surface: surface,
         createdAt: DateTime.now().millisecondsSinceEpoch,
         metadata: metadata,
+        eventModelVersion: attributedModelVersion,
       ),
     );
     await _persist(prefs, queue, latest);
@@ -113,6 +122,7 @@ class RecommendationTelemetryService {
     required String surface,
     required int createdAt,
     Map<String, dynamic> metadata = const {},
+    String? eventModelVersion,
   }) => {
     'event_id': _uuid.v4(),
     'impression_id': impressionId,
@@ -121,7 +131,10 @@ class RecommendationTelemetryService {
     'action': action,
     'surface': surface,
     'source': movie.recoSource ?? 'unknown',
-    'model_version': movie.recommendationModelVersion ?? modelVersion,
+    'model_version':
+        eventModelVersion ??
+        movie.recommendationModelVersion ??
+        RecommendationTelemetryService.modelVersion,
     'score_components': movie.recommendationScoreComponents,
     'metadata': metadata,
     'created_at': createdAt,

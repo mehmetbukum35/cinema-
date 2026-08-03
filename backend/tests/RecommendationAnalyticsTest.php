@@ -30,6 +30,7 @@ final class RecommendationAnalyticsTest extends TestCase
         $this->event('1', 'a', 'shown', 'browse', 'v1', 99_000_000);
         $this->event('2', 'a', 'detail_opened', 'browse', 'v1', 99_000_001);
         $this->event('3', 'a', 'watchlisted', 'browse', 'v1', 99_000_002);
+        $this->event('3b', 'a', 'trailer_opened', 'movie_detail', 'wrong', 99_000_002);
         $this->event('4', 'b', 'shown', 'browse', 'v1', 99_000_003);
         $this->event('5', 'b', 'dismissed', 'browse', 'v1', 99_000_004);
         $this->event('6', 'c', 'shown', 'swipe', 'v2', 99_000_005);
@@ -45,7 +46,7 @@ final class RecommendationAnalyticsTest extends TestCase
             'surface' => 'browse',
             'shown' => 2,
             'detail_opened' => 1,
-            'trailer_opened' => 0,
+            'trailer_opened' => 1,
             'watchlisted' => 1,
             'rated' => 0,
             'dismissed' => 1,

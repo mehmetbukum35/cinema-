@@ -24,12 +24,12 @@ class RecommendationExperiment {
 }
 
 class RecommendationExperimentService {
-  static const experimentId = 'ranking_weights_v1';
+  static const experimentId = 'ranking_weights_v2';
   static const _key = 'recommendation_experiment_$experimentId';
 
   static const control = RecommendationExperiment(
     variant: RecommendationExperimentVariant.control,
-    modelVersion: 'recommendation_v4_ab_control',
+    modelVersion: 'recommendation_v5_ab_control',
     genreOnlyWeights: (genre: 0.70, vote: 0.30),
     fullWeights: (genre: 0.45, keyword: 0.25, vote: 0.30),
     preferenceBoostMultiplier: 1.0,
@@ -37,7 +37,7 @@ class RecommendationExperimentService {
 
   static const personalization = RecommendationExperiment(
     variant: RecommendationExperimentVariant.personalization,
-    modelVersion: 'recommendation_v4_ab_personalization',
+    modelVersion: 'recommendation_v5_ab_personalization',
     genreOnlyWeights: (genre: 0.78, vote: 0.22),
     fullWeights: (genre: 0.50, keyword: 0.30, vote: 0.20),
     preferenceBoostMultiplier: 1.25,

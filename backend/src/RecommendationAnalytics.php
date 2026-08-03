@@ -21,10 +21,15 @@ final class RecommendationAnalytics
         $since = $nowMs - ($days * 86_400_000);
 
         $stmt = $this->db->prepare(
-            'SELECT impression_id, action, surface, model_version
-             FROM recommendation_events
-             WHERE created_at >= ?
-             ORDER BY created_at ASC'
+            "SELECT e.impression_id, e.action,
+                    shown.surface AS surface,
+                    shown.model_version AS model_version
+             FROM recommendation_events e
+             JOIN recommendation_events shown
+               ON shown.impression_id = e.impression_id
+              AND shown.action = 'shown'
+             WHERE shown.created_at >= ?
+             ORDER BY shown.created_at ASC, e.created_at ASC"
         );
         $stmt->execute([$since]);
 
