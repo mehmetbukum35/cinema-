@@ -1,0 +1,168 @@
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+
+import '../models/movie.dart';
+
+class RecommendationTelemetryService {
+  static const modelVersion = 'recommendation_v4_ab_control';
+  static const _queueKey = 'recommendation_event_queue_v1';
+  static const _latestKey = 'recommendation_latest_impressions_v1';
+  static const _uuid = Uuid();
+  static Future<void> _writeTail = Future<void>.value();
+
+  static String movieKey(Movie movie) =>
+      '${movie.isTV ? 'tv' : 'movie'}_${movie.id}';
+
+  static Future<void> recordShown(
+    Iterable<Movie> movies, {
+    required String surface,
+  }) => _enqueue(() async {
+    final prefs = await SharedPreferences.getInstance();
+    final queue = _readList(prefs.getString(_queueKey));
+    final latest = _readMap(prefs.getString(_latestKey));
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    for (final movie in movies) {
+      final impressionId = _uuid.v4();
+      movie
+        ..recommendationImpressionId = impressionId
+        ..recommendationModelVersion =
+            movie.recommendationModelVersion ?? modelVersion;
+      latest[movieKey(movie)] = {
+        'impression_id': impressionId,
+        'model_version': movie.recommendationModelVersion,
+        'shown_at': now,
+      };
+      queue.add(
+        _event(
+          movie: movie,
+          impressionId: impressionId,
+          action: 'shown',
+          surface: surface,
+          createdAt: now,
+        ),
+      );
+    }
+    await _persist(prefs, queue, latest);
+  });
+
+  static Future<void> recordAction(
+    Movie movie, {
+    required String action,
+    required String surface,
+    Map<String, dynamic> metadata = const {},
+  }) => _enqueue(() async {
+    final prefs = await SharedPreferences.getInstance();
+    final queue = _readList(prefs.getString(_queueKey));
+    final latest = _readMap(prefs.getString(_latestKey));
+    final latestForMovie = latest[movieKey(movie)];
+    final impressionId =
+        movie.recommendationImpressionId ??
+        (latestForMovie is Map
+            ? latestForMovie['impression_id']?.toString()
+            : null);
+    if (impressionId == null) return;
+    queue.add(
+      _event(
+        movie: movie,
+        impressionId: impressionId,
+        action: action,
+        surface: surface,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        metadata: metadata,
+      ),
+    );
+    await _persist(prefs, queue, latest);
+  });
+
+  static Future<List<Map<String, dynamic>>> pendingEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _readList(prefs.getString(_queueKey));
+  }
+
+  static Future<void> removeEvents(Set<String> eventIds) async {
+    if (eventIds.isEmpty) return;
+    return _enqueue(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final queue = _readList(prefs.getString(_queueKey))
+        ..removeWhere((event) => eventIds.contains(event['event_id']));
+      await prefs.setString(_queueKey, jsonEncode(queue));
+    });
+  }
+
+  static Future<void> _enqueue(Future<void> Function() operation) {
+    final previous = _writeTail;
+    final current = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Bir telemetri yazımı sonraki olayları kalıcı olarak engellememeli.
+      }
+      await operation();
+    }();
+    _writeTail = current;
+    return current;
+  }
+
+  static Map<String, dynamic> _event({
+    required Movie movie,
+    required String impressionId,
+    required String action,
+    required String surface,
+    required int createdAt,
+    Map<String, dynamic> metadata = const {},
+  }) => {
+    'event_id': _uuid.v4(),
+    'impression_id': impressionId,
+    'movie_id': movie.id,
+    'is_tv': movie.isTV,
+    'action': action,
+    'surface': surface,
+    'source': movie.recoSource ?? 'unknown',
+    'model_version': movie.recommendationModelVersion ?? modelVersion,
+    'score_components': movie.recommendationScoreComponents,
+    'metadata': metadata,
+    'created_at': createdAt,
+  };
+
+  static List<Map<String, dynamic>> _readList(String? raw) {
+    if (raw == null) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map<Object?, Object?>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+      }
+    } on FormatException {
+      // Bozuk telemetri kuyruğu yeni kuyruk gibi davranır.
+    }
+    return [];
+  }
+
+  static Map<String, dynamic> _readMap(String? raw) {
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } on FormatException {
+      // Bozuk son gösterim indeksi yeniden oluşturulur.
+    }
+    return {};
+  }
+
+  static Future<void> _persist(
+    SharedPreferences prefs,
+    List<Map<String, dynamic>> queue,
+    Map<String, dynamic> latest,
+  ) async {
+    if (queue.length > 500) queue.removeRange(0, queue.length - 500);
+    await Future.wait([
+      prefs.setString(_queueKey, jsonEncode(queue)),
+      prefs.setString(_latestKey, jsonEncode(latest)),
+    ]);
+  }
+}

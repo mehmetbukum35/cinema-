@@ -19,6 +19,7 @@ final class Maintenance
         'tombstone_retention_days' => 30,
         'search_history_tombstone_retention_days' => 7,
         'sync_device_inactive_days' => 90,
+        'recommendation_event_retention_days' => 90,
         'popular_min_votes' => 1,
         'popular_limit' => 20,
         'titles_refresh_batch' => 20,
@@ -40,6 +41,10 @@ final class Maintenance
             min(365, (int) $this->options['search_history_tombstone_retention_days'])
         );
         $this->options['sync_device_inactive_days'] = max(30, min(730, (int) $this->options['sync_device_inactive_days']));
+        $this->options['recommendation_event_retention_days'] = max(
+            30,
+            min(730, (int) $this->options['recommendation_event_retention_days'])
+        );
         $this->options['popular_min_votes'] = max(1, min(100000, (int) $this->options['popular_min_votes']));
         $this->options['popular_limit'] = max(1, min(50, (int) $this->options['popular_limit']));
         $this->options['titles_refresh_batch'] = max(1, min(100, (int) $this->options['titles_refresh_batch']));
@@ -100,6 +105,7 @@ final class Maintenance
             $result['password_resets_deleted'] = $this->deleteExpired('password_resets', 'expires_at', $nowMs);
             $result['email_verifications_deleted'] = $this->deleteExpired('email_verifications', 'expires_at', $nowMs);
             $result['rate_limits_deleted'] = $this->deleteExpired('rate_limits', 'window_time', intdiv($nowMs, 1000) - 120);
+            $result['recommendation_events_deleted'] = $this->deleteRecommendationEvents($nowMs);
             $this->db->commit();
         } catch (Throwable $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
@@ -107,6 +113,36 @@ final class Maintenance
         }
 
         return $result;
+    }
+
+    /**
+     * Telemetri saklama süresi sunucunun alma zamanına göre hesaplanır. Böylece
+     * uzun süre çevrimdışı kalıp sonradan senkronize olan olaylar istemeden hemen
+     * silinmez. Her çalıştırma batch_limit ile sınırlıdır.
+     */
+    private function deleteRecommendationEvents(int $nowMs): int
+    {
+        $cutoff = $nowMs
+            - ((int) $this->options['recommendation_event_retention_days'] * 86400000);
+        $select = $this->db->prepare(
+            'SELECT event_id FROM recommendation_events
+             WHERE received_at < ?
+             ORDER BY received_at ASC, event_id ASC
+             LIMIT ' . (int) $this->options['batch_limit']
+        );
+        $select->execute([$cutoff]);
+        $ids = $select->fetchAll(PDO::FETCH_COLUMN);
+        if ($ids === []) return 0;
+
+        $delete = $this->db->prepare(
+            'DELETE FROM recommendation_events WHERE event_id = ? AND received_at < ?'
+        );
+        $changed = 0;
+        foreach ($ids as $id) {
+            $delete->execute([(string) $id, $cutoff]);
+            $changed += $delete->rowCount();
+        }
+        return $changed;
     }
 
     /**

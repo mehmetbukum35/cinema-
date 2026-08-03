@@ -253,6 +253,34 @@ void main() {
       expect(telemetry['discover']?['liked'], 25);
     });
 
+    test('dismiss feedback prompt respects the daily cooldown', () async {
+      expect(
+        await PrefsService.shouldAskDismissFeedback(matchScore: 80),
+        isTrue,
+      );
+      expect(
+        await PrefsService.shouldAskDismissFeedback(matchScore: 95),
+        isFalse,
+      );
+    });
+
+    test(
+      'dismiss feedback records its reason and recommendation source',
+      () async {
+        await PrefsService.recordDismissFeedback(
+          movieKey: 'movie_550',
+          reason: 'notNow',
+          source: 'culture',
+        );
+
+        final events = await PrefsService.getDismissFeedback();
+        expect(events, hasLength(1));
+        expect(events.single['movie_key'], 'movie_550');
+        expect(events.single['reason'], 'notNow');
+        expect(events.single['source'], 'culture');
+      },
+    );
+
     test('resetAll invalidates cached genre weights', () async {
       await PrefsService.saveInitialGenres([28]);
       expect(await PrefsService.getGenreWeights(), contains(28));

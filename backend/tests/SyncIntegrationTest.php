@@ -81,6 +81,64 @@ class SyncIntegrationTest extends TestCase
         $this->assertSame('The Shawshank Redemption', TestHelperRegistry::$lastBody['watchlist'][0]['title']);
     }
 
+    public function testCulturalPreferencesRoundTripAndRejectOlderWrites(): void
+    {
+        $this->sync->push(1, [
+            'cultural_preferences' => [
+                'levels' => ['korean' => 2, 'iranian' => 1, 'unknown' => 2],
+                'updated_at' => 2000,
+            ],
+        ]);
+        $this->assertSame(1, TestHelperRegistry::$lastBody['applied']);
+
+        TestHelperRegistry::reset();
+        $this->sync->push(1, [
+            'cultural_preferences' => [
+                'levels' => ['hollywood' => 2],
+                'updated_at' => 1000,
+            ],
+        ]);
+        $this->assertSame(0, TestHelperRegistry::$lastBody['applied']);
+
+        TestHelperRegistry::reset();
+        $this->sync->pull(1, 0);
+        $profile = TestHelperRegistry::$lastBody['cultural_preferences'];
+        $this->assertSame(2000, $profile['updated_at']);
+        $this->assertSame(['korean' => 2, 'iranian' => 1], $profile['levels']);
+    }
+
+    public function testRecommendationEventsAreIdempotentAndAcknowledged(): void
+    {
+        $event = [
+            'event_id' => '11111111-1111-4111-8111-111111111111',
+            'impression_id' => '22222222-2222-4222-8222-222222222222',
+            'movie_id' => 550,
+            'is_tv' => false,
+            'action' => 'shown',
+            'surface' => 'browse',
+            'source' => 'culture',
+            'model_version' => 'recommendation_v3_context',
+            'score_components' => ['culture' => 0.1],
+            'created_at' => 2000,
+        ];
+        $this->sync->push(1, ['recommendation_events' => [$event]]);
+        $this->assertSame(
+            [$event['event_id']],
+            TestHelperRegistry::$lastBody['accepted_event_ids']
+        );
+
+        TestHelperRegistry::reset();
+        $this->sync->push(1, ['recommendation_events' => [$event]]);
+        $this->assertSame(
+            [$event['event_id']],
+            TestHelperRegistry::$lastBody['accepted_event_ids']
+        );
+        $count = $this->db->query(
+            'SELECT COUNT(*) FROM recommendation_events'
+        )->fetchColumn();
+        $this->assertSame(1, (int) $count);
+    }
+
     // ─── last-write-wins: YENİ kazanır ────────────────────────────────────────
     public function testNewerWriteWins(): void
     {
@@ -662,7 +720,9 @@ class SyncIntegrationTest extends TestCase
         $this->db->exec(
             'CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
-                review_banned INTEGER NOT NULL DEFAULT 0
+                review_banned INTEGER NOT NULL DEFAULT 0,
+                cultural_preferences TEXT,
+                cultural_preferences_updated_at INTEGER NOT NULL DEFAULT 0
             )'
         );
         $this->db->exec('INSERT INTO users (id, review_banned) VALUES (1, 0), (2, 0)');
@@ -746,6 +806,23 @@ class SyncIntegrationTest extends TestCase
                 server_updated_at INTEGER NOT NULL DEFAULT 0,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, query)
+            )'
+        );
+        $this->db->exec(
+            'CREATE TABLE recommendation_events (
+                event_id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                impression_id TEXT NOT NULL,
+                movie_id INTEGER NOT NULL,
+                is_tv INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                surface TEXT NOT NULL,
+                source TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                score_components TEXT,
+                metadata TEXT,
+                created_at INTEGER NOT NULL,
+                received_at INTEGER NOT NULL
             )'
         );
         $this->db->exec(

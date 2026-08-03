@@ -12,6 +12,9 @@ import '../providers/watchlist_provider.dart';
 import '../providers/top_list_provider.dart';
 import '../providers/swipe_provider.dart';
 import '../providers/social_provider.dart';
+import 'cultural_preference_service.dart';
+import '../models/cultural_preferences.dart';
+import 'recommendation_telemetry_service.dart';
 
 /// Sunucudan gelen sayısal alanları güvenle int'e çevirir. Paylaşımlı
 /// hosting'deki MySQL/PDO, BIGINT kolonları JSON'a STRING olarak yazar
@@ -67,6 +70,11 @@ int _maxUpdatedAtInPayload(Map<String, dynamic> payload) {
       final ts = _asInt(row['updated_at']);
       if (ts > maxTs) maxTs = ts;
     }
+  }
+  final cultural = payload['cultural_preferences'];
+  if (cultural is Map) {
+    final ts = _asInt(cultural['updated_at']);
+    if (ts > maxTs) maxTs = ts;
   }
   return maxTs;
 }
@@ -124,6 +132,12 @@ class SyncService {
       final chunk = <String, dynamic>{
         'metadata_locale': payload['metadata_locale'],
       };
+      if (batch == 0 && payload['cultural_preferences'] != null) {
+        chunk['cultural_preferences'] = payload['cultural_preferences'];
+      }
+      if (batch == 0 && payload['recommendation_events'] != null) {
+        chunk['recommendation_events'] = payload['recommendation_events'];
+      }
       if (payload['local_reset'] == true) {
         chunk['local_reset'] = true;
       }
@@ -141,6 +155,12 @@ class SyncService {
       final result = await _apiService.push(chunk);
       await _ensureSession(sessionUserId);
       applied += _asInt(result['applied']);
+      final accepted = (result['accepted_event_ids'] as List?)
+          ?.map((id) => id.toString())
+          .toSet();
+      if (accepted != null) {
+        await RecommendationTelemetryService.removeEvents(accepted);
+      }
     }
     return applied;
   }
@@ -297,10 +317,20 @@ class SyncService {
       await _ensureSession(sessionUserId);
       final pushResult = await _apiService.push(<String, dynamic>{
         'metadata_locale': PrefsService.activeLanguageCode,
+        'cultural_preferences': (await CulturalPreferenceService.load())
+            .toJson(),
+        'recommendation_events':
+            await RecommendationTelemetryService.pendingEvents(),
         if (_declareLocalReset) 'local_reset': true,
       });
       await _ensureSession(sessionUserId);
       debugPrint("Push complete. Applied changes: ${pushResult['applied']}");
+      final accepted = (pushResult['accepted_event_ids'] as List?)
+          ?.map((id) => id.toString())
+          .toSet();
+      if (accepted != null) {
+        await RecommendationTelemetryService.removeEvents(accepted);
+      }
       // Mock DB'de gönderilecek satır yok — duvar saatiyle imleç ilerletme.
       await _ensureSession(sessionUserId);
       final pullResult = await _apiService.pull(
@@ -309,6 +339,7 @@ class SyncService {
       );
       await _ensureSession(sessionUserId);
       final serverTime = _asInt(pullResult['server_time']);
+      await _applyRemoteCulturalPreferences(pullResult);
       await _ensureSession(sessionUserId);
       await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
       PrefsService.invalidateGenreWeights();
@@ -343,6 +374,12 @@ class SyncService {
       'metadata_locale': PrefsService.activeLanguageCode,
       if (_declareLocalReset) 'local_reset': true,
     };
+    final localCulturalPreferences = await CulturalPreferenceService.load();
+    if (localCulturalPreferences.updatedAt > lastPush) {
+      payload['cultural_preferences'] = localCulturalPreferences.toJson();
+    }
+    payload['recommendation_events'] =
+        await RecommendationTelemetryService.pendingEvents();
 
     // Ratings
     final localRatings = await db.query(
@@ -484,6 +521,7 @@ class SyncService {
         await _apiService.pull(lastPull, localReset: _declareLocalReset);
     await _ensureSession(sessionUserId);
     final serverTime = _asInt(pullResult['server_time']);
+    final culturalChanged = await _applyRemoteCulturalPreferences(pullResult);
 
     // Sunucudan gelen satır, yereldeki karşılığından ESKİYSE uygulanmaz.
     // Aksi halde sync sürerken yapılan yerel bir değişiklik (ör. yeni puan)
@@ -677,7 +715,7 @@ class SyncService {
     // Invalidate recommendation engine cache and DNA cache
     await _ref?.read(recommendationEngineProvider).invalidateCache();
 
-    if (appliedCount > 0) {
+    if (appliedCount > 0 || culturalChanged) {
       debugPrint(
         "Sync pulled $appliedCount database changes. Invalidating UI providers.",
       );
@@ -699,6 +737,19 @@ class SyncService {
       _declareLocalReset = false;
     }
     _autoPublishDnaBackground();
+  }
+
+  Future<bool> _applyRemoteCulturalPreferences(
+    Map<String, dynamic> pullResult,
+  ) async {
+    final remote = pullResult['cultural_preferences'];
+    if (remote is! Map) return false;
+    final normalized = Map<String, dynamic>.from(remote);
+    final remoteValue = CulturalPreferences.fromJson(normalized);
+    final localValue = await CulturalPreferenceService.load();
+    if (remoteValue.updatedAt < localValue.updatedAt) return false;
+    await CulturalPreferenceService.saveSnapshot(remoteValue);
+    return jsonEncode(remoteValue.toJson()) != jsonEncode(localValue.toJson());
   }
 
   void _autoPublishDnaBackground() {

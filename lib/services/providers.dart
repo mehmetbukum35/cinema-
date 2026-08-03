@@ -19,6 +19,7 @@ import 'db_helper.dart';
 import 'prefs_service.dart';
 import 'recommendation_engine.dart';
 import 'taste_dna_service.dart';
+import '../models/discovery_context.dart';
 
 class LocaleNotifier extends StateNotifier<Locale> {
   LocaleNotifier() : super(_getInitialLocale()) {
@@ -139,6 +140,11 @@ final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
 
 /// Keşfet ekranını arka planda yeniden yükle (giriş + sync, dil değişimi dışı).
 final browseRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
+/// Yalnızca aktif keşif oturumunu etkiler; kalıcı Taste DNA'ya yazılmaz.
+final discoveryContextProvider = StateProvider<DiscoveryContext>(
+  (ref) => const DiscoveryContext(),
+);
 
 class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
   Timer? _timer;

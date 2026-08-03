@@ -165,6 +165,26 @@ class Sync
             }
             $out[$table] = $rows;
         }
+        $profile = $this->db->prepare(
+            'SELECT cultural_preferences, cultural_preferences_updated_at
+             FROM users WHERE id = ?'
+        );
+        $profile->execute([$uid]);
+        $profileRow = $profile->fetch();
+        if (
+            $profileRow !== false
+            && (int) $profileRow['cultural_preferences_updated_at'] > $since
+        ) {
+            $decoded = json_decode(
+                (string) ($profileRow['cultural_preferences'] ?? '{}'),
+                true
+            );
+            $out['cultural_preferences'] = [
+                'levels' => is_array($decoded) ? $decoded : [],
+                'updated_at' => (int) $profileRow['cultural_preferences_updated_at'],
+                'source' => 'sync',
+            ];
+        }
         json_out(200, $out);
     }
 
@@ -193,10 +213,23 @@ class Sync
                 fail(413, "Çok fazla kayıt: $table (tek istekte en fazla " . self::MAX_ITEMS_PER_TABLE . ').');
             }
         }
+        $events = $in['recommendation_events'] ?? [];
+        if (is_array($events) && count($events) > self::MAX_ITEMS_PER_TABLE) {
+            fail(413, 'Çok fazla recommendation_events kaydı.');
+        }
 
         $applied = 0;
+        $acceptedEventIds = [];
         $this->db->beginTransaction();
         try {
+            $applied += $this->upsertCulturalPreferences($uid, $in) ? 1 : 0;
+            if (is_array($events)) {
+                foreach ($events as $event) {
+                    if (!is_array($event)) continue;
+                    $accepted = $this->insertRecommendationEvent($uid, $event);
+                    if ($accepted !== null) $acceptedEventIds[] = $accepted;
+                }
+            }
             foreach (self::TABLES as $table => $def) {
                 $items = $in[$table] ?? null;
                 if (!is_array($items)) continue;
@@ -224,7 +257,111 @@ class Sync
         } catch (Throwable $e) {
             cinema_error('TitleCatalog flush failed: ' . $e->getMessage(), $uid);
         }
-        json_out(200, ['server_time' => now_ms(), 'applied' => $applied]);
+        json_out(200, [
+            'server_time' => now_ms(),
+            'applied' => $applied,
+            'accepted_event_ids' => $acceptedEventIds,
+        ]);
+    }
+
+    private function insertRecommendationEvent(int $uid, array $event): ?string
+    {
+        $eventId = trim((string) ($event['event_id'] ?? ''));
+        $impressionId = trim((string) ($event['impression_id'] ?? ''));
+        if (
+            !preg_match('/^[0-9a-f-]{36}$/i', $eventId)
+            || !preg_match('/^[0-9a-f-]{36}$/i', $impressionId)
+        ) {
+            return null;
+        }
+        $allowedActions = [
+            'shown', 'detail_opened', 'watchlisted', 'rated', 'dismissed',
+            'trailer_opened',
+        ];
+        $action = (string) ($event['action'] ?? '');
+        if (!in_array($action, $allowedActions, true)) return null;
+        $movieId = (int) ($event['movie_id'] ?? 0);
+        if ($movieId <= 0) return null;
+
+        $exists = $this->db->prepare(
+            'SELECT 1 FROM recommendation_events WHERE event_id = ?'
+        );
+        $exists->execute([$eventId]);
+        if ($exists->fetchColumn() !== false) return $eventId;
+
+        $json = static function (mixed $value): ?string {
+            if (!is_array($value)) return null;
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE);
+            return $encoded !== false && strlen($encoded) <= 8192 ? $encoded : null;
+        };
+        $createdAt = max(0, (int) ($event['created_at'] ?? 0));
+        $insert = $this->db->prepare(
+            'INSERT INTO recommendation_events
+             (event_id, user_id, impression_id, movie_id, is_tv, action,
+              surface, source, model_version, score_components, metadata,
+              created_at, received_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute([
+            $eventId,
+            $uid,
+            $impressionId,
+            $movieId,
+            !empty($event['is_tv']) ? 1 : 0,
+            $action,
+            mb_substr((string) ($event['surface'] ?? 'unknown'), 0, 32),
+            mb_substr((string) ($event['source'] ?? 'unknown'), 0, 32),
+            mb_substr((string) ($event['model_version'] ?? 'unknown'), 0, 64),
+            $json($event['score_components'] ?? null),
+            $json($event['metadata'] ?? null),
+            $createdAt,
+            now_ms(),
+        ]);
+        return $eventId;
+    }
+
+    private function upsertCulturalPreferences(int $uid, array $in): bool
+    {
+        $raw = $in['cultural_preferences'] ?? null;
+        if (!is_array($raw)) return false;
+        $levels = $raw['levels'] ?? null;
+        if (!is_array($levels)) return false;
+
+        $allowed = [
+            'hollywood', 'turkish', 'korean', 'japanese', 'indian',
+            'iranian', 'european', 'latin_american', 'east_asian',
+        ];
+        $normalized = [];
+        foreach ($levels as $culture => $level) {
+            if (!in_array((string) $culture, $allowed, true)) continue;
+            $value = (int) $level;
+            if (!in_array($value, [-1, 0, 1, 2], true)) continue;
+            if ($value !== 0) $normalized[(string) $culture] = $value;
+        }
+
+        $serverNow = now_ms();
+        $updatedAt = (int) ($raw['updated_at'] ?? 0);
+        if ($updatedAt <= 0) return false;
+        if ($updatedAt > $serverNow + 5 * 60 * 1000) $updatedAt = $serverNow;
+
+        $select = $this->db->prepare(
+            'SELECT cultural_preferences_updated_at FROM users WHERE id = ?'
+        );
+        $select->execute([$uid]);
+        $current = (int) ($select->fetchColumn() ?: 0);
+        if ($updatedAt < $current) return false;
+
+        $update = $this->db->prepare(
+            'UPDATE users
+             SET cultural_preferences = ?, cultural_preferences_updated_at = ?
+             WHERE id = ?'
+        );
+        $update->execute([
+            json_encode($normalized, JSON_UNESCAPED_UNICODE),
+            $updatedAt,
+            $uid,
+        ]);
+        return $update->rowCount() > 0;
     }
 
     // ─── DELETE /search-history (klasik tekil uç örneği) ────────────────────
@@ -254,6 +391,13 @@ class Sync
                 );
                 $st->execute([$now, $now, $uid]);
             }
+            $profile = $this->db->prepare(
+                'UPDATE users
+                 SET cultural_preferences = NULL,
+                     cultural_preferences_updated_at = ?
+                 WHERE id = ?'
+            );
+            $profile->execute([$now, $uid]);
             // Diğer cihazlar tombstone'ları kaçırmasın diye tam yeniden çekmeye zorla.
             $inv = $this->db->prepare(
                 'UPDATE sync_devices SET invalidated_at = ?

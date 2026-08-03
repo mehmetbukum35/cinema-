@@ -32,12 +32,44 @@ import 'profile/widgets/received_recommendations_card.dart';
 import 'profile/widgets/sent_recommendations_card.dart';
 import 'profile/widgets/danger_zone_card.dart';
 import 'profile/widgets/sync_error_banner.dart';
+import 'profile/widgets/cultural_preferences_sheet.dart';
+import '../services/cultural_preference_service.dart';
 
 /// Profil sekmesi orkestratörü: sliver düzenini kurar, veri sağlayıcıları
 /// dinler ve yıkıcı işlemlerin onay akışlarını yönetir. Görsel parçalar
 /// profile/widgets/ altındaki dosyalarda yaşar.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _editCulturalPreferences(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final initial = await CulturalPreferenceService.load();
+    if (!context.mounted) return;
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.c.surface,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.92,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => CulturalPreferencesSheet(
+        initialValue: initial,
+        onSaved: () async {
+          await ref.read(recommendationEngineProvider).invalidateCache();
+          ref.read(browseRefreshTriggerProvider.notifier).state++;
+          if (ref.read(authProvider).isLoggedIn) {
+            await ref.read(syncProvider.notifier).performSync();
+          }
+        },
+      ),
+    );
+  }
 
   Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
     final c = context.c;
@@ -639,6 +671,23 @@ class ProfileScreen extends ConsumerWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: FamilyModeCard(),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: SettingsNavCard(
+                icon: Icons.public_rounded,
+                iconColor: c.gold,
+                iconBackground: c.gold.withValues(alpha: 0.15),
+                title:
+                    tr?.get('cultural_preferences_title') ??
+                    'Sinema kültürü tercihlerin',
+                subtitle:
+                    tr?.get('cultural_preferences_profile_desc') ??
+                    'Kore, Avrupa, Türk sineması ve diğer tercihlerini düzenle',
+                onTap: () => _editCulturalPreferences(context, ref),
+              ),
             ),
           ),
 

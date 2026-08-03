@@ -20,15 +20,23 @@ String? recoReasonLabel(
   final reason = movie.recoReason;
   if (reason == null || reason.isEmpty) return null;
   final isFriend = movie.recoReasonType == 'friend';
-  final key = isFriend
+  final isCulture = movie.recoReasonType == 'culture';
+  final key = isCulture
+      ? 'reco_reason_culture'
+      : isFriend
       ? 'reco_reason_friend'
       : (compact ? 'reco_reason_seed_short' : 'reco_reason_seed');
+  final localizedReason = isCulture
+      ? AppLocalizations.of(context)?.get('culture_$reason') ?? reason
+      : reason;
   final tpl =
       AppLocalizations.of(context)?.get(key) ??
-      (isFriend
+      (isCulture
+          ? 'Because you prefer {x}'
+          : isFriend
           ? '{x} loved this'
           : (compact ? 'More like {x}' : 'Because you liked {x}'));
-  return tpl.replaceFirst('{x}', reason);
+  return tpl.replaceFirst('{x}', localizedReason);
 }
 
 /// "Bu Gece Ne İzlesem?" vitrin kartı — öneri motorunun en yüksek skorlu

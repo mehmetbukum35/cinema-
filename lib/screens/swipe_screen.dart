@@ -5,6 +5,7 @@ import '../models/movie.dart';
 import '../services/providers.dart';
 import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
+import '../services/recommendation_telemetry_service.dart';
 import '../providers/swipe_provider.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/auth_provider.dart';
@@ -38,6 +39,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   // buton dokunuşu aynı kartı iki kez puanlayıp sıradakini atlamasın — rate()
   // ve undo() paylaşılan state.current imlecini okuyup yazıyor.
   bool _busy = false;
+  String? _trackedMovieKey;
 
   @override
   void initState() {
@@ -72,8 +74,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     super.dispose();
   }
 
-  Future<void> _rate(int rating) async {
+  Future<void> _rate(int rating, {String interaction = 'button'}) async {
     if (_busy) return;
+    final swipeState = ref.read(swipeProvider);
+    if (swipeState.current >= swipeState.queue.length) return;
+    final movie = swipeState.queue[swipeState.current];
     _busy = true;
     try {
       HapticFeedback.mediumImpact();
@@ -85,6 +90,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         try {
           await notifier.rate(rating);
           rated = true;
+          await RecommendationTelemetryService.recordAction(
+            movie,
+            action: 'rated',
+            surface: 'swipe',
+            metadata: {'rating': rating, 'interaction': interaction},
+          );
         } catch (e) {
           debugPrint("Error rating movie: $e");
           if (mounted) {
@@ -105,6 +116,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         await _fadeCtrl.reverse();
         await notifier.rate(rating);
         rated = true;
+        await RecommendationTelemetryService.recordAction(
+          movie,
+          action: 'rated',
+          surface: 'swipe',
+          metadata: {'rating': rating, 'interaction': interaction},
+        );
       } catch (e) {
         debugPrint("Error rating movie: $e");
         if (mounted) {
@@ -132,6 +149,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
 
   void _openDetail(Movie movie) {
     HapticFeedback.lightImpact();
+    RecommendationTelemetryService.recordAction(
+      movie,
+      action: 'detail_opened',
+      surface: 'swipe',
+    );
     final service = ref.read(tmdbServiceProvider);
     showModalBottomSheet(
       context: context,
@@ -240,6 +262,16 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
     final current = swipeState.current;
     final queue = swipeState.queue;
     final rated = current;
+    if (current < queue.length) {
+      final movie = queue[current];
+      final key = RecommendationTelemetryService.movieKey(movie);
+      if (_trackedMovieKey != key) {
+        _trackedMovieKey = key;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          RecommendationTelemetryService.recordShown([movie], surface: 'swipe');
+        });
+      }
+    }
 
     final statsState = ref.watch(statsProvider);
     final stats = statsState.value ?? {};
@@ -434,9 +466,9 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                   },
                   onHorizontalDragEnd: (details) {
                     if (_dragX > 120) {
-                      _rate(2);
+                      _rate(2, interaction: 'gesture');
                     } else if (_dragX < -120) {
-                      _rate(0);
+                      _rate(0, interaction: 'gesture');
                     }
                     setState(() {
                       _dragX = 0;
@@ -465,7 +497,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
           SwipeRatingButtonRow(
             currentIndex: current,
             onUndo: _undo,
-            onRate: _rate,
+            onRate: (rating) => _rate(rating),
           )
         else
           const SizedBox(height: 180),

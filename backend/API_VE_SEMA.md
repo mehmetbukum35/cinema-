@@ -552,6 +552,17 @@ yorumlar da otomatik gizlenir, açık şikayetleri kapatır) ve **susturmayı ka
 (`unban_user`; eski yorumlar gizli kalır, tek tek geri açılır). Config'de
 `admin_key` boşsa uç 404 döner.
 
+### GET `/admin/recommendations?days=30`
+
+Öneri telemetrisini `model_version` ve `surface` bazında toplulaştırır. Gösterim,
+detay, fragman, izleme listesi, puanlama ve reddetme adetleriyle birlikte detay,
+pozitif aksiyon ve reddetme oranlarını döndürür. Aralık 1–90 günle sınırlıdır.
+Kimlik veya tekil kullanıcının izleme geçmişi yanıtta yer almaz. Erişim
+`X-Admin-Key` başlığındaki `admin_key` ile korunur; anahtar yapılandırılmamışsa
+uç 404 döner. Ham öneri olayları varsayılan olarak sunucuya ulaştıkları tarihten
+itibaren 90 gün tutulur ve günlük `maintenance.php cleanup` görevi tarafından
+sınırlı partiler halinde silinir.
+
 ---
 
 ## 5. Güvenlik & Migration Yöneticisi

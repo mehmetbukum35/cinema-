@@ -33,6 +33,7 @@ require_once "$SRC/Fcm.php";
 require_once "$SRC/SocialWebRenderer.php";
 require_once "$SRC/Social.php";
 require_once "$SRC/Moderation.php";
+require_once "$SRC/RecommendationAnalytics.php";
 require_once "$SRC/Tmdb.php";
 require_once "$SRC/TitleCatalog.php";
 
@@ -71,6 +72,10 @@ if (!empty($cfg['fcm']['service_account'])) {
 }
 $social = new Social($db, null, $fcm);
 $moderation = new Moderation($db, (string) ($cfg['admin_key'] ?? ''));
+$recommendationAnalytics = new RecommendationAnalytics(
+    $db,
+    (string) ($cfg['admin_key'] ?? ''),
+);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -469,6 +474,13 @@ switch (true) {
     case $route === 'POST /admin/moderation/action':
         rate_limit('admin_moderation', 30, true);
         $moderation->handleAction();
+        break;
+
+    case $route === 'GET /admin/recommendations':
+        rate_limit('admin_recommendations', 30, true);
+        $recommendationAnalytics->renderReport(
+            isset($_GET['days']) ? (int) $_GET['days'] : 30,
+        );
         break;
 
     // ── Sağlık kontrolü ────────────────────────────────────────────────────

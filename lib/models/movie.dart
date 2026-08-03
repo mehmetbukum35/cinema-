@@ -13,6 +13,9 @@ class Movie {
   final double popularity;
   final int voteCount;
   final bool adult;
+  final String? originalLanguage;
+  final List<String> originCountries;
+  final int? runtimeMinutes;
 
   Movie({
     required this.id,
@@ -27,6 +30,9 @@ class Movie {
     this.popularity = 0,
     this.voteCount = 0,
     this.adult = false,
+    this.originalLanguage,
+    this.originCountries = const [],
+    this.runtimeMinutes,
   });
 
   factory Movie.fromJson(Map<String, dynamic> json, {bool isTV = false}) {
@@ -69,6 +75,27 @@ class Movie {
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
       adult:
           json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
+      originalLanguage: json['original_language']?.toString(),
+      originCountries:
+          (json['origin_country'] is List
+                  ? json['origin_country'] as List
+                  : json['production_countries'] is List
+                  ? (json['production_countries'] as List)
+                        .map((item) => item is Map ? item['iso_3166_1'] : item)
+                        .toList()
+                  : const [])
+              .map((item) => item?.toString())
+              .whereType<String>()
+              .where((item) => item.isNotEmpty)
+              .toList(),
+      runtimeMinutes:
+          int.tryParse(json['runtime']?.toString() ?? '') ??
+          ((json['episode_run_time'] is List &&
+                  (json['episode_run_time'] as List).isNotEmpty)
+              ? int.tryParse(
+                  (json['episode_run_time'] as List).first.toString(),
+                )
+              : null),
     );
   }
 
@@ -92,12 +119,15 @@ class Movie {
   /// UI rozeti için gerekçe: seed film adı ya da arkadaş adı.
   String? recoReason;
 
-  /// Gerekçe tipi: 'seed' ("X'i beğendiğin için") | 'friend' ("X buna bayıldı").
+  /// Gerekçe tipi: 'seed' | 'friend' | 'culture'.
   String? recoReasonType;
 
   /// Adayın geldiği kaynak — isabet telemetrisi için:
-  /// 'discover' | 'seed' | 'friend'.
+  /// 'discover' | 'seed' | 'friend' | 'culture'.
   String? recoSource;
+  String? recommendationImpressionId;
+  String? recommendationModelVersion;
+  Map<String, double> recommendationScoreComponents = const {};
 
   Map<String, dynamic> toStorage() => {
     'id': id,
@@ -112,6 +142,9 @@ class Movie {
     'popularity': popularity,
     'vote_count': voteCount,
     'adult': adult,
+    'original_language': originalLanguage,
+    'origin_country': originCountries,
+    'runtime': runtimeMinutes,
   };
 
   factory Movie.fromStorage(Map<String, dynamic> json) {
@@ -149,6 +182,14 @@ class Movie {
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
       adult:
           json['adult'] == true || json['adult'] == 1 || json['adult'] == '1',
+      originalLanguage: json['original_language']?.toString(),
+      originCountries: json['origin_country'] is List
+          ? (json['origin_country'] as List)
+                .map((item) => item?.toString())
+                .whereType<String>()
+                .toList()
+          : const [],
+      runtimeMinutes: int.tryParse(json['runtime']?.toString() ?? ''),
     );
   }
 
@@ -166,11 +207,17 @@ class Movie {
       popularity: popularity,
       voteCount: voteCount,
       adult: adult,
+      originalLanguage: originalLanguage,
+      originCountries: List<String>.from(originCountries),
+      runtimeMinutes: runtimeMinutes,
     );
     m.personalizedMatchScore = personalizedMatchScore;
     m.recoReason = recoReason;
     m.recoReasonType = recoReasonType;
     m.recoSource = recoSource;
+    m.recommendationImpressionId = recommendationImpressionId;
+    m.recommendationModelVersion = recommendationModelVersion;
+    m.recommendationScoreComponents = Map.of(recommendationScoreComponents);
     return m;
   }
 }

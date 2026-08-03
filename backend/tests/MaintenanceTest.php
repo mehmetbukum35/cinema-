@@ -92,6 +92,38 @@ final class MaintenanceTest extends TestCase
         self::assertSame(3, (int) $this->db->query('SELECT COUNT(*) FROM refresh_tokens')->fetchColumn());
     }
 
+    public function testRecommendationEventsUseReceivedAtAndBoundedRetention(): void
+    {
+        $old = $this->now - 91 * 86400000;
+        $recent = $this->now - 89 * 86400000;
+        $insert = $this->db->prepare(
+            'INSERT INTO recommendation_events
+             (event_id, created_at, received_at) VALUES (?, ?, ?)'
+        );
+        $insert->execute(['old-1', $this->now, $old]);
+        $insert->execute(['old-2', $this->now, $old]);
+        $insert->execute(['recent', 1, $recent]);
+
+        $result = (new Maintenance($this->db, [
+            'batch_limit' => 1,
+            'recommendation_event_retention_days' => 90,
+        ]))->runCleanup($this->now);
+
+        self::assertSame(1, $result['recommendation_events_deleted']);
+        self::assertSame(
+            2,
+            (int) $this->db
+                ->query('SELECT COUNT(*) FROM recommendation_events')
+                ->fetchColumn(),
+        );
+        self::assertSame(
+            1,
+            (int) $this->db
+                ->query("SELECT COUNT(*) FROM recommendation_events WHERE event_id = 'recent'")
+                ->fetchColumn(),
+        );
+    }
+
     public function testDeletesOnlyTombstonesAcknowledgedByEveryActiveDevice(): void
     {
         $deletedAt = $this->now - 31 * 86400000;
@@ -221,5 +253,6 @@ final class MaintenanceTest extends TestCase
         $this->db->exec('CREATE TABLE password_resets (email TEXT PRIMARY KEY, expires_at INTEGER)');
         $this->db->exec('CREATE TABLE email_verifications (email TEXT PRIMARY KEY, expires_at INTEGER)');
         $this->db->exec('CREATE TABLE rate_limits (ip_bucket TEXT, window_time INTEGER, PRIMARY KEY (ip_bucket, window_time))');
+        $this->db->exec('CREATE TABLE recommendation_events (event_id TEXT PRIMARY KEY, created_at INTEGER, received_at INTEGER)');
     }
 }

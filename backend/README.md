@@ -58,7 +58,27 @@ sessions, and removes expired temporary authentication records. Search-history
 tombstones are retained for 7 days; ratings, watchlist, favorites, and watched
 season tombstones retain the safer 30-day window. Physical deletion still waits
 until every active device has acknowledged the tombstone. Devices inactive for
-90 days must perform a safe full resync before pushing again.
+90 days must perform a safe full resync before pushing again. Recommendation
+telemetry is retained for 90 days by server receipt time and removed in bounded
+batches; configure this with `recommendation_event_retention_days`.
+
+## Release preflight (Windows)
+
+Repository rootundan analiz, biçim, Flutter testleri ve backend testlerini tek
+komutla çalıştır:
+
+```powershell
+.\scripts\preflight.ps1
+```
+
+İmzalama yapılandırılmışsa APK ve AAB de üretilebilir:
+
+```powershell
+.\scripts\preflight.ps1 -BuildAndroid -BuildNumber 42
+```
+
+Betik migration çalıştırmaz veya veritabanına bağlanmaz. `027` ve `028`
+migration durumları sunucuda manuel doğrulanmalıdır.
 
 ## Device-aware tombstone cleanup rollout
 
@@ -164,6 +184,7 @@ Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>
 | GET | `/profile/{username}` | Kullanıcının herkese açık web profil kartını render eder | – |
 | GET | `/download` | Uygulama indirme yönlendirme sayfası (Web) | – |
 | GET | `/tmdb/*` | Sunucu üzerinden rate-limit'li TMDB istek proxy'si | – |
+| GET | `/admin/recommendations?days=30` | Model ve yüzey bazında toplulaştırılmış öneri hunisi (1–90 gün) | `X-Admin-Key` |
 
 ## Güvenlik notları
 

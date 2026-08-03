@@ -3,8 +3,13 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../models/movie.dart';
+import '../models/cultural_preferences.dart';
+import '../models/discovery_context.dart';
+import 'cultural_classifier.dart';
+import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs_service.dart';
+import 'recommendation_experiment_service.dart';
 import 'tmdb_service.dart';
 
 /// Skorlanmış aday — sıralama boyunca ham skoru filmle birlikte taşır.
@@ -77,14 +82,17 @@ class RecommendationEngine {
     required double genreSim,
     double? kwSim,
     required double voteAverage,
+    RecommendationExperiment experiment =
+        RecommendationExperimentService.control,
   }) {
     final vote = voteAverage / 10.0;
     if (kwSim == null) {
-      return genreOnlyWeights.genre * genreSim + genreOnlyWeights.vote * vote;
+      return experiment.genreOnlyWeights.genre * genreSim +
+          experiment.genreOnlyWeights.vote * vote;
     }
-    return fullWeights.genre * genreSim +
-        fullWeights.keyword * kwSim +
-        fullWeights.vote * vote;
+    return experiment.fullWeights.genre * genreSim +
+        experiment.fullWeights.keyword * kwSim +
+        experiment.fullWeights.vote * vote;
   }
 
   /// Ham skoru kullanıcıya gösterilen uyum yüzdesine [40, 98] eşler.
@@ -94,6 +102,75 @@ class RecommendationEngine {
     final z = (raw - 0.2) * 4.0;
     final sigmoid = 1.0 / (1.0 + exp(-z));
     return (40 + (sigmoid * 58)).round().clamp(40, 98);
+  }
+
+  static double culturalPreferenceInfluence(int ratingCount) {
+    if (ratingCount < 10) return 1.0;
+    if (ratingCount < 25) return 0.6;
+    if (ratingCount < 50) return 0.3;
+    return 0.15;
+  }
+
+  static double culturalBoost({
+    required Movie movie,
+    required CulturalPreferences preferences,
+    required int ratingCount,
+  }) {
+    final cultures = CulturalClassifier.classify(movie);
+    if (cultures.isEmpty || preferences.isEmpty) return 0;
+    var strongest = 0.0;
+    for (final culture in cultures) {
+      final value = switch (preferences.levelFor(culture)) {
+        CulturePreferenceLevel.prefer => 0.10,
+        CulturePreferenceLevel.explore => 0.04,
+        CulturePreferenceLevel.avoid => -0.12,
+        CulturePreferenceLevel.neutral => 0.0,
+      };
+      if (value.abs() > strongest.abs()) strongest = value;
+    }
+    return strongest * culturalPreferenceInfluence(ratingCount);
+  }
+
+  static bool matchesDiscoveryContext(Movie movie, DiscoveryContext context) {
+    if (context.media == DiscoveryMedia.movie && movie.isTV) return false;
+    if (context.media == DiscoveryMedia.tv && !movie.isTV) return false;
+    final cultures = CulturalClassifier.classify(movie);
+    if (context.origin == DiscoveryOrigin.local &&
+        !cultures.contains('turkish')) {
+      return false;
+    }
+    if (context.origin == DiscoveryOrigin.foreign &&
+        cultures.contains('turkish')) {
+      return false;
+    }
+    return true;
+  }
+
+  static double discoveryContextBoost(Movie movie, DiscoveryContext context) {
+    var boost = 0.0;
+    final runtime = movie.runtimeMinutes;
+    if (runtime != null && context.duration != DiscoveryDuration.any) {
+      final shortLimit = movie.isTV ? 40 : 100;
+      final longLimit = movie.isTV ? 60 : 140;
+      final matches = switch (context.duration) {
+        DiscoveryDuration.short => runtime <= shortLimit,
+        DiscoveryDuration.medium => runtime > shortLimit && runtime < longLimit,
+        DiscoveryDuration.long => runtime >= longLimit,
+        DiscoveryDuration.any => true,
+      };
+      boost += matches ? 0.08 : -0.10;
+    }
+    switch (context.familiarity) {
+      case DiscoveryFamiliarity.safe:
+        boost += (movie.voteAverage / 10.0) * 0.05;
+        if (movie.voteCount >= 1000) boost += 0.03;
+      case DiscoveryFamiliarity.surprise:
+        if (movie.popularity < 40) boost += 0.07;
+        if (movie.voteCount < 1000) boost += 0.03;
+      case DiscoveryFamiliarity.balanced:
+        break;
+    }
+    return boost;
   }
 
   /// Arkadaş sinyali boost'u: sinyal başına +[perFriend], en fazla [maxFriends]
@@ -595,6 +672,7 @@ class RecommendationEngine {
   /// ray her açılışta aynı yüzlerle dizilmesin (impression cooldown).
   Future<List<Movie>> rankForYou(
     List<Movie> candidates, {
+    DiscoveryContext discoveryContext = const DiscoveryContext(),
     Set<String> excludedKeys = const {},
     Map<String, List<String>> friendSignals = const {},
     Set<String> cooldownKeys = const {},
@@ -631,6 +709,7 @@ class RecommendationEngine {
     final seen = <String>{};
     final fresh = <Movie>[];
     for (final m in candidates) {
+      if (!matchesDiscoveryContext(m, discoveryContext)) continue;
       final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
 
       // Hard filter: Zaten oylananlar veya sırada olanlar
@@ -651,6 +730,9 @@ class RecommendationEngine {
     if (fresh.isEmpty) return fresh;
 
     final userWeights = await PrefsService.getGenreWeights();
+    final culturalPreferences = await CulturalPreferenceService.load();
+    final experiment = await RecommendationExperimentService.current();
+    final ratingCount = ratings.length;
 
     // Kaba sıralama: tür + puan.
     final scored = <ScoredMovie>[];
@@ -672,11 +754,44 @@ class RecommendationEngine {
       }
       // Çoklu tohum kesişimi: 2+ beğeninin benzerlerinde geçen aday öne çıkar.
       final overlap = seedOverlapBoost(seedTitlesByKey[key]?.length ?? 0);
+      final cultureBoost =
+          culturalBoost(
+            movie: m,
+            preferences: culturalPreferences,
+            ratingCount: ratingCount,
+          ) *
+          experiment.preferenceBoostMultiplier;
+      final contextBoost =
+          discoveryContextBoost(m, discoveryContext) *
+          experiment.preferenceBoostMultiplier;
 
       final raw =
-          blend(genreSim: genreSim, voteAverage: m.voteAverage) +
+          blend(
+            genreSim: genreSim,
+            voteAverage: m.voteAverage,
+            experiment: experiment,
+          ) +
           penalty +
-          overlap;
+          overlap +
+          cultureBoost +
+          contextBoost;
+      m.recommendationScoreComponents = {
+        'genre_similarity': genreSim,
+        'vote_average': m.voteAverage / 10.0,
+        'negative_penalty': penalty,
+        'seed_overlap': overlap,
+        'culture': cultureBoost,
+        'context': contextBoost,
+        'experiment_personalization': experiment.isPersonalization ? 1.0 : 0.0,
+        'final': raw,
+      };
+      m.recommendationModelVersion = experiment.modelVersion;
+      if (cultureBoost > 0 && m.recoReason == null) {
+        m
+          ..recoReason = CulturalClassifier.classify(m).first
+          ..recoReasonType = 'culture'
+          ..recoSource = 'culture';
+      }
       m.personalizedMatchScore = toDisplayScore(raw);
       m.recoSource ??= 'discover';
       scored.add(ScoredMovie(m, raw));
@@ -713,15 +828,41 @@ class RecommendationEngine {
           penalty -= cooldownPenalty;
         }
         final overlap = seedOverlapBoost(seedTitlesByKey[key]?.length ?? 0);
+        final cultureBoost =
+            culturalBoost(
+              movie: m,
+              preferences: culturalPreferences,
+              ratingCount: ratingCount,
+            ) *
+            experiment.preferenceBoostMultiplier;
+        final contextBoost =
+            discoveryContextBoost(m, discoveryContext) *
+            experiment.preferenceBoostMultiplier;
 
         final raw =
             blend(
               genreSim: genreSim,
               kwSim: kwSim,
               voteAverage: m.voteAverage,
+              experiment: experiment,
             ) +
             penalty +
-            overlap;
+            overlap +
+            cultureBoost +
+            contextBoost;
+        m.recommendationScoreComponents = {
+          'genre_similarity': genreSim,
+          'keyword_similarity': kwSim,
+          'vote_average': m.voteAverage / 10.0,
+          'negative_penalty': penalty,
+          'seed_overlap': overlap,
+          'culture': cultureBoost,
+          'context': contextBoost,
+          'experiment_personalization': experiment.isPersonalization
+              ? 1.0
+              : 0.0,
+          'final': raw,
+        };
         m.personalizedMatchScore = toDisplayScore(raw);
         top[i].score = raw;
       }

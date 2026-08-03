@@ -13,6 +13,9 @@ import 'main_shell.dart';
 import 'onboarding/genre_step.dart';
 import 'onboarding/favorite_pick_step.dart';
 import 'onboarding/rating_widgets.dart';
+import 'onboarding/cultural_preference_step.dart';
+import '../models/cultural_preferences.dart';
+import '../services/cultural_preference_service.dart';
 
 const _rBerbat = AppColors.rBerbat;
 const _rEh = AppColors.rEh;
@@ -60,13 +63,15 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
-  // 0=film türleri, 1=dizi türleri, 2=fav filmler, 3=fav diziler, 4=değerlendirme
+  // 0=film türleri, 1=dizi türleri, 2=sinema kültürleri,
+  // 3=fav filmler, 4=fav diziler, 5=değerlendirme
   int _step = 0;
 
   final Set<int> _selectedMovieGenres = {};
   final Set<int> _selectedTvGenres = {};
   final List<Movie> _favMovies = [];
   final List<Movie> _favTvShows = [];
+  final Map<String, CulturePreferenceLevel> _culturalPreferences = {};
 
   final _service = TmdbService();
   List<Movie> _items = [];
@@ -124,12 +129,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       if (!mounted) return;
       setState(() => _step = 2);
     } else if (_step == 2) {
+      await CulturalPreferenceService.save(_culturalPreferences);
+      if (!mounted) return;
+      setState(() => _step = 3);
+    } else if (_step == 3) {
       // Birleştir, üzerine yazma: kullanıcının mevcut Top 20'si (varsa) korunur.
       await PrefsService.mergeFavoriteMovies(_favMovies);
       ref.invalidate(topListProvider);
       if (!mounted) return;
-      setState(() => _step = 3);
-    } else if (_step == 3) {
+      setState(() => _step = 4);
+    } else if (_step == 4) {
       await PrefsService.mergeFavoriteTvShows(_favTvShows);
       ref.invalidate(topListProvider);
       final auth = ref.read(authProvider);
@@ -138,7 +147,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       }
       if (!mounted) return;
       setState(() {
-        _step = 4;
+        _step = 5;
         _loadingCards = true;
       });
       _loadCards();
@@ -328,9 +337,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           onSkip: _skipOnboarding,
         );
       case 2:
-        return FavoritePickStep(
+        return CulturalPreferenceStep(
           key: const ValueKey(2),
           stepIndex: 2,
+          preferences: _culturalPreferences,
+          onChanged: (culture, level) => setState(() {
+            if (level == CulturePreferenceLevel.neutral) {
+              _culturalPreferences.remove(culture);
+            } else {
+              _culturalPreferences[culture] = level;
+            }
+          }),
+          onNext: _nextStep,
+          onSkip: _skipOnboarding,
+        );
+      case 3:
+        return FavoritePickStep(
+          key: const ValueKey(3),
+          stepIndex: 3,
           title:
               AppLocalizations.of(
                 context,
@@ -343,10 +367,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           onNext: _nextStep,
           onSkip: _skipOnboarding,
         );
-      case 3:
+      case 4:
         return FavoritePickStep(
-          key: const ValueKey(3),
-          stepIndex: 3,
+          key: const ValueKey(4),
+          stepIndex: 4,
           title:
               AppLocalizations.of(context)?.get('onboarding_title_fav_tvs') ??
               '',
@@ -359,7 +383,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         );
       default:
         return KeyedSubtree(
-          key: const ValueKey(4),
+          key: const ValueKey(5),
           child: _loadingCards || _items.isEmpty
               ? _loadingView()
               : _ratingView(),

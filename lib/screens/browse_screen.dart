@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
+import '../models/discovery_context.dart';
+import '../models/dismiss_feedback.dart';
+import '../models/cultural_preferences.dart';
 import '../models/social.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
@@ -24,6 +27,12 @@ import 'browse/browse_top_profile_card.dart';
 import 'browse/friend_signal_card.dart';
 import 'browse/moods.dart';
 import 'browse/onboarding_banner.dart';
+import 'browse/discovery_context_sheet.dart';
+import 'browse/dismiss_feedback_sheet.dart';
+import '../services/cultural_classifier.dart';
+import '../services/cultural_preference_service.dart';
+import '../services/sync_service.dart';
+import '../services/recommendation_telemetry_service.dart';
 import 'movie_detail_sheet.dart';
 import '../providers/social_provider.dart';
 import '../providers/auth_provider.dart';
@@ -68,6 +77,24 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   List<Movie> _onTheAir = [];
   bool _loading = true;
   bool _phase2Pending = false;
+
+  Future<void> _editDiscoveryContext() async {
+    final current = ref.read(discoveryContextProvider);
+    final selected = await showModalBottomSheet<DiscoveryContext>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.c.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => DiscoveryContextSheet(initialValue: current),
+    );
+    if (selected == null || !mounted) return;
+    ref.read(discoveryContextProvider.notifier).state = selected;
+    await _load(background: true);
+  }
+
   Object? _error;
   bool _showOnboardingBanner = false;
 
@@ -253,6 +280,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       final ranked = await engine.rankForYou(
         [...page1, ...page2, ...tvDiscover, ...seedCandidates],
+        discoveryContext: ref.read(discoveryContextProvider),
         excludedKeys: {...ratedIds, ...blockedKeys},
         friendSignals: friendSignals,
         cooldownKeys: cooldownKeys,
@@ -333,6 +361,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ...finalPersonal.take(10).map(_movieKey),
       ];
       unawaited(PrefsService.recordRecoImpressions(shownKeys));
+      unawaited(
+        RecommendationTelemetryService.recordShown([
+          ?tonightPick,
+          ...finalPersonal.take(10),
+        ], surface: 'browse'),
+      );
       if (tonightPick != null) {
         unawaited(PrefsService.recordTonightPick(_movieKey(tonightPick)));
       }
@@ -433,29 +467,63 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     }
   }
 
-  /// "İlgimi çekmedi": yapımı kalıcı engeller (bir daha hiçbir öneri yüzeyinde
-  /// çıkmaz) ve vitrine sıradaki adayı getirir — motor için gerçek negatif sinyal.
+  /// Öneriyi vitrinden çıkarır; seyrek geri bildirimle geçici isteği kalıcı
+  /// zevk reddinden ayırır. Yalnız açık kalıcı nedenler yapımı engeller.
   Future<void> _dismissTonight() async {
     final dismissed = _tonight;
     if (dismissed == null) return;
     HapticFeedback.mediumImpact();
-    await PrefsService.blockMovie(dismissed.id, dismissed.isTV);
-    if (!mounted) return;
-    setState(() {
-      _tonightPool.removeWhere(
-        (m) => m.id == dismissed.id && m.isTV == dismissed.isTV,
+    DismissFeedbackReason reason = DismissFeedbackReason.notInterested;
+    final shouldAsk = await PrefsService.shouldAskDismissFeedback(
+      matchScore: dismissed.matchScore,
+    );
+    if (shouldAsk && mounted) {
+      final answer = await showModalBottomSheet<DismissFeedbackReason>(
+        context: context,
+        backgroundColor: context.c.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => const DismissFeedbackSheet(),
       );
-      if (_tonightPool.isNotEmpty) {
-        _tonightCursor %= _tonightPool.length;
-        _tonight = _tonightPool[_tonightCursor];
-        final promoted = _tonight!;
-        _personal.removeWhere(
-          (m) => m.id == promoted.id && m.isTV == promoted.isTV,
-        );
-      } else {
-        _tonight = null;
+      if (answer != null) reason = answer;
+    }
+    if (reason != DismissFeedbackReason.notNow &&
+        reason != DismissFeedbackReason.tooLong) {
+      await PrefsService.blockMovie(dismissed.id, dismissed.isTV);
+    }
+    if (reason == DismissFeedbackReason.tooLong) {
+      final current = ref.read(discoveryContextProvider);
+      ref.read(discoveryContextProvider.notifier).state = current.copyWith(
+        duration: DiscoveryDuration.short,
+      );
+    }
+    if (reason == DismissFeedbackReason.wrongCulture) {
+      final current = await CulturalPreferenceService.load();
+      final levels = Map<String, CulturePreferenceLevel>.of(current.levels);
+      for (final culture in CulturalClassifier.classify(dismissed)) {
+        levels[culture] = CulturePreferenceLevel.avoid;
       }
-    });
+      await CulturalPreferenceService.save(levels, source: 'dismiss_feedback');
+      await ref.read(recommendationEngineProvider).invalidateCache();
+      if (ref.read(authProvider).isLoggedIn) {
+        unawaited(ref.read(syncProvider.notifier).performSync());
+      }
+    }
+    await PrefsService.recordDismissFeedback(
+      movieKey: _movieKey(dismissed),
+      reason: reason.name,
+      source: dismissed.recoSource ?? 'discover',
+    );
+    unawaited(
+      RecommendationTelemetryService.recordAction(
+        dismissed,
+        action: 'dismissed',
+        surface: 'tonight_pick',
+        metadata: {'reason': reason.name},
+      ),
+    );
+    if (!mounted) return;
     _removeBlockedMovie(dismissed);
     // Havuz da ray da boşaldıysa vitrini rayın ilk adayıyla doldur.
     if (_tonight == null && _personal.isNotEmpty) {
@@ -585,6 +653,16 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: DiscoveryContextCard(
+                value: ref.watch(discoveryContextProvider),
+                onTap: _editDiscoveryContext,
               ),
             ),
           ),
@@ -879,6 +957,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
   void _openDetail(Movie movie) {
     HapticFeedback.lightImpact();
+    unawaited(
+      RecommendationTelemetryService.recordAction(
+        movie,
+        action: 'detail_opened',
+        surface: 'browse',
+      ),
+    );
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

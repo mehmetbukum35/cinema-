@@ -23,6 +23,7 @@ import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
+import '../services/recommendation_telemetry_service.dart';
 import '../theme/app_theme.dart';
 import '../models/review.dart';
 import '../providers/watchlist_provider.dart';
@@ -321,6 +322,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         );
         return;
       }
+      unawaited(
+        RecommendationTelemetryService.recordAction(
+          movie,
+          action: 'watchlisted',
+          surface: 'movie_detail',
+        ),
+      );
       final added =
           AppLocalizations.of(
             context,
@@ -349,6 +357,13 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   void _openTrailer() {
     if (_trailerKey == null) return;
     HapticFeedback.lightImpact();
+    unawaited(
+      RecommendationTelemetryService.recordAction(
+        widget.movie,
+        action: 'trailer_opened',
+        surface: 'movie_detail',
+      ),
+    );
     // Üstte kapat (✕) butonu olan kendi WebView ekranımız.
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -468,6 +483,14 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             liked: rating >= 2,
           ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
         }
+        unawaited(
+          RecommendationTelemetryService.recordAction(
+            widget.movie,
+            action: 'rated',
+            surface: 'movie_detail',
+            metadata: {'rating': rating, 'liked': rating >= 2},
+          ),
+        );
 
         setState(() {
           _currentRating = rating;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 
-const kTotalSteps = 5;
+const kTotalSteps = 6;
 
 Widget buildDots(
   BuildContext context,

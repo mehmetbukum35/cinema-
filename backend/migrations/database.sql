@@ -206,6 +206,32 @@ CREATE TABLE `user_blocks` (
 -- --------------------------------------------------------
 
 --
+-- Tablo için tablo yapısı `recommendation_events`
+--
+
+CREATE TABLE `recommendation_events` (
+  `event_id` char(36) NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `impression_id` char(36) NOT NULL,
+  `movie_id` int(11) NOT NULL,
+  `is_tv` tinyint(1) NOT NULL DEFAULT 0,
+  `action` varchar(32) NOT NULL,
+  `surface` varchar(32) NOT NULL,
+  `source` varchar(32) NOT NULL,
+  `model_version` varchar(64) NOT NULL,
+  `score_components` text DEFAULT NULL,
+  `metadata` text DEFAULT NULL,
+  `created_at` bigint(20) NOT NULL,
+  `received_at` bigint(20) NOT NULL,
+  PRIMARY KEY (`event_id`),
+  KEY `idx_reco_events_user_created` (`user_id`,`created_at`),
+  KEY `idx_reco_events_model_action` (`model_version`,`action`),
+  KEY `idx_reco_events_impression` (`impression_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Tablo için tablo yapısı `users`
 --
 
@@ -220,6 +246,8 @@ CREATE TABLE `users` (
   `is_public` tinyint(1) NOT NULL DEFAULT 1,
   `taste_dna` text DEFAULT NULL,
   `taste_dna_at` bigint(20) NOT NULL DEFAULT 0,
+  `cultural_preferences` text DEFAULT NULL,
+  `cultural_preferences_updated_at` bigint(20) NOT NULL DEFAULT 0,
   `google_sub` varchar(255) DEFAULT NULL,
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
   `review_banned` tinyint(1) NOT NULL DEFAULT 0,

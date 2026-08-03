@@ -47,6 +47,8 @@ return [
         // Arama geçmişi düşük riskli ve yüksek hacimli; yalnız silinmiş kayıtlar.
         'search_history_tombstone_retention_days' => 7,
         'sync_device_inactive_days' => 90,
+        // Öneri olayları yalnızca toplu model analizi için 90 gün tutulur.
+        'recommendation_event_retention_days' => 90,
         // Client-sourced titles backfill: php maintenance.php titles
         'titles_refresh_batch' => 20,
     ],

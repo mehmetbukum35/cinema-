@@ -398,6 +398,65 @@ class PrefsService {
     );
   }
 
+  static const _keyDismissFeedback = 'dismiss_feedback_v1';
+  static const _keyDismissCount = 'dismiss_feedback_count_v1';
+  static const _keyDismissLastAsked = 'dismiss_feedback_last_asked_v1';
+
+  static Future<bool> shouldAskDismissFeedback({
+    required int matchScore,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = (prefs.getInt(_keyDismissCount) ?? 0) + 1;
+    await prefs.setInt(_keyDismissCount, count);
+    final lastAsked = prefs.getInt(_keyDismissLastAsked) ?? 0;
+    final cooldownPassed =
+        DateTime.now().millisecondsSinceEpoch - lastAsked >
+        const Duration(hours: 24).inMilliseconds;
+    final shouldAsk = cooldownPassed && (matchScore >= 75 || count % 4 == 0);
+    if (shouldAsk) {
+      await prefs.setInt(
+        _keyDismissLastAsked,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    return shouldAsk;
+  }
+
+  static Future<void> recordDismissFeedback({
+    required String movieKey,
+    required String reason,
+    required String source,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyDismissFeedback) ?? '[]';
+    final decoded = jsonDecode(raw);
+    final events = decoded is List
+        ? decoded
+              .whereType<Map<Object?, Object?>>()
+              .map(Map<String, dynamic>.from)
+              .toList()
+        : <Map<String, dynamic>>[];
+    events.add({
+      'movie_key': movieKey,
+      'reason': reason,
+      'source': source,
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    if (events.length > 100) events.removeRange(0, events.length - 100);
+    await prefs.setString(_keyDismissFeedback, jsonEncode(events));
+  }
+
+  static Future<List<Map<String, dynamic>>> getDismissFeedback() async {
+    final prefs = await SharedPreferences.getInstance();
+    final decoded = jsonDecode(prefs.getString(_keyDismissFeedback) ?? '[]');
+    return decoded is List
+        ? decoded
+              .whereType<Map<Object?, Object?>>()
+              .map(Map<String, dynamic>.from)
+              .toList()
+        : const [];
+  }
+
   // ─── Ratings ────────────────────────────────────────────────────────────────
 
   static Future<void> saveRating({
