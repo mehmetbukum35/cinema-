@@ -22,6 +22,21 @@ class SwipeFilterSheet {
             final c = context.c;
             final activeLang = state.languageFilter;
             final activeProv = state.providerFilter;
+            final activeCount =
+                (activeLang != null ? 1 : 0) + (activeProv != null ? 1 : 0);
+
+            String t(String key, String fallback) =>
+                AppLocalizations.of(context)?.get(key) ?? fallback;
+
+            void apply({String? language, int? provider}) {
+              ref
+                  .read(swipeProvider.notifier)
+                  .updateFilters(
+                    languageFilter: language,
+                    providerFilter: provider,
+                  );
+              Navigator.pop(ctx);
+            }
 
             return ClipRRect(
               borderRadius: const BorderRadius.only(
@@ -31,6 +46,9 @@ class SwipeFilterSheet {
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.9,
+                  ),
                   decoration: BoxDecoration(
                     color: (c.isLight ? c.surface : const Color(0xFF161616))
                         .withValues(alpha: c.isLight ? 0.94 : 0.85),
@@ -69,53 +87,25 @@ class SwipeFilterSheet {
                         ),
                         Row(
                           children: [
-                            Builder(
-                              builder: (context) {
-                                final activeCount =
-                                    (activeLang != null ? 1 : 0) +
-                                    (activeProv != null ? 1 : 0);
-                                final filterTitle =
-                                    AppLocalizations.of(
-                                      context,
-                                    )?.get('content_filters') ??
-                                    'Content Filters';
-                                final activeText = activeCount > 0
-                                    ? (AppLocalizations.of(context)
-                                              ?.get('active_count_label')
-                                              .replaceAll(
-                                                '{}',
-                                                '$activeCount',
-                                              ) ??
-                                          ' ($activeCount Active)')
-                                    : '';
-                                return Text(
-                                  '$filterTitle$activeText',
-                                  style: TextStyle(
-                                    color: c.ink,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                );
-                              },
+                            Expanded(
+                              child: Text(
+                                '${t('content_filters', 'Content Filters')}'
+                                '${activeCount > 0 ? (AppLocalizations.of(context)?.get('active_count_label').replaceAll('{}', '$activeCount') ?? ' ($activeCount Active)') : ''}',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                            const Spacer(),
                             if (activeLang != null || activeProv != null)
                               TextButton(
                                 onPressed: () {
                                   HapticFeedback.lightImpact();
-                                  ref
-                                      .read(swipeProvider.notifier)
-                                      .updateFilters(
-                                        languageFilter: null,
-                                        providerFilter: null,
-                                      );
-                                  Navigator.pop(ctx);
+                                  apply(language: null, provider: null);
                                 },
                                 child: Text(
-                                  AppLocalizations.of(
-                                        ctx,
-                                      )?.get('search_clear') ??
-                                      'Temizle',
+                                  t('search_clear', 'Temizle'),
                                   style: TextStyle(
                                     color: c.red,
                                     fontWeight: FontWeight.w600,
@@ -124,160 +114,46 @@ class SwipeFilterSheet {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                return Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('language_region') ??
-                                      'LANGUAGE / REGION',
-                                  style: TextStyle(
-                                    color: c.dim,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.2,
-                                  ),
-                                );
-                              },
-                            ),
-                            if (activeLang != null) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: c.red,
-                                ),
-                              ),
-                            ],
-                          ],
+                        const SizedBox(height: 22),
+                        _SectionHeader(
+                          label: t('language_region', 'LANGUAGE / REGION'),
+                          active: activeLang != null,
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                return SwipeFilterChip(
-                                  label:
-                                      '🌐 ${AppLocalizations.of(context)?.get('lang_all') ?? (AppLocalizations.of(context)?.get('lang_all') ?? 'All')}',
-                                  selected: activeLang == null,
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    ref
-                                        .read(swipeProvider.notifier)
-                                        .updateFilters(
-                                          languageFilter: null,
-                                          providerFilter: activeProv,
-                                        );
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
-                            ),
-                            ...SwipeFilterLabels.languages(context).entries.map(
-                              (entry) {
-                                return SwipeFilterChip(
-                                  label: SwipeFilterLabels.languageLabel(
-                                    context,
-                                    entry.key,
-                                  ),
-                                  selected: activeLang == entry.key,
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    ref
-                                        .read(swipeProvider.notifier)
-                                        .updateFilters(
-                                          languageFilter: entry.key,
-                                          providerFilter: activeProv,
-                                        );
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
-                            ),
-                          ],
+                        const SizedBox(height: 10),
+                        _RegionGrid(
+                          selected: activeLang,
+                          onSelect: (value) =>
+                              apply(language: value, provider: activeProv),
                         ),
                         const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                return Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('streaming_platforms') ??
-                                      'STREAMING PLATFORMS',
-                                  style: TextStyle(
-                                    color: c.dim,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.2,
-                                  ),
-                                );
-                              },
-                            ),
-                            if (activeProv != null) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: c.red,
-                                ),
-                              ),
-                            ],
-                          ],
+                        _SectionHeader(
+                          label: t(
+                            'streaming_platforms',
+                            'STREAMING PLATFORMS',
+                          ),
+                          active: activeProv != null,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            Builder(
-                              builder: (context) {
-                                return SwipeFilterChip(
-                                  label:
-                                      AppLocalizations.of(
-                                        context,
-                                      )?.get('all') ??
-                                      '🎬 All',
-                                  selected: activeProv == null,
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    ref
-                                        .read(swipeProvider.notifier)
-                                        .updateFilters(
-                                          languageFilter: activeLang,
-                                          providerFilter: null,
-                                        );
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
+                            SwipeFilterChip(
+                              label: t('lang_all', 'All'),
+                              selected: activeProv == null,
+                              onTap: () =>
+                                  apply(language: activeLang, provider: null),
                             ),
-                            ...SwipeFilterLabels.providers.entries.map((entry) {
-                              return SwipeFilterChip(
+                            ...SwipeFilterLabels.providers.entries.map(
+                              (entry) => SwipeFilterChip(
                                 label: entry.value,
                                 selected: activeProv == entry.key,
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  ref
-                                      .read(swipeProvider.notifier)
-                                      .updateFilters(
-                                        languageFilter: activeLang,
-                                        providerFilter: entry.key,
-                                      );
-                                  Navigator.pop(ctx);
-                                },
-                              );
-                            }),
+                                onTap: () => apply(
+                                  language: activeLang,
+                                  provider: entry.key,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -289,6 +165,157 @@ class SwipeFilterSheet {
           },
         );
       },
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label, required this.active});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: c.dim,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
+        ),
+        if (active) ...[
+          const SizedBox(width: 6),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: c.red),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RegionGrid extends StatelessWidget {
+  const _RegionGrid({required this.selected, required this.onSelect});
+
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final allLabel = AppLocalizations.of(context)?.get('lang_all') ?? 'All';
+
+    final tiles = <Widget>[
+      _RegionTile(
+        icon: SwipeFilterLabels.languageIcon(null),
+        label: allLabel,
+        semanticsLabel: allLabel,
+        selected: selected == null,
+        onTap: () => onSelect(null),
+      ),
+      ...SwipeFilterLabels.languageOrder.map((key) {
+        final short = SwipeFilterLabels.languageShort(context, key);
+        final full = SwipeFilterLabels.languageLabel(context, key);
+        return _RegionTile(
+          icon: SwipeFilterLabels.languageIcon(key),
+          label: short,
+          semanticsLabel: full,
+          selected: selected == key,
+          onTap: () => onSelect(key),
+        );
+      }),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final tileWidth = (constraints.maxWidth - gap) / 2;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: tileWidth, child: tile),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RegionTile extends StatelessWidget {
+  const _RegionTile({
+    required this.icon,
+    required this.label,
+    required this.semanticsLabel,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String semanticsLabel;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Semantics(
+      label: semanticsLabel,
+      selected: selected,
+      button: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? c.red.withValues(alpha: c.isLight ? 0.10 : 0.14)
+                  : c.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? c.red : c.border,
+                width: selected ? 1.4 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: selected ? c.red : c.dim),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? c.ink : c.dim,
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

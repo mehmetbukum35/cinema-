@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../theme/app_theme.dart';
 
 /// Swipe filtre alt sayfasındaki seçilebilir chip.
+///
+/// Wrap içinde shrink-wrap olur; loose max-width altında [Center]/[Align]
+/// satırı doldurmasın diye [IntrinsicWidth] kullanılır.
 class SwipeFilterChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -21,21 +25,27 @@ class SwipeFilterChip extends StatelessWidget {
       label: label,
       selected: selected,
       button: true,
+      excludeSemantics: true,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
         behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          height: 44,
-          child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          child: IntrinsicWidth(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: selected ? c.red : c.card,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: selected ? c.red : c.border,
-                  width: 1,
+                  width: selected ? 1.4 : 1,
                 ),
               ),
               child: Text(
@@ -43,7 +53,7 @@ class SwipeFilterChip extends StatelessWidget {
                 style: TextStyle(
                   color: selected ? Colors.white : c.dim,
                   fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),

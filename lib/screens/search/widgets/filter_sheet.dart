@@ -30,6 +30,12 @@ class SearchFilterSheet {
         builder: (ctx, setModalState) {
           final c = ctx.c;
           final media = MediaQuery.of(ctx);
+          final hasActive =
+              localLang != null || localProv != null || localRating != null;
+
+          String t(String key, String fallback) =>
+              AppLocalizations.of(ctx)?.get(key) ?? fallback;
+
           return Padding(
             padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
             child: ClipRRect(
@@ -78,25 +84,16 @@ class SearchFilterSheet {
                         const SizedBox(height: 20),
                         Row(
                           children: [
-                            Builder(
-                              builder: (context) {
-                                return Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('advanced_filters') ??
-                                      'Advanced Filters',
-                                  style: TextStyle(
-                                    color: c.ink,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                );
-                              },
+                            Text(
+                              t('advanced_filters', 'Advanced Filters'),
+                              style: TextStyle(
+                                color: c.ink,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const Spacer(),
-                            if (localLang != null ||
-                                localProv != null ||
-                                localRating != null)
+                            if (hasActive)
                               GestureDetector(
                                 onTap: () {
                                   setModalState(() {
@@ -106,10 +103,7 @@ class SearchFilterSheet {
                                   });
                                 },
                                 child: Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('search_clear') ??
-                                      'Temizle',
+                                  t('search_clear', 'Temizle'),
                                   style: TextStyle(
                                     color: c.red,
                                     fontSize: 13,
@@ -119,151 +113,48 @@ class SearchFilterSheet {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        Builder(
-                          builder: (context) {
-                            return Text(
-                              AppLocalizations.of(
-                                    context,
-                                  )?.get('country_region') ??
-                                  'COUNTRY / REGION',
-                              style: TextStyle(
-                                color: c.dim,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                              ),
-                            );
-                          },
+                        const SizedBox(height: 22),
+                        _SectionLabel(t('country_region', 'COUNTRY / REGION')),
+                        const SizedBox(height: 10),
+                        _RegionGrid(
+                          selected: localLang,
+                          onSelect: (value) =>
+                              setModalState(() => localLang = value),
                         ),
+                        const SizedBox(height: 22),
+                        _SectionLabel(t('platform', 'PLATFORM')),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            Builder(
-                              builder: (context) {
-                                return SearchFilterChip(
-                                  label:
-                                      AppLocalizations.of(
-                                        context,
-                                      )?.get('lang_all') ??
-                                      'All',
-                                  selected: localLang == null,
-                                  onTap: () =>
-                                      setModalState(() => localLang = null),
-                                );
-                              },
+                            SearchFilterChip(
+                              label: t('lang_all', 'All'),
+                              selected: localProv == null,
+                              onTap: () =>
+                                  setModalState(() => localProv = null),
                             ),
-                            ...SearchFilterLabels.languages(
-                              context,
-                            ).entries.map((entry) {
-                              return SearchFilterChip(
-                                label: SearchFilterLabels.languageLabel(
-                                  context,
-                                  entry.key,
-                                ),
-                                selected: localLang == entry.key,
-                                onTap: () =>
-                                    setModalState(() => localLang = entry.key),
-                              );
-                            }),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Builder(
-                          builder: (context) {
-                            return Text(
-                              AppLocalizations.of(context)?.get('platform') ??
-                                  'PLATFORM',
-                              style: TextStyle(
-                                color: c.dim,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                return SearchFilterChip(
-                                  label:
-                                      AppLocalizations.of(
-                                        context,
-                                      )?.get('lang_all') ??
-                                      'All',
-                                  selected: localProv == null,
-                                  onTap: () =>
-                                      setModalState(() => localProv = null),
-                                );
-                              },
-                            ),
-                            ...SearchFilterLabels.providers.entries.map((
-                              entry,
-                            ) {
-                              return SearchFilterChip(
+                            ...SearchFilterLabels.providers.entries.map(
+                              (entry) => SearchFilterChip(
                                 label: entry.value,
                                 selected: localProv == entry.key,
                                 onTap: () =>
                                     setModalState(() => localProv = entry.key),
-                              );
-                            }),
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        Builder(
-                          builder: (context) {
-                            return Text(
-                              AppLocalizations.of(
-                                    context,
-                                  )?.get('minimum_tmdb_score') ??
-                                  'MINIMUM TMDB SCORE',
-                              style: TextStyle(
-                                color: c.dim,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                              ),
-                            );
-                          },
+                        const SizedBox(height: 22),
+                        _SectionLabel(
+                          t('minimum_tmdb_score', 'MINIMUM TMDB SCORE'),
                         ),
                         const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                return SearchFilterChip(
-                                  label:
-                                      AppLocalizations.of(
-                                        context,
-                                      )?.get('lang_all') ??
-                                      'All',
-                                  selected: localRating == null,
-                                  onTap: () =>
-                                      setModalState(() => localRating = null),
-                                );
-                              },
-                            ),
-                            ...SearchFilterLabels.ratings.entries.map((entry) {
-                              return SearchFilterChip(
-                                label: entry.value,
-                                selected: localRating == entry.key,
-                                onTap: () => setModalState(
-                                  () => localRating = entry.key,
-                                ),
-                              );
-                            }),
-                          ],
+                        _ScoreRail(
+                          selected: localRating,
+                          onSelect: (value) =>
+                              setModalState(() => localRating = value),
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 28),
                         GestureDetector(
                           onTap: () {
                             HapticFeedback.mediumImpact();
@@ -284,26 +175,17 @@ class SearchFilterSheet {
                             width: double.infinity,
                             height: 48,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.red, Color(0xFFB83050)],
-                              ),
+                              gradient: CinemaGradients.crimson,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
-                            child: Builder(
-                              builder: (context) {
-                                return Text(
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.get('filter_and_list') ??
-                                      'Filter and List',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                );
-                              },
+                            child: Text(
+                              t('filter_and_list', 'Filter and List'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -315,6 +197,236 @@ class SearchFilterSheet {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Text(
+      text,
+      style: TextStyle(
+        color: c.dim,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.4,
+      ),
+    );
+  }
+}
+
+/// Bölge seçimi: kısa etiket + ikon, 2 sütun ızgara — uzun chip yığını yerine.
+class _RegionGrid extends StatelessWidget {
+  const _RegionGrid({required this.selected, required this.onSelect});
+
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final allLabel = AppLocalizations.of(context)?.get('lang_all') ?? 'All';
+
+    final tiles = <Widget>[
+      _RegionTile(
+        icon: Icons.travel_explore_rounded,
+        label: allLabel,
+        semanticsLabel: allLabel,
+        selected: selected == null,
+        onTap: () => onSelect(null),
+      ),
+      ...SearchFilterLabels.languageOrder.map((key) {
+        final short = SearchFilterLabels.languageShort(context, key);
+        final full = SearchFilterLabels.languageLabel(context, key);
+        return _RegionTile(
+          icon: SearchFilterLabels.languageIcon(key),
+          label: short,
+          semanticsLabel: full,
+          selected: selected == key,
+          onTap: () => onSelect(key),
+        );
+      }),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final tileWidth = (constraints.maxWidth - gap) / 2;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: tileWidth, child: tile),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RegionTile extends StatelessWidget {
+  const _RegionTile({
+    required this.icon,
+    required this.label,
+    required this.semanticsLabel,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String semanticsLabel;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Semantics(
+      label: semanticsLabel,
+      selected: selected,
+      button: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? c.red.withValues(alpha: c.isLight ? 0.10 : 0.14)
+                  : c.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? c.red : c.border,
+                width: selected ? 1.4 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: selected ? c.red : c.dim),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? c.ink : c.dim,
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Puan eşiği: tek satırlık segment rayı (ordinal seçim).
+class _ScoreRail extends StatelessWidget {
+  const _ScoreRail({required this.selected, required this.onSelect});
+
+  final double? selected;
+  final ValueChanged<double?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final allLabel = AppLocalizations.of(context)?.get('lang_all') ?? 'All';
+    final options = <MapEntry<double?, String>>[
+      MapEntry(null, allLabel),
+      ...SearchFilterLabels.ratings.entries,
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.border),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(width: 2),
+            Expanded(
+              child: _ScoreSegment(
+                label: options[i].value,
+                selected: selected == options[i].key,
+                onTap: () => onSelect(options[i].key),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreSegment extends StatelessWidget {
+  const _ScoreSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Semantics(
+      label: label,
+      selected: selected,
+      button: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? c.red : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : c.dim,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
