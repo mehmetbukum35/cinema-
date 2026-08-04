@@ -503,8 +503,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(loading: true);
 
-    if (resolution == ConflictResolution.delete) {
-      await DatabaseHelper().hardClearAllData();
+    final previousUserId = await PrefsService.getLastAuthenticatedUserId();
+    final newUserId = user['id']?.toString();
+    final accountSwitched =
+        previousUserId != null &&
+        newUserId != null &&
+        previousUserId != newUserId;
+
+    if (resolution == ConflictResolution.delete || accountSwitched) {
+      if (resolution == ConflictResolution.delete) {
+        await DatabaseHelper().hardClearAllData();
+      }
+      // Önceki hesabın kültür tercihleri / DNA cache'i yeni oturuma sızmasın.
+      await PrefsService.clearAccountScopedPreferences();
     }
     // Set sync timestamps to 0 so we fetch/push appropriately on new login session
     await PrefsService.setLastSyncTime(0);
@@ -516,7 +527,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     await PrefsService.saveUserData(user);
 
-    final newUserId = user['id']?.toString();
     await PrefsService.setLastAuthenticatedUserId(newUserId);
 
     state = state.copyWith(
@@ -607,6 +617,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
       await DatabaseHelper().hardClearAllData();
+      await PrefsService.clearAccountScopedPreferences();
       await PrefsService.setLastAuthenticatedUserId(null);
     }
     await _invalidateGuestProviders();

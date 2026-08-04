@@ -25,6 +25,11 @@ DnaRating _r({
 }
 
 void main() {
+  test('DNA schema version is bumped when snapshot shape changes', () {
+    // v2: top_cultures axis. Bump again when compute/hash inputs change.
+    expect(TasteDnaService.dnaSchemaVersion, 2);
+  });
+
   test('TasteDna.fromJson accepts numeric strings and malformed evidence', () {
     final dna = TasteDna.fromJson({
       'archetype': 'genre_nomad',

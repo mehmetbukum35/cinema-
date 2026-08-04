@@ -144,6 +144,8 @@ const Map<String, String> kTrStrings = {
   'discovery_duration_title': 'Ne kadar uzun?',
   'discovery_familiarity_title': 'Ne kadar keşif?',
   'discovery_origin_title': 'Hangi taraftan?',
+  'discovery_origin_hint':
+      'Yerli: tercih ettiğin sinemalar (yoksa uygulama diline göre).',
   'discovery_any': 'Fark etmez',
   'discovery_movie': 'Film',
   'discovery_tv': 'Dizi',

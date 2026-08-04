@@ -240,6 +240,11 @@ class _DiscoveryContextSheetState extends State<DiscoveryContextSheet> {
             ),
             _ChoiceSection<DiscoveryOrigin>(
               title: _tr(context, 'discovery_origin_title', 'Hangi taraftan?'),
+              subtitle: _tr(
+                context,
+                'discovery_origin_hint',
+                'Yerli: tercih ettiğin sinemalar (yoksa uygulama diline göre).',
+              ),
               selected: _value.origin,
               options: [
                 (
@@ -294,12 +299,14 @@ class _DiscoveryContextSheetState extends State<DiscoveryContextSheet> {
 class _ChoiceSection<T> extends StatelessWidget {
   const _ChoiceSection({
     required this.title,
+    this.subtitle,
     required this.selected,
     required this.options,
     required this.onSelected,
   });
 
   final String title;
+  final String? subtitle;
   final T selected;
   final List<(T, String)> options;
   final ValueChanged<T> onSelected;
@@ -320,6 +327,13 @@ class _ChoiceSection<T> extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: TextStyle(color: c.dim, fontSize: 12, height: 1.35),
+            ),
+          ],
           const SizedBox(height: 9),
           LayoutBuilder(
             builder: (context, constraints) => Wrap(

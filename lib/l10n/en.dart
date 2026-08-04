@@ -143,6 +143,8 @@ const Map<String, String> kEnStrings = {
   'discovery_duration_title': 'How long?',
   'discovery_familiarity_title': 'How much discovery?',
   'discovery_origin_title': 'From where?',
+  'discovery_origin_hint':
+      'Local means your preferred cinemas (or your app language if none).',
   'discovery_any': 'Any',
   'discovery_movie': 'Movie',
   'discovery_tv': 'TV show',

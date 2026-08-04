@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/providers/social_provider.dart';
 import 'package:ne_izlesem/providers/watchlist_provider.dart';
+import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/services/api_service.dart';
+import 'package:ne_izlesem/services/cultural_preference_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
@@ -452,6 +454,9 @@ void main() {
         // Set last authenticated user id to '1'
         await PrefsService.setLastAuthenticatedUserId('1');
         await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        await CulturalPreferenceService.save({
+          'korean': CulturePreferenceLevel.prefer,
+        });
 
         final result = await notifier.register('reg@example.com', 'secret123');
         expect(result.status, AuthStatus.conflict);
@@ -469,6 +474,36 @@ void main() {
           await DatabaseHelper().hasAnyLocalData(),
           isFalse,
         ); // ratings wiped
+        expect(
+          (await CulturalPreferenceService.load()).isEmpty,
+          isTrue,
+        ); // culture prefs wiped
+      },
+    );
+
+    test(
+      'completeLogin account switch clears previous user cultural preferences',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+
+        await PrefsService.setLastAuthenticatedUserId('1');
+        // Conflict, hasAnyLocalData gerektirir.
+        await PrefsService.saveRating(movieId: 55, isTV: false, rating: 2);
+        await CulturalPreferenceService.save({
+          'turkish': CulturePreferenceLevel.prefer,
+        }, source: 'explicit_edit');
+
+        final result = await notifier.register('reg2@example.com', 'secret123');
+        expect(result.status, AuthStatus.conflict);
+
+        await notifier.completeLogin(
+          user: result.user!,
+          tokens: result.tokens!,
+          resolution: ConflictResolution.merge,
+        );
+
+        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect((await CulturalPreferenceService.load()).isEmpty, isTrue);
       },
     );
 

@@ -131,17 +131,47 @@ class RecommendationEngine {
     return strongest * culturalPreferenceInfluence(ratingCount);
   }
 
-  static bool matchesDiscoveryContext(Movie movie, DiscoveryContext context) {
+  /// Kullanıcının "yerli" sinema çerçevesi.
+  ///
+  /// 1) `prefer` ettiği kültürler (açık tercih en güçlü sinyal)
+  /// 2) yoksa uygulama dili → varsayılan bölge (`tr`→Türk, `en`→Hollywood)
+  static Set<String> resolveHomeCultures({
+    required CulturalPreferences preferences,
+    String languageCode = 'tr',
+  }) {
+    final preferred = preferences.levels.entries
+        .where((e) => e.value == CulturePreferenceLevel.prefer)
+        .map((e) => e.key)
+        .toSet();
+    if (preferred.isNotEmpty) return preferred;
+
+    return switch (languageCode.toLowerCase()) {
+      'tr' => const {'turkish'},
+      'en' => const {'hollywood'},
+      _ => const {'hollywood'},
+    };
+  }
+
+  static bool matchesDiscoveryContext(
+    Movie movie,
+    DiscoveryContext context, {
+    Set<String> homeCultures = const {'turkish'},
+  }) {
     if (context.media == DiscoveryMedia.movie && movie.isTV) return false;
     if (context.media == DiscoveryMedia.tv && !movie.isTV) return false;
+    if (context.origin == DiscoveryOrigin.any) return true;
+
     final cultures = CulturalClassifier.classify(movie);
-    if (context.origin == DiscoveryOrigin.local &&
-        !cultures.contains('turkish')) {
-      return false;
+    final isHome =
+        homeCultures.isNotEmpty && cultures.any(homeCultures.contains);
+
+    if (context.origin == DiscoveryOrigin.local) {
+      return isHome;
     }
-    if (context.origin == DiscoveryOrigin.foreign &&
-        cultures.contains('turkish')) {
-      return false;
+    // Yabancı: ev çerçevesiyle kesişmeyen (sınıflanamayanlar da yabancı sayılır —
+    // aksi halde keşif boşalır).
+    if (context.origin == DiscoveryOrigin.foreign) {
+      return !isHome;
     }
     return true;
   }
@@ -706,10 +736,21 @@ class RecommendationEngine {
     }
 
     // Tekilleştir + dışlananları ele.
+    final culturalPreferences = await CulturalPreferenceService.load();
+    final homeCultures = resolveHomeCultures(
+      preferences: culturalPreferences,
+      languageCode: PrefsService.activeLanguageCode,
+    );
     final seen = <String>{};
     final fresh = <Movie>[];
     for (final m in candidates) {
-      if (!matchesDiscoveryContext(m, discoveryContext)) continue;
+      if (!matchesDiscoveryContext(
+        m,
+        discoveryContext,
+        homeCultures: homeCultures,
+      )) {
+        continue;
+      }
       final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
 
       // Hard filter: Zaten oylananlar veya sırada olanlar
@@ -730,7 +771,6 @@ class RecommendationEngine {
     if (fresh.isEmpty) return fresh;
 
     final userWeights = await PrefsService.getGenreWeights();
-    final culturalPreferences = await CulturalPreferenceService.load();
     final experiment = await RecommendationExperimentService.current();
     final ratingCount = ratings.length;
 

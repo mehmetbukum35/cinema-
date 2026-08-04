@@ -995,6 +995,12 @@ class PrefsService {
     await clearDnaCache();
   }
 
+  /// Hesaba özel yerel tercihler (kültür + DNA cache). Wipe / hesap değişiminde.
+  static Future<void> clearAccountScopedPreferences() async {
+    await CulturalPreferenceService.clear();
+    await clearDnaCache();
+  }
+
   // ─── DNA Caching ─────────────────────────────────────────────────────────────
   static const _keyLastDnaJson = 'last_dna_json';
   static const _keyLastDnaInputHash = 'last_dna_input_hash';

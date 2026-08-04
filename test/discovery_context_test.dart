@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/models/discovery_context.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
@@ -6,6 +7,7 @@ import 'package:ne_izlesem/services/recommendation_engine.dart';
 Movie title({
   bool isTV = false,
   String? language,
+  List<String> countries = const [],
   int? runtime,
   double popularity = 50,
   int voteCount = 500,
@@ -17,12 +19,50 @@ Movie title({
   voteAverage: voteAverage,
   isTV: isTV,
   originalLanguage: language,
+  originCountries: countries,
   runtimeMinutes: runtime,
   popularity: popularity,
   voteCount: voteCount,
 );
 
 void main() {
+  group('resolveHomeCultures', () {
+    test('falls back to Turkish for tr locale without prefers', () {
+      expect(
+        RecommendationEngine.resolveHomeCultures(
+          preferences: const CulturalPreferences(),
+          languageCode: 'tr',
+        ),
+        {'turkish'},
+      );
+    });
+
+    test('falls back to Hollywood for en locale without prefers', () {
+      expect(
+        RecommendationEngine.resolveHomeCultures(
+          preferences: const CulturalPreferences(),
+          languageCode: 'en',
+        ),
+        {'hollywood'},
+      );
+    });
+
+    test('prefers declared cultural preferences over app language', () {
+      expect(
+        RecommendationEngine.resolveHomeCultures(
+          preferences: const CulturalPreferences(
+            levels: {
+              'korean': CulturePreferenceLevel.prefer,
+              'european': CulturePreferenceLevel.explore,
+            },
+          ),
+          languageCode: 'tr',
+        ),
+        {'korean'},
+      );
+    });
+  });
+
   group('Discovery context filtering', () {
     test('movie and TV choices filter the opposite media type', () {
       expect(
@@ -41,11 +81,48 @@ void main() {
       );
     });
 
-    test('local and foreign choices use cultural evidence', () {
+    test('local/foreign follow the resolved home cultures', () {
+      const home = {'hollywood'};
+      expect(
+        RecommendationEngine.matchesDiscoveryContext(
+          title(language: 'en', countries: const ['US']),
+          const DiscoveryContext(origin: DiscoveryOrigin.local),
+          homeCultures: home,
+        ),
+        isTrue,
+      );
       expect(
         RecommendationEngine.matchesDiscoveryContext(
           title(language: 'tr'),
           const DiscoveryContext(origin: DiscoveryOrigin.local),
+          homeCultures: home,
+        ),
+        isFalse,
+      );
+      expect(
+        RecommendationEngine.matchesDiscoveryContext(
+          title(language: 'tr'),
+          const DiscoveryContext(origin: DiscoveryOrigin.foreign),
+          homeCultures: home,
+        ),
+        isTrue,
+      );
+      expect(
+        RecommendationEngine.matchesDiscoveryContext(
+          title(language: 'en', countries: const ['US']),
+          const DiscoveryContext(origin: DiscoveryOrigin.foreign),
+          homeCultures: home,
+        ),
+        isFalse,
+      );
+    });
+
+    test('Turkish home still treats Turkish cinema as local', () {
+      expect(
+        RecommendationEngine.matchesDiscoveryContext(
+          title(language: 'tr'),
+          const DiscoveryContext(origin: DiscoveryOrigin.local),
+          homeCultures: const {'turkish'},
         ),
         isTrue,
       );
@@ -53,6 +130,7 @@ void main() {
         RecommendationEngine.matchesDiscoveryContext(
           title(language: 'ko'),
           const DiscoveryContext(origin: DiscoveryOrigin.local),
+          homeCultures: const {'turkish'},
         ),
         isFalse,
       );

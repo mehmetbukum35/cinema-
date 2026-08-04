@@ -476,9 +476,13 @@ class DatabaseHelper {
 
     final originalLanguage =
         movie?.originalLanguage ?? existing?['original_language'] as String?;
-    final originCountriesJson = movie != null
+    // Liste uçlarından gelen Movie çoğu zaman originCountries=[] taşır;
+    // dolu mevcut değeri boş listeyle ezme (dil alanındaki null-safe desen).
+    final String? originCountriesJson =
+        (movie != null && movie.originCountries.isNotEmpty)
         ? jsonEncode(movie.originCountries)
-        : existing?['origin_countries'] as String?;
+        : (existing?['origin_countries'] as String? ??
+              (movie != null ? jsonEncode(const <String>[]) : null));
 
     if (db == null) {
       _mockRatings.removeWhere(

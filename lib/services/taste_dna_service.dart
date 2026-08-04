@@ -32,6 +32,10 @@ class TasteDnaService {
   final TmdbService _service;
   TasteDnaService(this._service);
 
+  /// Snapshot şekli / compute semantiği değişince bump et — eski cache
+  /// `top_cultures` gibi yeni alanları sonsuza dek boş bırakmasın.
+  static const dnaSchemaVersion = 2;
+
   static const _likedDecay = 0.00385; // ~180 gün yarı ömür (motorla aynı)
 
   /// Tür → arketip kümesi. En baskın türün kümesi arketipi belirler.
@@ -402,7 +406,7 @@ class TasteDnaService {
       ),
     );
     final inputHash =
-        "$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig|$cultureSig";
+        "v$dnaSchemaVersion|$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig|$cultureSig";
 
     final cachedData = await PrefsService.getCachedDna();
     if (cachedData != null && cachedData['hash'] == inputHash) {

@@ -278,6 +278,41 @@ void main() {
         expect(row['is_spoiler'], 1);
       });
 
+      test(
+        'lean Movie with empty originCountries preserves stored countries',
+        () async {
+          await helper.saveRating(
+            movie: Movie(
+              id: 42,
+              title: 'Oldboy',
+              overview: '',
+              voteAverage: 8,
+              originalLanguage: 'ko',
+              originCountries: const ['KR'],
+            ),
+            rating: 3,
+          );
+
+          // Discover/swipe list payload often has language but empty countries.
+          await helper.saveRating(
+            movie: Movie(
+              id: 42,
+              title: 'Oldboy',
+              overview: '',
+              voteAverage: 8,
+              originalLanguage: 'ko',
+              originCountries: const [],
+            ),
+            rating: 2,
+          );
+
+          final row = await helper.getRating(42, false);
+          expect(row!['original_language'], 'ko');
+          expect(row['origin_countries'], '["KR"]');
+          expect(row['rating'], 2);
+        },
+      );
+
       test('movie and tv with same id are independent rows', () async {
         await helper.saveRating(movie: movie(7, 'Film'), rating: 1);
         await helper.saveRating(movie: movie(7, 'Dizi', isTV: true), rating: 3);

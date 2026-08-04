@@ -49,12 +49,20 @@ class CulturalPreferenceService {
     await prefs.setString(storageKey, jsonEncode(value.toJson()));
   }
 
+  /// Hesap değişimi / yerel wipe sonrası cihazdaki kültür tercihlerini siler.
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(storageKey);
+  }
+
   /// Puanlamalardan kültürel tercihleri yumuşak günceller. Değişiklik olduysa true.
   static Future<bool> learnFromRatings() async {
     final current = await load();
     final raw = await DatabaseHelper().getRatings();
     final classified = <({Set<String> cultures, int rating})>[];
     for (final row in raw) {
+      // Özel puanlar DNA / yayınlanan kültür sinyalini şekillendirmesin.
+      if ((row['is_private'] as int? ?? 0) == 1) continue;
       final movie = row['movie'];
       if (movie is! Movie) continue;
       final cultures = CulturalClassifier.classify(movie);
