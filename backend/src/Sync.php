@@ -178,8 +178,8 @@ class Sync
         $profile->execute([$uid]);
         $profileRow = $profile->fetch();
         if (
-            $profileRow !== false
-            && (int) $profileRow['cultural_preferences_updated_at'] > $since
+            is_array($profileRow)
+            && (int) ($profileRow['cultural_preferences_updated_at'] ?? 0) > $since
         ) {
             $decoded = json_decode(
                 (string) ($profileRow['cultural_preferences'] ?? '{}'),

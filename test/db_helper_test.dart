@@ -6,6 +6,11 @@ import 'package:ne_izlesem/models/movie.dart';
 /// DatabaseHelper'ın gerçek SQL yolunu test eder: ffi in-memory veritabanı
 /// üretim şemasıyla (onCreate) açılıp DatabaseHelper'a enjekte edilir; mock
 /// listeler devreye girmez. Migration testleri ise v1 şemasından başlar.
+Future<Set<String>> _columnNames(Database db, String table) async {
+  final info = await db.rawQuery('PRAGMA table_info($table)');
+  return info.map((r) => r['name'] as String).toSet();
+}
+
 void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
@@ -153,7 +158,7 @@ void main() {
     });
 
     test('migrated schema matches fresh onCreate schema (no drift)', () async {
-      await helper.onUpgrade(db, 1, 9);
+      await helper.onUpgrade(db, 1, kDbSchemaVersion);
 
       final migratedColumns = <String, Set<String>>{};
       const tables = [
@@ -172,7 +177,7 @@ void main() {
 
       final fresh = await openDatabase(
         inMemoryDatabasePath,
-        version: 9,
+        version: kDbSchemaVersion,
         onCreate: helper.onCreate,
       );
       try {
@@ -193,6 +198,124 @@ void main() {
 
       // tearDown'daki close çift çağrılmasın diye yeniden aç.
       db = await openDatabase(inMemoryDatabasePath, version: 1);
+    });
+
+    test('onUpgrade tekrar çalıştırılabilir (idempotent)', () async {
+      await helper.onUpgrade(db, 1, kDbSchemaVersion);
+      final firstPass = await _columnNames(db, 'ratings');
+
+      // Aynı migration'ı ikinci kez koşturmak patlamamalı ve şemayı bozmamalı.
+      await helper.onUpgrade(db, 1, kDbSchemaVersion);
+
+      expect(await _columnNames(db, 'ratings'), firstPass);
+      expect(await db.query('ratings'), hasLength(1));
+    });
+  });
+
+  // ─── Kısmi migration onarımı ──────────────────────────────────────────────
+
+  group('kısmi migration onarımı', () {
+    late Database db;
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('yarım kalmış v10 yükseltmesi eksik kolonu sessizce atlamaz', () async {
+      // "original_language eklenmiş, origin_countries eklenmemiş" durumu:
+      // hatayı yutan eski migration kodunun bıraktığı bozuk şema.
+      db = await openDatabase(
+        inMemoryDatabasePath,
+        version: 9,
+        onCreate: (d, v) async {
+          await d.execute('''
+              CREATE TABLE ratings (
+                movie_id INTEGER,
+                is_tv INTEGER NOT NULL,
+                rating INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                original_language TEXT,
+                PRIMARY KEY (movie_id, is_tv)
+              )
+            ''');
+        },
+      );
+
+      await DatabaseHelper().onUpgrade(db, 9, kDbSchemaVersion);
+
+      expect(
+        await _columnNames(db, 'ratings'),
+        contains('origin_countries'),
+        reason:
+            'İlk ALTER "duplicate column" verse bile kalan adımlar '
+            'uygulanmalı; aksi halde sürüm yükseltilir ve şema kalıcı bozulur',
+      );
+    });
+
+    test('ensureSchema sürümü ilerlemiş bozuk şemayı onarır', () async {
+      // Sürüm zaten güncel ama kolonlar eksik: onUpgrade bir daha çalışmaz,
+      // dolayısıyla kurtarma yalnızca ensureSchema ile mümkün.
+      db = await openDatabase(
+        inMemoryDatabasePath,
+        version: kDbSchemaVersion,
+        onCreate: (d, v) async {
+          await d.execute('''
+            CREATE TABLE ratings (
+              movie_id INTEGER,
+              is_tv INTEGER NOT NULL,
+              rating INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              PRIMARY KEY (movie_id, is_tv)
+            )
+          ''');
+          await d.execute('''
+            CREATE TABLE watchlist (
+              id INTEGER,
+              title TEXT NOT NULL,
+              is_tv INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              PRIMARY KEY (id, is_tv)
+            )
+          ''');
+        },
+      );
+
+      await DatabaseHelper().ensureSchema(db);
+
+      final ratingCols = await _columnNames(db, 'ratings');
+      expect(
+        ratingCols,
+        containsAll(['original_language', 'origin_countries']),
+      );
+      expect(ratingCols, containsAll(['updated_at', 'deleted', 'comment']));
+      expect(ratingCols, contains('metadata_locale'));
+
+      final watchlistCols = await _columnNames(db, 'watchlist');
+      expect(watchlistCols, containsAll(['updated_at', 'deleted']));
+      expect(watchlistCols, contains('metadata_locale'));
+
+      // Eksik tablo ve indeksler de tamamlanmalı.
+      expect(await db.query('tmdb_cache'), isEmpty);
+      final indices = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index'",
+      );
+      expect(
+        indices.map((r) => r['name']),
+        containsAll(['idx_ratings_updated_at', 'idx_watchlist_updated_at']),
+      );
+    });
+
+    test('ensureSchema sağlam şemayı değiştirmez', () async {
+      db = await openDatabase(
+        inMemoryDatabasePath,
+        version: kDbSchemaVersion,
+        onCreate: DatabaseHelper().onCreate,
+      );
+      final before = await _columnNames(db, 'ratings');
+
+      await DatabaseHelper().ensureSchema(db);
+
+      expect(await _columnNames(db, 'ratings'), before);
     });
   });
 

@@ -5,6 +5,13 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/movie.dart';
 
+/// Yerel SQLite şemasının güncel sürümü.
+///
+/// Yeni bir migration eklerken burayı artır ve kolonu hem [DatabaseHelper.onCreate]
+/// hem `onUpgrade` hem de `_migratedColumns` tanımına ekle; db_helper_test'teki
+/// drift testi üçünün uyumunu doğrular.
+const int kDbSchemaVersion = 10;
+
 int _dbInt(Object? v, [int fallback = 0]) =>
     v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? fallback);
 
@@ -107,10 +114,133 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 10,
+      version: kDbSchemaVersion,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
+      onOpen: ensureSchema,
     );
+  }
+
+  // ─── Şema tanımı ve migration yardımcıları ───────────────────────────────
+
+  /// Migration'larla eklenen kolonların kanonik tanımı; `onCreate` ile bire bir
+  /// uyumlu olmalıdır.
+  ///
+  /// `ensureSchema` eksik kalan kolonları buradan tamamlar. Taban (v1) kolonları
+  /// her sürümde var olduğu için listeye dahil değildir.
+  static const Map<String, Map<String, String>> _migratedColumns = {
+    'watchlist': {
+      'metadata_locale': "TEXT NOT NULL DEFAULT 'und'",
+      'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+      'deleted': 'INTEGER NOT NULL DEFAULT 0',
+    },
+    'ratings': {
+      'title': 'TEXT',
+      'poster_path': 'TEXT',
+      'backdrop_path': 'TEXT',
+      'overview': 'TEXT',
+      'vote_average': 'REAL',
+      'release_date': 'TEXT',
+      'popularity': 'REAL',
+      'metadata_locale': "TEXT NOT NULL DEFAULT 'und'",
+      'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+      'deleted': 'INTEGER NOT NULL DEFAULT 0',
+      'comment': 'TEXT',
+      'is_spoiler': 'INTEGER NOT NULL DEFAULT 0',
+      'is_private': 'INTEGER NOT NULL DEFAULT 0',
+      'original_language': 'TEXT',
+      'origin_countries': 'TEXT',
+    },
+    'favorites': {
+      'metadata_locale': "TEXT NOT NULL DEFAULT 'und'",
+      'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+      'deleted': 'INTEGER NOT NULL DEFAULT 0',
+    },
+    'search_history': {
+      'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+      'deleted': 'INTEGER NOT NULL DEFAULT 0',
+    },
+    'watched_seasons': {
+      'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+      'deleted': 'INTEGER NOT NULL DEFAULT 0',
+    },
+  };
+
+  static const String _tmdbCacheDdl = '''
+      CREATE TABLE IF NOT EXISTS tmdb_cache (
+        cache_key TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        fetched_at INTEGER NOT NULL,
+        locale TEXT NOT NULL
+      )
+    ''';
+
+  /// Delta-sync indeksleri: indeks adı → tablo.
+  static const Map<String, String> _deltaSyncIndices = {
+    'idx_watchlist_updated_at': 'watchlist',
+    'idx_ratings_updated_at': 'ratings',
+    'idx_favorites_updated_at': 'favorites',
+    'idx_watched_seasons_updated_at': 'watched_seasons',
+    'idx_search_history_updated_at': 'search_history',
+  };
+
+  static Future<bool> _tableExists(DatabaseExecutor db, String table) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      [table],
+    );
+    return rows.isNotEmpty;
+  }
+
+  static Future<Set<String>> _columnsOf(
+    DatabaseExecutor db,
+    String table,
+  ) async {
+    final info = await db.rawQuery('PRAGMA table_info($table)');
+    return info.map((row) => row['name'] as String).toSet();
+  }
+
+  /// Kolon yoksa ekler, varsa dokunmaz.
+  ///
+  /// Tekrar çalıştırılabilir olması kritik: yarım kalmış bir migration ikinci
+  /// denemede "duplicate column" hatasıyla patlayıp kalan adımları atlamaz.
+  static Future<void> _addColumnIfMissing(
+    DatabaseExecutor db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    if (!await _tableExists(db, table)) return;
+    if ((await _columnsOf(db, table)).contains(column)) return;
+    await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+  }
+
+  static Future<void> _addColumnsIfMissing(
+    DatabaseExecutor db,
+    String table,
+    Map<String, String> columns,
+  ) async {
+    for (final entry in columns.entries) {
+      await _addColumnIfMissing(db, table, entry.key, entry.value);
+    }
+  }
+
+  /// Şemayı kanonik tanımla karşılaştırıp eksikleri tamamlar.
+  ///
+  /// Sürüm numarası yükseltilmiş ama kolonları eksik kalmış cihazları kurtarır:
+  /// eski migration kodu hataları yuttuğu için bazı kurulumlarda şema yarım
+  /// kalmış olabilir ve `onUpgrade` o cihazlarda bir daha çalışmaz.
+  Future<void> ensureSchema(Database db) async {
+    await db.execute(_tmdbCacheDdl);
+    for (final table in _migratedColumns.keys) {
+      await _addColumnsIfMissing(db, table, _migratedColumns[table]!);
+    }
+    for (final entry in _deltaSyncIndices.entries) {
+      if (!await _tableExists(db, entry.value)) continue;
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS ${entry.key} ON ${entry.value} (updated_at)',
+      );
+    }
   }
 
   Future<void> onCreate(Database db, int version) async {
@@ -203,49 +333,46 @@ class DatabaseHelper {
     ''');
 
     // 6. TMDB Cache Table
-    await db.execute('''
-      CREATE TABLE tmdb_cache (
-        cache_key TEXT PRIMARY KEY,
-        payload TEXT NOT NULL,
-        fetched_at INTEGER NOT NULL,
-        locale TEXT NOT NULL
-      )
-    ''');
+    await db.execute(_tmdbCacheDdl);
 
     // Indices for updated_at (Performance optimization for delta-sync)
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_watchlist_updated_at ON watchlist (updated_at)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ratings_updated_at ON ratings (updated_at)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_favorites_updated_at ON favorites (updated_at)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_watched_seasons_updated_at ON watched_seasons (updated_at)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_search_history_updated_at ON search_history (updated_at)',
-    );
+    for (final entry in _deltaSyncIndices.entries) {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS ${entry.key} ON ${entry.value} (updated_at)',
+      );
+    }
   }
 
+  /// Şemayı `oldVersion`'dan güncel sürüme taşır.
+  ///
+  /// Adımlar bilerek try/catch ile sarılmamıştır. sqflite `onUpgrade`'i bir
+  /// transaction içinde çalıştırdığı için, fırlatılan bir hata tüm değişiklikleri
+  /// geri alır ve sürüm numarasını yükseltmez; migration bir sonraki açılışta
+  /// baştan denenir. Hatayı yutmak ise yarım uygulanmış şemayı "tamamlandı" diye
+  /// kaydeder ve cihazı kalıcı olarak bozuk bırakır. Her adım ayrıca tekrar
+  /// çalıştırılabilir (idempotent) tutulmuştur.
   Future<void> onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      try {
-        await db.execute('ALTER TABLE ratings ADD COLUMN title TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN poster_path TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN backdrop_path TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN overview TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN vote_average REAL');
-        await db.execute('ALTER TABLE ratings ADD COLUMN release_date TEXT');
-        await db.execute('ALTER TABLE ratings ADD COLUMN popularity REAL');
-      } catch (e) {
-        debugPrint("Error migrating database to v2: $e");
-      }
+      await _addColumnsIfMissing(db, 'ratings', const {
+        'title': 'TEXT',
+        'poster_path': 'TEXT',
+        'backdrop_path': 'TEXT',
+        'overview': 'TEXT',
+        'vote_average': 'REAL',
+        'release_date': 'TEXT',
+        'popularity': 'REAL',
+      });
     }
     if (oldVersion < 3) {
-      try {
+      {
+        // Tabloları yeni birincil anahtara (id, is_tv) taşımak için yeniden kur.
+        // `*_old` artıkları yalnızca yarıda kesilmiş bir denemeden kalabilir;
+        // transaction geri alma sayesinde bu durum pratikte oluşmaz, ama kalırsa
+        // rename adımını kalıcı olarak kilitlememesi için temizleniyor.
+        await db.execute('DROP TABLE IF EXISTS watchlist_old;');
+        await db.execute('DROP TABLE IF EXISTS ratings_old;');
+        await db.execute('DROP TABLE IF EXISTS favorites_old;');
+
         // Migrate watchlist
         await db.execute('ALTER TABLE watchlist RENAME TO watchlist_old;');
         await db.execute('''
@@ -319,124 +446,62 @@ class DatabaseHelper {
           FROM favorites_old;
         ''');
         await db.execute('DROP TABLE favorites_old;');
-      } catch (e) {
-        debugPrint("Error migrating database to v3: $e");
       }
     }
     if (oldVersion < 4) {
-      try {
-        await db.execute(
-          'ALTER TABLE watchlist ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE watchlist ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE favorites ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE favorites ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE watched_seasons ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE watched_seasons ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE search_history ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-        );
-        await db.execute(
-          'ALTER TABLE search_history ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
-        );
-      } catch (e) {
-        debugPrint("Error migrating database to v4: $e");
+      const syncColumns = {
+        'updated_at': 'INTEGER NOT NULL DEFAULT 0',
+        'deleted': 'INTEGER NOT NULL DEFAULT 0',
+      };
+      for (final table in const [
+        'watchlist',
+        'ratings',
+        'favorites',
+        'watched_seasons',
+        'search_history',
+      ]) {
+        await _addColumnsIfMissing(db, table, syncColumns);
       }
     }
     if (oldVersion < 5) {
-      try {
-        await db.execute('ALTER TABLE ratings ADD COLUMN comment TEXT');
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN is_spoiler INTEGER NOT NULL DEFAULT 0',
-        );
-      } catch (e) {
-        debugPrint("Error migrating database to v5: $e");
-      }
+      await _addColumnsIfMissing(db, 'ratings', const {
+        'comment': 'TEXT',
+        'is_spoiler': 'INTEGER NOT NULL DEFAULT 0',
+      });
     }
     if (oldVersion < 6) {
-      try {
-        await db.execute('''
-          CREATE TABLE tmdb_cache (
-            cache_key TEXT PRIMARY KEY,
-            payload TEXT NOT NULL,
-            fetched_at INTEGER NOT NULL,
-            locale TEXT NOT NULL
-          )
-        ''');
-      } catch (e) {
-        debugPrint("Error migrating database to v6: $e");
-      }
+      await db.execute(_tmdbCacheDdl);
     }
     if (oldVersion < 7) {
-      try {
+      for (final entry in _deltaSyncIndices.entries) {
         await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_watchlist_updated_at ON watchlist (updated_at)',
+          'CREATE INDEX IF NOT EXISTS ${entry.key} ON ${entry.value} (updated_at)',
         );
-        await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_ratings_updated_at ON ratings (updated_at)',
-        );
-        await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_favorites_updated_at ON favorites (updated_at)',
-        );
-        await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_watched_seasons_updated_at ON watched_seasons (updated_at)',
-        );
-        await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_search_history_updated_at ON search_history (updated_at)',
-        );
-      } catch (e) {
-        debugPrint("Error migrating database to v7 (adding indices): $e");
       }
     }
     if (oldVersion < 8) {
-      try {
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0',
-        );
-      } catch (e) {
-        debugPrint("Error migrating database to v8 (adding is_private): $e");
-      }
+      await _addColumnIfMissing(
+        db,
+        'ratings',
+        'is_private',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
     }
     if (oldVersion < 9) {
-      try {
-        for (final table in ['ratings', 'watchlist', 'favorites']) {
-          await db.execute(
-            "ALTER TABLE $table ADD COLUMN metadata_locale TEXT NOT NULL DEFAULT 'und'",
-          );
-        }
-      } catch (e) {
-        debugPrint('Error migrating database to v9 (metadata locale): $e');
+      for (final table in const ['ratings', 'watchlist', 'favorites']) {
+        await _addColumnIfMissing(
+          db,
+          table,
+          'metadata_locale',
+          "TEXT NOT NULL DEFAULT 'und'",
+        );
       }
     }
     if (oldVersion < 10) {
-      try {
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN original_language TEXT',
-        );
-        await db.execute(
-          'ALTER TABLE ratings ADD COLUMN origin_countries TEXT',
-        );
-      } catch (e) {
-        debugPrint(
-          'Error migrating database to v10 (rating culture metadata): $e',
-        );
-      }
+      await _addColumnsIfMissing(db, 'ratings', const {
+        'original_language': 'TEXT',
+        'origin_countries': 'TEXT',
+      });
     }
   }
 
