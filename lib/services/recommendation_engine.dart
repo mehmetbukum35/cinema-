@@ -118,16 +118,25 @@ class RecommendationEngine {
   }) {
     final cultures = CulturalClassifier.classify(movie);
     if (cultures.isEmpty || preferences.isEmpty) return 0;
-    var strongest = 0.0;
+    // Ortak yapımlarda prefer, avoid'u yener (abs-max cezası yok).
+    var preferBoost = 0.0;
+    var exploreBoost = 0.0;
+    var avoidBoost = 0.0;
     for (final culture in cultures) {
-      final value = switch (preferences.levelFor(culture)) {
-        CulturePreferenceLevel.prefer => 0.10,
-        CulturePreferenceLevel.explore => 0.04,
-        CulturePreferenceLevel.avoid => -0.12,
-        CulturePreferenceLevel.neutral => 0.0,
-      };
-      if (value.abs() > strongest.abs()) strongest = value;
+      switch (preferences.levelFor(culture)) {
+        case CulturePreferenceLevel.prefer:
+          if (preferBoost < 0.10) preferBoost = 0.10;
+        case CulturePreferenceLevel.explore:
+          if (exploreBoost < 0.04) exploreBoost = 0.04;
+        case CulturePreferenceLevel.avoid:
+          if (avoidBoost > -0.12) avoidBoost = -0.12;
+        case CulturePreferenceLevel.neutral:
+          break;
+      }
     }
+    final strongest = preferBoost > 0
+        ? preferBoost
+        : (avoidBoost < 0 ? avoidBoost : exploreBoost);
     return strongest * culturalPreferenceInfluence(ratingCount);
   }
 

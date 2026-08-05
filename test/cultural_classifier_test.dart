@@ -78,6 +78,21 @@ void main() {
       expect(hollywood, -0.12);
     });
 
+    test('prefer wins over avoid on co-productions', () {
+      const prefs = CulturalPreferences(
+        levels: {
+          'hollywood': CulturePreferenceLevel.avoid,
+          'european': CulturePreferenceLevel.prefer,
+        },
+      );
+      final usFr = RecommendationEngine.culturalBoost(
+        movie: movie(language: 'en', countries: const ['US', 'FR']),
+        preferences: prefs,
+        ratingCount: 0,
+      );
+      expect(usFr, 0.10);
+    });
+
     test('reduces onboarding influence as real ratings accumulate', () {
       expect(RecommendationEngine.culturalPreferenceInfluence(0), 1);
       expect(RecommendationEngine.culturalPreferenceInfluence(10), 0.6);

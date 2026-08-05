@@ -56,6 +56,8 @@ CREATE TABLE `titles` (
   `release_date` varchar(20) DEFAULT NULL,
   `popularity` double DEFAULT NULL,
   `genre_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `original_language` varchar(16) DEFAULT NULL,
+  `origin_countries` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `metadata_updated_at` bigint(20) NOT NULL DEFAULT 0,
   `source` varchar(10) NOT NULL DEFAULT 'client',
   `refreshed_at` bigint(20) NOT NULL DEFAULT 0,

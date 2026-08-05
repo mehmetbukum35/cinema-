@@ -10,6 +10,9 @@ class CulturalPreferenceLearner {
     required List<({Set<String> cultures, int rating})> classifiedRatings,
     int? nowMs,
   }) {
+    // Profilde elle ayarlanan tercihler davranışla ezilmez.
+    if (current.source == 'explicit_edit') return null;
+
     final liked = <String, int>{};
     final disliked = <String, int>{};
     var classifiedLikeEvents = 0;
@@ -34,6 +37,7 @@ class CulturalPreferenceLearner {
 
     final next = Map<String, CulturePreferenceLevel>.from(current.levels);
     var changed = false;
+    final protectAvoid = current.source == 'dismiss_feedback';
 
     for (final culture in {...liked.keys, ...disliked.keys}) {
       final likeCount = liked[culture] ?? 0;
@@ -50,7 +54,8 @@ class CulturalPreferenceLearner {
       } else if (likeRate >= 0.7 &&
           likeCount >= 3 &&
           cur == CulturePreferenceLevel.avoid) {
-        // Yanlış "az göster"i yumuşakça geri al.
+        // Yanlış "az göster"i yumuşakça geri al — dismiss ile konulan avoid hariç.
+        if (protectAvoid) continue;
         target = CulturePreferenceLevel.explore;
       } else if (likeRate >= 0.65 && likeCount >= 4) {
         target = cur.value >= CulturePreferenceLevel.prefer.value
@@ -73,6 +78,7 @@ class CulturalPreferenceLearner {
           cur == CulturePreferenceLevel.avoid &&
           target == CulturePreferenceLevel.explore;
       if (!upgrading && !softDowngrade && !healAvoid) continue;
+      if (protectAvoid && cur == CulturePreferenceLevel.avoid) continue;
 
       if (target == CulturePreferenceLevel.neutral) {
         next.remove(culture);
@@ -88,7 +94,12 @@ class CulturalPreferenceLearner {
         next.entries.where((e) => e.value != CulturePreferenceLevel.neutral),
       ),
       updatedAt: nowMs ?? DateTime.now().millisecondsSinceEpoch,
-      source: 'behavior',
+      // Dismiss kaynaklı avoid'lar duruyorsa kaynağı koru.
+      source:
+          protectAvoid &&
+              next.values.any((v) => v == CulturePreferenceLevel.avoid)
+          ? 'dismiss_feedback'
+          : 'behavior',
     );
   }
 }

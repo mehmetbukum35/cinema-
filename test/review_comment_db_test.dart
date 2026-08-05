@@ -51,6 +51,8 @@ void main() {
             comment TEXT,
             is_spoiler INTEGER NOT NULL DEFAULT 0,
             is_private INTEGER NOT NULL DEFAULT 0,
+            original_language TEXT,
+            origin_countries TEXT,
             PRIMARY KEY (movie_id, is_tv)
           )
         ''');

@@ -154,6 +154,9 @@ if ($migrationCount === 0 && $tableExists($db, 'users')) {
     ) {
         $autoApplied['019_drop_legacy_title_metadata.sql'] = true;
     }
+    if ($tableExists($db, 'titles') && $columnExists($db, 'titles', 'original_language')) {
+        $autoApplied['029_titles_origin.sql'] = true;
+    }
 
     // Insert auto-detected applied migrations
     if (!empty($autoApplied)) {

@@ -32,7 +32,7 @@ class SearchFilterLabels {
       'ko' => localizations?.get('lang_ko') ?? 'Korean Cinema',
       'fr|es|de|it|pt|sv|da|no|fi|nl|pl' =>
         localizations?.get('lang_eu') ?? 'European Cinema',
-      'en' => localizations?.get('lang_en') ?? 'Hollywood',
+      'en' => localizations?.get('lang_en') ?? 'English-language',
       'tr' => localizations?.get('lang_tr') ?? 'Turkish Cinema',
       'ja' => localizations?.get('lang_ja') ?? 'Japanese Cinema',
       'hi' => localizations?.get('lang_hi') ?? 'Bollywood',
@@ -48,7 +48,7 @@ class SearchFilterLabels {
       'ko' => l?.get('culture_short_korean') ?? 'Kore',
       'fr|es|de|it|pt|sv|da|no|fi|nl|pl' =>
         l?.get('culture_short_european') ?? 'Avrupa',
-      'en' => l?.get('culture_short_hollywood') ?? 'Hollywood',
+      'en' => l?.get('lang_en_short') ?? 'English',
       'tr' => l?.get('culture_short_turkish') ?? 'Türk',
       'ja' => l?.get('culture_short_japanese') ?? 'Japon',
       'hi' => l?.get('culture_short_indian') ?? 'Hint',

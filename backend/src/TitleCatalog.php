@@ -12,7 +12,8 @@ final class TitleCatalog
 
     private const FIELDS = [
         'title', 'poster_path', 'backdrop_path', 'overview', 'vote_average',
-        'release_date', 'popularity', 'genre_ids',
+        'release_date', 'popularity', 'genre_ids', 'original_language',
+        'origin_countries',
     ];
 
     private const TEXT_LIMITS = [
@@ -269,13 +270,20 @@ final class TitleCatalog
      */
     private function normalizeField(string $field, mixed $incoming): mixed
     {
-        if ($field === 'genre_ids') {
+        if ($field === 'genre_ids' || $field === 'origin_countries') {
             if ($incoming === null || $incoming === '') {
                 return null;
             }
             return is_string($incoming)
                 ? $incoming
                 : json_encode($incoming, JSON_UNESCAPED_UNICODE);
+        }
+        if ($field === 'original_language') {
+            if (!is_string($incoming) || $incoming === '') {
+                return null;
+            }
+            $lang = strtolower(trim($incoming));
+            return preg_match('/^[a-z]{2,16}$/', $lang) === 1 ? $lang : null;
         }
         if (in_array($field, self::IMAGE_PATH_FIELDS, true)) {
             return self::sanitizeImagePath($incoming);

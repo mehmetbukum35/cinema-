@@ -72,5 +72,31 @@ void main() {
       );
       expect(result?.levelFor('indian'), CulturePreferenceLevel.neutral);
     });
+
+    test('does not overwrite explicit_edit preferences', () {
+      final result = CulturalPreferenceLearner.suggest(
+        current: const CulturalPreferences(
+          levels: {'korean': CulturePreferenceLevel.avoid},
+          source: 'explicit_edit',
+        ),
+        classifiedRatings: [
+          for (var i = 0; i < 6; i++) (cultures: {'korean'}, rating: 3),
+        ],
+      );
+      expect(result, isNull);
+    });
+
+    test('does not heal dismiss_feedback avoids', () {
+      final result = CulturalPreferenceLearner.suggest(
+        current: const CulturalPreferences(
+          levels: {'turkish': CulturePreferenceLevel.avoid},
+          source: 'dismiss_feedback',
+        ),
+        classifiedRatings: [
+          for (var i = 0; i < 6; i++) (cultures: {'turkish'}, rating: 3),
+        ],
+      );
+      expect(result, isNull);
+    });
   });
 }

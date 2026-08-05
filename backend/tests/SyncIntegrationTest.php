@@ -739,6 +739,8 @@ class SyncIntegrationTest extends TestCase
                 release_date TEXT,
                 popularity REAL,
                 genre_ids TEXT,
+                original_language TEXT,
+                origin_countries TEXT,
                 metadata_updated_at INTEGER NOT NULL DEFAULT 0,
                 source TEXT NOT NULL DEFAULT \'client\',
                 refreshed_at INTEGER NOT NULL DEFAULT 0,

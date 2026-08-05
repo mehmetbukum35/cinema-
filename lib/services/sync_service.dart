@@ -420,6 +420,11 @@ class SyncService {
             'comment': r['comment'],
             'is_spoiler': r['is_spoiler'],
             'is_private': r['is_private'],
+            'original_language': r['original_language'],
+            'origin_countries': () {
+              final countries = _decodeJsonList(r['origin_countries']);
+              return countries.isEmpty ? null : countries;
+            }(),
             'created_at': r['created_at'],
             'updated_at': r['updated_at'],
             'deleted': r['deleted'] == 1,
@@ -578,7 +583,7 @@ class SyncService {
         ], r['updated_at'])) {
           continue;
         }
-        // Dil/ülke sunucu senkronunda yok; REPLACE ile silinmesin diye yereli koru.
+        // Dil/ülke titles join'dan gelebilir; REPLACE ile silinmesin diye yereli koru.
         String? originalLanguage = r['original_language'] as String?;
         Object? originCountries = r['origin_countries'];
         if (originalLanguage == null || originCountries == null) {
@@ -595,8 +600,10 @@ class SyncService {
           }
         }
         final originCountriesJson = originCountries is List
-            ? jsonEncode(originCountries)
-            : originCountries as String?;
+            ? jsonEncode(List<dynamic>.from(originCountries))
+            : (originCountries is String && originCountries.isNotEmpty
+                  ? originCountries
+                  : null);
         await txn.insert('ratings', {
           'movie_id': _asInt(r['movie_id']),
           'is_tv': _asInt(r['is_tv']),

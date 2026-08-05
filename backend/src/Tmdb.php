@@ -120,6 +120,30 @@ class Tmdb
             $genreIds = json_encode(array_values($data['genre_ids']), JSON_UNESCAPED_UNICODE);
         }
 
+        $originCountries = [];
+        if (isset($data['origin_country']) && is_array($data['origin_country'])) {
+            foreach ($data['origin_country'] as $code) {
+                if (is_string($code) && $code !== '') {
+                    $originCountries[] = strtoupper($code);
+                }
+            }
+        } elseif (isset($data['production_countries']) && is_array($data['production_countries'])) {
+            foreach ($data['production_countries'] as $country) {
+                if (!is_array($country)) {
+                    continue;
+                }
+                $code = $country['iso_3166_1'] ?? null;
+                if (is_string($code) && $code !== '') {
+                    $originCountries[] = strtoupper($code);
+                }
+            }
+        }
+        $originCountries = array_values(array_unique($originCountries));
+
+        $originalLanguage = isset($data['original_language']) && is_string($data['original_language'])
+            ? strtolower($data['original_language'])
+            : null;
+
         return [
             'title' => is_string($title) ? $title : null,
             'overview' => is_string($overview) ? $overview : null,
@@ -133,6 +157,10 @@ class Tmdb
                 : (is_string($data['first_air_date'] ?? null) ? $data['first_air_date'] : null),
             'popularity' => isset($data['popularity']) ? (float) $data['popularity'] : null,
             'genre_ids' => $genreIds,
+            'original_language' => $originalLanguage,
+            'origin_countries' => $originCountries === []
+                ? null
+                : json_encode($originCountries, JSON_UNESCAPED_UNICODE),
         ];
     }
 

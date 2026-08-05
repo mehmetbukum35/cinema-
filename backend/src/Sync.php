@@ -138,7 +138,9 @@ class Sync
                             COALESCE(t.vote_average, tf.vote_average) AS vote_average,
                             COALESCE(t.release_date, tf.release_date) AS release_date,
                             COALESCE(t.popularity, tf.popularity) AS popularity,
-                            COALESCE(t.genre_ids, tf.genre_ids) AS genre_ids';
+                            COALESCE(t.genre_ids, tf.genre_ids) AS genre_ids,
+                            COALESCE(t.original_language, tf.original_language) AS original_language,
+                            COALESCE(t.origin_countries, tf.origin_countries) AS origin_countries';
                 $join = " LEFT JOIN titles t ON t.tmdb_id = d.`{$def['title_key']}`
                           AND t.is_tv = d.is_tv AND t.locale = ?
                           LEFT JOIN titles tf ON tf.tmdb_id = d.`{$def['title_key']}`
@@ -157,7 +159,11 @@ class Sync
             $rows = [];
             foreach ($st->fetchAll() as $r) {
                 unset($r['user_id'], $r['server_updated_at']);
-                foreach (array_unique(array_merge($def['json'], isset($def['title_key']) ? ['genre_ids'] : [])) as $jc) {
+                $jsonCols = array_unique(array_merge(
+                    $def['json'],
+                    isset($def['title_key']) ? ['genre_ids', 'origin_countries'] : []
+                ));
+                foreach ($jsonCols as $jc) {
                     if (isset($r[$jc])) $r[$jc] = json_decode($r[$jc], true);
                 }
                 $r['deleted'] = ((int) $r['deleted']) !== 0;
