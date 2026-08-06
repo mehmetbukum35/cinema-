@@ -123,7 +123,10 @@ final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
 /// Ortak öneri motoru — swipe kuyruğu ve Sana Özel aynı örneği paylaşır ki
 /// keyword zevk vektörü memoization'ı ve invalidation'ı tek yerden yönetilsin.
 final recommendationEngineProvider = Provider<RecommendationEngine>((ref) {
-  return RecommendationEngine(ref.watch(tmdbServiceProvider));
+  return RecommendationEngine(
+    ref.watch(tmdbServiceProvider),
+    localeCode: () => ref.read(localeProvider).languageCode,
+  );
 });
 
 /// Sinema DNA motoru — puanlama verisinden zevk kimliği üretir.

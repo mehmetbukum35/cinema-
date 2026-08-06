@@ -35,7 +35,14 @@ class ScoredMovie {
 class RecommendationEngine {
   final TmdbService _service;
 
-  RecommendationEngine(this._service);
+  /// Aktif arayüz dili. Kültürel "ev bölgesi" çözümü buna bakar; kullanıcı
+  /// dili değiştirdiğinde sonraki sıralama yeni dile göre yapılır.
+  final String Function() localeCode;
+
+  RecommendationEngine(this._service, {String Function()? localeCode})
+    : localeCode = localeCode ?? _defaultLocaleCode;
+
+  static String _defaultLocaleCode() => 'tr';
 
   /// Kullanıcının anahtar kelime zevk vektörü (keyword_id → ağırlık).
   Map<int, double>? _userKeywordVector;
@@ -748,7 +755,7 @@ class RecommendationEngine {
     final culturalPreferences = await CulturalPreferenceService.load();
     final homeCultures = resolveHomeCultures(
       preferences: culturalPreferences,
-      languageCode: PrefsService.activeLanguageCode,
+      languageCode: localeCode(),
     );
     final seen = <String>{};
     final fresh = <Movie>[];

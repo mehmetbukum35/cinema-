@@ -73,6 +73,17 @@ void main() {
     }
   });
 
+  test('recommendationEngineProvider localeProvider ile ayni dili verir', () {
+    for (final code in ['en', 'tr']) {
+      final container = ProviderContainer(
+        overrides: [initialLocaleProvider.overrideWithValue(code)],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(recommendationEngineProvider).localeCode(), code);
+    }
+  });
+
   test('dil degisince ayni ApiService ornegi yeni dili verir', () async {
     final container = ProviderContainer(
       overrides: [initialLocaleProvider.overrideWithValue('tr')],

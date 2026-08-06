@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/models/discovery_context.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
@@ -722,5 +723,75 @@ void main() {
         expect(vector3.containsKey(20), isTrue);
       },
     );
+  });
+
+  group('RecommendationEngine dil enjeksiyonu', () {
+    // Iki yon birden: varsayilan 'tr' oldugu icin tek yonlu test, parametreyi
+    // tamamen yok sayan bir regresyonu goremezdi.
+    test('kurucuda verilen dil kaynagi okunur', () {
+      for (final code in ['en', 'tr']) {
+        final engine = RecommendationEngine(
+          TmdbService(
+            client: MockClient((_) async => http.Response('{}', 200)),
+          ),
+          localeCode: () => code,
+        );
+
+        expect(engine.localeCode(), code);
+      }
+    });
+
+    test('dil kaynagi verilmezse tr varsayilir', () {
+      final engine = RecommendationEngine(
+        TmdbService(client: MockClient((_) async => http.Response('{}', 200))),
+      );
+
+      expect(engine.localeCode(), 'tr');
+    });
+
+    test('rankForYou ev kulturunu enjekte edilen dilden cozer', () async {
+      // Acik kultur tercihi YOK: ev bolgesi yalnizca dilden cozulsun.
+      SharedPreferences.setMockInitialValues({});
+      // Acik bir kultur tercihi yokken ev bolgesi dile gore belirlenir:
+      // tr -> turkish, en -> hollywood. "Yerli" filtresi bunu kullanir, yani
+      // dilin gercekten tuketildigini gozlenebilir bicimde olcer.
+      final turkishTitle = Movie(
+        id: 901,
+        title: 'Yerli Film',
+        overview: '',
+        voteAverage: 7.5,
+        genreIds: const [28],
+        originCountries: const ['TR'],
+        originalLanguage: 'tr',
+      );
+      final hollywoodTitle = Movie(
+        id: 902,
+        title: 'US Film',
+        overview: '',
+        voteAverage: 7.5,
+        genreIds: const [28],
+        originCountries: const ['US'],
+        originalLanguage: 'en',
+      );
+
+      Future<List<int>> localIdsFor(String code) async {
+        final engine = RecommendationEngine(
+          TmdbService(
+            client: MockClient((_) async => http.Response('{}', 200)),
+          ),
+          localeCode: () => code,
+        );
+        final ranked = await engine.rankForYou(
+          [turkishTitle, hollywoodTitle],
+          discoveryContext: const DiscoveryContext(
+            origin: DiscoveryOrigin.local,
+          ),
+        );
+        return ranked.map((m) => m.id).toList();
+      }
+
+      expect(await localIdsFor('tr'), [901]);
+      expect(await localIdsFor('en'), [902]);
+    });
   });
 }
