@@ -1,4 +1,8 @@
+includes:
+	- phpstan-baseline.neon
+
 parameters:
-	level: 5
+	# Level 6; baseline holds existing missingType.iterableValue debt (array value types).
+	level: 6
 	paths:
 		- src
