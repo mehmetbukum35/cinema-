@@ -85,6 +85,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     NotificationService.instance.setAuthReadyHandler(
       () => _sessionReady.future,
     );
+    NotificationService.instance.setLocaleSource(
+      () => _ref.read(localeProvider).languageCode,
+    );
     // Push bildirim dinleyicilerini bir kez kur (best-effort).
     NotificationService.instance.init(_apiService);
     _initSession();
@@ -208,6 +211,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   @override
   void dispose() {
     NotificationService.instance.setAuthReadyHandler(null);
+    NotificationService.instance.setLocaleSource(null);
     if (!_sessionReady.isCompleted) {
       _sessionReady.complete();
     }

@@ -1,5 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
+import 'package:ne_izlesem/services/prefs_service.dart';
+import 'package:ne_izlesem/services/providers.dart';
+import 'mocks/secure_storage_mock.dart';
 
 void main() {
   group('NotificationService.payloadFromData', () {
@@ -266,6 +272,49 @@ void main() {
         ),
         isFalse,
       );
+    });
+  });
+
+  group('NotificationService dil kaynagi', () {
+    setUpAll(setupSecureStorageMock);
+
+    tearDown(() {
+      NotificationService.instance.setLocaleSource(null);
+      NotificationService.instance.setAuthReadyHandler(null);
+    });
+
+    test('kurulan kaynak okunur', () {
+      // Iki yon birden: varsayilan 'tr' oldugu icin tek yonlu test, kaynagin
+      // hic okunmadigi bir regresyonu goremezdi.
+      for (final code in ['en', 'tr']) {
+        NotificationService.instance.setLocaleSource(() => code);
+
+        expect(NotificationService.instance.localeCode, code);
+      }
+    });
+
+    test('kaynak null iken varsayilana duser, hata atmaz', () {
+      NotificationService.instance.setLocaleSource(() => 'en');
+      NotificationService.instance.setLocaleSource(null);
+
+      expect(NotificationService.instance.localeCode, 'tr');
+    });
+
+    test('AuthNotifier dispose edilince kaynak temizlenir', () async {
+      // Servis surec omru boyunca yasayan bir singleton, ProviderContainer ise
+      // gelip geciyor. Temizlenmezse olu bir container'a bagli kalir.
+      SharedPreferences.setMockInitialValues({});
+      PrefsService.resetInMemoryCaches();
+      final container = ProviderContainer(
+        overrides: [initialLocaleProvider.overrideWithValue('en')],
+      );
+      container.read(authProvider.notifier);
+      await pumpEventQueue();
+      expect(NotificationService.instance.localeCode, 'en');
+
+      container.dispose();
+
+      expect(NotificationService.instance.localeCode, 'tr');
     });
   });
 }

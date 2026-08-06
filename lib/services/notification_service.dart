@@ -11,7 +11,6 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import '../firebase_options.dart';
 import 'api_service.dart';
-import 'prefs_service.dart';
 import '../screens/social_screen.dart';
 import '../screens/couch_screen.dart';
 import '../models/movie.dart';
@@ -51,6 +50,7 @@ class NotificationService {
   Future<void> Function(String token)? _registerTokenOverride;
   Future<void> Function(String token)? _unregisterTokenOverride;
   Future<void> Function()? _authReadyHandler;
+  String Function()? _localeSource;
   Future<void> _tokenOperationTail = Future.value();
   Future<void> _reminderOperationTail = Future.value();
   bool _tokenRegistrationEnabled = false;
@@ -107,8 +107,8 @@ class NotificationService {
         importance: Importance.high,
       );
 
-  static AndroidNotificationChannel get _localizedSocialChannel {
-    final tr = PrefsService.activeLanguageCode == 'tr';
+  AndroidNotificationChannel get _localizedSocialChannel {
+    final tr = localeCode == 'tr';
     return AndroidNotificationChannel(
       _channel.id,
       tr ? 'Sosyal Bildirimler' : _channel.name,
@@ -119,8 +119,8 @@ class NotificationService {
     );
   }
 
-  static AndroidNotificationChannel get _localizedReleaseChannel {
-    final tr = PrefsService.activeLanguageCode == 'tr';
+  AndroidNotificationChannel get _localizedReleaseChannel {
+    final tr = localeCode == 'tr';
     return AndroidNotificationChannel(
       _releaseChannel.id,
       tr ? 'Çıkış Hatırlatıcıları' : _releaseChannel.name,
@@ -365,6 +365,18 @@ class NotificationService {
     _authReadyHandler = handler;
   }
 
+  /// Aktif arayüz dilini okuyan kaynak. `AuthNotifier` kurulurken verir,
+  /// dispose olurken `null`'lar — bu servis singleton olduğu için ölü bir
+  /// `ProviderContainer`'a bağlı kalmamalı ([setAuthReadyHandler] ile aynı
+  /// kur/temizle döngüsü).
+  void setLocaleSource(String Function()? source) {
+    _localeSource = source;
+  }
+
+  /// Kaynak yoksa (uygulama henüz kurulmadıysa veya container düştüyse)
+  /// varsayılan dile düşer; bildirim metni hiçbir koşulda patlamaz.
+  String get localeCode => _localeSource?.call() ?? 'tr';
+
   Future<void> _sendToken(String token) async {
     if (!_tokenRegistrationEnabled) return;
     final generation = _tokenRegistrationGeneration;
@@ -462,7 +474,7 @@ class NotificationService {
       final when = tz.TZDateTime(tz.local, date.year, date.month, date.day, 10);
       if (!when.isAfter(tz.TZDateTime.now(tz.local))) return;
 
-      final tr = PrefsService.activeLanguageCode == 'tr';
+      final tr = localeCode == 'tr';
       final title = movie.isTV
           ? (tr ? '📺 Bugün yayında!' : '📺 Streaming today!')
           : (tr ? '🎬 Bugün vizyonda!' : '🎬 In theaters today!');
@@ -740,7 +752,7 @@ class NotificationService {
     final context = nav.overlay?.context;
     if (context == null) return;
 
-    final locale = notificationContentLocale(PrefsService.activeLanguageCode);
+    final locale = notificationContentLocale(localeCode);
     final service = TmdbService(
       language: locale.language,
       region: locale.region,
