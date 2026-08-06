@@ -66,7 +66,10 @@ class GenreStep extends StatelessWidget {
             itemCount: genres.length,
             itemBuilder: (ctx, i) {
               final (id, _, icon) = genres[i];
-              final name = PrefsService.genreName(id);
+              final name = PrefsService.genreName(
+                id,
+                locale: Localizations.localeOf(ctx).languageCode,
+              );
               final isSel = selected.contains(id);
               return GestureDetector(
                 onTap: () => onToggle(id),

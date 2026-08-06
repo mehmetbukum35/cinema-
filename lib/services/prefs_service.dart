@@ -75,8 +75,8 @@ class PrefsService {
     10768: 'War & Politics',
   };
 
-  static String genreName(int id) {
-    if (activeLanguageCode == 'tr') {
+  static String genreName(int id, {required String locale}) {
+    if (locale == 'tr') {
       return _genreNames[id] ?? 'Bilinmeyen';
     } else {
       return _genreNamesEn[id] ?? 'Unknown';

@@ -43,7 +43,12 @@ class _WrappedModalState extends State<WrappedModal> {
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
 
     final genreNames = topGenres
-        .map((id) => PrefsService.genreName(id as int))
+        .map(
+          (id) => PrefsService.genreName(
+            id as int,
+            locale: Localizations.localeOf(context).languageCode,
+          ),
+        )
         .toList();
 
     final profileUrl = widget.username != null && widget.username!.isNotEmpty
@@ -428,7 +433,10 @@ class _WrappedModalState extends State<WrappedModal> {
             ...topGenres.asMap().entries.map((entry) {
               final index = entry.key;
               final genreId = entry.value as int;
-              final name = PrefsService.genreName(genreId);
+              final name = PrefsService.genreName(
+                genreId,
+                locale: Localizations.localeOf(context).languageCode,
+              );
 
               final gradients = [
                 const [Color(0xFFFF2E93), Color(0xFFFF8A00)],
@@ -594,7 +602,12 @@ class _WrappedModalState extends State<WrappedModal> {
     final total = widget.stats['total'] as int? ?? 0;
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
     final genreNames = topGenres
-        .map((id) => PrefsService.genreName(id as int))
+        .map(
+          (id) => PrefsService.genreName(
+            id as int,
+            locale: Localizations.localeOf(context).languageCode,
+          ),
+        )
         .toList();
 
     return Container(

@@ -145,7 +145,10 @@ class MatchTogetherBody extends StatelessWidget {
             itemBuilder: (ctx, i) {
               final palette = ctx.c;
               final (id, _) = togetherGenres[i];
-              final name = PrefsService.genreName(id);
+              final name = PrefsService.genreName(
+                id,
+                locale: Localizations.localeOf(ctx).languageCode,
+              );
               final inP1 = p1.contains(id);
               final inP2 = p2.contains(id);
               final inActive = activePerson == 1 ? inP1 : inP2;
@@ -395,7 +398,10 @@ class _GenreChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = PrefsService.genreName(id);
+    final name = PrefsService.genreName(
+      id,
+      locale: Localizations.localeOf(context).languageCode,
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

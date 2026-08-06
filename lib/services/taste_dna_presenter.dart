@@ -11,6 +11,10 @@ class TasteDnaPresenter {
 
   TasteDnaPresenter(this.l10n, this.dna);
 
+  /// Presenter'ın dili. `l10n` verilmemişse Türkçe'ye düşer — [_t]'nin yedek
+  /// mantığıyla aynı.
+  String get _localeCode => l10n?.locale.languageCode ?? 'tr';
+
   String _t(String key, String fallback) {
     final val = l10n?.get(key);
     if (val == null || val == key) return fallback;
@@ -214,10 +218,14 @@ class TasteDnaPresenter {
       out.add(
         TasteDnaSignal(
           icon: 'blind',
-          text: _t(
-            'dna_blind',
-            'Kör noktan: {g} — sana pek hitap etmiyor.',
-          ).replaceFirst('{g}', PrefsService.genreName(dna.blindSpotGenre!)),
+          text: _t('dna_blind', 'Kör noktan: {g} — sana pek hitap etmiyor.')
+              .replaceFirst(
+                '{g}',
+                PrefsService.genreName(
+                  dna.blindSpotGenre!,
+                  locale: _localeCode,
+                ),
+              ),
         ),
       );
     }
@@ -231,9 +239,15 @@ class TasteDnaPresenter {
           text: _t('dna_shift', 'Zevkinin rotası: {from} → {to}.')
               .replaceFirst(
                 '{from}',
-                PrefsService.genreName(dna.shiftFromGenre!),
+                PrefsService.genreName(
+                  dna.shiftFromGenre!,
+                  locale: _localeCode,
+                ),
               )
-              .replaceFirst('{to}', PrefsService.genreName(dna.shiftToGenre!)),
+              .replaceFirst(
+                '{to}',
+                PrefsService.genreName(dna.shiftToGenre!, locale: _localeCode),
+              ),
         ),
       );
     }
@@ -305,8 +319,9 @@ class TasteDnaPresenter {
       .toList();
 
   // ── Tür çipleri ──
-  List<String> get genreChips =>
-      dna.topGenres.map(PrefsService.genreName).toList();
+  List<String> get genreChips => dna.topGenres
+      .map((id) => PrefsService.genreName(id, locale: _localeCode))
+      .toList();
 
   // ── Kanıtlı isabet ──
   String? get accuracyText {

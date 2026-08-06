@@ -346,4 +346,16 @@ void main() {
       expect(await PrefsService.getAccessToken(), isNull);
     });
   });
+
+  group('PrefsService.genreName', () {
+    test('tur adi verilen dile gore cozulur', () {
+      expect(PrefsService.genreName(28, locale: 'tr'), 'Aksiyon');
+      expect(PrefsService.genreName(28, locale: 'en'), 'Action');
+    });
+
+    test('bilinmeyen tur id dile uygun yedek dondurur', () {
+      expect(PrefsService.genreName(999999, locale: 'tr'), 'Bilinmeyen');
+      expect(PrefsService.genreName(999999, locale: 'en'), 'Unknown');
+    });
+  });
 }

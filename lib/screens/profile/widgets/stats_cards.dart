@@ -93,7 +93,10 @@ class StatsOverviewCard extends StatelessWidget {
                             : null,
                       ),
                       child: Text(
-                        PrefsService.genreName(g as int),
+                        PrefsService.genreName(
+                          g as int,
+                          locale: Localizations.localeOf(context).languageCode,
+                        ),
                         style: TextStyle(
                           color: c.ink,
                           fontSize: 12,
