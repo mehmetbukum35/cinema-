@@ -1,3 +1,8 @@
+<?php
+declare(strict_types=1);
+/** @var string $title */
+/** @var string $desc */
+?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>

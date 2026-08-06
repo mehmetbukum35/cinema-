@@ -110,23 +110,6 @@ class SocialWebRenderer
     }
 
     /**
-     * Split a mixed title list into movies or TV rows.
-     *
-     * @param array<int, array<string, mixed>> $items
-     * @return array<int, array<string, mixed>>
-     */
-    private function partitionByMedia(array $items, bool $isTv): array
-    {
-        $out = [];
-        foreach ($items as $item) {
-            if (((int) ($item['is_tv'] ?? 0) === 1) === $isTv) {
-                $out[] = $item;
-            }
-        }
-        return $out;
-    }
-
-    /**
      * Public library shelf for a single rating + media type.
      *
      * @return array<int, array<string, mixed>>

@@ -10,7 +10,6 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import 'movie_detail_sheet.dart';
-import 'watchlist_screen.dart';
 import '../services/sync_service.dart';
 import 'onboarding_screen.dart';
 import 'blocked_users_screen.dart';
@@ -21,7 +20,8 @@ import 'profile/widgets/change_password_sheet.dart';
 import 'profile/widgets/unlink_google_sheet.dart';
 import 'profile/widgets/unlink_apple_sheet.dart';
 import 'profile/widgets/user_header_card.dart';
-import 'profile/widgets/profile_rail_cards.dart';
+import 'profile/widgets/profile_section_header.dart';
+import 'profile/widgets/profile_library_rails.dart';
 import 'profile/widgets/top_list_rail.dart';
 import 'profile/widgets/family_mode_card.dart';
 import 'profile/widgets/settings_nav_card.dart';
@@ -337,34 +337,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionHeader(BuildContext context, ThemePalette c, String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 12,
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              gradient: CinemaGradients.crimson,
-              borderRadius: BorderRadius.circular(1.5),
-            ),
-          ),
-          Text(
-            text.toUpperCase(),
-            style: TextStyle(
-              color: c.dim,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _content(
     BuildContext context,
     WidgetRef ref,
@@ -424,10 +396,8 @@ class ProfileScreen extends ConsumerWidget {
           // 1.5 Top 20 — kişisel panteon (Film + Dizi). Profilin gurur vitrini;
           // izleme listesi/geçmişten farklı olarak sıralı "en sevdiklerim".
           SliverToBoxAdapter(
-            child: _sectionHeader(
-              context,
-              c,
-              tr?.get('top_list_section') ?? "Top 20'm",
+            child: ProfileSectionHeader(
+              text: tr?.get('top_list_section') ?? "Top 20'm",
             ),
           ),
           const SliverToBoxAdapter(
@@ -447,126 +417,21 @@ class ProfileScreen extends ConsumerWidget {
           // Arşivin tamamı LibraryScreen'de (showroom); ray artık listenin
           // tamamını basmıyor (200 öğe = 200 kaydırma sorunu). Profilin
           // günlük kullanım nedeni burası olduğu için en üste alındı.
-          if (watchlist.isNotEmpty || ratedMovies.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: _sectionHeader(
-                context,
-                c,
-                tr?.get('library_title') ?? 'Kütüphanen',
-              ),
-            ),
-            if (watchlist.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: _railLabel(
-                  context,
-                  c,
-                  label: tr?.get('profile_watchlist') ?? 'İZLEME LİSTESİ',
-                  count: watchlist.length,
-                  onSeeAll: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LibraryScreen(initialTab: 0),
-                    ),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 225,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      for (final m in watchlist.take(10))
-                        WatchlistCard(
-                          movie: m,
-                          onTap: () => _openDetail(context, ref, m),
-                          onRemove: () {
-                            ref
-                                .read(watchlistProvider.notifier)
-                                .remove(m.id, m.isTV);
-                          },
-                        ),
-                      if (watchlist.length > 10)
-                        SeeAllCard(
-                          remaining: watchlist.length - 10,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const LibraryScreen(initialTab: 0),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-            ],
-            if (ratedMovies.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: _railLabel(
-                  context,
-                  c,
-                  label: tr?.get('profile_history') ?? 'DEĞERLENDİRDİKLERİM',
-                  count: ratedMovies.length,
-                  onSeeAll: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LibraryScreen(initialTab: 1),
-                    ),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 225,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      for (final item
-                          in ratedMovies.take(10).cast<Map<String, dynamic>>())
-                        RatedMovieCard(
-                          movie: item['movie'] as Movie,
-                          rating: item['rating'] as int,
-                          isPrivate: (item['is_private'] as int? ?? 0) == 1,
-                          onTap: () =>
-                              _openDetail(context, ref, item['movie'] as Movie),
-                          onDelete: () => _confirmDeleteRating(
-                            context,
-                            ref,
-                            item['movie'] as Movie,
-                          ),
-                        ),
-                      if (ratedMovies.length > 10)
-                        SeeAllCard(
-                          remaining: ratedMovies.length - 10,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const LibraryScreen(initialTab: 1),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 4)),
-            ],
-          ],
+          ...ProfileLibraryRails.slivers(
+            context,
+            watchlist: watchlist,
+            ratedMovies: ratedMovies,
+            onOpenMovie: (m) => _openDetail(context, ref, m),
+            onRemoveWatchlist: (m) {
+              ref.read(watchlistProvider.notifier).remove(m.id, m.isTV);
+            },
+            onDeleteRated: (m) => _confirmDeleteRating(context, ref, m),
+          ),
 
           if (isLoggedIn) ...[
             SliverToBoxAdapter(
-              child: _sectionHeader(
-                context,
-                c,
-                tr?.get('profile_interactions') ?? 'Etkileşimlerim',
+              child: ProfileSectionHeader(
+                text: tr?.get('profile_interactions') ?? 'Etkileşimlerim',
               ),
             ),
             if (ratedMovies.isNotEmpty)
@@ -593,10 +458,8 @@ class ProfileScreen extends ConsumerWidget {
           // 3. Sinema Kimliğin — Zevk DNA'sı + istatistikler tek başlık
           // altında: ikisi de "ben nasıl bir izleyiciyim?" sorusunu yanıtlar.
           SliverToBoxAdapter(
-            child: _sectionHeader(
-              context,
-              c,
-              tr?.get('profile_cinema_identity') ?? 'Sinema Kimliğin',
+            child: ProfileSectionHeader(
+              text: tr?.get('profile_cinema_identity') ?? 'Sinema Kimliğin',
             ),
           ),
           if (total < 5)
@@ -661,10 +524,8 @@ class ProfileScreen extends ConsumerWidget {
 
           // 5. Settings & Utilities Section
           SliverToBoxAdapter(
-            child: _sectionHeader(
-              context,
-              c,
-              tr?.get('settings_title') ?? 'Ayarlar & Tercihler',
+            child: ProfileSectionHeader(
+              text: tr?.get('settings_title') ?? 'Ayarlar & Tercihler',
             ),
           ),
           const SliverToBoxAdapter(
@@ -824,69 +685,6 @@ class ProfileScreen extends ConsumerWidget {
                 isLoggedIn: isLoggedIn,
                 onReset: () => _confirmReset(context, ref),
                 onDeleteAccount: () => showDeleteAccountDialog(context, ref),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Ray üstü etiket: "İZLEME LİSTESİ · 34" + "Tümünü Gör".
-  Widget _railLabel(
-    BuildContext context,
-    ThemePalette c, {
-    required String label,
-    required int count,
-    required VoidCallback onSeeAll,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: Row(
-        children: [
-          Text(
-            '${label.toUpperCase()} · $count',
-            style: TextStyle(
-              color: c.dim,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const Spacer(),
-          // Belirgin hap buton: düz metin hâli gözden kaçıyordu.
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onSeeAll();
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: c.red.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: c.red.withValues(alpha: 0.45),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.get('see_all') ??
-                        'Tümünü Gör',
-                    style: TextStyle(
-                      color: c.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, color: c.red, size: 13),
-                ],
               ),
             ),
           ),

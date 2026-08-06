@@ -216,7 +216,6 @@ function sanitize_comment(?string $c): ?string
 function sanitize_title_text(?string $t, int $maxLen = 512): ?string
 {
     if ($t === null) return null;
-    if (!is_string($t)) $t = (string) $t;
     $t = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $t) ?? '';
     $t = preg_replace('~(?:https?://|www\.)[^\s]+~iu', '', $t) ?? '';
     $t = preg_replace('/\s+/u', ' ', $t) ?? '';

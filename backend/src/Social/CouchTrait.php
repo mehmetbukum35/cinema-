@@ -314,7 +314,7 @@ trait SocialCouchTrait
      */
     private function resolveCouchOutcome(array $row, ?int $exceptUserId = null): array
     {
-        if ($row['status'] !== 'active' && $row['status'] !== 'pending') {
+        if (!in_array((string) $row['status'], self::COUCH_OPEN_STATUSES, true)) {
             return $row;
         }
         $deck = json_decode((string) $row['deck'], true) ?: [];

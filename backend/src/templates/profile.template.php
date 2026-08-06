@@ -1,6 +1,22 @@
 <?php
 declare(strict_types=1);
 
+/** @var array<string, string> $t */
+/** @var string $displayName */
+/** @var string $userHandle */
+/** @var array<string, mixed>|null $dna */
+/** @var list<array<string, mixed>> $topMovies */
+/** @var list<array<string, mixed>> $topShows */
+/** @var list<array<string, mixed>> $ratings */
+/** @var list<array<string, mixed>> $goodRatings */
+/** @var list<array<string, mixed>> $watchlist */
+/** @var list<array<string, mixed>> $greatMovies */
+/** @var list<array<string, mixed>> $greatShows */
+/** @var list<array<string, mixed>> $goodMovies */
+/** @var list<array<string, mixed>> $goodShows */
+/** @var list<array<string, mixed>> $watchMovies */
+/** @var list<array<string, mixed>> $watchShows */
+
 $e = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $posterUrl = static fn(?string $path, string $size = 'w500'): string =>
     $path ? 'https://image.tmdb.org/t/p/' . $size . $path : '';
