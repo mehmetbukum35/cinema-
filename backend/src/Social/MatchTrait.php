@@ -80,6 +80,9 @@ trait SocialMatchTrait
     /**
      * İki kullanıcının uyum skorunu hesaplar; json_out YAPMAZ (tekil uç ve
      * toplu uç ortak kullanır). $mine önceden çekilmişse yeniden sorgulanmaz.
+     *
+     * @param array<string, array{rating: int, genres: list<int>, created_at: int|null}>|null $mine
+     * @return array<string, mixed>
      */
     private function computeTasteMatch(int $uid, int $friendId, ?array $mine = null): array
     {

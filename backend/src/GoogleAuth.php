@@ -25,6 +25,9 @@ class GoogleAuth
     /**
      * ID token'ı doğrulayıp claim'leri döner; geçersizse null.
      * $clientIds: kabul edilen OAuth client ID'leri (aud bunlardan biri olmalı).
+     *
+     * @param list<string> $clientIds
+     * @return array<string, mixed>|null
      */
     public static function verifyIdToken(string $idToken, array $clientIds): ?array
     {
@@ -53,6 +56,9 @@ class GoogleAuth
      *  - iss Google
      *  - exp geçmemiş
      *  - email var ve email_verified true (hesap bağlama e-postaya güvenir)
+     *
+     * @param array<string, mixed> $claims
+     * @param list<string> $clientIds
      */
     public static function validateClaims(
         array $claims,
@@ -101,6 +107,8 @@ class GoogleAuth
      *        ['status' => 'unavailable']           yerel doğrulama yapılamadı
      *                                              (openssl yok / JWKS indirilemedi
      *                                               / beklenmeyen alg).
+     *
+     * @return array{status: string, claims?: array<string, mixed>}
      */
     private static function verifyWithJwks(string $idToken): array
     {
@@ -162,7 +170,11 @@ class GoogleAuth
     /** Son JWKS indirmesinin başarısız olup olmadığı (fallback kararı için). */
     private static bool $jwksFetchFailed = false;
 
-    /** Verilen kid için JWK'yı cache'ten/ağdan bulur; yoksa null. */
+    /**
+     * Verilen kid için JWK'yı cache'ten/ağdan bulur; yoksa null.
+     *
+     * @return array<string, mixed>|null
+     */
     private static function findJwk(string $kid, bool $forceRefresh = false): ?array
     {
         $keys = self::fetchJwks($forceRefresh);
@@ -181,6 +193,8 @@ class GoogleAuth
      * Google JWKS anahtar listesini döner (cache'li). İndirilemezse ve cache de
      * yoksa null. Ağ hatasında süresi geçmiş cache varsa yine de kullanılır
      * (anahtarlar günlerce geçerlidir).
+     *
+     * @return list<mixed>|null
      */
     private static function fetchJwks(bool $forceRefresh = false): ?array
     {
@@ -306,7 +320,10 @@ class GoogleAuth
         return (string) base64_decode(strtr($d, '-_', '+/'), true);
     }
 
-    /** tokeninfo çağrısı (fallback); ağ/HTTP hatasında veya 200 dışında null. */
+    /** tokeninfo çağrısı (fallback); ağ/HTTP hatasında veya 200 dışında null.
+     *
+     * @return array<string, mixed>|null
+     */
     private static function fetchTokenInfo(string $idToken): ?array
     {
         $ch = curl_init(self::TOKENINFO_URL . urlencode($idToken));

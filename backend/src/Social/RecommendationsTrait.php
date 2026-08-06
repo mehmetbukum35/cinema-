@@ -6,6 +6,7 @@ trait SocialRecommendationsTrait
     // ─── POST /social/recommend ─────────────────────────────────────────────
     // Arkadaşa film/dizi önerir. Aynı yapım aynı arkadaşa tekrar önerilirse
     // mevcut kayıt tazelenir (spam/çift kayıt oluşmaz). Push bildirimi gönderilir.
+    /** @param array<string, mixed> $in */
     public function recommend(int $uid, array $in): void
     {
         $friendId = (int) ($in['friend_id'] ?? 0);
@@ -170,6 +171,7 @@ trait SocialRecommendationsTrait
         json_out(200, ['sent' => $items, 'next_cursor' => $nextCursor, 'has_more' => $hasMore]);
     }
 
+    /** @param array<string, mixed> $item */
     private function encodeRecommendationCursor(array $item): string
     {
         return rtrim(strtr(base64_encode(json_encode([
@@ -178,6 +180,7 @@ trait SocialRecommendationsTrait
         ], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
     }
 
+    /** @return array{created_at: int, id: int}|null */
     private function decodeRecommendationCursor(?string $cursor): ?array
     {
         if ($cursor === null || $cursor === '') return null;

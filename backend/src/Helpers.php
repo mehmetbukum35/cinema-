@@ -72,6 +72,7 @@ function cinema_send_security_headers(string $surface = 'api'): void
 }
 
 if (!function_exists('json_out')) {
+    /** @param array<string, mixed> $body */
     function json_out(int $status, array $body): void
     {
         http_response_code($status);
@@ -108,7 +109,11 @@ if (!function_exists('fail')) {
     }
 }
 
-/** İstek gövdesini JSON olarak okur. Aşırı büyük gövdeler 413 ile reddedilir. */
+/**
+ * İstek gövdesini JSON olarak okur. Aşırı büyük gövdeler 413 ile reddedilir.
+ *
+ * @return array<string, mixed>
+ */
 function read_json(int $maxBytes = 4 * 1024 * 1024): array
 {
     $raw = file_get_contents('php://input') ?: '';
@@ -463,6 +468,7 @@ function cinema_redact(mixed $value, ?string $key = null): mixed
     return $value;
 }
 
+/** @param array<string, mixed> $context */
 function cinema_log(string $level, string $message, array $context = []): void
 {
     $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');

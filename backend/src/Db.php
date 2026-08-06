@@ -5,6 +5,11 @@ class Db
 {
     private static ?PDO $pdo = null;
 
+    /**
+     * @param array{
+     *   db: array{host: string, name: string, user: string, pass: string, charset: string}
+     * }|null $cfg
+     */
     public static function conn(?array $cfg = null): PDO
     {
         if (self::$pdo === null) {

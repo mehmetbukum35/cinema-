@@ -98,7 +98,9 @@ class Sync
         $insert->execute([$uid, $deviceId, $ackCursor, $now, $now]);
     }
 
-    /** Push başına kullanıcı yasağı bir kez okunur (upsert kayıt başına çağrılır). */
+    /** Push başına kullanıcı yasağı bir kez okunur (upsert kayıt başına çağrılır).
+     * @var array<int, bool>
+     */
     private array $reviewBanCache = [];
 
     private function isReviewBanned(int $uid): bool
@@ -201,6 +203,7 @@ class Sync
     // şişirmesini ve upsert döngüsünün transaction'ı kilitlemesini önler.
     private const MAX_ITEMS_PER_TABLE = 500;
 
+    /** @param array<string, mixed> $in */
     public function push(int $uid, array $in, bool $requireDevice = false): void
     {
         $originDevice = trim((string) ($in['device_id'] ?? ''));
@@ -270,6 +273,7 @@ class Sync
         ]);
     }
 
+    /** @param array<string, mixed> $event */
     private function insertRecommendationEvent(int $uid, array $event): ?string
     {
         $eventId = trim((string) ($event['event_id'] ?? ''));
@@ -326,6 +330,7 @@ class Sync
         return $eventId;
     }
 
+    /** @param array<string, mixed> $in */
     private function upsertCulturalPreferences(int $uid, array $in): bool
     {
         $raw = $in['cultural_preferences'] ?? null;
@@ -424,6 +429,10 @@ class Sync
     // SQLite'ta çalışır (MySQL'e özgü `ON DUPLICATE KEY UPDATE` kullanılmaz).
     // Dönüş: kayıt yazıldı/güncellendiyse true; gelen veri eski olduğu için
     // yok sayıldıysa false (böylece `applied` sayacı gerçekten uygulananları sayar).
+    /**
+     * @param array<string, mixed> $def
+     * @param array<string, mixed> $item
+     */
     private function upsert(
         int $uid,
         string $table,
@@ -631,6 +640,7 @@ class Sync
     }
 
     /** Shared titles: client fill-empty only; TMDB-canonical rows never overwritten. */
+    /** @param array<string, mixed> $item */
     private function upsertTitle(array $item, string $idKey, int $updatedAt, string $locale): void
     {
         $this->titles->ingestFromClient($item, $idKey, $updatedAt, $locale);

@@ -5,6 +5,7 @@ require_once __DIR__ . '/Jwt.php';
 
 class Auth
 {
+    /** @param array<string, mixed> $cfg */
     public function __construct(private PDO $db, private array $cfg) {}
 
     // ─── Korumalı uçlar için: Bearer access token'ı doğrula, user_id döndür ──
@@ -32,6 +33,7 @@ class Auth
     // token VERİLMEZ. E-postaya 6 haneli kod gider; oturum ancak
     // POST /auth/verify-email ile kod doğrulanınca açılır. Böylece kimse
     // başkasının e-posta adresiyle kullanılabilir bir hesap açamaz.
+    /** @param array<string, mixed> $in */
     public function register(array $in): void
     {
         $email = strtolower(trim($in['email'] ?? ''));
@@ -85,6 +87,7 @@ class Auth
     // ─── POST /auth/verify-email ─────────────────────────────────────────────
     // Kayıtta gönderilen kodu doğrular; başarılıysa hesap doğrulanmış olur ve
     // oturum (token çifti) burada açılır.
+    /** @param array<string, mixed> $in */
     public function verifyEmail(array $in): void
     {
         $email = strtolower(trim((string) ($in['email'] ?? '')));
@@ -134,6 +137,7 @@ class Auth
     // ─── POST /auth/resend-verification ──────────────────────────────────────
     // Doğrulama kodunu yeniden gönderir. E-posta varlığını sızdırmamak için
     // her durumda 200 döner (forgotPassword ile aynı ilke).
+    /** @param array<string, mixed> $in */
     public function resendVerification(array $in): void
     {
         $email = strtolower(trim((string) ($in['email'] ?? '')));
@@ -212,6 +216,8 @@ class Auth
      * Yanıtı hemen döndürür, çağıranın kalan işi (e-posta gönderimi) arka
      * planda sürer. Test ortamında json_out zaten exit etmez; production'da
      * fastcgi_finish_request bağlantıyı kapatır (bkz. forgotPassword).
+     *
+     * @param array<string, mixed> $body
      */
     private function respondThenContinue(int $status, array $body): void
     {
@@ -269,6 +275,7 @@ class Auth
     }
 
     // ─── POST /auth/login ───────────────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function login(array $in): void
     {
         $email = strtolower(trim($in['email'] ?? ''));
@@ -311,6 +318,7 @@ class Auth
     // e-postayı doğruladığı için güvenli); o da yoksa yeni hesap açılır.
     // Oturum yine bizim JWT/refresh boru hattımızla yönetilir.
     // $verifier: testler için enjekte edilebilir (idToken → claims|null).
+    /** @param array<string, mixed> $in */
     public function googleLogin(array $in, ?callable $verifier = null): void
     {
         $idToken = (string) ($in['id_token'] ?? '');
@@ -356,6 +364,8 @@ class Auth
      * Transaction içinde çalışır; eşzamanlı iki istek aynı yeni kullanıcıyı
      * yaratmaya çalışırsa oluşan UNIQUE ihlali yakalanıp bir kez yeniden denenir
      * (ikinci turda kayıt artık mevcut olduğundan SELECT ile bulunur).
+     *
+     * @return array{int, string, ?string, ?string, bool}
      */
     private function resolveGoogleAccount(string $sub, string $email, ?string $name): array
     {
@@ -380,7 +390,10 @@ class Auth
         throw new \RuntimeException('resolveGoogleAccount: beklenmeyen durum');
     }
 
-    /** google_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar. */
+    /** google_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar.
+     *
+     * @return array{int, string, ?string, ?string, bool}
+     */
     private function findOrCreateGoogleUser(string $sub, string $email, ?string $name): array
     {
         // 1) Daha önce Google ile bağlanmış hesap.
@@ -456,6 +469,7 @@ class Auth
     // (Apple e-postayı doğruladığı için güvenli); o da yoksa yeni hesap açılır.
     // Ad, token'da bulunmaz: istemci İLK yetkilendirmede display_name gönderir.
     // $verifier: testler için enjekte edilebilir (identityToken → claims|null).
+    /** @param array<string, mixed> $in */
     public function appleLogin(array $in, ?callable $verifier = null): void
     {
         $idToken = (string) ($in['identity_token'] ?? '');
@@ -494,7 +508,10 @@ class Auth
         ]);
     }
 
-    /** resolveGoogleAccount'un Apple eşleniği: transaction + tek retry. */
+    /** resolveGoogleAccount'un Apple eşleniği: transaction + tek retry.
+     *
+     * @return array{int, string, ?string, ?string, bool}
+     */
     private function resolveAppleAccount(string $sub, string $email, ?string $name): array
     {
         for ($attempt = 0; $attempt < 2; $attempt++) {
@@ -516,7 +533,10 @@ class Auth
         throw new \RuntimeException('resolveAppleAccount: beklenmeyen durum');
     }
 
-    /** apple_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar. */
+    /** apple_sub → e-posta → yeni hesap sırasıyla çözer. Transaction çağıran sağlar.
+     *
+     * @return array{int, string, ?string, ?string, bool}
+     */
     private function findOrCreateAppleUser(string $sub, string $email, ?string $name): array
     {
         // 1) Daha önce Apple ile bağlanmış hesap.
@@ -590,6 +610,7 @@ class Auth
     }
 
     // ─── POST /auth/refresh ─────────────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function refresh(array $in): void
     {
         $rt = (string) ($in['refresh_token'] ?? '');
@@ -644,6 +665,7 @@ class Auth
     }
 
     // ─── POST /auth/logout ──────────────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function logout(array $in): void
     {
         $rt = (string) ($in['refresh_token'] ?? '');
@@ -671,6 +693,7 @@ class Auth
     // ─── DELETE /auth/google/link *(Bearer)* ─────────────────────────────────
     // Google hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
     // mevcut parola zorunludur.
+    /** @param array<string, mixed> $in */
     public function unlinkGoogle(int $uid, array $in, ?callable $verifier = null): void
     {
         $st = $this->db->prepare('SELECT google_sub, password_hash FROM users WHERE id = ?');
@@ -710,6 +733,7 @@ class Auth
     // ─── DELETE /auth/apple/link *(Bearer)* ──────────────────────────────────
     // Apple hesabı bağlantısını kaldırır. Parola ile giriş mümkün olan hesaplarda
     // mevcut parola zorunludur.
+    /** @param array<string, mixed> $in */
     public function unlinkApple(int $uid, array $in, ?callable $verifier = null): void
     {
         $st = $this->db->prepare('SELECT apple_sub, password_hash FROM users WHERE id = ?');
@@ -746,6 +770,7 @@ class Auth
         json_out(200, ['ok' => true]);
     }
      // ─── POST /auth/change-password (nadir/tekil işlem) ─────────────────────
+    /** @param array<string, mixed> $in */
     public function changePassword(int $uid, array $in): void
     {
         $old = (string) ($in['old_password'] ?? '');
@@ -775,6 +800,7 @@ class Auth
     }
 
     // ─── DELETE /me (hesap silme — nadir/tekil işlem) ───────────────────────
+    /** @param array<string, mixed> $in */
     public function deleteAccount(
         int $uid,
         array $in,
@@ -819,6 +845,7 @@ class Auth
     }
 
     // ─── POST /auth/forgot-password ──────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function forgotPassword(array $in): void
     {
         $email = strtolower(trim((string) ($in['email'] ?? '')));
@@ -917,6 +944,7 @@ class Auth
     }
 
     // ─── POST /auth/verify-reset-code ────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function verifyResetCode(array $in): void
     {
         // forgotPassword e-postayı lowercase kaydeder; burada da normalize
@@ -934,6 +962,7 @@ class Auth
     }
 
     // ─── POST /auth/reset-password ───────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function resetPassword(array $in): void
     {
         // Bkz. verifyResetCode: e-posta lowercase normalize edilir.
@@ -983,6 +1012,9 @@ class Auth
     }
 
     // ─── Yardımcı: access + refresh üret, refresh'i hash'leyip sakla ────────
+    /**
+     * @return array{access_token: string, refresh_token: string, expires_in: int}
+     */
     private function issueTokens(
         int $uid,
         ?string $refreshOverride = null,

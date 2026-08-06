@@ -81,6 +81,7 @@ trait SocialFeedTrait
         ]);
     }
 
+    /** @return array{updated_at: int, friend_id: int, movie_id: int, is_tv: int}|null */
     private function decodeActivityCursor(?string $cursor): ?array
     {
         if ($cursor === null || $cursor === '') return null;

@@ -53,6 +53,7 @@ class TasteDnaWebText
     // TMDB keyword'leri İngilizce döner; sık temalar için TR sözlüğü.
     // Dart karşılığı: lib/services/taste_dna_presenter.dart (themeTr) —
     // ikisi senkron tutulmalı.
+    /** @var array<string, string>|null */
     private static ?array $themesTr = null;
 
     private static function isEn(string $lang): bool
@@ -60,11 +61,13 @@ class TasteDnaWebText
         return $lang === 'en';
     }
 
+    /** @return array<string, list<string>> */
     private static function archetypes(string $lang): array
     {
         return self::isEn($lang) ? self::ARCHETYPES_EN : self::ARCHETYPES_TR;
     }
 
+    /** @return array<string, string> */
     private static function getThemesTr(): array
     {
         if (self::$themesTr === null) {
@@ -139,6 +142,18 @@ class TasteDnaWebText
     /**
      * Snapshot'ı gösterim dizisine çevirir. DNA hazır değilse (yetersiz veri)
      * null döner. Dönen tüm metinler ham (template htmlspecialchars uygular).
+     *
+     * @param array<string, mixed>|null $dna
+     * @return array{
+     *   emoji: string,
+     *   archetype: string,
+     *   essence: string,
+     *   themes: list<string>,
+     *   genres: list<string>,
+     *   signals: list<string>,
+     *   accuracy: string|null,
+     *   themes_with_evidence: list<array{name: string, movies: mixed}>
+     * }|null
      */
     public static function build(?array $dna, string $lang = 'tr'): ?array
     {

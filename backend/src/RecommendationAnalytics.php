@@ -14,6 +14,7 @@ final class RecommendationAnalytics
         json_out(200, $this->report($days));
     }
 
+    /** @return array<string, mixed> */
     public function report(int $days, ?int $nowMs = null): array
     {
         $days = max(1, min(90, $days));

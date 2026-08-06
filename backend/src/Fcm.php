@@ -7,7 +7,8 @@ declare(strict_types=1);
 // Hiçbir Composer paketi gerektirmez; yalnız openssl + curl (LiteSpeed'de mevcut).
 class Fcm
 {
-    private array $sa;          // service account JSON (decode edilmiş)
+    /** @var array<string, mixed> service account JSON (decode edilmiş) */
+    private array $sa;
     private string $projectId;
 
     public function __construct(string $serviceAccountPath, ?string $projectId = null)
@@ -27,8 +28,12 @@ class Fcm
         }
     }
 
-    // Tek bir cihaz token'ına gönderir.
-    // true: teslim için kabul edildi. false: token geçersiz/kayıtsız (çağıran temizleyebilir).
+    /**
+     * Tek bir cihaz token'ına gönderir.
+     * true: teslim için kabul edildi. false: token geçersiz/kayıtsız (çağıran temizleyebilir).
+     *
+     * @param array<string, mixed> $data
+     */
     public function send(string $deviceToken, string $title, string $body, array $data = []): bool
     {
         $accessToken = $this->accessToken();
@@ -66,8 +71,12 @@ class Fcm
         throw new RuntimeException("FCM gönderimi başarısız (HTTP $status): $resp");
     }
 
-    // Bir kullanıcının tüm cihazlarına gönderir; geçersiz token'ları DB'den temizler.
-    // Dönüş: başarıyla gönderilen cihaz sayısı.
+    /**
+     * Bir kullanıcının tüm cihazlarına gönderir; geçersiz token'ları DB'den temizler.
+     * Dönüş: başarıyla gönderilen cihaz sayısı.
+     *
+     * @param array<string, mixed> $data
+     */
     public function sendToUser(PDO $db, int $userId, string $title, string $body, array $data = []): int
     {
         $st = $db->prepare('SELECT token FROM device_tokens WHERE user_id = ?');
@@ -134,6 +143,9 @@ class Fcm
         return (string) $json['access_token'];
     }
 
+    /**
+     * @param array<string, int|string> $claim
+     */
     private function signJwt(array $claim): string
     {
         $seg = [
@@ -155,7 +167,10 @@ class Fcm
         return rtrim(strtr(base64_encode($d), '+/', '-_'), '=');
     }
 
-    /** @return array{0:int,1:string} [httpStatus, responseBody] */
+    /**
+     * @param list<string> $headers
+     * @return array{0:int,1:string} [httpStatus, responseBody]
+     */
     private function httpPost(string $url, string $body, array $headers): array
     {
         $ch = curl_init($url);

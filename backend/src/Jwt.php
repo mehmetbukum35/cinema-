@@ -3,6 +3,10 @@ declare(strict_types=1);
 // Bağımlılıksız JWT (HS256). Paylaşımlı hosting'de composer gerekmez.
 class Jwt
 {
+    /**
+     * @param array<string, mixed> $payload
+     * @param string|array<string, string> $secret
+     */
     public static function encode(array $payload, string|array $secret, ?string $kid = null): string
     {
         $header = ['alg' => 'HS256', 'typ' => 'JWT'];
@@ -18,7 +22,12 @@ class Jwt
         return "$h.$p.$sig";
     }
 
-    /** Geçerliyse payload dizisini, değilse null döner (imza + exp kontrolü). */
+    /**
+     * Geçerliyse payload dizisini, değilse null döner (imza + exp kontrolü).
+     *
+     * @param string|array<string, string> $secret
+     * @return array<string, mixed>|null
+     */
     public static function decode(string $jwt, string|array $secret): ?array
     {
         $parts = explode('.', $jwt);

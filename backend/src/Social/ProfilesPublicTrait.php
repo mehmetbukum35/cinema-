@@ -7,6 +7,7 @@ trait SocialProfilesPublicTrait
     // Bir üyenin herkese açık profilini (listelerini) beğen / beğeniyi geri al.
     // Girdi: { owner_id: int, liked: bool }. Kullanıcı başına tek beğeni
     // (PK voter_id+owner_id); tekrar beğenmek idempotenttir.
+    /** @param array<string, mixed> $in */
     public function likeProfile(int $uid, array $in): void
     {
         $ownerId = (int) ($in['owner_id'] ?? 0);
@@ -163,6 +164,7 @@ trait SocialProfilesPublicTrait
         invalidate_top_profiles_cache();
     }
 
+    /** @return list<array<string, mixed>>|null */
     private function readTopProfilesCache(string $locale): ?array
     {
         // Integration tests use isolated in-memory SQLite databases.
@@ -173,6 +175,7 @@ trait SocialProfilesPublicTrait
         return is_array($data) ? $data : null;
     }
 
+    /** @param list<array<string, mixed>> $profiles */
     private function writeTopProfilesCache(string $locale, array $profiles): void
     {
         if ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') return;

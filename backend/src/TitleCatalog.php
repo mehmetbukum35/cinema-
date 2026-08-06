@@ -43,6 +43,8 @@ final class TitleCatalog
     /**
      * Sync push'tan gelen client metadata. `source=tmdb` satırları dokunulmaz.
      * Aksi halde fill-empty + `source=client`, ardından lazy TMDB kuyruğu.
+     *
+     * @param array<string, mixed> $item
      */
     public function ingestFromClient(array $item, string $idKey, int $updatedAt, string $locale): void
     {

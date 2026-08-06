@@ -28,6 +28,7 @@ class Tmdb
         return 3600;
     }
 
+    /** @param array<string, mixed> $query */
     private static function cacheFile(string $path, array $query): string
     {
         $safeQuery = $query;
@@ -58,6 +59,7 @@ class Tmdb
      * $_GET'e güvenmeden, ham haliyle ve noktaları koruyarak parse ederiz.
      * Aynı anahtar tekrar gelirse son değer kazanır ($_GET davranışıyla aynı).
      */
+    /** @return array<string, string> */
     public static function parseRawQuery(string $rawQueryString): array
     {
         $params = [];
@@ -171,6 +173,7 @@ class Tmdb
      *         noktalı TMDB parametrelerini korumak için $_GET yerine ham
      *         QUERY_STRING kullanılır (bkz. parseRawQuery).
      */
+    /** @param array<string, mixed> $query */
     public function proxy(string $path, array $query): void
     {
         if ($this->apiKey === '') {
@@ -210,6 +213,7 @@ class Tmdb
     /**
      * Ortak HTTP + dosya önbelleği. Exit etmez; curl hatasında null döner.
      *
+     * @param array<string, mixed> $query
      * @return array{status:int, body:string, cache:string}|null
      */
     private function request(string $path, array $query, bool $persistCache = true): ?array
@@ -292,6 +296,7 @@ class Tmdb
         return $body;
     }
 
+    /** @param array<string, mixed> $item */
     private function shouldFilterItem(array $item): bool
     {
         if (isset($item['adult']) && $item['adult'] === true) {

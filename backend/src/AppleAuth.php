@@ -24,6 +24,9 @@ class AppleAuth
     /**
      * Identity token'ı doğrulayıp claim'leri döner; geçersizse null.
      * $bundleIds: kabul edilen uygulama bundle ID'leri (aud bunlardan biri olmalı).
+     *
+     * @param list<string> $bundleIds
+     * @return array<string, mixed>|null
      */
     public static function verifyIdentityToken(string $idToken, array $bundleIds): ?array
     {
@@ -42,6 +45,9 @@ class AppleAuth
      *  - exp geçmemiş
      *  - sub var (Apple'ın değişmez kullanıcı kimliği)
      *  - email varsa email_verified true olmalı (hesap bağlama e-postaya güvenir)
+     *
+     * @param array<string, mixed> $claims
+     * @param list<string> $bundleIds
      */
     public static function validateClaims(
         array $claims,
@@ -83,7 +89,7 @@ class AppleAuth
 
     // ── Yerel JWKS/RS256 doğrulaması (GoogleAuth ile aynı teknik) ───────────
 
-    /** @return array{status:string, claims?:array} */
+    /** @return array{status: string, claims?: array<string, mixed>} */
     private static function verifyWithJwks(string $idToken): array
     {
         if (!function_exists('openssl_verify')) {
@@ -131,7 +137,11 @@ class AppleAuth
         return ['status' => 'ok', 'claims' => $claims];
     }
 
-    /** Verilen kid için JWK'yı cache'ten/ağdan bulur; yoksa null. */
+    /**
+     * Verilen kid için JWK'yı cache'ten/ağdan bulur; yoksa null.
+     *
+     * @return array<string, mixed>|null
+     */
     private static function findJwk(string $kid, bool $forceRefresh = false): ?array
     {
         $keys = self::fetchJwks($forceRefresh);
@@ -149,6 +159,8 @@ class AppleAuth
     /**
      * Apple JWKS anahtar listesini döner (cache'li). Ağ hatasında süresi geçmiş
      * cache varsa yine de kullanılır (anahtarlar uzun ömürlüdür).
+     *
+     * @return list<mixed>|null
      */
     private static function fetchJwks(bool $forceRefresh = false): ?array
     {

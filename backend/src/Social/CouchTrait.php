@@ -21,6 +21,7 @@ trait SocialCouchTrait
     // Girdi: { friend_id, deck: [{movie_id,is_tv,title,poster_path,vote_average}] }
     // Desteyi HOST istemcisi kurar (ortak izleme listesi + öneri motoru);
     // sunucu yalnızca doğrular, kırpar ve saklar.
+    /** @param array<string, mixed> $in */
     public function createCouchSession(int $uid, array $in): void
     {
         $friendId = (int) ($in['friend_id'] ?? 0);
@@ -132,6 +133,7 @@ trait SocialCouchTrait
     // ─── POST /social/couch/{id}/vote ───────────────────────────────────────
     // Girdi: { movie_id, is_tv, liked }. Oy kullanıcının KENDİ kolonuna yazılır
     // (host_votes/guest_votes) — eşzamanlı iki oy birbirini ezemez.
+    /** @param array<string, mixed> $in */
     public function voteCouchSession(int $uid, int $sessionId, array $in): void
     {
         $movieId = (int) ($in['movie_id'] ?? 0);
@@ -244,6 +246,7 @@ trait SocialCouchTrait
 
     // ─── Yardımcılar ────────────────────────────────────────────────────────
 
+    /** @return array<string, mixed> */
     private function loadCouchSession(int $sessionId, bool $forUpdate = false): array
     {
         $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -255,6 +258,7 @@ trait SocialCouchTrait
         return $row;
     }
 
+    /** @return array<string, mixed> */
     private function requireCouchParticipant(int $uid, int $sessionId): array
     {
         $row = $this->loadCouchSession($sessionId);
@@ -265,6 +269,7 @@ trait SocialCouchTrait
         return $row;
     }
 
+    /** @param array<string, mixed> $row */
     private function assertCouchFriendshipForRow(array $row, int $uid): void
     {
         $friendId = (int) $row['host_id'] === $uid
@@ -287,7 +292,10 @@ trait SocialCouchTrait
         $cancel->execute([now_ms(), $uid, $friendId, $friendId, $uid]);
     }
 
-    /** Misafirin ilk teması oturumu pending → active taşır. */
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
     private function activateIfGuestArrived(array $row, int $uid): array
     {
         if ($row['status'] === 'pending' && (int) $row['guest_id'] === $uid) {
@@ -309,8 +317,10 @@ trait SocialCouchTrait
      * Oturum sonucunu çözer: karşılıklı beğeni varsa 'matched' (+ karşı tarafa
      * push), iki taraf da desteyi bitirmiş ve eşleşme yoksa 'ended'.
      *
+     * @param array<string, mixed> $row
      * @param int|null $exceptUserId Oyunu tetikleyen kullanıcı — zaten ekranda;
      *                               push yalnızca karşı tarafa gider.
+     * @return array<string, mixed>
      */
     private function resolveCouchOutcome(array $row, ?int $exceptUserId = null): array
     {
@@ -391,7 +401,12 @@ trait SocialCouchTrait
         json_out(200, ['used_keys' => $used]);
     }
 
-    /** İstemciye dönen oturum görünümü ([uid] perspektifinden). */
+    /**
+     * İstemciye dönen oturum görünümü ([uid] perspektifinden).
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
     private function couchPayload(array $row, int $uid): array
     {
         $isHost = ((int) $row['host_id']) === $uid;

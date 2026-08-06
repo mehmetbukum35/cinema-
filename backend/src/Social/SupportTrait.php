@@ -4,6 +4,7 @@ declare(strict_types=1);
 /** Shared helpers for {@see Social} domain modules. */
 trait SocialSupportTrait
 {
+    /** @param array<string, mixed> $extra */
     private function notify(int $toUserId, int $fromUserId, string $type, array $extra = []): void
     {
         if ($this->fcm === null) {
@@ -67,6 +68,7 @@ trait SocialSupportTrait
         }
     }
 
+    /** @return array<string, array{rating: int, genres: list<int>, created_at: int|null}> */
     private function fetchRatingsMap(int $uid): array
     {
         $locale = cinema_content_locale();
@@ -92,6 +94,10 @@ trait SocialSupportTrait
         return $map;
     }
 
+    /**
+     * @param array<string, array{rating: int, genres: list<int>, created_at: int|null}> $ratingsMap
+     * @return array<int, float>
+     */
     private function genreVector(array $ratingsMap): array
     {
         static $weights = [3 => 2.0, 2 => 1.0, 1 => -1.0, 0 => -2.0];
@@ -117,6 +123,10 @@ trait SocialSupportTrait
         return $v;
     }
 
+    /**
+     * @param array<int, float> $v1
+     * @param array<int, float> $v2
+     */
     private function cosine(array $v1, array $v2): float
     {
         $dot = 0.0;

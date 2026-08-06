@@ -24,6 +24,7 @@ trait SocialFriendsTrait
     }
 
     // ─── POST /social/friends/request ───────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function sendFriendRequest(int $uid, array $in): void
     {
         $search = trim((string) ($in['search_query'] ?? ''));
@@ -126,6 +127,7 @@ trait SocialFriendsTrait
     }
 
     // ─── POST /social/friends/accept ────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function acceptFriendRequest(int $uid, array $in): void
     {
         $friendId = (int) ($in['friend_id'] ?? 0);
@@ -185,6 +187,7 @@ trait SocialFriendsTrait
     }
 
     // ─── POST /social/friends/reject ────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function rejectFriendRequest(int $uid, array $in): void
     {
         $friendId = (int) ($in['friend_id'] ?? 0);

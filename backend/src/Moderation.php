@@ -233,6 +233,12 @@ class Moderation
         $this->redirectToPanel();
     }
 
+    /**
+     * @param list<array<string, mixed>> $open
+     * @param list<array<string, mixed>> $hidden
+     * @param list<array<string, mixed>> $banned
+     * @param array<string, mixed>|null $recommendations
+     */
     private function html(
         string $key,
         array $open,
@@ -333,6 +339,7 @@ class Moderation
             . '</body></html>';
     }
 
+    /** @param array<string, mixed>|null $report */
     private function recommendationHtml(?array $report, Closure $e): string
     {
         if ($report === null) {

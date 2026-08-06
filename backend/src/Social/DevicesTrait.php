@@ -6,6 +6,7 @@ trait SocialDevicesTrait
     // ─── POST /social/device/register ───────────────────────────────────────
     // İstemci FCM token'ını kaydeder/günceller. Token tekildir (PK): aynı cihaz
     // başka bir hesaba geçtiyse user_id güncellenir, çift kayıt oluşmaz.
+    /** @param array<string, mixed> $in */
     public function registerDevice(int $uid, array $in): void
     {
         $token = trim((string) ($in['token'] ?? ''));
@@ -31,6 +32,7 @@ trait SocialDevicesTrait
     }
 
     // ─── POST /social/device/unregister (çıkış yaparken) ────────────────────
+    /** @param array<string, mixed> $in */
     public function unregisterDevice(int $uid, array $in): void
     {
         $token = trim((string) ($in['token'] ?? ''));

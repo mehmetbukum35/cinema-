@@ -4,6 +4,7 @@ declare(strict_types=1);
 trait SocialProfilesTrait
 {
     // ─── POST /social/profile/setup ─────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function setupProfile(int $uid, array $in): void
     {
         $username = strtolower(trim((string) ($in['username'] ?? '')));
@@ -36,6 +37,7 @@ trait SocialProfilesTrait
     // ─── POST /social/dna ───────────────────────────────────────────────────
     // Cihazın ürettiği Sinema DNA snapshot'ını saklar (public web kartı için).
     // Algoritma sunucuda tekrarlanmaz; yalnızca hazır snapshot depolanır.
+    /** @param array<string, mixed> $in */
     public function publishTasteDna(int $uid, array $in): void
     {
         $dna = $in['dna'] ?? null;

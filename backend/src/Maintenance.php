@@ -25,8 +25,12 @@ final class Maintenance
         'titles_refresh_batch' => 20,
     ];
 
+    /** @var array<string, int> */
     private array $options;
 
+    /**
+     * @param array<string, int> $options
+     */
     public function __construct(
         private PDO $db,
         array $options = [],
@@ -246,6 +250,9 @@ final class Maintenance
         return $st->rowCount();
     }
 
+    /**
+     * @param list<string> $keys
+     */
     private function deleteAcknowledgedTombstones(
         string $table,
         array $keys,
@@ -403,7 +410,10 @@ final class Maintenance
         return $this->applyCompositeKeys($st, $keys);
     }
 
-    /** @return list<int> */
+    /**
+     * @param list<mixed> $params
+     * @return list<int>
+     */
     private function selectIds(string $table, string $where, array $params): array
     {
         $st = $this->db->prepare(
@@ -413,7 +423,11 @@ final class Maintenance
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * @param list<string> $columns
+     * @param list<mixed> $params
+     * @return list<array<string, mixed>>
+     */
     private function selectCompositeKeys(string $table, array $columns, string $where, array $params): array
     {
         $columnList = implode(', ', array_map(fn (string $column): string => "`$column`", $columns));
@@ -424,6 +438,9 @@ final class Maintenance
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * @param list<array<string, mixed>> $rows
+     */
     private function applyCompositeKeys(PDOStatement $statement, array $rows): int
     {
         $changed = 0;

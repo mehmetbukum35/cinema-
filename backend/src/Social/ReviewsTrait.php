@@ -70,6 +70,7 @@ trait SocialReviewsTrait
     // şikayet edebilir (PK). AUTO_HIDE_THRESHOLD farklı kullanıcıdan açık
     // şikayet birikince yorum otomatik gizlenir; moderatör panelinden geri
     // açılabilir. Böylece moderatör uyurken topluluk kendini korur.
+    /** @param array<string, mixed> $in */
     public function reportReview(int $uid, array $in): void
     {
         $reportedId = (int) ($in['user_id'] ?? 0);
@@ -126,6 +127,7 @@ trait SocialReviewsTrait
     // ─── POST /social/users/block ────────────────────────────────────────────
     // Engelleme mevcut arkadaşlığı da (iki yönde) koparır: engellediğin biriyle
     // arkadaş kalmak tutarsız olurdu ve arkadaş sorguları blok filtresinden geçmez.
+    /** @param array<string, mixed> $in */
     public function blockUser(int $uid, array $in): void
     {
         $blockedId = (int) ($in['user_id'] ?? 0);
@@ -183,6 +185,7 @@ trait SocialReviewsTrait
     }
 
     // ─── POST /social/users/unblock ──────────────────────────────────────────
+    /** @param array<string, mixed> $in */
     public function unblockUser(int $uid, array $in): void
     {
         $blockedId = (int) ($in['user_id'] ?? 0);

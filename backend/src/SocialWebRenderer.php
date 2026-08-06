@@ -167,7 +167,11 @@ class SocialWebRenderer
         return $st->fetchAll();
     }
 
-    /// Web profil sayfasının arayüz metinleri.
+    /**
+     * Web profil sayfasının arayüz metinleri.
+     *
+     * @return array<string, string>
+     */
     private static function webStrings(string $lang): array
     {
         if ($lang === 'en') {
