@@ -159,6 +159,10 @@ const Map<String, String> kTrStrings = {
   'discovery_foreign': 'Farklı Kültürler',
   'discovery_apply': 'Önerileri hazırla',
   'discovery_clear': 'Seçimleri temizle',
+  'discovery_empty_title': 'Bu Seçimlerle Öneri Bulunamadı',
+  'discovery_empty_desc':
+      'Favori bölgelerin veya seçtiğin kısıtlar eldeki havuzu sıfırladı. Filtreleri esneterek daha çok filme ulaşabilirsin.',
+  'discovery_empty_action': 'Filtreleri Temizle',
   'dismiss_feedback_title': 'Neden olmadı?',
   'dismiss_feedback_desc':
       'Cevabın yalnızca daha iyi öneriler vermemize yardımcı olur.',

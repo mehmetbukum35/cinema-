@@ -29,6 +29,7 @@ import 'browse/discovery_context_sheet.dart';
 import 'browse/dismiss_feedback_sheet.dart';
 import '../services/cultural_classifier.dart';
 import '../services/cultural_preference_service.dart';
+import '../services/recommendation_engine.dart';
 import '../services/sync_service.dart';
 import '../services/recommendation_telemetry_service.dart';
 import 'movie_detail_sheet.dart';
@@ -91,6 +92,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     if (selected == null || !mounted) return;
     ref.read(discoveryContextProvider.notifier).state = selected;
     await _load(background: true);
+  }
+
+  void _clearDiscoveryContext() {
+    ref.read(discoveryContextProvider.notifier).state =
+        const DiscoveryContext();
+    _load(background: true);
   }
 
   Object? _error;
@@ -253,6 +260,47 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       );
       if (!mounted || loadGeneration != _loadGeneration) return;
 
+      // Hedefli Kültür Çekimi: "Favori Bölgelerim" seçilmişse, havuzu
+      // kullanıcının ev sahibi kültürlerinin filmleriyle zenginleştir.
+      final discoveryContext = ref.read(discoveryContextProvider);
+      List<Movie> cultureCandidates = const [];
+      if (discoveryContext.origin == DiscoveryOrigin.local) {
+        try {
+          final culturalPreferences = await CulturalPreferenceService.load();
+          final homeCultures = RecommendationEngine.resolveHomeCultures(
+            preferences: culturalPreferences,
+            languageCode: ref.read(localeProvider).languageCode,
+          );
+          final cultureFilters = RecommendationEngine.cultureToTmdbFilters(
+            homeCultures,
+          );
+          if (cultureFilters.isNotEmpty) {
+            final cultureFetches = cultureFilters
+                .take(3)
+                .map(
+                  (f) => _service
+                      .discover(
+                        originCountry: f.originCountry,
+                        originalLanguage: f.originalLanguage,
+                        includeMovies:
+                            discoveryContext.media != DiscoveryMedia.tv,
+                        includeTv:
+                            discoveryContext.media != DiscoveryMedia.movie,
+                        page: basePage,
+                      )
+                      .catchError((_) => <Movie>[]),
+                );
+            final cultureResults = await Future.wait(cultureFetches);
+            cultureCandidates = cultureResults
+                .expand((list) => list)
+                .cast<Movie>()
+                .toList();
+          }
+        } catch (e) {
+          debugPrint("Targeted culture discovery fetch error: $e");
+        }
+      }
+
       Map<String, List<String>> friendSignals = const {};
       if (isAuthenticated) {
         try {
@@ -277,8 +325,14 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       };
 
       final ranked = await engine.rankForYou(
-        [...page1, ...page2, ...tvDiscover, ...seedCandidates],
-        discoveryContext: ref.read(discoveryContextProvider),
+        [
+          ...page1,
+          ...page2,
+          ...tvDiscover,
+          ...seedCandidates,
+          ...cultureCandidates,
+        ],
+        discoveryContext: discoveryContext,
         excludedKeys: {...ratedIds, ...blockedKeys},
         friendSignals: friendSignals,
         cooldownKeys: cooldownKeys,
@@ -638,6 +692,17 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               ),
             ),
           ),
+
+          // ── Keşif Boş Durum Uyarısı ──────────────────────────────────────────
+          if (!_loading &&
+              _tonight == null &&
+              _personal.isEmpty &&
+              !ref.watch(discoveryContextProvider).isDefault)
+            SliverToBoxAdapter(
+              child: DiscoveryEmptyStateBanner(
+                onClearFilters: _clearDiscoveryContext,
+              ),
+            ),
 
           // ── Ruh hali ─────────────────────────────────────────────────────────
           SliverToBoxAdapter(

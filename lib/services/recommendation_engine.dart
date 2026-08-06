@@ -168,6 +168,44 @@ class RecommendationEngine {
     };
   }
 
+  /// Kültür etiketlerini (turkish, iranian, european vb.) TMDB discover sorgu
+  /// parametrelerine (originCountry, originalLanguage) dönüştürür.
+  static List<({String? originCountry, String? originalLanguage})>
+  cultureToTmdbFilters(Set<String> homeCultures) {
+    final filters = <({String? originCountry, String? originalLanguage})>[];
+    for (final c in homeCultures) {
+      switch (c) {
+        case 'turkish':
+          filters.add((originCountry: 'TR', originalLanguage: 'tr'));
+        case 'iranian':
+          filters.add((originCountry: 'IR', originalLanguage: 'fa'));
+        case 'korean':
+          filters.add((originCountry: 'KR', originalLanguage: 'ko'));
+        case 'japanese':
+          filters.add((originCountry: 'JP', originalLanguage: 'ja'));
+        case 'indian':
+          filters.add((originCountry: 'IN', originalLanguage: null));
+        case 'european':
+          filters.add((
+            originCountry: 'FR|DE|ES|IT|GB|SE|NL|DK|NO|FI|AT|PL|CZ',
+            originalLanguage: null,
+          ));
+        case 'latin_american':
+          filters.add((
+            originCountry: 'MX|BR|AR|CL|CO|PE|CU',
+            originalLanguage: null,
+          ));
+        case 'east_asian':
+          filters.add((originCountry: 'CN|HK|TW', originalLanguage: null));
+        case 'hollywood':
+          filters.add((originCountry: 'US|CA|AU|NZ', originalLanguage: 'en'));
+        default:
+          break;
+      }
+    }
+    return filters;
+  }
+
   static bool matchesDiscoveryContext(
     Movie movie,
     DiscoveryContext context, {

@@ -365,3 +365,73 @@ class _ChoiceSection<T> extends StatelessWidget {
     );
   }
 }
+
+class DiscoveryEmptyStateBanner extends StatelessWidget {
+  const DiscoveryEmptyStateBanner({super.key, required this.onClearFilters});
+
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final tr = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.gold.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.filter_alt_off_rounded, color: c.gold, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    tr?.get('discovery_empty_title') ??
+                        'Bu Seçimlerle Öneri Bulunamadı',
+                    style: TextStyle(
+                      color: c.ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tr?.get('discovery_empty_desc') ??
+                  'Favori bölgelerin veya seçtiğin kısıtlar eldeki havuzu sıfırladı. Filtreleri esneterek daha çok filme ulaşabilirsin.',
+              style: TextStyle(color: c.dim, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onClearFilters,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  tr?.get('discovery_empty_action') ?? 'Filtreleri Temizle',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: c.gold,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -158,6 +158,10 @@ const Map<String, String> kEnStrings = {
   'discovery_foreign': 'Other Cultures',
   'discovery_apply': 'Prepare recommendations',
   'discovery_clear': 'Clear choices',
+  'discovery_empty_title': 'No Recommendations Found for These Choices',
+  'discovery_empty_desc':
+      'Your preferred regions or length filters filtered out the current candidate pool. Try broadening your filters to explore more movies.',
+  'discovery_empty_action': 'Reset Filters',
   'dismiss_feedback_title': 'Why wasn’t it right?',
   'dismiss_feedback_desc':
       'Your answer only helps us make better recommendations.',
