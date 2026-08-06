@@ -401,5 +401,51 @@ void main() {
         'tr',
       );
     });
+
+    test('addToWatchlist verilen dili yazar', () async {
+      final movie = Movie(
+        id: 5151,
+        title: 'Watch EN',
+        overview: '',
+        voteAverage: 7.0,
+      );
+      await PrefsService.addToWatchlist(movie, metadataLocale: 'en');
+
+      final rows = await DatabaseHelper().getWatchlistRaw();
+      final row = rows.singleWhere((r) => r['id'] == 5151);
+      expect(row['metadata_locale'], 'en');
+    });
+
+    test(
+      'saveFavoriteMovies ve saveFavoriteTvShows verilen dili yazar',
+      () async {
+        final film = Movie(
+          id: 6161,
+          title: 'Fav Film',
+          overview: '',
+          voteAverage: 8.0,
+          isTV: false,
+        );
+        final show = Movie(
+          id: 6262,
+          title: 'Fav Show',
+          overview: '',
+          voteAverage: 8.0,
+          isTV: true,
+        );
+        await PrefsService.saveFavoriteMovies([film], metadataLocale: 'en');
+        await PrefsService.saveFavoriteTvShows([show], metadataLocale: 'tr');
+
+        final rows = await DatabaseHelper().getFavoritesRaw();
+        expect(
+          rows.singleWhere((r) => r['id'] == 6161)['metadata_locale'],
+          'en',
+        );
+        expect(
+          rows.singleWhere((r) => r['id'] == 6262)['metadata_locale'],
+          'tr',
+        );
+      },
+    );
   });
 }

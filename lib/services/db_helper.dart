@@ -1359,7 +1359,19 @@ class DatabaseHelper {
     }
     return await db.query(
       'favorites',
-      columns: ['genre_ids', 'created_at'],
+      columns: ['id', 'is_tv', 'genre_ids', 'created_at', 'metadata_locale'],
+      where: 'deleted = 0',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getWatchlistRaw() async {
+    final db = await database;
+    if (db == null) {
+      return _mockWatchlist.where((e) => e['deleted'] != 1).toList();
+    }
+    return await db.query(
+      'watchlist',
+      columns: ['id', 'is_tv', 'metadata_locale'],
       where: 'deleted = 0',
     );
   }

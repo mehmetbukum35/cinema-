@@ -196,6 +196,54 @@ void main() {
       expect(mockApi.pushedPayload!['metadata_locale'], 'en');
     });
 
+    test('pull metadata_locale yoksa API diline duser', () async {
+      mockApi.localeCode = () => 'en';
+      mockApi.pullResponse = {
+        'server_time': 2000,
+        'ratings': [
+          {
+            'movie_id': 888,
+            'is_tv': 0,
+            'rating': 3,
+            'genre_ids': [28],
+            'title': 'Legacy Remote',
+            'created_at': 1500,
+            'updated_at': 1600,
+            'deleted': false,
+          },
+        ],
+        'watchlist': [
+          {
+            'id': 889,
+            'is_tv': 0,
+            'title': 'Legacy Watch',
+            'genre_ids': [18],
+            'created_at': 1501,
+            'updated_at': 1700,
+            'deleted': false,
+          },
+        ],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      final rating = await testDb.query(
+        'ratings',
+        where: 'movie_id = ? AND is_tv = ?',
+        whereArgs: [888, 0],
+      );
+      final watch = await testDb.query(
+        'watchlist',
+        where: 'id = ? AND is_tv = ?',
+        whereArgs: [889, 0],
+      );
+      expect(rating.single['metadata_locale'], 'en');
+      expect(watch.single['metadata_locale'], 'en');
+    });
+
     test('should tolerate null genre metadata in legacy rows', () async {
       await testDb.insert('ratings', {
         'movie_id': 321,
