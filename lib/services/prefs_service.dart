@@ -88,10 +88,11 @@ class PrefsService {
     return prefs.getString(_keyLanguage);
   }
 
+  /// Yalnızca kalıcılaştırır. Aktif dilin sahibi `LocaleNotifier`'dır; buradan
+  /// ikinci bir yazma yapılırsa iki kaynak ayrışır.
   static Future<void> setSelectedLanguage(String lang) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLanguage, lang);
-    activeLanguageCode = lang;
   }
 
   static Future<bool> isFamilyMode() async {

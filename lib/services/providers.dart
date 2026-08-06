@@ -21,39 +21,34 @@ import 'recommendation_engine.dart';
 import 'taste_dna_service.dart';
 import '../models/discovery_context.dart';
 
+/// Açılışta diskten okunmuş dil kodu. `main()` gerçek değerle override eder;
+/// override yoksa (veya kayıt yoksa) `null` gelir ve platform diline düşülür.
+/// Testler bu provider'ı override ederek dili senkron olarak sabitleyebilir.
+final initialLocaleProvider = Provider<String?>((ref) => null);
+
+/// Seçili arayüz dilinin tek sahibi. Diğer katmanlar dili buradan enjekte
+/// edilen bir okuyucuyla alır; global bir kopya tutulmaz — iki yazıcı
+/// ayrıştığında kullanıcı Türkçe arayüzde İngilizce bildirim alıyordu.
 class LocaleNotifier extends StateNotifier<Locale> {
-  LocaleNotifier() : super(_getInitialLocale()) {
-    _init();
-  }
+  LocaleNotifier(String? initialLanguageCode)
+    : super(Locale(_resolve(initialLanguageCode)));
 
-  static Locale _getInitialLocale() {
+  /// Dil çözümü tek yerde: kayıtlı tercih varsa o, yoksa platform dili;
+  /// desteklenmeyen her dil 'en'e düşer.
+  static String _resolve(String? saved) {
+    if (saved == 'tr' || saved == 'en') return saved!;
     final sysLang = ui.PlatformDispatcher.instance.locale.languageCode;
-    final lang = sysLang == 'tr' ? 'tr' : 'en';
-    return Locale(lang);
-  }
-
-  void _init() async {
-    final saved = await PrefsService.getSelectedLanguage();
-    if (saved != null) {
-      state = Locale(saved);
-      PrefsService.activeLanguageCode = saved;
-    } else {
-      final sysLang = ui.PlatformDispatcher.instance.locale.languageCode;
-      final lang = sysLang == 'tr' ? 'tr' : 'en';
-      state = Locale(lang);
-      PrefsService.activeLanguageCode = lang;
-    }
+    return sysLang == 'tr' ? 'tr' : 'en';
   }
 
   Future<void> setLocale(String langCode) async {
     await PrefsService.setSelectedLanguage(langCode);
-    PrefsService.activeLanguageCode = langCode;
     state = Locale(langCode);
   }
 }
 
 final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
-  return LocaleNotifier();
+  return LocaleNotifier(ref.watch(initialLocaleProvider));
 });
 
 /// Tema modu (koyu/açık). Varsayılan açık; kullanıcı seçimi cihazda saklanır.

@@ -110,7 +110,17 @@ Future<void> _bootstrap() async {
   );
 
   final onboardingDone = await PrefsService.isOnboardingDone();
-  runApp(ProviderScope(child: NeIzlesemApp(showOnboarding: !onboardingDone)));
+  // Dil runApp'ten ÖNCE okunur: aksi halde tercih diskten gelene kadar geçen
+  // pencerede ilk isteklerin Accept-Language başlığı yanlış dile takılır.
+  final savedLanguage = await PrefsService.getSelectedLanguage();
+  // Geçici: global'i hâlâ okuyan katmanlar Task 3-7'de temizlenecek.
+  PrefsService.activeLanguageCode = savedLanguage ?? 'tr';
+  runApp(
+    ProviderScope(
+      overrides: [initialLocaleProvider.overrideWithValue(savedLanguage)],
+      child: NeIzlesemApp(showOnboarding: !onboardingDone),
+    ),
+  );
 }
 
 class NeIzlesemApp extends ConsumerWidget {
