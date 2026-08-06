@@ -89,8 +89,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     return range.start.round() != 1970 || range.end.round() != _currentYear;
   }
 
-  static String _getLanguageLabel(String code, String fallback) {
-    final isTr = PrefsService.activeLanguageCode == 'tr';
+  static String _getLanguageLabel(
+    String code,
+    String fallback,
+    String localeCode,
+  ) {
+    final isTr = localeCode == 'tr';
     if (isTr) return fallback;
     switch (code) {
       case 'tr':
@@ -435,7 +439,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   ),
                   ..._languages.map(
                     (l) => ResultsLangChip(
-                      label: _getLanguageLabel(l.code, l.label),
+                      label: _getLanguageLabel(
+                        l.code,
+                        l.label,
+                        Localizations.localeOf(context).languageCode,
+                      ),
                       selected: tempLang == l.code,
                       onTap: () => setModal(
                         () => tempLang = tempLang == l.code ? null : l.code,
@@ -595,6 +603,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                           _languages
                               .firstWhere((l) => l.code == _filterLanguage)
                               .label,
+                          Localizations.localeOf(context).languageCode,
                         ),
                         style: TextStyle(color: c.ink, fontSize: 12),
                       ),
