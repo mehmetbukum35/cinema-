@@ -37,11 +37,20 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
            (isTV
                ? PrefsService.getFavoriteTvShows
                : PrefsService.getFavoriteMovies),
+       // Tear-off yerine closure: metadataLocale adlandırılmış parametresi
+       // eklendikten sonra imza `Future<void> Function(List<Movie>)` ile
+       // uyuşmuyor. Dil yazma anında okunur.
        _writeList =
            writeList ??
-           (isTV
-               ? PrefsService.saveFavoriteTvShows
-               : PrefsService.saveFavoriteMovies),
+           ((List<Movie> list) => isTV
+               ? PrefsService.saveFavoriteTvShows(
+                   list,
+                   metadataLocale: ref.read(localeProvider).languageCode,
+                 )
+               : PrefsService.saveFavoriteMovies(
+                   list,
+                   metadataLocale: ref.read(localeProvider).languageCode,
+                 )),
        super(const AsyncValue.loading()) {
     if (autoLoad) unawaited(load());
   }

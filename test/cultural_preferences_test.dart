@@ -63,6 +63,8 @@ void main() {
         ),
         rating: 3,
         isPrivate: 1,
+
+        metadataLocale: 'tr',
       );
     }
 

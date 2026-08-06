@@ -273,12 +273,16 @@ void main() {
           isTV: false,
           rating: 3,
           genreIds: [28],
+
+          metadataLocale: 'tr',
         );
         await PrefsService.saveRating(
           movieId: 20,
           isTV: false,
           rating: 0,
           genreIds: [35],
+
+          metadataLocale: 'tr',
         );
 
         final client = MockClient((request) async {
@@ -325,12 +329,16 @@ void main() {
           isTV: false,
           rating: 3,
           genreIds: [28],
+
+          metadataLocale: 'tr',
         );
         await PrefsService.saveRating(
           movieId: 30,
           isTV: false,
           rating: -1, // İzlemedim — yargı değil
           genreIds: [35],
+
+          metadataLocale: 'tr',
         );
 
         final client = MockClient((request) async {
@@ -384,11 +392,17 @@ void main() {
           rating: 0,
           genreIds: [28],
           comment: 'bad',
+
+          metadataLocale: 'tr',
         );
         // Biz "Iron Man" filminin title'ını test veritabanında kaydetmek için saveRating'e movie nesnesini de vermeliyiz.
         // DatabaseHelper mock'u `movie` parametresi verilirse başlığı oradan çeker:
         final movieObj = _movie(50, title: 'Iron Man');
-        await PrefsService.saveRating(movie: movieObj, rating: 0);
+        await PrefsService.saveRating(
+          movie: movieObj,
+          rating: 0,
+          metadataLocale: 'tr',
+        );
 
         final client = MockClient((request) async {
           // Berbat filmin similar/recommendation isteklerine ID: 51'i dönelim (similar to Iron Man)
@@ -535,11 +549,11 @@ void main() {
       () async {
         // 1. Favorilere "Fav Movie" (ID: 200) ekle
         final favMovie = _movie(200, title: 'Fav Movie');
-        await PrefsService.saveFavoriteMovies([favMovie]);
+        await PrefsService.saveFavoriteMovies([favMovie], metadataLocale: 'tr');
 
         // 2. Watchlist'e "Watchlist Movie" (ID: 300) ekle
         final watchMovie = _movie(300, title: 'Watchlist Movie');
-        await PrefsService.addToWatchlist(watchMovie);
+        await PrefsService.addToWatchlist(watchMovie, metadataLocale: 'tr');
 
         final client = MockClient((request) async {
           // ID 200 ve 300 için mock responses
@@ -622,7 +636,11 @@ void main() {
         // 2. Ratings veritabanına 6 tane "Harika" film kaydet
         for (int i = 1; i <= 6; i++) {
           final movie = _movie(100 + i, title: 'Seed Movie $i');
-          await PrefsService.saveRating(movie: movie, rating: 3);
+          await PrefsService.saveRating(
+            movie: movie,
+            rating: 3,
+            metadataLocale: 'tr',
+          );
         }
 
         final client = MockClient((request) async {
@@ -697,6 +715,8 @@ void main() {
         await PrefsService.saveRating(
           movie: _movie(100, title: 'Action Movie'),
           rating: 3,
+
+          metadataLocale: 'tr',
         );
 
         // 2. Keyword vektörünü hesapla (bu işlem sonucu önbelleklenir)
@@ -708,6 +728,8 @@ void main() {
         await PrefsService.saveRating(
           movie: _movie(200, title: 'Scifi Movie'),
           rating: 3,
+
+          metadataLocale: 'tr',
         );
 
         // Önbellek temizlenmediği için vektör hala eski değeri dönecektir

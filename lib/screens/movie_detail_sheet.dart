@@ -466,6 +466,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           comment: commentText.isEmpty ? null : commentText,
           isSpoiler: _isSpoiler ? 1 : 0,
           isPrivate: _isPrivate ? 1 : 0,
+          metadataLocale: ref.read(localeProvider).languageCode,
         );
         if (!mounted) return;
         ref
@@ -543,6 +544,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       comment: commentText.isEmpty ? null : commentText,
       isSpoiler: isSpoiler ? 1 : 0,
       isPrivate: isPrivate ? 1 : 0,
+      metadataLocale: ref.read(localeProvider).languageCode,
     );
     if (!mounted) return;
     if (ref.read(authProvider).isLoggedIn) {
@@ -564,6 +566,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         comment: commentText.isEmpty ? null : commentText,
         isSpoiler: _isSpoiler ? 1 : 0,
         isPrivate: _isPrivate ? 1 : 0,
+        metadataLocale: ref.read(localeProvider).languageCode,
       );
       if (!mounted) return;
       ref

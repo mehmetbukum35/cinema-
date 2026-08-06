@@ -247,20 +247,26 @@ class PrefsService {
 
   /// Favori listesinin tamamını (sıra dahil) yeniden yazar. Top 20 düzenleme
   /// ekranı ve sıralama işlemleri buradan geçer — liste otoritedir.
-  static Future<void> saveFavoriteMovies(List<Movie> movies) async {
+  static Future<void> saveFavoriteMovies(
+    List<Movie> movies, {
+    required String metadataLocale,
+  }) async {
     await DatabaseHelper().saveFavorites(
       movies,
       false,
-      metadataLocale: activeLanguageCode,
+      metadataLocale: metadataLocale,
     );
     invalidateGenreWeights();
   }
 
-  static Future<void> saveFavoriteTvShows(List<Movie> shows) async {
+  static Future<void> saveFavoriteTvShows(
+    List<Movie> shows, {
+    required String metadataLocale,
+  }) async {
     await DatabaseHelper().saveFavorites(
       shows,
       true,
-      metadataLocale: activeLanguageCode,
+      metadataLocale: metadataLocale,
     );
     invalidateGenreWeights();
   }
@@ -282,13 +288,21 @@ class PrefsService {
     return 1.0 - 0.8 * (r / (favoritesCap - 1));
   }
 
-  static Future<void> mergeFavoriteMovies(List<Movie> picks) =>
-      _mergeFavorites(picks, false);
+  static Future<void> mergeFavoriteMovies(
+    List<Movie> picks, {
+    required String metadataLocale,
+  }) => _mergeFavorites(picks, false, metadataLocale);
 
-  static Future<void> mergeFavoriteTvShows(List<Movie> picks) =>
-      _mergeFavorites(picks, true);
+  static Future<void> mergeFavoriteTvShows(
+    List<Movie> picks, {
+    required String metadataLocale,
+  }) => _mergeFavorites(picks, true, metadataLocale);
 
-  static Future<void> _mergeFavorites(List<Movie> picks, bool isTV) async {
+  static Future<void> _mergeFavorites(
+    List<Movie> picks,
+    bool isTV,
+    String metadataLocale,
+  ) async {
     final existing = await DatabaseHelper().getFavorites(isTV);
     final merged = <Movie>[...existing];
     for (final pick in picks) {
@@ -301,7 +315,7 @@ class PrefsService {
     await DatabaseHelper().saveFavorites(
       merged,
       isTV,
-      metadataLocale: activeLanguageCode,
+      metadataLocale: metadataLocale,
     );
     invalidateGenreWeights();
   }
@@ -471,6 +485,7 @@ class PrefsService {
     Object? comment = DatabaseHelper.unset,
     Object? isSpoiler = DatabaseHelper.unset,
     Object? isPrivate = DatabaseHelper.unset,
+    required String metadataLocale,
   }) async {
     await DatabaseHelper().saveRating(
       movie: movie,
@@ -481,7 +496,7 @@ class PrefsService {
       comment: comment,
       isSpoiler: isSpoiler,
       isPrivate: isPrivate,
-      metadataLocale: activeLanguageCode,
+      metadataLocale: metadataLocale,
     );
     invalidateGenreWeights();
     // Best-effort: yeterli sınıflandırılmış beğeni birikince kültürel tercihleri
@@ -807,10 +822,13 @@ class PrefsService {
 
   // ─── Watchlist ───────────────────────────────────────────────────────────────
 
-  static Future<void> addToWatchlist(Movie movie) async {
+  static Future<void> addToWatchlist(
+    Movie movie, {
+    required String metadataLocale,
+  }) async {
     await DatabaseHelper().addToWatchlist(
       movie,
-      metadataLocale: activeLanguageCode,
+      metadataLocale: metadataLocale,
     );
   }
 

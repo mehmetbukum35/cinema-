@@ -262,8 +262,15 @@ void main() {
     test('login → yerel puanlama → sync: veri sunucuya ulaşır', () async {
       await login();
 
-      await PrefsService.saveRating(movie: makeMovie(101), rating: 3);
-      await PrefsService.addToWatchlist(makeMovie(202, isTV: true));
+      await PrefsService.saveRating(
+        movie: makeMovie(101),
+        rating: 3,
+        metadataLocale: 'tr',
+      );
+      await PrefsService.addToWatchlist(
+        makeMovie(202, isTV: true),
+        metadataLocale: 'tr',
+      );
 
       await syncService.sync();
 
@@ -284,7 +291,11 @@ void main() {
 
     test('ikinci cihaz sıfır imleçle pull: veri oraya iner', () async {
       await login();
-      await PrefsService.saveRating(movie: makeMovie(101), rating: 2);
+      await PrefsService.saveRating(
+        movie: makeMovie(101),
+        rating: 2,
+        metadataLocale: 'tr',
+      );
       await syncService.sync();
 
       // ── Cihaz B: taze DB + sıfır imleçler (aynı hesap) ──
@@ -369,7 +380,11 @@ void main() {
       'süresi dolan access token sync ortasında sessizce yenilenir',
       () async {
         await login();
-        await PrefsService.saveRating(movie: makeMovie(101), rating: 3);
+        await PrefsService.saveRating(
+          movie: makeMovie(101),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
 
         backend.expireAccessTokens(); // access öldü, refresh hâlâ geçerli
 
@@ -390,7 +405,11 @@ void main() {
 
     test('refresh reddedilirse oturum düşer ama yerel veri korunur', () async {
       await login();
-      await PrefsService.saveRating(movie: makeMovie(101), rating: 3);
+      await PrefsService.saveRating(
+        movie: makeMovie(101),
+        rating: 3,
+        metadataLocale: 'tr',
+      );
 
       backend.expireAccessTokens();
       backend.rejectRefresh = true;
@@ -416,7 +435,11 @@ void main() {
       'logout yerel veriyi korur; yeniden login idempotent re-push yapar',
       () async {
         await login();
-        await PrefsService.saveRating(movie: makeMovie(101), rating: 3);
+        await PrefsService.saveRating(
+          movie: makeMovie(101),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
         await syncService.sync();
 
         await api.logout(); // sunucuda refresh iptal + yerel auth temizliği

@@ -55,6 +55,8 @@ void main() {
           isTV: false,
           rating: 3,
           genreIds: [28],
+
+          metadataLocale: 'tr',
         );
 
         final client = MockClient((request) async {

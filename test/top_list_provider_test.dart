@@ -74,7 +74,10 @@ void main() {
     test(
       'load exposes stored favorites and triggers sync when authed',
       () async {
-        await PrefsService.saveFavoriteMovies([_movie(1), _movie(2)]);
+        await PrefsService.saveFavoriteMovies([
+          _movie(1),
+          _movie(2),
+        ], metadataLocale: 'tr');
         container = buildContainer();
 
         final notifier = container.read(topListProvider(false).notifier);
@@ -176,7 +179,11 @@ void main() {
     });
 
     test('remove drops the item', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2), _movie(3)]);
+      await PrefsService.saveFavoriteMovies([
+        _movie(1),
+        _movie(2),
+        _movie(3),
+      ], metadataLocale: 'tr');
       container = buildContainer();
       final notifier = container.read(topListProvider(false).notifier);
       await notifier.load();
@@ -191,7 +198,11 @@ void main() {
     });
 
     test('reorder moves an item to the new rank', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2), _movie(3)]);
+      await PrefsService.saveFavoriteMovies([
+        _movie(1),
+        _movie(2),
+        _movie(3),
+      ], metadataLocale: 'tr');
       container = buildContainer();
       final notifier = container.read(topListProvider(false).notifier);
       await notifier.load();
@@ -207,8 +218,10 @@ void main() {
     });
 
     test('movie and tv lists are isolated', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1)]);
-      await PrefsService.saveFavoriteTvShows([_movie(2, isTV: true)]);
+      await PrefsService.saveFavoriteMovies([_movie(1)], metadataLocale: 'tr');
+      await PrefsService.saveFavoriteTvShows([
+        _movie(2, isTV: true),
+      ], metadataLocale: 'tr');
       container = buildContainer(authed: false);
 
       final movies = container.read(topListProvider(false).notifier);
@@ -229,10 +242,14 @@ void main() {
         _movie(3),
         _movie(4),
         _movie(5),
-      ]);
+      ], metadataLocale: 'tr');
 
       // Onboarding tekrar çalışır ve 3 seçim gönderir (biri zaten listede).
-      await PrefsService.mergeFavoriteMovies([_movie(1), _movie(6), _movie(7)]);
+      await PrefsService.mergeFavoriteMovies([
+        _movie(1),
+        _movie(6),
+        _movie(7),
+      ], metadataLocale: 'tr');
 
       final result = await PrefsService.getFavoriteMovies();
       expect(result.map((m) => m.id).toList(), [1, 2, 3, 4, 5, 6, 7]);
@@ -240,9 +257,12 @@ void main() {
 
     test('merge respects the 20 cap', () async {
       final twenty = [for (var id = 1; id <= 20; id++) _movie(id)];
-      await PrefsService.saveFavoriteMovies(twenty);
+      await PrefsService.saveFavoriteMovies(twenty, metadataLocale: 'tr');
 
-      await PrefsService.mergeFavoriteMovies([_movie(21), _movie(22)]);
+      await PrefsService.mergeFavoriteMovies([
+        _movie(21),
+        _movie(22),
+      ], metadataLocale: 'tr');
 
       final result = await PrefsService.getFavoriteMovies();
       expect(result, hasLength(20));
@@ -250,7 +270,10 @@ void main() {
     });
 
     test('add while loading preserves existing items', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1), _movie(2)]);
+      await PrefsService.saveFavoriteMovies([
+        _movie(1),
+        _movie(2),
+      ], metadataLocale: 'tr');
       container = buildContainer(authed: false);
 
       final notifier = container.read(topListProvider(false).notifier);

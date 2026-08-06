@@ -1,6 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -30,7 +31,9 @@ void main() {
           voteAverage: 8.0,
           genreIds: [18, 878],
         );
-        await PrefsService.saveFavoriteMovies([favoriteMovie]);
+        await PrefsService.saveFavoriteMovies([
+          favoriteMovie,
+        ], metadataLocale: 'tr');
 
         // 3. Ratings >= 2 (İyi/Harika): Thriller (53) -> Weight 2
         // Rate movie 2 (rating: 3, genres: [53])
@@ -39,6 +42,8 @@ void main() {
           isTV: false,
           rating: 3,
           genreIds: [53],
+
+          metadataLocale: 'tr',
         );
 
         // Score calculation:
@@ -72,7 +77,7 @@ void main() {
       await PrefsService.saveFavoriteMovies([
         Movie(id: 1, title: 'A', overview: '', voteAverage: 8, genreIds: [18]),
         Movie(id: 2, title: 'B', overview: '', voteAverage: 8, genreIds: [27]),
-      ]);
+      ], metadataLocale: 'tr');
 
       final w = await PrefsService.getGenreWeights();
       // Favoriler artık cihazda da katkı veriyor (created_at = sıra, decay yok).
@@ -107,18 +112,24 @@ void main() {
           isTV: false,
           rating: 0,
           genreIds: [28],
+
+          metadataLocale: 'tr',
         );
         await PrefsService.saveRating(
           movieId: 11,
           isTV: false,
           rating: 2,
           genreIds: [35],
+
+          metadataLocale: 'tr',
         );
         await PrefsService.saveRating(
           movieId: 12,
           isTV: false,
           rating: 3,
           genreIds: [35, 18],
+
+          metadataLocale: 'tr',
         );
 
         final stats = await PrefsService.getStats();
@@ -153,7 +164,7 @@ void main() {
 
         expect(await PrefsService.isInWatchlist(100, false), isFalse);
 
-        await PrefsService.addToWatchlist(m);
+        await PrefsService.addToWatchlist(m, metadataLocale: 'tr');
         expect(await PrefsService.isInWatchlist(100, false), isTrue);
 
         final list = await PrefsService.getWatchlist();
@@ -176,6 +187,8 @@ void main() {
           genreIds: [28],
           comment: 'Highly recommended masterpiece!',
           isSpoiler: 1,
+
+          metadataLocale: 'tr',
         );
 
         final ratingData = await PrefsService.getRating(50, false);
@@ -191,6 +204,8 @@ void main() {
           genreIds: [28],
           comment: 'Actually it is just good.',
           isSpoiler: 0,
+
+          metadataLocale: 'tr',
         );
 
         final ratingData2 = await PrefsService.getRating(50, false);
@@ -356,6 +371,35 @@ void main() {
     test('bilinmeyen tur id dile uygun yedek dondurur', () {
       expect(PrefsService.genreName(999999, locale: 'tr'), 'Bilinmeyen');
       expect(PrefsService.genreName(999999, locale: 'en'), 'Unknown');
+    });
+  });
+
+  group('PrefsService metadataLocale', () {
+    // metadata_locale, onbellege alinan baslik metadatasinin hangi dilde
+    // oldugunu soyler. Sabitlenirse Ingilizce oturumun verisi 'tr' etiketiyle
+    // diske yazilir ve dil degisiminde yanlis metin gosterilir.
+    test('saveRating verilen dili yazar, sabit deger degil', () async {
+      await PrefsService.saveRating(
+        movieId: 4242,
+        isTV: false,
+        rating: 5,
+        metadataLocale: 'en',
+      );
+      await PrefsService.saveRating(
+        movieId: 4343,
+        isTV: false,
+        rating: 4,
+        metadataLocale: 'tr',
+      );
+
+      expect(
+        (await DatabaseHelper().getRating(4242, false))?['metadata_locale'],
+        'en',
+      );
+      expect(
+        (await DatabaseHelper().getRating(4343, false))?['metadata_locale'],
+        'tr',
+      );
     });
   });
 }

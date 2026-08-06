@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
+import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
 
@@ -66,7 +67,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<bool> add(Movie movie) async {
     ++_loadGeneration;
     try {
-      await PrefsService.addToWatchlist(movie);
+      await PrefsService.addToWatchlist(
+        movie,
+        metadataLocale: ref.read(localeProvider).languageCode,
+      );
       if (mounted) {
         final list = state.value ?? await PrefsService.getWatchlist();
         if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {

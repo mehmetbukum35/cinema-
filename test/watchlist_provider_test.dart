@@ -78,7 +78,7 @@ void main() {
           releaseDate: '2026',
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie);
+        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
 
         // 2. Act
         final notifier = container.read(watchlistProvider.notifier);
@@ -110,7 +110,7 @@ void main() {
           voteAverage: 7.5,
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie);
+        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
         mockSync.gate = Completer<void>();
 
         container = ProviderContainer(
@@ -207,7 +207,7 @@ void main() {
           releaseDate: '2026',
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie);
+        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
 
         final notifier = container.read(watchlistProvider.notifier);
         await notifier.load();

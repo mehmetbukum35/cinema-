@@ -290,7 +290,11 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final newRatedIds = Set<String>.from(state.ratedIds)..add(key);
 
     // Save to local storage (SQLite)
-    await PrefsService.saveRating(movie: movie, rating: rating);
+    await PrefsService.saveRating(
+      movie: movie,
+      rating: rating,
+      metadataLocale: ref?.read(localeProvider).languageCode ?? 'tr',
+    );
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
     await _engine.invalidateCache(isNegativeChange: rating <= 1);
 

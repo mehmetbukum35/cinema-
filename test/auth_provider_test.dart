@@ -479,7 +479,12 @@ void main() {
         // Set last authenticated user id to '1'
         await PrefsService.setLastAuthenticatedUserId('1');
         // Mock ratings data in DatabaseHelper to simulate local data
-        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        await PrefsService.saveRating(
+          movieId: 123,
+          isTV: false,
+          rating: 3,
+          metadataLocale: 'tr',
+        );
 
         // Attempt to login as user id '2' (MockApiService register returns id: 2)
         final result = await notifier.register('reg@example.com', 'secret123');
@@ -511,7 +516,12 @@ void main() {
 
         // Set last authenticated user id to '1'
         await PrefsService.setLastAuthenticatedUserId('1');
-        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        await PrefsService.saveRating(
+          movieId: 123,
+          isTV: false,
+          rating: 3,
+          metadataLocale: 'tr',
+        );
         await CulturalPreferenceService.save({
           'korean': CulturePreferenceLevel.prefer,
         });
@@ -546,7 +556,12 @@ void main() {
 
         await PrefsService.setLastAuthenticatedUserId('1');
         // Conflict, hasAnyLocalData gerektirir.
-        await PrefsService.saveRating(movieId: 55, isTV: false, rating: 2);
+        await PrefsService.saveRating(
+          movieId: 55,
+          isTV: false,
+          rating: 2,
+          metadataLocale: 'tr',
+        );
         await CulturalPreferenceService.save({
           'turkish': CulturePreferenceLevel.prefer,
         }, source: 'explicit_edit');
@@ -572,7 +587,12 @@ void main() {
 
         // Set last authenticated user id to null (guest mode)
         await PrefsService.setLastAuthenticatedUserId(null);
-        await PrefsService.saveRating(movieId: 123, isTV: false, rating: 3);
+        await PrefsService.saveRating(
+          movieId: 123,
+          isTV: false,
+          rating: 3,
+          metadataLocale: 'tr',
+        );
 
         // Attempt to register
         final result = await notifier.register(
@@ -826,7 +846,12 @@ void main() {
       () async {
         final notifier = container.read(authProvider.notifier);
         await notifier.login('test@example.com', 'secret123');
-        await PrefsService.saveRating(movieId: 77, isTV: false, rating: 4);
+        await PrefsService.saveRating(
+          movieId: 77,
+          isTV: false,
+          rating: 4,
+          metadataLocale: 'tr',
+        );
         mockApi.deleteAccountError = ApiException(
           statusCode: 403,
           message: 'Mevcut parola hatalı.',
