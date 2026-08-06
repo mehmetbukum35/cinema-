@@ -155,6 +155,7 @@ Senin son commit'lerinin düzgün karşılığı:
 - [ ] **Semantic Versioning** — `pubspec.yaml`'daki `version: 1.0.0+1` ile uyumlu git tag'leri (`v1.0.0`).
 - [ ] Yayın yaptıkça `git tag -a v1.x.x -m "..."`.
 - [ ] `CHANGELOG.md` — "Keep a Changelog" formatı; `feat`/`fix` commit'lerden beslenir.
+- [x] **Store release checklist** — `docs/STORE_RELEASE_CHECKLIST.md` + screenshot capture guide (`docs/screenshots/README.md`). Gerçek PNG'ler hâlâ manuel.
 
 ### B4. Dal (branch) stratejisi
 

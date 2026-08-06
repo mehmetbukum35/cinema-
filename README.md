@@ -12,7 +12,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 |------|---------|
 | `/` | Flutter app (Android, iOS, Web, Desktop targets) |
 | `/backend` | PHP 8.4+ REST API, MySQL/MariaDB, JWT auth |
-| `/docs` | Project docs and [screenshots placeholder](docs/screenshots/README.md) |
+| `/docs` | Project docs, [store release checklist](docs/STORE_RELEASE_CHECKLIST.md), [screenshots](docs/screenshots/README.md) |
 
 ## Features
 
@@ -85,6 +85,13 @@ CI runs format check, analyze, Flutter tests with coverage, and PHPUnit on push/
 - **Local data:** SQLite (sqflite) + SharedPreferences
 - **Network:** HTTP, JWT rotation, delta sync
 - **Backend modules:** Auth, Sync, Tmdb proxy, Social (split under `backend/src/Social/`)
+
+## Releases
+
+- Checklist: [docs/STORE_RELEASE_CHECKLIST.md](docs/STORE_RELEASE_CHECKLIST.md)
+- Screenshot capture guide: [docs/screenshots/README.md](docs/screenshots/README.md)
+- Android signed AAB/APK: `.github/workflows/android-release.yml` (`workflow_dispatch` or tag `v*`)
+- iOS TestFlight IPA: `.github/workflows/ios.yml` (`workflow_dispatch`)
 
 ## Contributing
 
