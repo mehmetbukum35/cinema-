@@ -14,6 +14,13 @@ import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
+/// ApiException olmayan beklenmeyen bir arıza (soket kopması, serileştirme
+/// hatası…). Notifier'ın bunu ham metin olarak arayüze sızdırmadığını doğrular.
+class FakeNetworkException implements Exception {
+  @override
+  String toString() => 'FakeNetworkException: socket closed';
+}
+
 class MockApiService implements ApiService {
   @override
   void Function()? onSessionExpired;
@@ -49,13 +56,32 @@ class MockApiService implements ApiService {
   bool unlinkAppleCalled = false;
   bool getMeCalled = false;
   bool resetPasswordCalled = false;
+  bool verifyResetCodeCalled = false;
   Completer<Map<String, dynamic>>? getMeGate;
+
+  // Hata enjeksiyonu: ilgili uç çağrıldığında fırlatılır, null ise normal
+  // yanıt döner. Sunucunun reddettiği durumlarda notifier'ın oturumu ve yerel
+  // veriyi koruduğunu doğrulamak için.
+  Exception? loginError;
+  Exception? registerError;
+  Exception? verifyEmailError;
+  Exception? changePasswordError;
+  Exception? deleteAccountError;
+  Exception? forgotPasswordError;
+  Exception? verifyResetCodeError;
+  Exception? resetPasswordError;
+  Exception? unlinkGoogleError;
+  Exception? unlinkAppleError;
+  Exception? logoutError;
+  Exception? resendVerificationError;
+  Exception? getMeError;
 
   @override
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
+    if (loginError != null) throw loginError!;
     return loginResponse;
   }
 
@@ -65,17 +91,27 @@ class MockApiService implements ApiService {
     required String password,
     String? displayName,
   }) async {
+    if (registerError != null) throw registerError!;
     return registerResponse;
   }
 
   @override
   Future<void> logout() async {
     logoutCalled = true;
+    if (logoutError != null) throw logoutError!;
+  }
+
+  final List<String> revokedRefreshTokens = [];
+
+  @override
+  Future<void> revokeRefreshToken(String refreshToken) async {
+    revokedRefreshTokens.add(refreshToken);
   }
 
   @override
   Future<void> deleteAccount(String password) async {
     deleteAccountCalled = true;
+    if (deleteAccountError != null) throw deleteAccountError!;
   }
 
   @override
@@ -84,11 +120,19 @@ class MockApiService implements ApiService {
     required String newPassword,
   }) async {
     changePasswordCalled = true;
+    if (changePasswordError != null) throw changePasswordError!;
   }
 
   @override
   Future<void> forgotPassword(String email) async {
     forgotPasswordCalled = true;
+    if (forgotPasswordError != null) throw forgotPasswordError!;
+  }
+
+  @override
+  Future<void> verifyResetCode(String email, String code) async {
+    verifyResetCodeCalled = true;
+    if (verifyResetCodeError != null) throw verifyResetCodeError!;
   }
 
   @override
@@ -98,31 +142,37 @@ class MockApiService implements ApiService {
     String newPassword,
   ) async {
     resetPasswordCalled = true;
+    if (resetPasswordError != null) throw resetPasswordError!;
   }
 
   @override
   Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
+    if (verifyEmailError != null) throw verifyEmailError!;
     return registerResponse;
   }
 
   @override
   Future<void> resendVerification(String email) async {
     resendVerificationCalled = true;
+    if (resendVerificationError != null) throw resendVerificationError!;
   }
 
   @override
   Future<void> unlinkGoogle({required String password}) async {
     unlinkGoogleCalled = true;
+    if (unlinkGoogleError != null) throw unlinkGoogleError!;
   }
 
   @override
   Future<void> unlinkApple({required String password}) async {
     unlinkAppleCalled = true;
+    if (unlinkAppleError != null) throw unlinkAppleError!;
   }
 
   @override
   Future<Map<String, dynamic>> getMe() async {
     getMeCalled = true;
+    if (getMeError != null) throw getMeError!;
     if (getMeGate != null) return getMeGate!.future;
     return {
       'id': 1,
@@ -192,8 +242,12 @@ void main() {
   late MockApiService mockApi;
   late ProviderContainer container;
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    // DatabaseHelper testlerde bellek içi sahte listeler kullanır ve singleton
+    // olduğu için dosya boyunca yaşar. Temizlenmezse önceki testin bıraktığı
+    // puan, sonraki login'i "hesap değişimi" çakışmasına düşürür.
+    await DatabaseHelper().hardClearAllData();
     mockApi = MockApiService();
     container = ProviderContainer(
       overrides: [
@@ -623,5 +677,520 @@ void main() {
         expect(await PrefsService.getUserData(), isNull);
       },
     );
+  });
+
+  group('AuthProvider backend error mapping', () {
+    test('login maps a machine-readable error code to a locale key', () async {
+      mockApi.loginError = ApiException(
+        statusCode: 401,
+        message: 'E-posta veya parola hatalı.',
+        code: 'invalid_credentials',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.login('test@example.com', 'wrong-pass');
+
+      expect(result.status, AuthStatus.error);
+      expect(result.errorMessage, 'auth_err_invalid_credentials');
+      final state = container.read(authProvider);
+      expect(state.error, 'auth_err_invalid_credentials');
+      expect(state.loading, isFalse);
+      expect(state.isAuthenticated, isFalse);
+    });
+
+    test(
+      'login falls back to the legacy message map when the server sends no code',
+      () async {
+        // `code` alanı dönmeyen eski sunucu. Yedek eşleme kaldırılırsa ham
+        // Türkçe sunucu metni İngilizce arayüze sızar.
+        mockApi.loginError = ApiException(
+          statusCode: 401,
+          message: 'E-posta veya parola hatalı.',
+        );
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final result = await notifier.login('test@example.com', 'wrong-pass');
+
+        expect(result.errorMessage, 'auth_err_invalid_credentials');
+        expect(
+          container.read(authProvider).error,
+          'auth_err_invalid_credentials',
+        );
+      },
+    );
+
+    test(
+      'login with an unverified email asks for verification without an error band',
+      () async {
+        mockApi.loginError = ApiException(
+          statusCode: 403,
+          message: 'E-posta adresi doğrulanmamış.',
+          code: 'email_unverified',
+        );
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final result = await notifier.login('test@example.com', 'secret123');
+
+        expect(result.status, AuthStatus.pendingVerification);
+        final state = container.read(authProvider);
+        expect(state.error, isNull);
+        expect(state.loading, isFalse);
+      },
+    );
+
+    test('login surfaces an unmapped server message verbatim', () async {
+      mockApi.loginError = ApiException(
+        statusCode: 500,
+        message: 'Depolama alanı dolu.',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.login('test@example.com', 'secret123');
+
+      expect(result.errorMessage, 'Depolama alanı dolu.');
+    });
+
+    test('login reports a generic failure for a non-API exception', () async {
+      mockApi.loginError = FakeNetworkException();
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.login('test@example.com', 'secret123');
+
+      expect(result.status, AuthStatus.error);
+      expect(result.errorMessage, 'auth_err_login_failed');
+      expect(container.read(authProvider).error, 'auth_err_login_failed');
+    });
+
+    test('register maps the legacy duplicate-email message', () async {
+      mockApi.registerError = ApiException(
+        statusCode: 409,
+        message: 'Bu e-posta zaten kayıtlı.',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.register('taken@example.com', 'secret123');
+
+      expect(result.status, AuthStatus.error);
+      expect(result.errorMessage, 'auth_err_email_exists');
+    });
+
+    test('verifyEmail maps a rejected code', () async {
+      mockApi.verifyEmailError = ApiException(
+        statusCode: 400,
+        message: 'Geçersiz veya süresi dolmuş doğrulama kodu.',
+        code: 'verify_code_failed',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.verifyEmail('reg@example.com', '000000');
+
+      expect(result.status, AuthStatus.error);
+      expect(result.errorMessage, 'auth_err_verify_code_failed');
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+    });
+  });
+
+  group('AuthProvider keeps the session when the server rejects a request', () {
+    test('changePassword failure leaves the user signed in', () async {
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'secret123');
+      mockApi.changePasswordError = ApiException(
+        statusCode: 400,
+        message: 'Mevcut parola hatalı.',
+        code: 'wrong_password',
+      );
+
+      final success = await notifier.changePassword('wrong-old', 'new-secret1');
+
+      expect(success, isFalse);
+      final state = container.read(authProvider);
+      expect(state.error, 'auth_err_wrong_password');
+      expect(state.loading, isFalse);
+      expect(state.isAuthenticated, isTrue);
+      expect(await PrefsService.getAccessToken(), 'test_access');
+    });
+
+    test(
+      'deleteAccount failure keeps both the session and the local data',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await notifier.login('test@example.com', 'secret123');
+        await PrefsService.saveRating(movieId: 77, isTV: false, rating: 4);
+        mockApi.deleteAccountError = ApiException(
+          statusCode: 403,
+          message: 'Mevcut parola hatalı.',
+          code: 'wrong_password',
+        );
+
+        final success = await notifier.deleteAccount('wrong-pass');
+
+        expect(success, isFalse);
+        expect(container.read(authProvider).error, 'auth_err_wrong_password');
+        expect(container.read(authProvider).isAuthenticated, isTrue);
+        expect(await DatabaseHelper().hasAnyLocalData(), isTrue);
+      },
+    );
+
+    test('resetPassword failure leaves the user signed in', () async {
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'secret123');
+      mockApi.resetPasswordError = ApiException(
+        statusCode: 400,
+        message: 'Geçersiz veya süresi dolmuş doğrulama kodu.',
+        code: 'verify_code_failed',
+      );
+
+      final success = await notifier.resetPassword(
+        'test@example.com',
+        '000000',
+        'new-secret1',
+      );
+
+      expect(success, isFalse);
+      expect(container.read(authProvider).error, 'auth_err_verify_code_failed');
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+      expect(await PrefsService.getAccessToken(), 'test_access');
+    });
+
+    test('unlinkGoogle failure keeps google_sub on the account', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      notifier.state = notifier.state.copyWith(
+        accessToken: 'access',
+        user: {
+          'id': 1,
+          'email': 'test@example.com',
+          'google_sub': 'google_123',
+        },
+      );
+      mockApi.unlinkGoogleError = ApiException(
+        statusCode: 400,
+        message: 'Bağlantıyı kaldırmak için parola gerekli.',
+      );
+
+      final success = await notifier.unlinkGoogle('');
+
+      expect(success, isFalse);
+      final state = container.read(authProvider);
+      expect(state.error, 'auth_err_google_unlink_failed');
+      expect(state.user?['google_sub'], 'google_123');
+      expect(state.loading, isFalse);
+    });
+  });
+
+  group('AuthProvider password reset code', () {
+    test(
+      'verifyResetCode reaches the server and clears the error band',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final success = await notifier.verifyResetCode(
+          'test@example.com',
+          '123456',
+        );
+
+        expect(success, isTrue);
+        expect(mockApi.verifyResetCodeCalled, isTrue);
+        final state = container.read(authProvider);
+        expect(state.loading, isFalse);
+        expect(state.error, isNull);
+      },
+    );
+
+    test('verifyResetCode maps a rejected code to a locale key', () async {
+      mockApi.verifyResetCodeError = ApiException(
+        statusCode: 400,
+        message: 'Geçersiz veya süresi dolmuş doğrulama kodu.',
+        code: 'verify_code_failed',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final success = await notifier.verifyResetCode(
+        'test@example.com',
+        '000000',
+      );
+
+      expect(success, isFalse);
+      expect(container.read(authProvider).error, 'auth_err_verify_code_failed');
+      expect(container.read(authProvider).loading, isFalse);
+    });
+
+    test('forgotPassword maps a rate-limit rejection', () async {
+      mockApi.forgotPasswordError = ApiException(
+        statusCode: 429,
+        message: 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final success = await notifier.forgotPassword('test@example.com');
+
+      expect(success, isFalse);
+      expect(container.read(authProvider).error, 'auth_err_rate_limited');
+    });
+  });
+
+  group('AuthProvider session restore and profile update', () {
+    test(
+      'a stored session is restored on launch and backfills the last-user id',
+      () async {
+        // Eski kurulumdan gelen cihaz: token + kullanıcı var ama
+        // last_authenticated_user_id yazılmamış. Migration satırı düşerse
+        // aynı kullanıcının bir sonraki girişi "hesap değişimi" sanılır.
+        await PrefsService.saveTokens(
+          accessToken: 'stored_access',
+          refreshToken: 'stored_refresh',
+        );
+        await PrefsService.saveUserData({
+          'id': 7,
+          'email': 'stored@example.com',
+          'display_name': 'Stored User',
+        });
+        await PrefsService.setLastAuthenticatedUserId(null);
+
+        container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final state = container.read(authProvider);
+        expect(state.isAuthenticated, isTrue);
+        expect(state.user?['email'], 'stored@example.com');
+        expect(state.accessToken, 'stored_access');
+        expect(state.loading, isFalse);
+        expect(await PrefsService.getLastAuthenticatedUserId(), '7');
+      },
+    );
+
+    test(
+      'updateUserProfile stores the username and writes is_public as an int',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await notifier.login('test@example.com', 'secret123');
+
+        await notifier.updateUserProfile('new_handle', false);
+
+        final user = container.read(authProvider).user;
+        expect(user?['username'], 'new_handle');
+        expect(user?['is_public'], 0);
+        final stored = await PrefsService.getUserData();
+        expect(stored?['username'], 'new_handle');
+        expect(stored?['is_public'], 0);
+      },
+    );
+
+    test('updateUserProfile is a no-op while signed out', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      expect(container.read(authProvider).user, isNull);
+
+      await notifier.updateUserProfile('ghost', true);
+
+      expect(container.read(authProvider).user, isNull);
+      expect(await PrefsService.getUserData(), isNull);
+    });
+  });
+
+  group('AuthProvider cancelled conflict login', () {
+    test(
+      'cancelPendingLogin revokes the refresh token the server already issued',
+      () async {
+        // Çakışma diyaloğu iptal edilirse token çifti oturuma hiç dönüşmez;
+        // iptal edilmezse sunucuda 30 gün geçerli yetim bir refresh token kalır.
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        await notifier.cancelPendingLogin({
+          'access_token': 'pending_access',
+          'refresh_token': 'pending_refresh',
+        });
+
+        expect(mockApi.revokedRefreshTokens, ['pending_refresh']);
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+      },
+    );
+
+    test(
+      'cancelPendingLogin skips revocation when there is no token',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        await notifier.cancelPendingLogin({'refresh_token': ''});
+        await notifier.cancelPendingLogin(null);
+
+        expect(mockApi.revokedRefreshTokens, isEmpty);
+      },
+    );
+  });
+
+  group('AuthProvider resilience', () {
+    test('a corrupted stored session does not leave the app spinning', () async {
+      // Yarım yazılmış / bozulmuş auth_user_data. jsonDecode patlar; kullanıcı
+      // sonsuza kadar açılış spinner'ında kalmamalı, misafir olarak devam etmeli.
+      SharedPreferences.setMockInitialValues({'auth_user_data': '{bozuk-json'});
+      await PrefsService.saveTokens(
+        accessToken: 'stored_access',
+        refreshToken: 'stored_refresh',
+      );
+
+      container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final state = container.read(authProvider);
+      expect(state.loading, isFalse);
+      expect(state.isAuthenticated, isFalse);
+    });
+
+    test(
+      'logout ends the local session even if the server call fails',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await notifier.login('test@example.com', 'secret123');
+        mockApi.logoutError = FakeNetworkException();
+
+        await notifier.logout();
+
+        expect(mockApi.logoutCalled, isTrue);
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+        expect(container.read(authProvider).user, isNull);
+        expect(await PrefsService.getAccessToken(), isNull);
+      },
+    );
+
+    test('a failed /me refresh leaves the session untouched', () async {
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'secret123');
+      mockApi.getMeError = FakeNetworkException();
+
+      await notifier.refreshUser();
+
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, isTrue);
+      expect(state.user?['email'], 'test@example.com');
+    });
+
+    test(
+      'resendVerificationCode reports failure instead of throwing',
+      () async {
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+        mockApi.resendVerificationError = FakeNetworkException();
+
+        final ok = await notifier.resendVerificationCode('reg@example.com');
+
+        expect(ok, isFalse);
+      },
+    );
+
+    test(
+      'register reports a generic failure for a non-API exception',
+      () async {
+        mockApi.registerError = FakeNetworkException();
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final result = await notifier.register('reg@example.com', 'secret123');
+
+        expect(result.status, AuthStatus.error);
+        expect(result.errorMessage, 'auth_err_register_failed');
+        expect(container.read(authProvider).loading, isFalse);
+      },
+    );
+
+    test(
+      'verifyEmail reports a generic failure for a non-API exception',
+      () async {
+        mockApi.verifyEmailError = FakeNetworkException();
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final result = await notifier.verifyEmail('reg@example.com', '123456');
+
+        expect(result.status, AuthStatus.error);
+        expect(result.errorMessage, 'auth_err_verify_code_failed');
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+      },
+    );
+
+    test('unlinkApple failure keeps apple_sub on the account', () async {
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+      notifier.state = notifier.state.copyWith(
+        accessToken: 'access',
+        user: {'id': 1, 'email': 'test@example.com', 'apple_sub': 'apple_456'},
+      );
+      mockApi.unlinkAppleError = ApiException(
+        statusCode: 400,
+        message: 'Bağlantıyı kaldırmak için parola gerekli.',
+      );
+
+      final success = await notifier.unlinkApple('');
+
+      expect(success, isFalse);
+      final state = container.read(authProvider);
+      expect(state.user?['apple_sub'], 'apple_456');
+      expect(state.error, isNotNull);
+      expect(state.loading, isFalse);
+    });
+  });
+
+  group('AuthProvider unexpected (non-API) failures', () {
+    // Ağ/serileştirme gibi ApiException olmayan hatalar kullanıcıya ham
+    // exception metni olarak değil, yerelleştirme anahtarı olarak dönmeli ve
+    // çağrı `false` ile bitmeli — arayüz çökmemeli.
+    final cases = <String, Future<bool> Function(AuthNotifier, MockApiService)>{
+      'changePassword': (n, api) {
+        api.changePasswordError = FakeNetworkException();
+        return n.changePassword('old12345', 'new12345');
+      },
+      'deleteAccount': (n, api) {
+        api.deleteAccountError = FakeNetworkException();
+        return n.deleteAccount('secret123');
+      },
+      'forgotPassword': (n, api) {
+        api.forgotPasswordError = FakeNetworkException();
+        return n.forgotPassword('test@example.com');
+      },
+      'verifyResetCode': (n, api) {
+        api.verifyResetCodeError = FakeNetworkException();
+        return n.verifyResetCode('test@example.com', '123456');
+      },
+      'resetPassword': (n, api) {
+        api.resetPasswordError = FakeNetworkException();
+        return n.resetPassword('test@example.com', '123456', 'new12345');
+      },
+      'unlinkGoogle': (n, api) {
+        api.unlinkGoogleError = FakeNetworkException();
+        return n.unlinkGoogle('secret123');
+      },
+    };
+
+    cases.forEach((name, run) {
+      test('$name reports a localized error instead of throwing', () async {
+        final notifier = container.read(authProvider.notifier);
+        await notifier.login('test@example.com', 'secret123');
+
+        final success = await run(notifier, mockApi);
+
+        expect(success, isFalse);
+        final state = container.read(authProvider);
+        expect(state.loading, isFalse);
+        expect(state.error, isNotNull);
+        expect(
+          state.error,
+          startsWith('auth_err_'),
+          reason: 'ham exception metni arayüze sızmamalı',
+        );
+        expect(state.isAuthenticated, isTrue);
+      });
+    });
   });
 }
