@@ -992,7 +992,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final apiServiceProvider = Provider<ApiService>((ref) {
-  return ApiService();
+  // Sağlayıcı her istekte okunur; dil değişince yeni istekler yeni dili alır.
+  return ApiService(localeCode: () => ref.read(localeProvider).languageCode);
 });
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

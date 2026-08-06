@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/providers.dart';
 
@@ -57,5 +58,30 @@ void main() {
 
     expect(container.read(localeProvider).languageCode, 'en');
     expect(await PrefsService.getSelectedLanguage(), 'en');
+  });
+
+  test('apiServiceProvider localeProvider ile ayni dili verir', () async {
+    // Uretim baglantisinin bekcisi: kurucu varsayilanli oldugu icin
+    // localeCode gecirmeyi unutmak sessizce 'tr'ye duserdi.
+    for (final code in ['en', 'tr']) {
+      final container = ProviderContainer(
+        overrides: [initialLocaleProvider.overrideWithValue(code)],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(apiServiceProvider).localeCode(), code);
+    }
+  });
+
+  test('dil degisince ayni ApiService ornegi yeni dili verir', () async {
+    final container = ProviderContainer(
+      overrides: [initialLocaleProvider.overrideWithValue('tr')],
+    );
+    addTearDown(container.dispose);
+    final apiService = container.read(apiServiceProvider);
+
+    await container.read(localeProvider.notifier).setLocale('en');
+
+    expect(apiService.localeCode(), 'en');
   });
 }

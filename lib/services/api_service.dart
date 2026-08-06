@@ -42,12 +42,22 @@ class ApiClient {
   Future<RefreshOutcome>? _refreshFuture;
   final Map<(String, String?, String), Future<http.Response>> _inFlightGets =
       {};
+
+  /// Aktif arayüz dili. Sunucuya `Accept-Language` olarak gider ve in-flight
+  /// GET birleştirme anahtarının parçasıdır. Her istekte yeniden okunur ki
+  /// kullanıcı dili değiştirdiğinde kurulum anındaki değere takılı kalmasın.
+  final String Function() localeCode;
+
   ApiClient({
     http.Client? client,
     this.onSessionExpired,
     this.requestTimeout = _kRequestTimeout,
     this.transientRetryDelay = const Duration(milliseconds: 250),
-  }) : _client = client ?? http.Client();
+    String Function()? localeCode,
+  }) : _client = client ?? http.Client(),
+       localeCode = localeCode ?? _defaultLocaleCode;
+
+  static String _defaultLocaleCode() => 'tr';
 
   void _invalidateInFlightGets(String pathPrefix) {
     _inFlightGets.removeWhere(
@@ -62,7 +72,7 @@ class ApiClient {
     final Map<String, String> headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Accept-Language': PrefsService.activeLanguageCode,
+      'Accept-Language': localeCode(),
     };
     if (requestId case final requestId?) {
       headers['X-Request-ID'] = requestId;
@@ -149,7 +159,7 @@ class ApiClient {
     // happen while an older request is still in flight; never hand that
     // response to the new session/language.
     final authToken = requireAuth ? await PrefsService.getAccessToken() : null;
-    final key = (PrefsService.activeLanguageCode, authToken, path);
+    final key = (localeCode(), authToken, path);
     final existing = _inFlightGets[key];
     if (existing != null) {
       debugPrint('Coalescing duplicate GET $path');
@@ -360,6 +370,7 @@ class ApiService extends ApiClient
     super.onSessionExpired,
     super.requestTimeout,
     super.transientRetryDelay,
+    super.localeCode,
   });
   static String get baseUrl => AppConfig.apiBaseUrl;
   static String get webProfileBaseUrl => AppConfig.webProfileBaseUrl;

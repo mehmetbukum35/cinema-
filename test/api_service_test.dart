@@ -13,7 +13,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    PrefsService.activeLanguageCode = 'tr';
+    PrefsService.resetInMemoryCaches();
     await PrefsService.saveTokens(
       accessToken: 'initial_access',
       refreshToken: 'initial_refresh',
@@ -150,10 +150,8 @@ void main() {
         expect(request.method, 'GET');
         expect(request.url.path, '/api/social/friends');
         expect(request.headers['Authorization'], 'Bearer initial_access');
-        expect(
-          request.headers['accept-language'],
-          PrefsService.activeLanguageCode,
-        );
+        // Dil kaynagi verilmeyen ApiService varsayilan 'tr' gonderir.
+        expect(request.headers['accept-language'], 'tr');
 
         return http.Response(
           jsonEncode({
@@ -746,6 +744,90 @@ void main() {
       );
 
       expect(await apiService.getWatchlistIntersection(2), isEmpty);
+    });
+  });
+
+  group('ApiService dil enjeksiyonu', () {
+    // Dil artik global degil, kurucudan gelen bir okuyucu. Ayni surecte iki
+    // farkli dil yasayabilmeli — global olsaydi ikisi de ayni degeri gonderirdi.
+    test('ayni surecteki iki ornek farkli Accept-Language gonderir', () async {
+      final sent = <String, String>{};
+      http.Client recorder(String tag) => MockClient((request) async {
+        sent[tag] = request.headers['accept-language'] ?? '<yok>';
+        return http.Response('{"friends":[]}', 200);
+      });
+
+      final english = ApiService(
+        client: recorder('en'),
+        localeCode: () => 'en',
+      );
+      final turkish = ApiService(
+        client: recorder('tr'),
+        localeCode: () => 'tr',
+      );
+
+      await english.getFriends();
+      await turkish.getFriends();
+
+      expect(sent['en'], 'en');
+      expect(sent['tr'], 'tr');
+    });
+
+    test('saglayici her istekte yeniden okunur', () async {
+      final sent = <String>[];
+      var current = 'tr';
+      final apiService = ApiService(
+        client: MockClient((request) async {
+          sent.add(request.headers['accept-language'] ?? '<yok>');
+          return http.Response('{"friends":[]}', 200);
+        }),
+        localeCode: () => current,
+      );
+
+      await apiService.getFriends();
+      current = 'en';
+      await apiService.getFriends();
+
+      expect(sent, ['tr', 'en']);
+    });
+
+    test('dil degisirse ucus halindeki GET yeniden kullanilmaz', () async {
+      // In-flight birlestirme anahtari dili tasimazsa, dil degistikten sonraki
+      // istek eski dilin yanitini alir.
+      var requestCount = 0;
+      var current = 'tr';
+      final gate = Completer<void>();
+      final apiService = ApiService(
+        client: MockClient((request) async {
+          requestCount++;
+          await gate.future;
+          return http.Response('{"friends":[]}', 200);
+        }),
+        localeCode: () => current,
+      );
+
+      final first = apiService.getFriends();
+      await Future<void>.delayed(Duration.zero);
+      current = 'en';
+      final second = apiService.getFriends();
+      gate.complete();
+      await Future.wait([first, second]);
+
+      expect(requestCount, 2);
+    });
+
+    test('dil kaynagi verilmezse tr varsayilir', () async {
+      String? sentLanguage;
+      final apiService = ApiService(
+        client: MockClient((request) async {
+          sentLanguage = request.headers['accept-language'];
+          return http.Response('{"friends":[]}', 200);
+        }),
+      );
+
+      await apiService.getFriends();
+
+      expect(sentLanguage, 'tr');
     });
   });
 }

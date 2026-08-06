@@ -10,7 +10,7 @@ mixin SyncApi on ApiClient {
     final localResetQuery = localReset ? '&local_reset=1' : '';
     final response = await _request(
       'GET',
-      '/sync?since=$since&ack_cursor=$since&device_id=${Uri.encodeQueryComponent(deviceId)}&locale=${Uri.encodeQueryComponent(PrefsService.activeLanguageCode)}$localResetQuery',
+      '/sync?since=$since&ack_cursor=$since&device_id=${Uri.encodeQueryComponent(deviceId)}&locale=${Uri.encodeQueryComponent(localeCode())}$localResetQuery',
       requireAuth: true,
     );
     final data = _decodeJsonMap(response.body);
