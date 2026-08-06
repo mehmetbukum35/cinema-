@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:ui' as ui;
@@ -113,15 +114,20 @@ Future<void> _bootstrap() async {
   // Dil runApp'ten ÖNCE okunur: aksi halde tercih diskten gelene kadar geçen
   // pencerede ilk isteklerin Accept-Language başlığı yanlış dile takılır.
   final savedLanguage = await PrefsService.getSelectedLanguage();
-  // Geçici: global'i hâlâ okuyan katmanlar Task 3-7'de temizlenecek.
-  PrefsService.activeLanguageCode = savedLanguage ?? 'tr';
   runApp(
     ProviderScope(
-      overrides: [initialLocaleProvider.overrideWithValue(savedLanguage)],
+      overrides: rootOverrides(savedLanguage),
       child: NeIzlesemApp(showOnboarding: !onboardingDone),
     ),
   );
 }
+
+/// Kök `ProviderScope`'un override'ları. Ayrı bir fonksiyon çünkü `main()`
+/// doğrudan test edilemiyor; kaydedilmiş dilin gerçekten aktarıldığı burada
+/// doğrulanır. Aktarılmazsa kullanıcının dil tercihi açılışta yok sayılır.
+List<Override> rootOverrides(String? savedLanguage) => [
+  initialLocaleProvider.overrideWithValue(savedLanguage),
+];
 
 class NeIzlesemApp extends ConsumerWidget {
   final bool showOnboarding;

@@ -16,7 +16,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    PrefsService.activeLanguageCode = 'tr';
+    PrefsService.resetInMemoryCaches();
     await PrefsService.saveTokens(accessToken: 'a', refreshToken: 'r');
     await PrefsService.saveUserData({'id': 1});
     requests = [];

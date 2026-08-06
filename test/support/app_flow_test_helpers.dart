@@ -15,8 +15,7 @@ Future<void> setUpAppFlowTestCase() async {
     'selected_language': 'en',
     'swipe_guide_shown': true,
   });
-  PrefsService.activeLanguageCode = 'en';
-  PrefsService.invalidateGenreWeights();
+  PrefsService.resetInMemoryCaches();
   await DatabaseHelper().clearAllData();
 }
 

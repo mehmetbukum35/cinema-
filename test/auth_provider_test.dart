@@ -248,6 +248,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    PrefsService.resetInMemoryCaches();
     // DatabaseHelper testlerde bellek içi sahte listeler kullanır ve singleton
     // olduğu için dosya boyunca yaşar. Temizlenmezse önceki testin bıraktığı
     // puan, sonraki login'i "hesap değişimi" çakışmasına düşürür.

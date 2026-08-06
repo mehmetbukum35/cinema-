@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/main.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/providers.dart';
@@ -71,6 +72,38 @@ void main() {
 
       expect(container.read(apiServiceProvider).localeCode(), code);
     }
+  });
+
+  test('rootOverrides kaydedilmis dili koke aktarir', () {
+    // main() dogrudan test edilemiyor; override kurulumu ayri bir uretim
+    // fonksiyonunda. Aktarilmazsa kullanicinin dil tercihi acilista yok
+    // sayilir ve platform diline dusulur.
+    for (final code in ['en', 'tr']) {
+      final container = ProviderContainer(overrides: rootOverrides(code));
+      addTearDown(container.dispose);
+
+      expect(container.read(localeProvider).languageCode, code);
+    }
+  });
+
+  test('iki container ayni anda farkli dilleri tasir', () {
+    // "Global yok" iddiasinin davranissal kanidi. Paylasilan tek bir alan
+    // olsaydi iki container da ayni degeri verirdi; kaynak metni grep'lenmez.
+    final english = ProviderContainer(
+      overrides: [initialLocaleProvider.overrideWithValue('en')],
+    );
+    addTearDown(english.dispose);
+    final turkish = ProviderContainer(
+      overrides: [initialLocaleProvider.overrideWithValue('tr')],
+    );
+    addTearDown(turkish.dispose);
+
+    expect(english.read(localeProvider).languageCode, 'en');
+    expect(turkish.read(localeProvider).languageCode, 'tr');
+    expect(english.read(apiServiceProvider).localeCode(), 'en');
+    expect(turkish.read(apiServiceProvider).localeCode(), 'tr');
+    expect(english.read(recommendationEngineProvider).localeCode(), 'en');
+    expect(turkish.read(recommendationEngineProvider).localeCode(), 'tr');
   });
 
   test('recommendationEngineProvider localeProvider ile ayni dili verir', () {

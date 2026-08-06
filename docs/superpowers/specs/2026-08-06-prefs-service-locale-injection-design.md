@@ -1,7 +1,35 @@
 # PrefsService: mutable global'leri kaldır, dili enjekte et
 
 **Tarih:** 2026-08-06
-**Durum:** Tasarım onaylandı, implementasyon planı bekliyor
+**Durum:** Uygulandı (2026-08-06)
+
+## Uygulama notları
+
+Tasarımdan sapılan ve tasarımın kaçırdığı noktalar:
+
+- **`sync_service.dart` spec'te yoktu.** İlk analizde `grep | head -20` çıktıyı
+  kestiği için bu dosyadaki 6 okuma sayılmamıştı. Ayrı bir sağlayıcı eklemek
+  yerine dil `_apiService.localeCode()`'dan alındı — altı okumanın hepsi
+  `metadata_locale` yazıyor, yani "bu veri hangi dilde çekildi" etiketi; onu
+  API'nin sorduğu dilden almak iki kaynağın ayrışmasını imkânsız kılar.
+- **`metadataLocale` çağrıları `ref` üzerinden geçiriliyor**, spec'teki
+  `Localizations.localeOf(context)` yerine: çağrıların hepsi `async` metotların
+  içinde ve `context`'i `await` sonrası kullanmak
+  `use_build_context_synchronously` lint'ini tetikliyordu.
+- **Test churn'ü 12 değil 46 çıktı** (ilk sayım yalnız `saveFavorite*`
+  çağrılarını kapsıyormuş). `metadataLocale` yine de zorunlu tutuldu: yanlış
+  varsayılan diske sessizce yanlış etiketli veri yazar.
+- **İkinci tear-off** `TasteDnaPresenter.genreChips`'te çıktı; parantezli grep
+  kaçırmıştı, analyzer yakaladı.
+- **`main()`'in override'ı** `rootOverrides()` fonksiyonuna çıkarıldı ve test
+  edildi. Geriye `_bootstrap()` içindeki tek satırlık çağrı korumasız kalıyor;
+  onu test etmek `main()`'i (Firebase init + asset yükleme + `runApp`)
+  çalıştırmayı gerektirir.
+- **`sync_service.dart:611/646/677`'deki `?? localeCode()` yedekleri
+  ulaşılamaz**: `metadata_locale` sütunu şemada `TEXT NOT NULL DEFAULT 'und'`.
+  Mutasyon kontrolü bu üç dalın ölü olduğunu gösterdi; davranış değiştirilmedi.
+
+Sonuç: 572 test geçiyor, `flutter analyze` temiz, CI kapsam eşiği %76.9 → %77.5.
 
 ## Sorun
 

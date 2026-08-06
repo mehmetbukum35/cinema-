@@ -238,7 +238,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    PrefsService.activeLanguageCode = 'tr';
+    PrefsService.resetInMemoryCaches();
     sessionExpiredFired = false;
 
     backend = FakeBackend();

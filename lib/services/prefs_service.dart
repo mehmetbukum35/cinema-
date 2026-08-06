@@ -15,7 +15,6 @@ class PrefsService {
   static const _keyThemeMode = 'theme_mode'; // 'dark' | 'light' | 'system'
   static const _keyFamilyMode = 'family_mode';
   static const _keyBlockedMovies = 'blocked_movie_ids';
-  static String activeLanguageCode = 'tr';
 
   static const _genreNames = {
     28: 'Aksiyon',

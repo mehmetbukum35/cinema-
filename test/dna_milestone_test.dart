@@ -6,6 +6,7 @@ import 'package:ne_izlesem/services/prefs_service.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    PrefsService.resetInMemoryCaches();
   });
 
   group(

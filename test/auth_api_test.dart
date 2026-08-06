@@ -23,7 +23,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    PrefsService.activeLanguageCode = 'tr';
+    PrefsService.resetInMemoryCaches();
     recorder = _Recorder();
   });
 
