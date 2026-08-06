@@ -853,11 +853,21 @@ class PrefsService {
 
   static const _secureStorage = FlutterSecureStorage();
 
-  static Future<void> resetAll() async {
-    _recoTelemetryTail = Future<void>.value();
-    final prefs = await SharedPreferences.getInstance();
+  /// Bellekte tutulan performans cache'lerini sıfırlar. Diske dokunmaz.
+  ///
+  /// Testler için gerekli: bu cache'ler statik olduğundan bir testin yazdığı
+  /// token veya tür ağırlığı aynı dosyadaki sonraki testlere sızar ve testleri
+  /// çalışma sırasına bağımlı kılar.
+  @visibleForTesting
+  static void resetInMemoryCaches() {
     _cachedAccessToken = null;
+    _recoTelemetryTail = Future<void>.value();
     invalidateGenreWeights();
+  }
+
+  static Future<void> resetAll() async {
+    resetInMemoryCaches();
+    final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await _secureStorage.deleteAll();
     await DatabaseHelper().clearAllData();

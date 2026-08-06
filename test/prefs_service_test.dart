@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
@@ -288,6 +289,61 @@ void main() {
       await PrefsService.resetAll();
 
       expect(await PrefsService.getGenreWeights(), isEmpty);
+    });
+  });
+
+  group('PrefsService bellek ici cache', () {
+    // Access token secure storage'da tutulur ama her HTTP isteginde okumak
+    // pahali oldugu icin bellekte cache'lenir. Cache statik oldugundan bir
+    // testin yazdigi token sonraki testlere sizar; resetInMemoryCaches bunu
+    // kirar.
+    const accessTokenKey = 'auth_access_token';
+
+    test(
+      'resetInMemoryCaches cache ile depolama ayristiginda depolamayi okur',
+      () async {
+        await PrefsService.saveTokens(
+          accessToken: 'cached_value',
+          refreshToken: 'cached_refresh',
+        );
+        // Depolamayi PrefsService'i atlayarak degistir: cache artik bayat.
+        await const FlutterSecureStorage().write(
+          key: accessTokenKey,
+          value: 'storage_value',
+        );
+        expect(
+          await PrefsService.getAccessToken(),
+          'cached_value',
+          reason: 'cache canli olmali, aksi halde test bir sey kanitlamaz',
+        );
+
+        PrefsService.resetInMemoryCaches();
+
+        expect(await PrefsService.getAccessToken(), 'storage_value');
+      },
+    );
+
+    test('saveTokens token depolamaya da yazar, yalniz cache degil', () async {
+      await PrefsService.saveTokens(
+        accessToken: 'token_a',
+        refreshToken: 'refresh_a',
+      );
+
+      PrefsService.resetInMemoryCaches();
+
+      expect(await PrefsService.getAccessToken(), 'token_a');
+    });
+
+    test('clearAuthData cache icindeki tokeni da dusurur', () async {
+      await PrefsService.saveTokens(
+        accessToken: 'token_b',
+        refreshToken: 'refresh_b',
+      );
+      expect(await PrefsService.getAccessToken(), 'token_b');
+
+      await PrefsService.clearAuthData();
+
+      expect(await PrefsService.getAccessToken(), isNull);
     });
   });
 }
