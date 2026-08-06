@@ -55,6 +55,11 @@ class MockApiService implements ApiService {
     return pullResponse;
   }
 
+  /// SyncService `metadata_locale`'i buradan okur: gonderilen veri, API'nin
+  /// hangi dilde konustuguyla ayni etiketi tasimali.
+  @override
+  String Function() localeCode = () => 'tr';
+
   // Define other required methods to satisfy ApiService interface
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -72,7 +77,7 @@ void main() {
   setUp(() async {
     // 1. Initialize Mock SharedPreferences
     SharedPreferences.setMockInitialValues({'sync_last_time': 1000});
-    PrefsService.activeLanguageCode = 'tr';
+    PrefsService.resetInMemoryCaches();
 
     // 2. Open Fresh In-Memory Test SQLite Database
     testDb = await openDatabase(
@@ -162,6 +167,33 @@ void main() {
 
       // One millisecond overlap prevents equal-watermark writes being skipped.
       expect(await PrefsService.getLastSyncTime(), 1099);
+    });
+
+    test('push payload API ile ayni dili etiketler', () async {
+      // metadata_locale, verinin hangi dilde cekildigini soyler. Sabitlenirse
+      // Ingilizce konusan bir oturumun verisi sunucuda 'tr' diye etiketlenir.
+      mockApi.localeCode = () => 'en';
+      await testDb.insert('ratings', {
+        'movie_id': 777,
+        'is_tv': 0,
+        'rating': 3,
+        'genre_ids': jsonEncode([28]),
+        'created_at': 1005,
+        'updated_at': 1010,
+        'deleted': 0,
+      });
+      mockApi.pullResponse = {
+        'server_time': 1100,
+        'ratings': [],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      expect(mockApi.pushedPayload!['metadata_locale'], 'en');
     });
 
     test('should tolerate null genre metadata in legacy rows', () async {

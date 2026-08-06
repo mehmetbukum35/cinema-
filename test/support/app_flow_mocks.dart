@@ -131,6 +131,10 @@ class MockIntegrationApiService implements ApiService {
   @override
   Future<void> publishTasteDna(Map<String, dynamic> payload) async {}
 
+  /// SyncService dili buradan okur; ApiService'in gercek alaninin karsiligi.
+  @override
+  String Function() localeCode = () => 'tr';
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

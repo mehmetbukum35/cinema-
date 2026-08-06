@@ -334,6 +334,10 @@ class MockApiService implements ApiService {
     return profileLikeRequests.removeAt(0).future;
   }
 
+  /// SyncService dili buradan okur; ApiService'in gercek alaninin karsiligi.
+  @override
+  String Function() localeCode = () => 'tr';
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

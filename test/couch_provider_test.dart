@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/legacy.dart';
 class MockAuthNotifier extends StateNotifier<AuthState>
     implements AuthNotifier {
   MockAuthNotifier(super.state);
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -115,6 +116,10 @@ class MockCouchApi implements ApiService {
   @override
   Future<List<String>> getUsedCouchMovies(int friendId) async =>
       usedCouchMoviesResponse;
+
+  /// SyncService dili buradan okur; ApiService'in gercek alaninin karsiligi.
+  @override
+  String Function() localeCode = () => 'tr';
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

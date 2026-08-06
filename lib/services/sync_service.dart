@@ -331,7 +331,7 @@ class SyncService {
       );
       await _ensureSession(sessionUserId);
       final pushResult = await _apiService.push(<String, dynamic>{
-        'metadata_locale': PrefsService.activeLanguageCode,
+        'metadata_locale': _apiService.localeCode(),
         'cultural_preferences': (await CulturalPreferenceService.load())
             .toJson(),
         'recommendation_events':
@@ -386,7 +386,7 @@ class SyncService {
 
     // 1. Build and PUSH local changes
     final payload = <String, dynamic>{
-      'metadata_locale': PrefsService.activeLanguageCode,
+      'metadata_locale': _apiService.localeCode(),
       if (_declareLocalReset) 'local_reset': true,
     };
     final localCulturalPreferences = await CulturalPreferenceService.load();
@@ -607,8 +607,7 @@ class SyncService {
         await txn.insert('ratings', {
           'movie_id': _asInt(r['movie_id']),
           'is_tv': _asInt(r['is_tv']),
-          'metadata_locale':
-              r['metadata_locale'] ?? PrefsService.activeLanguageCode,
+          'metadata_locale': r['metadata_locale'] ?? _apiService.localeCode(),
           'rating': _asInt(r['rating']),
           'genre_ids': jsonEncode(_decodeJsonList(r['genre_ids'])),
           'title': r['title'],
@@ -642,8 +641,7 @@ class SyncService {
         await txn.insert('watchlist', {
           'id': _asInt(w['id']),
           'is_tv': _asInt(w['is_tv']),
-          'metadata_locale':
-              w['metadata_locale'] ?? PrefsService.activeLanguageCode,
+          'metadata_locale': w['metadata_locale'] ?? _apiService.localeCode(),
           // Compacted legacy tombstones may no longer have catalog metadata.
           // SQLite keeps this legacy column NOT NULL, so retain a harmless
           // placeholder for deleted rows instead of aborting the entire sync.
@@ -673,8 +671,7 @@ class SyncService {
         await txn.insert('favorites', {
           'id': _asInt(f['id']),
           'is_tv': _asInt(f['is_tv']),
-          'metadata_locale':
-              f['metadata_locale'] ?? PrefsService.activeLanguageCode,
+          'metadata_locale': f['metadata_locale'] ?? _apiService.localeCode(),
           // Favorites has the same legacy NOT NULL constraint as watchlist.
           'title': f['title'] ?? '',
           'poster_path': f['poster_path'],
@@ -867,7 +864,7 @@ class SyncService {
     if (rows.isEmpty) return;
 
     final payload = <String, dynamic>{
-      'metadata_locale': PrefsService.activeLanguageCode,
+      'metadata_locale': _apiService.localeCode(),
       'favorites': rows
           .map(
             (f) => {
