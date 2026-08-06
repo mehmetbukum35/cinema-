@@ -1,0 +1,121 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Helpers.php
+
+		-
+			message: '#^Constant Social\:\:COUCH_OPEN_STATUSES is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: src/Social.php
+
+		-
+			message: '#^Method SocialWebRenderer\:\:partitionByMedia\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: src/SocialWebRenderer.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 7
+			path: src/TasteDnaWebText.php
+
+		-
+			message: '#^Variable \$desc might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/error.template.php
+
+		-
+			message: '#^Variable \$title might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/templates/error.template.php
+
+		-
+			message: '#^Variable \$displayName might not be defined\.$#'
+			identifier: variable.undefined
+			count: 5
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$goodMovies might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$goodRatings might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$goodShows might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$greatMovies might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$greatShows might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$ratings might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$t might not be defined\.$#'
+			identifier: variable.undefined
+			count: 27
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$topMovies might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$topShows might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$userHandle might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$watchMovies might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$watchShows might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php
+
+		-
+			message: '#^Variable \$watchlist might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/templates/profile.template.php

@@ -7,7 +7,6 @@ import '../models/movie.dart';
 import '../models/discovery_context.dart';
 import '../models/dismiss_feedback.dart';
 import '../models/cultural_preferences.dart';
-import '../models/social.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
@@ -16,15 +15,14 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
-import '../widgets/app_cached_image.dart';
 import '../widgets/tonight_pick_card.dart';
-import 'top_list/top_rank_badge.dart';
 import 'browse/browse_skeleton.dart';
-import 'browse/browse_card.dart';
 import 'browse/browse_error_view.dart';
-import 'browse/browse_section_header.dart';
-import 'browse/browse_top_profile_card.dart';
-import 'browse/friend_signal_card.dart';
+import 'browse/browse_header_block.dart';
+import 'browse/friends_activity_section.dart';
+import 'browse/top_profiles_section.dart';
+import 'browse/popular_community_section.dart';
+import 'browse/movie_rail_section.dart';
 import 'browse/moods.dart';
 import 'browse/onboarding_banner.dart';
 import 'browse/discovery_context_sheet.dart';
@@ -629,33 +627,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ),
         slivers: [
           // ── Header ────────────────────────────────────────────────────────────
-          // Araç ikonları (yenile, zar, dil, tema, hakkında, web, avatar)
-          // global üst bara/menüye taşındı; başlık tek başına kaldı.
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-              child: Row(
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.get('what_to') ?? 'what to ',
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)?.get('watch') ?? 'watch?',
-                    style: TextStyle(
-                      color: c.ink,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const SliverToBoxAdapter(child: BrowseHeaderBlock()),
 
           SliverToBoxAdapter(
             child: Padding(
@@ -714,243 +686,157 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
           // ── Sana Özel ─────────────────────────────────────────────────────────
           if (_personal.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_for_you_personal') ??
-                  '',
-              _personal,
-              showScore: true,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_for_you_personal') ??
+                    '',
+                items: _personal,
+                showScore: true,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Arkadaşlarından Son Sinyaller ──────────────────────────────────────────
           if (isAuthenticated && socialState.activityFeed.isNotEmpty)
-            _friendsActivitySection(socialState.activityFeed),
+            BrowseFriendsActivitySection(
+              feed: socialState.activityFeed,
+              onOpen: _openDetail,
+              onBlocked: _removeBlockedMovie,
+            ),
 
           // ── Popüler Üyeler ─────────────────────────────────────────────────────────
           if (isAuthenticated && socialState.topProfiles.isNotEmpty)
-            _topProfilesSection(socialState.topProfiles),
+            BrowseTopProfilesSection(profiles: socialState.topProfiles),
 
           // ── Topluluğun Favorileri: Popüler Top 20 (Film + Dizi) ───────────────
-          // Tüm kullanıcıların Top 20'lerinden türeyen küresel liste (cron ile
-          // önhesaplı). Veri yoksa bölüm gizlenir.
-          _popularCommunitySection(false),
-          _popularCommunitySection(true),
+          BrowsePopularCommunitySection(isTV: false, onOpen: _openDetail),
+          BrowsePopularCommunitySection(isTV: true, onOpen: _openDetail),
 
           // ── Bu Hafta Trend ────────────────────────────────────────────────────
           if (_trending.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_trending_week') ?? '',
-              _trending,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(context)?.get('browse_trending_week') ??
+                    '',
+                items: _trending,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Sinema'da ─────────────────────────────────────────────────────────
           if (_nowPlaying.isNotEmpty)
-            _section(
-              AppLocalizations.of(
-                    context,
-                  )?.get('browse_now_playing_theaters') ??
-                  '',
-              _nowPlaying,
-              badge: '🎬',
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_now_playing_theaters') ??
+                    '',
+                items: _nowPlaying,
+                badge: '🎬',
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Popüler Filmler ───────────────────────────────────────────────────
           if (_movies.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_popular_movies') ?? '',
-              _movies,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_popular_movies') ??
+                    '',
+                items: _movies,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Bu Gün TV'de ──────────────────────────────────────────────────────
           if (_airingToday.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_airing_today_tv') ?? '',
-              _airingToday,
-              badge: '📺',
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_airing_today_tv') ??
+                    '',
+                items: _airingToday,
+                badge: '📺',
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Şu An Yayında ─────────────────────────────────────────────────────
           if (_onTheAir.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_on_the_air_tv') ?? '',
-              _onTheAir,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(context)?.get('browse_on_the_air_tv') ??
+                    '',
+                items: _onTheAir,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Popüler Diziler ───────────────────────────────────────────────────
           if (_shows.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_popular_tvs') ?? '',
-              _shows,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(context)?.get('browse_popular_tvs') ??
+                    '',
+                items: _shows,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── Yakında Gelecekler ────────────────────────────────────────────────
           if (_upcoming.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_upcoming_coming') ?? '',
-              _upcoming,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_upcoming_coming') ??
+                    '',
+                items: _upcoming,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           // ── En Yüksek Puanlı ─────────────────────────────────────────────────
           if (_topRated.isNotEmpty)
-            _section(
-              AppLocalizations.of(context)?.get('browse_top_rated_movies') ??
-                  '',
-              _topRated,
-              // showScore kapalı: buradaki skor kişisel eşleşme değil, ham TMDB
-              // puanı (voteAverage×10) olurdu — yanıltıcı "%92 uyum" gösterirdi.
-              showScore: false,
+            SliverToBoxAdapter(
+              child: BrowseMovieRailSection(
+                title:
+                    AppLocalizations.of(
+                      context,
+                    )?.get('browse_top_rated_movies') ??
+                    '',
+                items: _topRated,
+                // showScore kapalı: buradaki skor kişisel eşleşme değil, ham TMDB
+                // puanı (voteAverage×10) olurdu — yanıltıcı "%92 uyum" gösterirdi.
+                showScore: false,
+                onOpen: _openDetail,
+                onBlocked: _removeBlockedMovie,
+              ),
             ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
-      ),
-    );
-  }
-
-  SliverToBoxAdapter _section(
-    String title,
-    List<Movie> items, {
-    bool showScore = false,
-    String? badge,
-  }) {
-    return SliverToBoxAdapter(
-      child: EntranceFade(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrowseSectionHeader(
-              title: title,
-              badge: badge,
-              gradient: CinemaGradients.gold,
-            ),
-            SizedBox(
-              height: 275,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: items.length,
-                itemBuilder: (ctx, i) => BrowseCard(
-                  movie: items[i],
-                  showScore: showScore,
-                  onTap: () => _openDetail(items[i]),
-                  onBlocked: () => _removeBlockedMovie(items[i]),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _friendsActivitySection(List<ActivityItem> feed) {
-    return SliverToBoxAdapter(
-      child: EntranceFade(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrowseSectionHeader(
-              title:
-                  AppLocalizations.of(
-                    context,
-                  )?.get('browse_friends_activity') ??
-                  'Arkadaşlarından Son Sinyaller',
-              gradient: CinemaGradients.crimson,
-            ),
-            SizedBox(
-              height: 250,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: feed.length,
-                itemBuilder: (ctx, i) => FriendSignalCard(
-                  item: feed[i],
-                  onOpen: _openDetail,
-                  onBlocked: _removeBlockedMovie,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _topProfilesSection(List<TopProfile> profiles) {
-    return SliverToBoxAdapter(
-      child: EntranceFade(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrowseSectionHeader(
-              title:
-                  AppLocalizations.of(context)?.get('top_lists_title') ??
-                  'Popüler Listeler',
-              gradient: CinemaGradients.crimson,
-            ),
-            SizedBox(
-              height: 136,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: profiles.length,
-                itemBuilder: (ctx, i) =>
-                    BrowseTopProfileCard(profile: profiles[i], rank: i + 1),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Topluluk "Popüler Top 20" rayı (Film ya da Dizi). Veri yoksa/hata varsa
-  /// görünmez — cron henüz koşmamış veya boşsa Keşfet'i kirletmez.
-  Widget _popularCommunitySection(bool isTV) {
-    final items =
-        ref.watch(popularTitlesProvider(isTV)).value ?? const <PopularTitle>[];
-    if (items.isEmpty) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-    final title =
-        AppLocalizations.of(
-          context,
-        )?.get(isTV ? 'popular_top_tv_title' : 'popular_top_movies_title') ??
-        (isTV ? 'Cinema+ Top 20 Dizi' : 'Cinema+ Top 20 Film');
-    final subtitle = AppLocalizations.of(
-      context,
-    )?.get(isTV ? 'popular_top_tv_subtitle' : 'popular_top_movies_subtitle');
-    return SliverToBoxAdapter(
-      child: EntranceFade(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrowseSectionHeader(
-              title: title,
-              subtitle: subtitle,
-              gradient: CinemaGradients.gold,
-            ),
-            SizedBox(
-              height: 250,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: items.length,
-                itemBuilder: (ctx, i) => _PopularRankCard(
-                  entry: items[i],
-                  onTap: () => _openDetail(items[i].movie),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
@@ -969,84 +855,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => MovieDetailSheet(movie: movie, service: _service),
-    );
-  }
-}
-
-/// Topluluk popüler rayı kartı: poster + sıra rozeti + oy sayısı.
-class _PopularRankCard extends StatelessWidget {
-  final PopularTitle entry;
-  final VoidCallback onTap;
-
-  const _PopularRankCard({required this.entry, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final m = entry.movie;
-    final votesLabel =
-        AppLocalizations.of(
-          context,
-        )?.get('popular_votes_label').replaceAll('{}', '${entry.votes}') ??
-        '${entry.votes}';
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 130,
-        margin: const EdgeInsets.only(right: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    AppCachedNetworkImage(
-                      imageUrl: m.posterUrl,
-                      fit: BoxFit.cover,
-                      preset: AppImageCachePreset.poster,
-                      placeholder: (ctx, url) => ColoredBox(color: c.card),
-                      errorWidget: (ctx, url, err) => ColoredBox(color: c.card),
-                    ),
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: TopRankBadge(rank: entry.rank, size: 28),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              m.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: c.ink,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Row(
-              children: [
-                Icon(Icons.favorite_rounded, color: c.red, size: 11),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    votesLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: c.dim, fontSize: 11.5),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

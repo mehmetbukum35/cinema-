@@ -71,6 +71,8 @@ jobs:
           coverage: pcov
       - name: Install Composer dependencies
         run: composer install --working-dir=backend
+      - name: PHPStan static analysis
+        run: composer --working-dir=backend phpstan
       - name: Validate production schema on MySQL 8
         env:
           MYSQL_PWD: cinema_test_root
