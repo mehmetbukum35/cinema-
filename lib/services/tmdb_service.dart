@@ -65,13 +65,10 @@ class TmdbServiceBase {
   final Map<String, List<Movie>> _similarCache = {};
   final Map<String, List<Movie>> _recommendationsCache = {};
 
-  TmdbServiceBase({
-    http.Client? client,
-    String? language,
-    String? region,
-  }) : _client = client ?? http.Client(),
-       _language = language ?? 'tr-TR',
-       _region = region ?? 'TR';
+  TmdbServiceBase({http.Client? client, String? language, String? region})
+    : _client = client ?? http.Client(),
+      _language = language ?? 'tr-TR',
+      _region = region ?? 'TR';
 
   V? _readMemoryCache<V>(Map<String, V> cache, String key) {
     final value = cache.remove(key);

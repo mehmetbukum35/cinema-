@@ -101,8 +101,11 @@ class DiscoveryContextCard extends StatelessWidget {
         DiscoveryFamiliarity.surprise => text('discovery_surprise', 'Sürpriz'),
       },
       switch (value.origin) {
-        DiscoveryOrigin.local => text('discovery_local', 'Yerli'),
-        DiscoveryOrigin.foreign => text('discovery_foreign', 'Yabancı'),
+        DiscoveryOrigin.local => text('discovery_local', 'Favori Bölgelerim'),
+        DiscoveryOrigin.foreign => text(
+          'discovery_foreign',
+          'Farklı Kültürler',
+        ),
         DiscoveryOrigin.any => text('discovery_any', 'Fark etmez'),
       },
     ];
@@ -239,11 +242,11 @@ class _DiscoveryContextSheetState extends State<DiscoveryContextSheet> {
               ),
             ),
             _ChoiceSection<DiscoveryOrigin>(
-              title: _tr(context, 'discovery_origin_title', 'Hangi taraftan?'),
+              title: _tr(context, 'discovery_origin_title', 'Hangi sinemalar?'),
               subtitle: _tr(
                 context,
                 'discovery_origin_hint',
-                'Yerli: tercih ettiğin sinemalar (yoksa uygulama diline göre).',
+                'Favori Bölgelerim: profilindeki tercih ettiğin sinema kültürleri (Türk, Avrupa vb.).',
               ),
               selected: _value.origin,
               options: [
@@ -253,11 +256,11 @@ class _DiscoveryContextSheetState extends State<DiscoveryContextSheet> {
                 ),
                 (
                   DiscoveryOrigin.local,
-                  _tr(context, 'discovery_local', 'Yerli'),
+                  _tr(context, 'discovery_local', 'Favori Bölgelerim'),
                 ),
                 (
                   DiscoveryOrigin.foreign,
-                  _tr(context, 'discovery_foreign', 'Yabancı'),
+                  _tr(context, 'discovery_foreign', 'Farklı Kültürler'),
                 ),
               ],
               onSelected: (origin) =>
