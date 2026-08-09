@@ -233,6 +233,21 @@ class PrefsAppSettings {
         .toList();
   }
 
+  /// Anket ağırlığının decay referans anı (ms). `PrefsTastePrefs` tür ağırlığı
+  /// hesabında kullanır; bu anahtar `saveInitialGenres` ile birlikte yazılır.
+  static Future<int?> getInitialGenresSavedAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyInitialGenresSavedAt);
+  }
+
+  /// Eski kurulumlar için referans anı yoksa bir kereliğine damgalar.
+  static Future<void> setInitialGenresSavedAt(
+    int millisecondsSinceEpoch,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyInitialGenresSavedAt, millisecondsSinceEpoch);
+  }
+
   static Future<bool> isSwipeGuideShown() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('swipe_guide_shown') ?? false;
