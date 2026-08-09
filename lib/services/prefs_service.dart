@@ -8,6 +8,7 @@ import '../models/movie.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs/app_settings.dart';
+import 'prefs/auth_storage.dart';
 
 class PrefsService {
   static const _keyInitialGenres = 'initial_genres';
@@ -708,7 +709,7 @@ class PrefsService {
   /// çalışma sırasına bağımlı kılar.
   @visibleForTesting
   static void resetInMemoryCaches() {
-    _cachedAccessToken = null;
+    PrefsAuthStorage.clearTokenCache();
     _recoTelemetryTail = Future<void>.value();
     invalidateGenreWeights();
   }
@@ -722,61 +723,22 @@ class PrefsService {
   }
 
   // ─── Authentication & Sync ──────────────────────────────────────────────────
-  static const _keyAccessToken = 'auth_access_token';
-  static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyLastSyncTime = 'sync_last_time';
   static const _keyLastPushTime = 'sync_last_push_time';
   static const _keySyncDeviceId = 'sync_device_id';
-  static const _keyUserData = 'auth_user_data';
 
-  // Secure storage okumak (özellikle Android Keystore) her HTTP isteğinde
-  // pahalı; access token bellekte cache'lenir. saveTokens/clearAuthData günceller.
-  static String? _cachedAccessToken;
-
-  static Future<String?> getAccessToken() async {
-    if (_cachedAccessToken != null) return _cachedAccessToken;
-
-    // Try secure storage first
-    String? token = await _secureStorage.read(key: _keyAccessToken);
-    if (token != null) {
-      _cachedAccessToken = token;
-      return token;
-    }
-
-    // Migration fallback
-    final prefs = await SharedPreferences.getInstance();
-    token = prefs.getString(_keyAccessToken);
-    if (token != null) {
-      await _secureStorage.write(key: _keyAccessToken, value: token);
-      await prefs.remove(_keyAccessToken);
-      _cachedAccessToken = token;
-    }
-    return token;
-  }
+  static Future<String?> getAccessToken() => PrefsAuthStorage.getAccessToken();
 
   static Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
-  }) async {
-    await _secureStorage.write(key: _keyAccessToken, value: accessToken);
-    await _secureStorage.write(key: _keyRefreshToken, value: refreshToken);
-    _cachedAccessToken = accessToken;
-  }
+  }) => PrefsAuthStorage.saveTokens(
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+  );
 
-  static Future<String?> getRefreshToken() async {
-    // Try secure storage first
-    String? token = await _secureStorage.read(key: _keyRefreshToken);
-    if (token != null) return token;
-
-    // Migration fallback
-    final prefs = await SharedPreferences.getInstance();
-    token = prefs.getString(_keyRefreshToken);
-    if (token != null) {
-      await _secureStorage.write(key: _keyRefreshToken, value: token);
-      await prefs.remove(_keyRefreshToken);
-    }
-    return token;
-  }
+  static Future<String?> getRefreshToken() =>
+      PrefsAuthStorage.getRefreshToken();
 
   static Future<int> getLastSyncTime() async {
     final prefs = await SharedPreferences.getInstance();
@@ -812,42 +774,21 @@ class PrefsService {
     return generated;
   }
 
-  static Future<Map<String, dynamic>?> getUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyUserData);
-    if (raw == null) return null;
-    return jsonDecode(raw) as Map<String, dynamic>;
-  }
+  static Future<Map<String, dynamic>?> getUserData() =>
+      PrefsAuthStorage.getUserData();
 
-  static Future<void> saveUserData(Map<String, dynamic> userData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUserData, jsonEncode(userData));
-  }
+  static Future<void> saveUserData(Map<String, dynamic> userData) =>
+      PrefsAuthStorage.saveUserData(userData);
 
-  static const _keyLastAuthenticatedUserId = 'last_authenticated_user_id';
+  static Future<String?> getLastAuthenticatedUserId() =>
+      PrefsAuthStorage.getLastAuthenticatedUserId();
 
-  static Future<String?> getLastAuthenticatedUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyLastAuthenticatedUserId);
-  }
-
-  static Future<void> setLastAuthenticatedUserId(String? userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (userId == null) {
-      await prefs.remove(_keyLastAuthenticatedUserId);
-    } else {
-      await prefs.setString(_keyLastAuthenticatedUserId, userId);
-    }
-  }
+  static Future<void> setLastAuthenticatedUserId(String? userId) =>
+      PrefsAuthStorage.setLastAuthenticatedUserId(userId);
 
   static Future<void> clearAuthData() async {
+    await PrefsAuthStorage.clearTokens();
     final prefs = await SharedPreferences.getInstance();
-    _cachedAccessToken = null;
-    await _secureStorage.delete(key: _keyAccessToken);
-    await _secureStorage.delete(key: _keyRefreshToken);
-    await prefs.remove(_keyAccessToken);
-    await prefs.remove(_keyRefreshToken);
-    await prefs.remove(_keyUserData);
     await prefs.remove(_keyLastSyncTime);
     await prefs.remove(_keyLastPushTime);
     await clearDnaCache();
