@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/watchlist_provider.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -78,7 +79,7 @@ void main() {
           releaseDate: '2026',
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
+        await PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: 'tr');
 
         // 2. Act
         final notifier = container.read(watchlistProvider.notifier);
@@ -110,7 +111,7 @@ void main() {
           voteAverage: 7.5,
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
+        await PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: 'tr');
         mockSync.gate = Completer<void>();
 
         container = ProviderContainer(
@@ -207,7 +208,7 @@ void main() {
           releaseDate: '2026',
           isTV: false,
         );
-        await PrefsService.addToWatchlist(movie, metadataLocale: 'tr');
+        await PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: 'tr');
 
         final notifier = container.read(watchlistProvider.notifier);
         await notifier.load();
@@ -308,7 +309,7 @@ void main() {
           .add(movie);
       expect(success, isTrue);
 
-      final list = await PrefsService.getWatchlist();
+      final list = await PrefsLibraryFacade.getWatchlist();
       expect(list, isNotEmpty);
       expect(list.any((m) => m.id == 999), isTrue);
     });

@@ -27,6 +27,7 @@ import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs/sync_meta.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
 
@@ -264,12 +265,12 @@ void main() {
     test('login → yerel puanlama → sync: veri sunucuya ulaşır', () async {
       await login();
 
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: makeMovie(101),
         rating: 3,
         metadataLocale: 'tr',
       );
-      await PrefsService.addToWatchlist(
+      await PrefsLibraryFacade.addToWatchlist(
         makeMovie(202, isTV: true),
         metadataLocale: 'tr',
       );
@@ -293,7 +294,7 @@ void main() {
 
     test('ikinci cihaz sıfır imleçle pull: veri oraya iner', () async {
       await login();
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: makeMovie(101),
         rating: 2,
         metadataLocale: 'tr',
@@ -382,7 +383,7 @@ void main() {
       'süresi dolan access token sync ortasında sessizce yenilenir',
       () async {
         await login();
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: makeMovie(101),
           rating: 3,
           metadataLocale: 'tr',
@@ -407,7 +408,7 @@ void main() {
 
     test('refresh reddedilirse oturum düşer ama yerel veri korunur', () async {
       await login();
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: makeMovie(101),
         rating: 3,
         metadataLocale: 'tr',
@@ -437,7 +438,7 @@ void main() {
       'logout yerel veriyi korur; yeniden login idempotent re-push yapar',
       () async {
         await login();
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: makeMovie(101),
           rating: 3,
           metadataLocale: 'tr',

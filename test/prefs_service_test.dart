@@ -5,6 +5,7 @@ import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/prefs/app_settings.dart';
 import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs/taste_prefs.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -34,13 +35,13 @@ void main() {
           voteAverage: 8.0,
           genreIds: [18, 878],
         );
-        await PrefsService.saveFavoriteMovies([
+        await PrefsLibraryFacade.saveFavoriteMovies([
           favoriteMovie,
         ], metadataLocale: 'tr');
 
         // 3. Ratings >= 2 (İyi/Harika): Thriller (53) -> Weight 2
         // Rate movie 2 (rating: 3, genres: [53])
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 2,
           isTV: false,
           rating: 3,
@@ -58,7 +59,7 @@ void main() {
         //
         // Top 3 should be: [18, 878, 53] (order of 18 and 878 can be arbitrary as they tie, but both must be in top 3)
 
-        final likedGenres = await PrefsService.getLikedGenreIds();
+        final likedGenres = await PrefsTastePrefs.getLikedGenreIds();
 
         expect(likedGenres.length, lessThanOrEqualTo(3));
         expect(likedGenres.contains(18), isTrue);
@@ -77,12 +78,12 @@ void main() {
 
     test('favorites feed genre weights by rank (no decay-to-zero)', () async {
       // #1 favori → tür 18, #2 favori → tür 27 (aynı listede, farklı sıra).
-      await PrefsService.saveFavoriteMovies([
+      await PrefsLibraryFacade.saveFavoriteMovies([
         Movie(id: 1, title: 'A', overview: '', voteAverage: 8, genreIds: [18]),
         Movie(id: 2, title: 'B', overview: '', voteAverage: 8, genreIds: [27]),
       ], metadataLocale: 'tr');
 
-      final w = await PrefsService.getGenreWeights();
+      final w = await PrefsTastePrefs.getGenreWeights();
       // Favoriler artık cihazda da katkı veriyor (created_at = sıra, decay yok).
       expect((w[18] ?? 0) > 0, isTrue);
       expect((w[27] ?? 0) > 0, isTrue);
@@ -95,35 +96,56 @@ void main() {
       'revertRecoOutcome should correctly decrement recommendation telemetry counters',
       () async {
         // Record outcomes
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: false);
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
+        await PrefsTastePrefs.recordRecoOutcome(
+          source: 'discover',
+          liked: true,
+        );
+        await PrefsTastePrefs.recordRecoOutcome(
+          source: 'discover',
+          liked: false,
+        );
+        await PrefsTastePrefs.recordRecoOutcome(
+          source: 'discover',
+          liked: true,
+        );
 
-        var telemetry = await PrefsService.getRecoTelemetry();
+        var telemetry = await PrefsTastePrefs.getRecoTelemetry();
         expect(telemetry['discover']?['shown'], 3);
         expect(telemetry['discover']?['liked'], 2);
 
         // Revert one liked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
+        await PrefsTastePrefs.revertRecoOutcome(
+          source: 'discover',
+          liked: true,
+        );
+        telemetry = await PrefsTastePrefs.getRecoTelemetry();
         expect(telemetry['discover']?['shown'], 2);
         expect(telemetry['discover']?['liked'], 1);
 
         // Revert one disliked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: false);
-        telemetry = await PrefsService.getRecoTelemetry();
+        await PrefsTastePrefs.revertRecoOutcome(
+          source: 'discover',
+          liked: false,
+        );
+        telemetry = await PrefsTastePrefs.getRecoTelemetry();
         expect(telemetry['discover']?['shown'], 1);
         expect(telemetry['discover']?['liked'], 1);
 
         // Revert another liked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
+        await PrefsTastePrefs.revertRecoOutcome(
+          source: 'discover',
+          liked: true,
+        );
+        telemetry = await PrefsTastePrefs.getRecoTelemetry();
         expect(telemetry['discover']?['shown'], 0);
         expect(telemetry['discover']?['liked'], 0);
 
         // Revert when already 0 should not go negative
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
+        await PrefsTastePrefs.revertRecoOutcome(
+          source: 'discover',
+          liked: true,
+        );
+        telemetry = await PrefsTastePrefs.getRecoTelemetry();
         expect(telemetry['discover']?['shown'], 0);
         expect(telemetry['discover']?['liked'], 0);
       },
@@ -133,25 +155,25 @@ void main() {
       await Future.wait(
         List.generate(
           50,
-          (index) => PrefsService.recordRecoOutcome(
+          (index) => PrefsTastePrefs.recordRecoOutcome(
             source: 'discover',
             liked: index.isEven,
           ),
         ),
       );
 
-      final telemetry = await PrefsService.getRecoTelemetry();
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
       expect(telemetry['discover']?['shown'], 50);
       expect(telemetry['discover']?['liked'], 25);
     });
 
     test('dismiss feedback prompt respects the daily cooldown', () async {
       expect(
-        await PrefsService.shouldAskDismissFeedback(matchScore: 80),
+        await PrefsTastePrefs.shouldAskDismissFeedback(matchScore: 80),
         isTrue,
       );
       expect(
-        await PrefsService.shouldAskDismissFeedback(matchScore: 95),
+        await PrefsTastePrefs.shouldAskDismissFeedback(matchScore: 95),
         isFalse,
       );
     });
@@ -159,13 +181,13 @@ void main() {
     test(
       'dismiss feedback records its reason and recommendation source',
       () async {
-        await PrefsService.recordDismissFeedback(
+        await PrefsTastePrefs.recordDismissFeedback(
           movieKey: 'movie_550',
           reason: 'notNow',
           source: 'culture',
         );
 
-        final events = await PrefsService.getDismissFeedback();
+        final events = await PrefsTastePrefs.getDismissFeedback();
         expect(events, hasLength(1));
         expect(events.single['movie_key'], 'movie_550');
         expect(events.single['reason'], 'notNow');
@@ -175,23 +197,23 @@ void main() {
 
     test('resetAll invalidates cached genre weights', () async {
       await PrefsTastePrefs.saveInitialGenres([28]);
-      expect(await PrefsService.getGenreWeights(), contains(28));
+      expect(await PrefsTastePrefs.getGenreWeights(), contains(28));
 
       await PrefsService.resetAll();
 
-      expect(await PrefsService.getGenreWeights(), isEmpty);
+      expect(await PrefsTastePrefs.getGenreWeights(), isEmpty);
     });
   });
 
   group('PrefsLibraryFacade (via PrefsService)', () {
     test('favoriteRankWeight: #1 tam, sona doğru azalır', () {
-      expect(PrefsService.favoriteRankWeight(0), closeTo(1.0, 1e-9));
-      expect(PrefsService.favoriteRankWeight(19), closeTo(0.2, 1e-9));
+      expect(PrefsLibraryFacade.favoriteRankWeight(0), closeTo(1.0, 1e-9));
+      expect(PrefsLibraryFacade.favoriteRankWeight(19), closeTo(0.2, 1e-9));
       // Sıra dışı (ör. bozuk) değerler güvenle kıstırılır.
-      expect(PrefsService.favoriteRankWeight(999), closeTo(0.2, 1e-9));
+      expect(PrefsLibraryFacade.favoriteRankWeight(999), closeTo(0.2, 1e-9));
       expect(
-        PrefsService.favoriteRankWeight(0) >
-            PrefsService.favoriteRankWeight(10),
+        PrefsLibraryFacade.favoriteRankWeight(0) >
+            PrefsLibraryFacade.favoriteRankWeight(10),
         isTrue,
       );
     });
@@ -203,7 +225,7 @@ void main() {
         // Movie 1: rating 0 (Berbat), genres [28]
         // Movie 2: rating 2 (İyi), genres [35]
         // Movie 3: rating 3 (Harika), genres [35, 18]
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 10,
           isTV: false,
           rating: 0,
@@ -211,7 +233,7 @@ void main() {
 
           metadataLocale: 'tr',
         );
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 11,
           isTV: false,
           rating: 2,
@@ -219,7 +241,7 @@ void main() {
 
           metadataLocale: 'tr',
         );
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 12,
           isTV: false,
           rating: 3,
@@ -228,7 +250,7 @@ void main() {
           metadataLocale: 'tr',
         );
 
-        final stats = await PrefsService.getStats();
+        final stats = await PrefsLibraryFacade.getStats();
 
         expect(stats['total'], 3);
         expect(stats['berbat'], 1);
@@ -258,25 +280,25 @@ void main() {
           isTV: false,
         );
 
-        expect(await PrefsService.isInWatchlist(100, false), isFalse);
+        expect(await PrefsLibraryFacade.isInWatchlist(100, false), isFalse);
 
-        await PrefsService.addToWatchlist(m, metadataLocale: 'tr');
-        expect(await PrefsService.isInWatchlist(100, false), isTrue);
+        await PrefsLibraryFacade.addToWatchlist(m, metadataLocale: 'tr');
+        expect(await PrefsLibraryFacade.isInWatchlist(100, false), isTrue);
 
-        final list = await PrefsService.getWatchlist();
+        final list = await PrefsLibraryFacade.getWatchlist();
         expect(list.length, 1);
         expect(list.first.id, 100);
 
-        await PrefsService.removeFromWatchlist(100, false);
-        expect(await PrefsService.isInWatchlist(100, false), isFalse);
-        expect(await PrefsService.getWatchlist(), isEmpty);
+        await PrefsLibraryFacade.removeFromWatchlist(100, false);
+        expect(await PrefsLibraryFacade.isInWatchlist(100, false), isFalse);
+        expect(await PrefsLibraryFacade.getWatchlist(), isEmpty);
       },
     );
 
     test(
       'saveRating and getRating should save and load comment and spoiler tag correctly',
       () async {
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 50,
           isTV: false,
           rating: 3,
@@ -287,13 +309,13 @@ void main() {
           metadataLocale: 'tr',
         );
 
-        final ratingData = await PrefsService.getRating(50, false);
+        final ratingData = await PrefsLibraryFacade.getRating(50, false);
         expect(ratingData, isNotNull);
         expect(ratingData!['rating'], 3);
         expect(ratingData['comment'], 'Highly recommended masterpiece!');
         expect(ratingData['is_spoiler'], 1);
 
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 50,
           isTV: false,
           rating: 2,
@@ -304,7 +326,7 @@ void main() {
           metadataLocale: 'tr',
         );
 
-        final ratingData2 = await PrefsService.getRating(50, false);
+        final ratingData2 = await PrefsLibraryFacade.getRating(50, false);
         expect(ratingData2!['rating'], 2);
         expect(ratingData2['comment'], 'Actually it is just good.');
         expect(ratingData2['is_spoiler'], 0);
@@ -315,13 +337,13 @@ void main() {
     // oldugunu soyler. Sabitlenirse Ingilizce oturumun verisi 'tr' etiketiyle
     // diske yazilir ve dil degisiminde yanlis metin gosterilir.
     test('saveRating verilen dili yazar, sabit deger degil', () async {
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movieId: 4242,
         isTV: false,
         rating: 5,
         metadataLocale: 'en',
       );
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movieId: 4343,
         isTV: false,
         rating: 4,
@@ -345,7 +367,7 @@ void main() {
         overview: '',
         voteAverage: 7.0,
       );
-      await PrefsService.addToWatchlist(movie, metadataLocale: 'en');
+      await PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: 'en');
 
       final rows = await DatabaseHelper().getWatchlistRaw();
       final row = rows.singleWhere((r) => r['id'] == 5151);
@@ -369,8 +391,12 @@ void main() {
           voteAverage: 8.0,
           isTV: true,
         );
-        await PrefsService.saveFavoriteMovies([film], metadataLocale: 'en');
-        await PrefsService.saveFavoriteTvShows([show], metadataLocale: 'tr');
+        await PrefsLibraryFacade.saveFavoriteMovies([
+          film,
+        ], metadataLocale: 'en');
+        await PrefsLibraryFacade.saveFavoriteTvShows([
+          show,
+        ], metadataLocale: 'tr');
 
         final rows = await DatabaseHelper().getFavoritesRaw();
         expect(

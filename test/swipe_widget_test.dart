@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/prefs/app_settings.dart';
 import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/screens/swipe_screen.dart';
 import 'package:ne_izlesem/services/localization_service.dart';
@@ -99,7 +100,7 @@ void main() {
       expect(find.text('Daha fazla yükleniyor...'), findsOneWidget);
 
       // Verify that rating is saved in shared preferences mock database
-      final ratedIds = await PrefsService.getRatedIds();
+      final ratedIds = await PrefsLibraryFacade.getRatedIds();
       expect(ratedIds.contains('movie_1001'), isTrue);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -178,7 +179,7 @@ void main() {
       // ve ikinci kart atlanırdı).
       expect(find.text('1 değerlendirme'), findsOneWidget);
       expect(find.text('2 değerlendirme'), findsNothing);
-      final ratedIds = await PrefsService.getRatedIds();
+      final ratedIds = await PrefsLibraryFacade.getRatedIds();
       expect(ratedIds.length, 1);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

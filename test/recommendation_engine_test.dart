@@ -7,6 +7,7 @@ import 'package:ne_izlesem/models/discovery_context.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
@@ -268,7 +269,7 @@ void main() {
       'buildUserKeywordVector, Berbat (0) ve Eh (1) oylarına negatif ağırlık vermelidir',
       () async {
         // Mock ratings: ID 10 (Harika=3), ID 20 (Berbat=0)
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 10,
           isTV: false,
           rating: 3,
@@ -276,7 +277,7 @@ void main() {
 
           metadataLocale: 'tr',
         );
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 20,
           isTV: false,
           rating: 0,
@@ -324,7 +325,7 @@ void main() {
       () async {
         // Bu bug bir kez geri geldi: -1 else-dalına düşüp Berbat (-2.0) gibi
         // sayılıyordu. Atlanan filmin keyword'ü vektöre HİÇ girmemeli.
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 10,
           isTV: false,
           rating: 3,
@@ -332,7 +333,7 @@ void main() {
 
           metadataLocale: 'tr',
         );
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 30,
           isTV: false,
           rating: -1, // İzlemedim — yargı değil
@@ -386,7 +387,7 @@ void main() {
       'rankForYou, Berbat oylanan filmlerin benzerlerini ve devam serilerini filtrelemelidir',
       () async {
         // Berbat oylanan film: "Iron Man" (ID: 50)
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 50,
           isTV: false,
           rating: 0,
@@ -398,7 +399,7 @@ void main() {
         // Biz "Iron Man" filminin title'ını test veritabanında kaydetmek için saveRating'e movie nesnesini de vermeliyiz.
         // DatabaseHelper mock'u `movie` parametresi verilirse başlığı oradan çeker:
         final movieObj = _movie(50, title: 'Iron Man');
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: movieObj,
           rating: 0,
           metadataLocale: 'tr',
@@ -549,11 +550,16 @@ void main() {
       () async {
         // 1. Favorilere "Fav Movie" (ID: 200) ekle
         final favMovie = _movie(200, title: 'Fav Movie');
-        await PrefsService.saveFavoriteMovies([favMovie], metadataLocale: 'tr');
+        await PrefsLibraryFacade.saveFavoriteMovies([
+          favMovie,
+        ], metadataLocale: 'tr');
 
         // 2. Watchlist'e "Watchlist Movie" (ID: 300) ekle
         final watchMovie = _movie(300, title: 'Watchlist Movie');
-        await PrefsService.addToWatchlist(watchMovie, metadataLocale: 'tr');
+        await PrefsLibraryFacade.addToWatchlist(
+          watchMovie,
+          metadataLocale: 'tr',
+        );
 
         final client = MockClient((request) async {
           // ID 200 ve 300 için mock responses
@@ -636,7 +642,7 @@ void main() {
         // 2. Ratings veritabanına 6 tane "Harika" film kaydet
         for (int i = 1; i <= 6; i++) {
           final movie = _movie(100 + i, title: 'Seed Movie $i');
-          await PrefsService.saveRating(
+          await PrefsLibraryFacade.saveRating(
             movie: movie,
             rating: 3,
             metadataLocale: 'tr',
@@ -712,7 +718,7 @@ void main() {
         final engine = RecommendationEngine(service);
 
         // 1. Birinci filmi oyla (ID: 100)
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: _movie(100, title: 'Action Movie'),
           rating: 3,
 
@@ -725,7 +731,7 @@ void main() {
         expect(vector1.containsKey(20), isFalse);
 
         // 3. İkinci filmi oyla (ID: 200) ama henüz önbelleği temizleme
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: _movie(200, title: 'Scifi Movie'),
           rating: 3,
 

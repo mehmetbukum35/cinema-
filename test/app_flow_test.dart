@@ -7,7 +7,7 @@ import 'package:ne_izlesem/l10n/en.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/providers/swipe_provider.dart';
 import 'package:ne_izlesem/services/providers.dart';
-import 'package:ne_izlesem/services/prefs_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
 
 import 'support/app_flow_mocks.dart';
@@ -164,7 +164,7 @@ Future<void> runRateTabFlowTest(WidgetTester tester) async {
   await container.read(swipeProvider.notifier).rate(3);
   await settleUi(tester, steps: 15);
 
-  final ratedIds = await PrefsService.getRatedIds();
+  final ratedIds = await PrefsLibraryFacade.getRatedIds();
   expect(ratedIds.contains('movie_1001'), isTrue);
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/cultural_preference_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,7 +54,7 @@ void main() {
 
   test('learnFromRatings ignores private ratings', () async {
     for (var i = 0; i < 6; i++) {
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: Movie(
           id: i + 1,
           title: 'Private Korean $i',

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/top_list_provider.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -74,7 +75,7 @@ void main() {
     test(
       'load exposes stored favorites and triggers sync when authed',
       () async {
-        await PrefsService.saveFavoriteMovies([
+        await PrefsLibraryFacade.saveFavoriteMovies([
           _movie(1),
           _movie(2),
         ], metadataLocale: 'tr');
@@ -179,7 +180,7 @@ void main() {
     });
 
     test('remove drops the item', () async {
-      await PrefsService.saveFavoriteMovies([
+      await PrefsLibraryFacade.saveFavoriteMovies([
         _movie(1),
         _movie(2),
         _movie(3),
@@ -198,7 +199,7 @@ void main() {
     });
 
     test('reorder moves an item to the new rank', () async {
-      await PrefsService.saveFavoriteMovies([
+      await PrefsLibraryFacade.saveFavoriteMovies([
         _movie(1),
         _movie(2),
         _movie(3),
@@ -218,8 +219,10 @@ void main() {
     });
 
     test('movie and tv lists are isolated', () async {
-      await PrefsService.saveFavoriteMovies([_movie(1)], metadataLocale: 'tr');
-      await PrefsService.saveFavoriteTvShows([
+      await PrefsLibraryFacade.saveFavoriteMovies([
+        _movie(1),
+      ], metadataLocale: 'tr');
+      await PrefsLibraryFacade.saveFavoriteTvShows([
         _movie(2, isTV: true),
       ], metadataLocale: 'tr');
       container = buildContainer(authed: false);
@@ -236,7 +239,7 @@ void main() {
 
     test('onboarding merge does not clobber an existing Top 20', () async {
       // Kullanıcının mevcut listesi (5 film).
-      await PrefsService.saveFavoriteMovies([
+      await PrefsLibraryFacade.saveFavoriteMovies([
         _movie(1),
         _movie(2),
         _movie(3),
@@ -245,32 +248,32 @@ void main() {
       ], metadataLocale: 'tr');
 
       // Onboarding tekrar çalışır ve 3 seçim gönderir (biri zaten listede).
-      await PrefsService.mergeFavoriteMovies([
+      await PrefsLibraryFacade.mergeFavoriteMovies([
         _movie(1),
         _movie(6),
         _movie(7),
       ], metadataLocale: 'tr');
 
-      final result = await PrefsService.getFavoriteMovies();
+      final result = await PrefsLibraryFacade.getFavoriteMovies();
       expect(result.map((m) => m.id).toList(), [1, 2, 3, 4, 5, 6, 7]);
     });
 
     test('merge respects the 20 cap', () async {
       final twenty = [for (var id = 1; id <= 20; id++) _movie(id)];
-      await PrefsService.saveFavoriteMovies(twenty, metadataLocale: 'tr');
+      await PrefsLibraryFacade.saveFavoriteMovies(twenty, metadataLocale: 'tr');
 
-      await PrefsService.mergeFavoriteMovies([
+      await PrefsLibraryFacade.mergeFavoriteMovies([
         _movie(21),
         _movie(22),
       ], metadataLocale: 'tr');
 
-      final result = await PrefsService.getFavoriteMovies();
+      final result = await PrefsLibraryFacade.getFavoriteMovies();
       expect(result, hasLength(20));
       expect(result.every((m) => m.id <= 20), isTrue);
     });
 
     test('add while loading preserves existing items', () async {
-      await PrefsService.saveFavoriteMovies([
+      await PrefsLibraryFacade.saveFavoriteMovies([
         _movie(1),
         _movie(2),
       ], metadataLocale: 'tr');
@@ -281,7 +284,7 @@ void main() {
       final added = await notifier.add(_movie(3));
       expect(added, isTrue);
 
-      final list = await PrefsService.getFavoriteMovies();
+      final list = await PrefsLibraryFacade.getFavoriteMovies();
       expect(list.map((m) => m.id).toList(), [1, 2, 3]);
     });
   });

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ne_izlesem/services/prefs_service.dart';
+import 'package:ne_izlesem/services/prefs/taste_prefs.dart';
 
 void main() {
   group('Cosine Similarity & Recommendation Math Tests', () {
@@ -8,7 +8,7 @@ void main() {
       () {
         final userVector = <int, double>{};
         final movieGenres = [28, 12]; // Action, Adventure
-        final similarity = PrefsService.calculateSimilarity(
+        final similarity = PrefsTastePrefs.calculateSimilarity(
           userVector,
           movieGenres,
         );
@@ -21,7 +21,7 @@ void main() {
       () {
         final userVector = {28: 3.0, 12: 2.0};
         final movieGenres = <int>[];
-        final similarity = PrefsService.calculateSimilarity(
+        final similarity = PrefsTastePrefs.calculateSimilarity(
           userVector,
           movieGenres,
         );
@@ -34,7 +34,7 @@ void main() {
       () {
         final userVector = {28: 2.0}; // Action only
         final movieGenres = [28]; // Action movie
-        final similarity = PrefsService.calculateSimilarity(
+        final similarity = PrefsTastePrefs.calculateSimilarity(
           userVector,
           movieGenres,
         );
@@ -51,7 +51,7 @@ void main() {
       () {
         final userVector = {28: 3.0, 12: 1.0}; // Action and Adventure weights
         final movieGenres = [28, 35]; // Action and Comedy movie
-        final similarity = PrefsService.calculateSimilarity(
+        final similarity = PrefsTastePrefs.calculateSimilarity(
           userVector,
           movieGenres,
         );
@@ -73,7 +73,7 @@ void main() {
 
         // Case A: Action + Adventure movie (no Horror)
         final movieA = [28, 12];
-        final simA = PrefsService.calculateSimilarity(userVector, movieA);
+        final simA = PrefsTastePrefs.calculateSimilarity(userVector, movieA);
         // Dot product: 3.0
         // Norm user: sqrt(3^2 + (-2)^2) = sqrt(13) = 3.605
         // Norm movie: sqrt(2) = 1.414
@@ -81,7 +81,7 @@ void main() {
 
         // Case B: Action + Horror movie (contains Horror)
         final movieB = [28, 27];
-        final simB = PrefsService.calculateSimilarity(userVector, movieB);
+        final simB = PrefsTastePrefs.calculateSimilarity(userVector, movieB);
         // Dot product: 3.0 * 1 + (-2.0) * 1 = 1.0
         // Norm user: sqrt(13) = 3.605
         // Norm movie: sqrt(2) = 1.414
@@ -95,8 +95,8 @@ void main() {
     test(
       'mixed preferences should yield lower score than pure liked matches',
       () {
-        final pureLiked = PrefsService.calculateSimilarity({28: 5.0}, [28]);
-        final mixed = PrefsService.calculateSimilarity(
+        final pureLiked = PrefsTastePrefs.calculateSimilarity({28: 5.0}, [28]);
+        final mixed = PrefsTastePrefs.calculateSimilarity(
           {28: 5.0, 27: -2.0},
           [28, 27],
         );
@@ -105,7 +105,7 @@ void main() {
     );
 
     test('purely disliked genres should yield negative similarity score', () {
-      final similarity = PrefsService.calculateSimilarity({27: -2.0}, [27]);
+      final similarity = PrefsTastePrefs.calculateSimilarity({27: -2.0}, [27]);
       expect(similarity, lessThan(0.0));
       expect(similarity, closeTo(-1.0, 0.0001));
     });

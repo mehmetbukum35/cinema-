@@ -10,6 +10,7 @@ import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/cultural_preference_service.dart';
 import 'package:ne_izlesem/services/prefs/auth_storage.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
@@ -481,7 +482,7 @@ void main() {
         // Set last authenticated user id to '1'
         await PrefsAuthStorage.setLastAuthenticatedUserId('1');
         // Mock ratings data in DatabaseHelper to simulate local data
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 123,
           isTV: false,
           rating: 3,
@@ -518,7 +519,7 @@ void main() {
 
         // Set last authenticated user id to '1'
         await PrefsAuthStorage.setLastAuthenticatedUserId('1');
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 123,
           isTV: false,
           rating: 3,
@@ -558,7 +559,7 @@ void main() {
 
         await PrefsAuthStorage.setLastAuthenticatedUserId('1');
         // Conflict, hasAnyLocalData gerektirir.
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 55,
           isTV: false,
           rating: 2,
@@ -589,7 +590,7 @@ void main() {
 
         // Set last authenticated user id to null (guest mode)
         await PrefsAuthStorage.setLastAuthenticatedUserId(null);
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 123,
           isTV: false,
           rating: 3,
@@ -848,7 +849,7 @@ void main() {
       () async {
         final notifier = container.read(authProvider.notifier);
         await notifier.login('test@example.com', 'secret123');
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 77,
           isTV: false,
           rating: 4,

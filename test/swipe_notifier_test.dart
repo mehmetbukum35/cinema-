@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
 import 'package:ne_izlesem/providers/swipe_provider.dart';
@@ -50,7 +51,7 @@ void main() {
 
         // Set up pre-rated movies in mock SharedPreferences/DB
         // Movie 1 (id: 1) is already rated
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movieId: 1,
           isTV: false,
           rating: 3,
@@ -147,7 +148,7 @@ void main() {
         expect(notifier.state.ratedIds.contains(expectedKey), isTrue);
 
         // Verify that it saved to DatabaseHelper
-        var ratedIds = await PrefsService.getRatedIds();
+        var ratedIds = await PrefsLibraryFacade.getRatedIds();
         expect(ratedIds.contains(expectedKey), isTrue);
 
         // Undo should bring current back to 0
@@ -156,7 +157,7 @@ void main() {
         expect(notifier.state.ratedIds.contains(expectedKey), isFalse);
 
         // Verify that it rolled back in DB
-        ratedIds = await PrefsService.getRatedIds();
+        ratedIds = await PrefsLibraryFacade.getRatedIds();
         expect(ratedIds.contains(expectedKey), isFalse);
       },
     );

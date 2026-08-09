@@ -156,87 +156,151 @@ class PrefsService {
   @Deprecated('Use PrefsSyncMeta.getSyncDeviceId instead')
   static Future<String> getSyncDeviceId() => PrefsSyncMeta.getSyncDeviceId();
 
+  /// Prefer [PrefsTastePrefs.recordRecoOutcome].
+  @Deprecated('Use PrefsTastePrefs.recordRecoOutcome instead')
   static Future<void> recordRecoOutcome({required String source, required bool liked}) =>
       PrefsTastePrefs.recordRecoOutcome(source: source, liked: liked);
 
+  /// Prefer [PrefsTastePrefs.revertRecoOutcome].
+  @Deprecated('Use PrefsTastePrefs.revertRecoOutcome instead')
   static Future<void> revertRecoOutcome({required String source, required bool liked}) =>
       PrefsTastePrefs.revertRecoOutcome(source: source, liked: liked);
 
+  /// Prefer [PrefsTastePrefs.getRecoTelemetry].
+  @Deprecated('Use PrefsTastePrefs.getRecoTelemetry instead')
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() =>
       PrefsTastePrefs.getRecoTelemetry();
 
+  /// Prefer [PrefsTastePrefs.shouldAskDismissFeedback].
+  @Deprecated('Use PrefsTastePrefs.shouldAskDismissFeedback instead')
   static Future<bool> shouldAskDismissFeedback({required int matchScore}) =>
       PrefsTastePrefs.shouldAskDismissFeedback(matchScore: matchScore);
 
+  /// Prefer [PrefsTastePrefs.recordDismissFeedback].
+  @Deprecated('Use PrefsTastePrefs.recordDismissFeedback instead')
   static Future<void> recordDismissFeedback({
     required String movieKey,
     required String reason,
     required String source,
   }) => PrefsTastePrefs.recordDismissFeedback(movieKey: movieKey, reason: reason, source: source);
 
+  /// Prefer [PrefsTastePrefs.getDismissFeedback].
+  @Deprecated('Use PrefsTastePrefs.getDismissFeedback instead')
   static Future<List<Map<String, dynamic>>> getDismissFeedback() =>
       PrefsTastePrefs.getDismissFeedback();
 
+  /// Prefer [PrefsTastePrefs.getLikedGenreIds].
+  @Deprecated('Use PrefsTastePrefs.getLikedGenreIds instead')
   static Future<List<int>> getLikedGenreIds() => PrefsTastePrefs.getLikedGenreIds();
 
+  /// Prefer [PrefsTastePrefs.sampleLikedGenreIds].
+  @Deprecated('Use PrefsTastePrefs.sampleLikedGenreIds instead')
   static Future<List<int>> sampleLikedGenreIds(Random rng, {int count = 3}) =>
       PrefsTastePrefs.sampleLikedGenreIds(rng, count: count);
 
+  /// Prefer [PrefsTastePrefs.getRecoImpressions].
+  @Deprecated('Use PrefsTastePrefs.getRecoImpressions instead')
   static Future<Map<String, int>> getRecoImpressions() => PrefsTastePrefs.getRecoImpressions();
 
+  /// Prefer [PrefsTastePrefs.recordRecoImpressions].
+  @Deprecated('Use PrefsTastePrefs.recordRecoImpressions instead')
   static Future<void> recordRecoImpressions(List<String> keys) =>
       PrefsTastePrefs.recordRecoImpressions(keys);
 
+  /// Prefer [PrefsTastePrefs.getTonightHistory].
+  @Deprecated('Use PrefsTastePrefs.getTonightHistory instead')
   static Future<Map<String, int>> getTonightHistory() => PrefsTastePrefs.getTonightHistory();
 
+  /// Prefer [PrefsTastePrefs.recordTonightPick].
+  @Deprecated('Use PrefsTastePrefs.recordTonightPick instead')
   static Future<void> recordTonightPick(String key) => PrefsTastePrefs.recordTonightPick(key);
 
+  /// Prefer [PrefsTastePrefs.invalidateGenreWeights].
+  @Deprecated('Use PrefsTastePrefs.invalidateGenreWeights instead')
   static void invalidateGenreWeights() => PrefsTastePrefs.invalidateGenreWeights();
 
+  /// Prefer [PrefsTastePrefs.getGenreWeights].
+  @Deprecated('Use PrefsTastePrefs.getGenreWeights instead')
   static Future<Map<int, double>> getGenreWeights() => PrefsTastePrefs.getGenreWeights();
 
+  /// Prefer [PrefsTastePrefs.calculateSimilarity].
+  @Deprecated('Use PrefsTastePrefs.calculateSimilarity instead')
   static double calculateSimilarity(Map<int, double> userVector, List<int> movieGenres) =>
       PrefsTastePrefs.calculateSimilarity(userVector, movieGenres);
 
+  /// Prefer [PrefsTastePrefs.getCachedDna].
+  @Deprecated('Use PrefsTastePrefs.getCachedDna instead')
   static Future<Map<String, String>?> getCachedDna() => PrefsTastePrefs.getCachedDna();
 
+  /// Prefer [PrefsTastePrefs.cacheDna].
+  @Deprecated('Use PrefsTastePrefs.cacheDna instead')
   static Future<void> cacheDna(String json, String hash) => PrefsTastePrefs.cacheDna(json, hash);
 
+  /// Prefer [PrefsTastePrefs.getLastPublishedDnaHash].
+  @Deprecated('Use PrefsTastePrefs.getLastPublishedDnaHash instead')
   static Future<String?> getLastPublishedDnaHash() => PrefsTastePrefs.getLastPublishedDnaHash();
 
+  /// Prefer [PrefsTastePrefs.setLastPublishedDnaHash].
+  @Deprecated('Use PrefsTastePrefs.setLastPublishedDnaHash instead')
   static Future<void> setLastPublishedDnaHash(String? hash) =>
       PrefsTastePrefs.setLastPublishedDnaHash(hash);
 
+  /// Prefer [PrefsTastePrefs.clearDnaCache].
+  @Deprecated('Use PrefsTastePrefs.clearDnaCache instead')
   static Future<void> clearDnaCache() => PrefsTastePrefs.clearDnaCache();
 
+  /// Prefer [PrefsTastePrefs.dnaMilestones].
+  @Deprecated('Use PrefsTastePrefs.dnaMilestones instead')
   static const dnaMilestones = PrefsTastePrefs.dnaMilestones;
 
+  /// Prefer [PrefsTastePrefs.pendingDnaMilestone].
+  @Deprecated('Use PrefsTastePrefs.pendingDnaMilestone instead')
   static Future<int?> pendingDnaMilestone(int ratingCount) =>
       PrefsTastePrefs.pendingDnaMilestone(ratingCount);
 
+  /// Prefer [PrefsTastePrefs.markDnaMilestoneShown].
+  @Deprecated('Use PrefsTastePrefs.markDnaMilestoneShown instead')
   static Future<void> markDnaMilestoneShown(int threshold) =>
       PrefsTastePrefs.markDnaMilestoneShown(threshold);
 
+  /// Prefer [PrefsLibraryFacade.getFavoriteMovies].
+  @Deprecated('Use PrefsLibraryFacade.getFavoriteMovies instead')
   static Future<List<Movie>> getFavoriteMovies() => PrefsLibraryFacade.getFavoriteMovies();
 
+  /// Prefer [PrefsLibraryFacade.getFavoriteTvShows].
+  @Deprecated('Use PrefsLibraryFacade.getFavoriteTvShows instead')
   static Future<List<Movie>> getFavoriteTvShows() => PrefsLibraryFacade.getFavoriteTvShows();
 
+  /// Prefer [PrefsLibraryFacade.saveFavoriteMovies].
+  @Deprecated('Use PrefsLibraryFacade.saveFavoriteMovies instead')
   static Future<void> saveFavoriteMovies(List<Movie> movies, {required String metadataLocale}) =>
       PrefsLibraryFacade.saveFavoriteMovies(movies, metadataLocale: metadataLocale);
 
+  /// Prefer [PrefsLibraryFacade.saveFavoriteTvShows].
+  @Deprecated('Use PrefsLibraryFacade.saveFavoriteTvShows instead')
   static Future<void> saveFavoriteTvShows(List<Movie> shows, {required String metadataLocale}) =>
       PrefsLibraryFacade.saveFavoriteTvShows(shows, metadataLocale: metadataLocale);
 
+  /// Prefer [PrefsLibraryFacade.favoritesCap].
+  @Deprecated('Use PrefsLibraryFacade.favoritesCap instead')
   static const favoritesCap = PrefsLibraryFacade.favoritesCap;
 
+  /// Prefer [PrefsLibraryFacade.favoriteRankWeight].
+  @Deprecated('Use PrefsLibraryFacade.favoriteRankWeight instead')
   static double favoriteRankWeight(int rank) => PrefsLibraryFacade.favoriteRankWeight(rank);
 
+  /// Prefer [PrefsLibraryFacade.mergeFavoriteMovies].
+  @Deprecated('Use PrefsLibraryFacade.mergeFavoriteMovies instead')
   static Future<void> mergeFavoriteMovies(List<Movie> picks, {required String metadataLocale}) =>
       PrefsLibraryFacade.mergeFavoriteMovies(picks, metadataLocale: metadataLocale);
 
+  /// Prefer [PrefsLibraryFacade.mergeFavoriteTvShows].
+  @Deprecated('Use PrefsLibraryFacade.mergeFavoriteTvShows instead')
   static Future<void> mergeFavoriteTvShows(List<Movie> picks, {required String metadataLocale}) =>
       PrefsLibraryFacade.mergeFavoriteTvShows(picks, metadataLocale: metadataLocale);
 
+  /// Prefer [PrefsLibraryFacade.saveRating].
+  @Deprecated('Use PrefsLibraryFacade.saveRating instead')
   static Future<void> saveRating({
     Movie? movie,
     int? movieId,
@@ -259,44 +323,76 @@ class PrefsService {
     metadataLocale: metadataLocale,
   );
 
+  /// Prefer [PrefsLibraryFacade.getRating].
+  @Deprecated('Use PrefsLibraryFacade.getRating instead')
   static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) =>
       PrefsLibraryFacade.getRating(movieId, isTV);
 
+  /// Prefer [PrefsLibraryFacade.deleteComment].
+  @Deprecated('Use PrefsLibraryFacade.deleteComment instead')
   static Future<void> deleteComment(int movieId, bool isTV) =>
       PrefsLibraryFacade.deleteComment(movieId, isTV);
 
+  /// Prefer [PrefsLibraryFacade.getCommentedRatings].
+  @Deprecated('Use PrefsLibraryFacade.getCommentedRatings instead')
   static Future<List<Map<String, dynamic>>> getCommentedRatings() =>
       PrefsLibraryFacade.getCommentedRatings();
 
+  /// Prefer [PrefsLibraryFacade.getRatedIds].
+  @Deprecated('Use PrefsLibraryFacade.getRatedIds instead')
   static Future<Set<String>> getRatedIds() => PrefsLibraryFacade.getRatedIds();
 
+  /// Prefer [PrefsLibraryFacade.deleteRating].
+  @Deprecated('Use PrefsLibraryFacade.deleteRating instead')
   static Future<void> deleteRating(int movieId, bool isTV) =>
       PrefsLibraryFacade.deleteRating(movieId, isTV);
 
+  /// Prefer [PrefsLibraryFacade.getRatingCount].
+  @Deprecated('Use PrefsLibraryFacade.getRatingCount instead')
   static Future<int> getRatingCount() => PrefsLibraryFacade.getRatingCount();
 
+  /// Prefer [PrefsLibraryFacade.getStats].
+  @Deprecated('Use PrefsLibraryFacade.getStats instead')
   static Future<Map<String, dynamic>> getStats() => PrefsLibraryFacade.getStats();
 
+  /// Prefer [PrefsLibraryFacade.addToWatchlist].
+  @Deprecated('Use PrefsLibraryFacade.addToWatchlist instead')
   static Future<void> addToWatchlist(Movie movie, {required String metadataLocale}) =>
       PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: metadataLocale);
 
+  /// Prefer [PrefsLibraryFacade.removeFromWatchlist].
+  @Deprecated('Use PrefsLibraryFacade.removeFromWatchlist instead')
   static Future<void> removeFromWatchlist(int id, bool isTV) =>
       PrefsLibraryFacade.removeFromWatchlist(id, isTV);
 
+  /// Prefer [PrefsLibraryFacade.isInWatchlist].
+  @Deprecated('Use PrefsLibraryFacade.isInWatchlist instead')
   static Future<bool> isInWatchlist(int id, bool isTV) =>
       PrefsLibraryFacade.isInWatchlist(id, isTV);
 
+  /// Prefer [PrefsLibraryFacade.getWatchlist].
+  @Deprecated('Use PrefsLibraryFacade.getWatchlist instead')
   static Future<List<Movie>> getWatchlist() => PrefsLibraryFacade.getWatchlist();
 
+  /// Prefer [PrefsLibraryFacade.addSearchHistory].
+  @Deprecated('Use PrefsLibraryFacade.addSearchHistory instead')
   static Future<void> addSearchHistory(String query) => PrefsLibraryFacade.addSearchHistory(query);
 
+  /// Prefer [PrefsLibraryFacade.getSearchHistory].
+  @Deprecated('Use PrefsLibraryFacade.getSearchHistory instead')
   static Future<List<String>> getSearchHistory() => PrefsLibraryFacade.getSearchHistory();
 
+  /// Prefer [PrefsLibraryFacade.clearSearchHistory].
+  @Deprecated('Use PrefsLibraryFacade.clearSearchHistory instead')
   static Future<void> clearSearchHistory() => PrefsLibraryFacade.clearSearchHistory();
 
+  /// Prefer [PrefsLibraryFacade.toggleSeason].
+  @Deprecated('Use PrefsLibraryFacade.toggleSeason instead')
   static Future<void> toggleSeason(int tvId, int seasonNumber) =>
       PrefsLibraryFacade.toggleSeason(tvId, seasonNumber);
 
+  /// Prefer [PrefsLibraryFacade.getWatchedSeasons].
+  @Deprecated('Use PrefsLibraryFacade.getWatchedSeasons instead')
   static Future<Set<int>> getWatchedSeasons(int tvId) => PrefsLibraryFacade.getWatchedSeasons(tvId);
 
   /// Bellekte tutulan performans cache'lerini sıfırlar. Diske dokunmaz.
