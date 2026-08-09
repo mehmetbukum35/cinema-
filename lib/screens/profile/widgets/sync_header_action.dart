@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/sync_meta.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
@@ -25,7 +25,7 @@ class _SyncHeaderActionState extends ConsumerState<SyncHeaderAction> {
   }
 
   Future<void> _loadSyncTime() async {
-    final timestamp = await PrefsService.getLastSyncTime();
+    final timestamp = await PrefsSyncMeta.getLastSyncTime();
     if (timestamp == 0) {
       if (mounted) setState(() => _syncTimeStr = null);
       return;

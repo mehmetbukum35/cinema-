@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
 import 'prefs/auth_storage.dart';
+import 'prefs/sync_meta.dart';
 import 'prefs_service.dart';
 import 'api_service.dart';
 import 'providers.dart';
@@ -220,7 +221,7 @@ class SyncService {
         if (pendingLocalChanges.values.any((rows) => rows.isNotEmpty)) {
           // The full pull advances both cursors. Rewind only the push cursor so
           // the preserved offline edits are uploaded on a second pass.
-          await PrefsService.setLastPushTime(0);
+          await PrefsSyncMeta.setLastPushTime(0);
           await _performSync();
         }
       } catch (e) {
@@ -234,7 +235,7 @@ class SyncService {
     final pending = <String, List<Map<String, Object?>>>{};
     final db = await DatabaseHelper().database;
     if (db != null) {
-      final lastPush = await PrefsService.getLastPushTime();
+      final lastPush = await PrefsSyncMeta.getLastPushTime();
       await db.transaction((txn) async {
         for (final table in const [
           'ratings',
@@ -252,8 +253,8 @@ class SyncService {
         }
       });
     }
-    await PrefsService.setLastSyncTime(0);
-    await PrefsService.setLastPushTime(0);
+    await PrefsSyncMeta.setLastSyncTime(0);
+    await PrefsSyncMeta.setLastPushTime(0);
     PrefsService.invalidateGenreWeights();
     await _ref?.read(recommendationEngineProvider).invalidateCache();
     _ref?.invalidate(watchlistProvider);
@@ -322,8 +323,8 @@ class SyncService {
     // Tek imleç kullanılırsa cihaz saati sunucudan gerideyken sync sonrası
     // yapılan değişiklikler updated_at < server_time kaldığı için asla push
     // edilmez (sessiz veri kaybı).
-    final lastPull = await PrefsService.getLastSyncTime();
-    final lastPush = await PrefsService.getLastPushTime();
+    final lastPull = await PrefsSyncMeta.getLastSyncTime();
+    final lastPush = await PrefsSyncMeta.getLastPushTime();
     final db = await DatabaseHelper().database;
     if (db == null) {
       // Web / FLUTTER_TEST mock storage: no SQLite, but cloud handshake still runs.
@@ -357,7 +358,7 @@ class SyncService {
       final serverTime = _asInt(pullResult['server_time']);
       await _applyRemoteCulturalPreferences(pullResult);
       await _ensureSession(sessionUserId);
-      await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
+      await PrefsSyncMeta.setLastSyncTime(_overlappingCursor(serverTime));
       PrefsService.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
       debugPrint(
@@ -532,7 +533,7 @@ class SyncService {
         ? _overlappingCursor(pushedMax)
         : lastPush;
     if (pushedMax > lastPush) {
-      await PrefsService.setLastPushTime(nextPushCursor);
+      await PrefsSyncMeta.setLastPushTime(nextPushCursor);
     }
 
     // 2. PULL remote changes (ilk sync'te earlyPull zaten alındı).
@@ -750,7 +751,7 @@ class SyncService {
 
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await _ensureSession(sessionUserId);
-    await PrefsService.setLastSyncTime(_overlappingCursor(serverTime));
+    await PrefsSyncMeta.setLastSyncTime(_overlappingCursor(serverTime));
     PrefsService.invalidateGenreWeights();
 
     // Invalidate recommendation engine cache and DNA cache
@@ -890,9 +891,9 @@ class SyncService {
     final applied = await _pushPayloadInChunks(payload, sessionUserId);
     final pushedMax = _maxUpdatedAtInPayload(payload);
     if (pushedMax > 0) {
-      final lastPush = await PrefsService.getLastPushTime();
+      final lastPush = await PrefsSyncMeta.getLastPushTime();
       if (pushedMax > lastPush) {
-        await PrefsService.setLastPushTime(_overlappingCursor(pushedMax));
+        await PrefsSyncMeta.setLastPushTime(_overlappingCursor(pushedMax));
       }
     }
     debugPrint(

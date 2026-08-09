@@ -105,8 +105,8 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       await PrefsService.clearAccountScopedPreferences();
     }
     // Set sync timestamps to 0 so we fetch/push appropriately on new login session
-    await PrefsService.setLastSyncTime(0);
-    await PrefsService.setLastPushTime(0);
+    await PrefsSyncMeta.setLastSyncTime(0);
+    await PrefsSyncMeta.setLastPushTime(0);
 
     await PrefsAuthStorage.saveTokens(
       accessToken: tokens['access_token'] as String,

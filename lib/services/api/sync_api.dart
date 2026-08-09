@@ -6,7 +6,7 @@ mixin SyncApi on ApiClient {
     int since, {
     bool localReset = false,
   }) async {
-    final deviceId = await PrefsService.getSyncDeviceId();
+    final deviceId = await PrefsSyncMeta.getSyncDeviceId();
     final localResetQuery = localReset ? '&local_reset=1' : '';
     final response = await _request(
       'GET',
@@ -28,8 +28,8 @@ mixin SyncApi on ApiClient {
 
   Future<Map<String, dynamic>> push(Map<String, dynamic> payload) async {
     final enrichedPayload = Map<String, dynamic>.from(payload);
-    enrichedPayload['device_id'] ??= await PrefsService.getSyncDeviceId();
-    enrichedPayload['ack_cursor'] ??= await PrefsService.getLastSyncTime();
+    enrichedPayload['device_id'] ??= await PrefsSyncMeta.getSyncDeviceId();
+    enrichedPayload['ack_cursor'] ??= await PrefsSyncMeta.getLastSyncTime();
     final response = await _request(
       'POST',
       '/sync',

@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'prefs_service.dart';
+import 'prefs/sync_meta.dart';
 
 enum RecommendationExperimentVariant { control, personalization }
 
@@ -51,7 +51,7 @@ class RecommendationExperimentService {
       return personalization;
     }
 
-    final deviceId = await PrefsService.getSyncDeviceId();
+    final deviceId = await PrefsSyncMeta.getSyncDeviceId();
     final assignment = assignmentFor(deviceId);
     await prefs.setString(_key, assignment.variant.name);
     return assignment;

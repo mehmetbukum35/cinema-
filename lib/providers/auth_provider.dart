@@ -9,6 +9,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../services/api_service.dart';
 import '../services/app_config.dart';
 import '../services/prefs/auth_storage.dart';
+import '../services/prefs/sync_meta.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
 import '../services/sync_service.dart';

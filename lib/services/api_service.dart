@@ -10,6 +10,7 @@ import '../models/social.dart';
 import 'app_config.dart';
 import 'crash_reporting_service.dart';
 import 'prefs/auth_storage.dart';
+import 'prefs/sync_meta.dart';
 import 'prefs_service.dart';
 
 part 'api/auth_api.dart';
