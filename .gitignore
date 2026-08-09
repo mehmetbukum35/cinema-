@@ -54,6 +54,7 @@ app.*.map.json
 # Local development and workspace configurations
 .claude/
 .cursor/
+.superpowers/
 .worktrees/
 .env
 graphify-out/
