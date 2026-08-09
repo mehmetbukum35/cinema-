@@ -2,10 +2,16 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/TasteDnaWebText.php';
+require_once __DIR__ . '/SocialWebProfileCatalog.php';
 
 class SocialWebRenderer
 {
-    public function __construct(private PDO $db) {}
+    private SocialWebProfileCatalog $catalog;
+
+    public function __construct(private PDO $db, ?SocialWebProfileCatalog $catalog = null)
+    {
+        $this->catalog = $catalog ?? new SocialWebProfileCatalog($db);
+    }
 
     public function renderPublicWebProfile(string $username): void
     {
@@ -49,8 +55,8 @@ class SocialWebRenderer
 
             // Kişisel Top 20: favorites.created_at bir zaman damgası değil, kullanıcının
             // açıkça belirlediği 0-tabanlı sırasıdır. Film ve dizi listeleri ayrı tutulur.
-            $topMovies = $this->loadTopList($userId, false, $lang);
-            $topShows = $this->loadTopList($userId, true, $lang);
+            $topMovies = $this->catalog->loadTopList($userId, false, $lang);
+            $topShows = $this->catalog->loadTopList($userId, true, $lang);
 
             $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
             $userHandle = htmlspecialchars($user['username']);
@@ -256,32 +262,6 @@ class SocialWebRenderer
             'sub_movies'      => 'Filmler',
             'sub_tv'          => 'Diziler',
         ];
-    }
-
-    /** @return array<int, array<string, mixed>> */
-    private function loadTopList(int $userId, bool $isTv, string $lang): array
-    {
-        $st = $this->db->prepare(
-            'SELECT f.id AS movie_id, f.is_tv,
-                    COALESCE(t.title, tf.title) AS title,
-                    COALESCE(t.poster_path, tf.poster_path) AS poster_path,
-                    COALESCE(t.backdrop_path, tf.backdrop_path) AS backdrop_path,
-                    COALESCE(t.vote_average, tf.vote_average) AS vote_average,
-                    COALESCE(t.release_date, tf.release_date) AS release_date
-             FROM favorites f
-             LEFT JOIN titles t ON t.tmdb_id = f.id AND t.is_tv = f.is_tv AND t.locale = ?
-             LEFT JOIN titles tf ON tf.tmdb_id = f.id AND tf.is_tv = f.is_tv AND tf.locale = \'und\'
-             WHERE f.user_id = ? AND f.is_tv = ? AND f.deleted = 0
-             ORDER BY f.created_at ASC, f.id ASC
-             LIMIT 20'
-        );
-        $st->execute([$lang, $userId, $isTv ? 1 : 0]);
-        $rows = $st->fetchAll();
-        foreach ($rows as $index => &$row) {
-            $row['rank'] = $index + 1;
-        }
-        unset($row);
-        return $rows;
     }
 
     // Yardımcı: Şık Hata Sayfası oluşturucu (Web için)

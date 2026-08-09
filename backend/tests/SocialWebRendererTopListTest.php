@@ -4,10 +4,11 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../src/SocialWebRenderer.php';
+require_once __DIR__ . '/../src/SocialWebProfileCatalog.php';
 
 final class SocialWebRendererTopListTest extends TestCase
 {
-    public function testLoadsSeparatedTopTwentyInUserOrderWithLocaleFallback(): void
+    public function testCatalogLoadsSeparatedTopTwentyInUserOrderWithLocaleFallback(): void
     {
         $db = new PDO('sqlite::memory:');
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -22,17 +23,22 @@ final class SocialWebRendererTopListTest extends TestCase
             (103, 0, 'und', 'Fallback Film', '/2.jpg', NULL, 8.4, '2002-01-01'),
             (201, 1, 'tr', 'Birinci Dizi', '/tv.jpg', '/tvb.jpg', 9.0, '2020-01-01')");
 
-        $renderer = new SocialWebRenderer($db);
-        $method = (new ReflectionClass($renderer))->getMethod('loadTopList');
-        $movies = $method->invoke($renderer, 7, false, 'tr');
-        $shows = $method->invoke($renderer, 7, true, 'tr');
+        for ($id = 300; $id < 322; $id++) {
+            $db->prepare('INSERT INTO favorites VALUES (7, ?, 0, ?, 0)')->execute([$id, $id]);
+            $db->prepare("INSERT INTO titles VALUES (?, 0, 'tr', ?, NULL, NULL, 0, NULL)")
+                ->execute([$id, 'Film ' . $id]);
+        }
 
-        $this->assertSame([102, 103, 101], array_map('intval', array_column($movies, 'movie_id')));
-        $this->assertSame([1, 2, 3], array_column($movies, 'rank'));
-        $this->assertSame('Fallback Film', $movies[1]['title']);
-        $this->assertSame('/1b.jpg', $movies[0]['backdrop_path']);
-        $this->assertCount(1, $shows);
-        $this->assertSame(201, (int) $shows[0]['movie_id']);
+        $catalog = new SocialWebProfileCatalog($db);
+        $movies = $catalog->loadTopList(7, false, 'tr');
+        $shows = $catalog->loadTopList(7, true, 'tr');
+
+        self::assertCount(20, $movies);
+        self::assertSame([102, 103, 101], array_map('intval', array_column(array_slice($movies, 0, 3), 'movie_id')));
+        self::assertSame(range(1, 20), array_column($movies, 'rank'));
+        self::assertSame('Fallback Film', $movies[1]['title']);
+        self::assertSame('/1b.jpg', $movies[0]['backdrop_path']);
+        self::assertSame([201], array_map('intval', array_column($shows, 'movie_id')));
     }
 
     public function testSocialDelegatesToWebRenderer(): void
@@ -46,9 +52,8 @@ final class SocialWebRendererTopListTest extends TestCase
         $social = new Social($db);
         $this->assertTrue(method_exists($social, 'renderPublicWebProfile'));
 
-        $method = (new ReflectionClass($social))->getMethod('webRenderer');
-        $method->setAccessible(true);
-        $renderer = $method->invoke($social);
-        $this->assertInstanceOf(SocialWebRenderer::class, $renderer);
+        $renderer = $social->webRenderer();
+        self::assertInstanceOf(SocialWebRenderer::class, $renderer);
+        self::assertSame($renderer, $social->webRenderer());
     }
 }
