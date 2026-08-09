@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ne_izlesem/services/prefs/app_settings.dart';
 import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
@@ -222,7 +223,7 @@ void main() {
 
         // Overlay should be dismissed
         expect(find.text('Discovery Gestures'), findsNothing);
-        expect(await PrefsService.isSwipeGuideShown(), isTrue);
+        expect(await PrefsAppSettings.isSwipeGuideShown(), isTrue);
       },
     );
   });

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/main.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
+import 'package:ne_izlesem/services/prefs/app_settings.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/providers.dart';
 
@@ -58,7 +59,7 @@ void main() {
     await container.read(localeProvider.notifier).setLocale('en');
 
     expect(container.read(localeProvider).languageCode, 'en');
-    expect(await PrefsService.getSelectedLanguage(), 'en');
+    expect(await PrefsAppSettings.getSelectedLanguage(), 'en');
   });
 
   test('apiServiceProvider localeProvider ile ayni dili verir', () async {

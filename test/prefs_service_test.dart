@@ -2,6 +2,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
+import 'package:ne_izlesem/services/prefs/app_settings.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
+import 'package:ne_izlesem/services/prefs/taste_prefs.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -20,7 +23,7 @@ void main() {
       'getLikedGenreIds should calculate correct weighted genre ranks',
       () async {
         // 1. Initial genres: Action (28), comedy (35) -> Weight 1 each
-        await PrefsService.saveInitialGenres([28, 35]);
+        await PrefsTastePrefs.saveInitialGenres([28, 35]);
 
         // 2. Favourites: Drama (18), Sci-Fi (878) -> Weight 3 each
         // Add one favorite movie with genres [18, 878]
@@ -171,7 +174,7 @@ void main() {
     );
 
     test('resetAll invalidates cached genre weights', () async {
-      await PrefsService.saveInitialGenres([28]);
+      await PrefsTastePrefs.saveInitialGenres([28]);
       expect(await PrefsService.getGenreWeights(), contains(28));
 
       await PrefsService.resetAll();
@@ -392,7 +395,7 @@ void main() {
     test(
       'resetInMemoryCaches cache ile depolama ayristiginda depolamayi okur',
       () async {
-        await PrefsService.saveTokens(
+        await PrefsAuthStorage.saveTokens(
           accessToken: 'cached_value',
           refreshToken: 'cached_refresh',
         );
@@ -402,50 +405,50 @@ void main() {
           value: 'storage_value',
         );
         expect(
-          await PrefsService.getAccessToken(),
+          await PrefsAuthStorage.getAccessToken(),
           'cached_value',
           reason: 'cache canli olmali, aksi halde test bir sey kanitlamaz',
         );
 
         PrefsService.resetInMemoryCaches();
 
-        expect(await PrefsService.getAccessToken(), 'storage_value');
+        expect(await PrefsAuthStorage.getAccessToken(), 'storage_value');
       },
     );
 
     test('saveTokens token depolamaya da yazar, yalniz cache degil', () async {
-      await PrefsService.saveTokens(
+      await PrefsAuthStorage.saveTokens(
         accessToken: 'token_a',
         refreshToken: 'refresh_a',
       );
 
       PrefsService.resetInMemoryCaches();
 
-      expect(await PrefsService.getAccessToken(), 'token_a');
+      expect(await PrefsAuthStorage.getAccessToken(), 'token_a');
     });
 
     test('clearAuthData cache icindeki tokeni da dusurur', () async {
-      await PrefsService.saveTokens(
+      await PrefsAuthStorage.saveTokens(
         accessToken: 'token_b',
         refreshToken: 'refresh_b',
       );
-      expect(await PrefsService.getAccessToken(), 'token_b');
+      expect(await PrefsAuthStorage.getAccessToken(), 'token_b');
 
       await PrefsService.clearAuthData();
 
-      expect(await PrefsService.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
     });
   });
 
   group('PrefsAppSettings (via PrefsService)', () {
     test('tur adi verilen dile gore cozulur', () {
-      expect(PrefsService.genreName(28, locale: 'tr'), 'Aksiyon');
-      expect(PrefsService.genreName(28, locale: 'en'), 'Action');
+      expect(PrefsAppSettings.genreName(28, locale: 'tr'), 'Aksiyon');
+      expect(PrefsAppSettings.genreName(28, locale: 'en'), 'Action');
     });
 
     test('bilinmeyen tur id dile uygun yedek dondurur', () {
-      expect(PrefsService.genreName(999999, locale: 'tr'), 'Bilinmeyen');
-      expect(PrefsService.genreName(999999, locale: 'en'), 'Unknown');
+      expect(PrefsAppSettings.genreName(999999, locale: 'tr'), 'Bilinmeyen');
+      expect(PrefsAppSettings.genreName(999999, locale: 'en'), 'Unknown');
     });
   });
 }

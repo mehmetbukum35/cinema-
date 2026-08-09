@@ -9,6 +9,7 @@ import 'package:ne_izlesem/providers/watchlist_provider.dart';
 import 'package:ne_izlesem/models/cultural_preferences.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/cultural_preference_service.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
@@ -284,8 +285,8 @@ void main() {
       expect(state.user, isNotNull);
       expect(state.user!['email'], 'test@example.com');
 
-      expect(await PrefsService.getAccessToken(), 'test_access');
-      expect(await PrefsService.getRefreshToken(), 'test_refresh');
+      expect(await PrefsAuthStorage.getAccessToken(), 'test_access');
+      expect(await PrefsAuthStorage.getRefreshToken(), 'test_refresh');
     });
 
     test(
@@ -336,7 +337,7 @@ void main() {
       final state = container.read(authProvider);
       expect(state.isAuthenticated, isTrue);
       expect(state.user!['email'], 'reg@example.com');
-      expect(await PrefsService.getAccessToken(), 'reg_access');
+      expect(await PrefsAuthStorage.getAccessToken(), 'reg_access');
     });
 
     test('resendVerificationCode should invoke API', () async {
@@ -363,8 +364,8 @@ void main() {
       expect(state.isAuthenticated, isFalse);
       expect(state.user, isNull);
 
-      expect(await PrefsService.getAccessToken(), isNull);
-      expect(await PrefsService.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
     });
 
     test(
@@ -382,7 +383,7 @@ void main() {
         await notifier.clearSession();
 
         expect(container.read(authProvider).isAuthenticated, isFalse);
-        expect(await PrefsService.getAccessToken(), isNull);
+        expect(await PrefsAuthStorage.getAccessToken(), isNull);
         expect(mockApi.logoutCalled, isFalse);
         expect(localTokenInvalidated, isTrue);
       },
@@ -397,7 +398,7 @@ void main() {
       await notifier.wipeAllData();
 
       expect(container.read(authProvider).isAuthenticated, isFalse);
-      expect(await PrefsService.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
     });
 
     test('changePassword should end session locally', () async {
@@ -432,7 +433,7 @@ void main() {
       expect(success, isTrue);
       expect(mockApi.resetPasswordCalled, isTrue);
       expect(container.read(authProvider).isAuthenticated, isFalse);
-      expect(await PrefsService.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
       expect(localTokenInvalidated, isTrue);
       expect(container.read(socialProvider.notifier), isNot(same(oldSocial)));
       expect(
@@ -478,7 +479,7 @@ void main() {
         final notifier = container.read(authProvider.notifier);
 
         // Set last authenticated user id to '1'
-        await PrefsService.setLastAuthenticatedUserId('1');
+        await PrefsAuthStorage.setLastAuthenticatedUserId('1');
         // Mock ratings data in DatabaseHelper to simulate local data
         await PrefsService.saveRating(
           movieId: 123,
@@ -502,7 +503,7 @@ void main() {
         );
 
         expect(container.read(authProvider).isAuthenticated, isTrue);
-        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect(await PrefsAuthStorage.getLastAuthenticatedUserId(), '2');
         expect(
           await DatabaseHelper().hasAnyLocalData(),
           isTrue,
@@ -516,7 +517,7 @@ void main() {
         final notifier = container.read(authProvider.notifier);
 
         // Set last authenticated user id to '1'
-        await PrefsService.setLastAuthenticatedUserId('1');
+        await PrefsAuthStorage.setLastAuthenticatedUserId('1');
         await PrefsService.saveRating(
           movieId: 123,
           isTV: false,
@@ -538,7 +539,7 @@ void main() {
         );
 
         expect(container.read(authProvider).isAuthenticated, isTrue);
-        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect(await PrefsAuthStorage.getLastAuthenticatedUserId(), '2');
         expect(
           await DatabaseHelper().hasAnyLocalData(),
           isFalse,
@@ -555,7 +556,7 @@ void main() {
       () async {
         final notifier = container.read(authProvider.notifier);
 
-        await PrefsService.setLastAuthenticatedUserId('1');
+        await PrefsAuthStorage.setLastAuthenticatedUserId('1');
         // Conflict, hasAnyLocalData gerektirir.
         await PrefsService.saveRating(
           movieId: 55,
@@ -576,7 +577,7 @@ void main() {
           resolution: ConflictResolution.merge,
         );
 
-        expect(await PrefsService.getLastAuthenticatedUserId(), '2');
+        expect(await PrefsAuthStorage.getLastAuthenticatedUserId(), '2');
         expect((await CulturalPreferenceService.load()).isEmpty, isTrue);
       },
     );
@@ -587,7 +588,7 @@ void main() {
         final notifier = container.read(authProvider.notifier);
 
         // Set last authenticated user id to null (guest mode)
-        await PrefsService.setLastAuthenticatedUserId(null);
+        await PrefsAuthStorage.setLastAuthenticatedUserId(null);
         await PrefsService.saveRating(
           movieId: 123,
           isTV: false,
@@ -629,7 +630,7 @@ void main() {
         expect(mockApi.unlinkGoogleCalled, isTrue);
         expect(container.read(authProvider).user?['google_sub'], isNull);
 
-        final storedUser = await PrefsService.getUserData();
+        final storedUser = await PrefsAuthStorage.getUserData();
         expect(storedUser?['google_sub'], isNull);
       },
     );
@@ -656,7 +657,7 @@ void main() {
         expect(mockApi.unlinkAppleCalled, isTrue);
         expect(container.read(authProvider).user?['apple_sub'], isNull);
 
-        final storedUser = await PrefsService.getUserData();
+        final storedUser = await PrefsAuthStorage.getUserData();
         expect(storedUser?['apple_sub'], isNull);
       },
     );
@@ -699,7 +700,7 @@ void main() {
         await refresh;
 
         expect(container.read(authProvider).isAuthenticated, isFalse);
-        expect(await PrefsService.getUserData(), isNull);
+        expect(await PrefsAuthStorage.getUserData(), isNull);
       },
     );
   });
@@ -839,7 +840,7 @@ void main() {
       expect(state.error, 'auth_err_wrong_password');
       expect(state.loading, isFalse);
       expect(state.isAuthenticated, isTrue);
-      expect(await PrefsService.getAccessToken(), 'test_access');
+      expect(await PrefsAuthStorage.getAccessToken(), 'test_access');
     });
 
     test(
@@ -886,7 +887,7 @@ void main() {
       expect(success, isFalse);
       expect(container.read(authProvider).error, 'auth_err_verify_code_failed');
       expect(container.read(authProvider).isAuthenticated, isTrue);
-      expect(await PrefsService.getAccessToken(), 'test_access');
+      expect(await PrefsAuthStorage.getAccessToken(), 'test_access');
     });
 
     test('unlinkGoogle failure keeps google_sub on the account', () async {
@@ -976,16 +977,16 @@ void main() {
         // Eski kurulumdan gelen cihaz: token + kullanıcı var ama
         // last_authenticated_user_id yazılmamış. Migration satırı düşerse
         // aynı kullanıcının bir sonraki girişi "hesap değişimi" sanılır.
-        await PrefsService.saveTokens(
+        await PrefsAuthStorage.saveTokens(
           accessToken: 'stored_access',
           refreshToken: 'stored_refresh',
         );
-        await PrefsService.saveUserData({
+        await PrefsAuthStorage.saveUserData({
           'id': 7,
           'email': 'stored@example.com',
           'display_name': 'Stored User',
         });
-        await PrefsService.setLastAuthenticatedUserId(null);
+        await PrefsAuthStorage.setLastAuthenticatedUserId(null);
 
         container.read(authProvider.notifier);
         await pumpEventQueue();
@@ -995,7 +996,7 @@ void main() {
         expect(state.user?['email'], 'stored@example.com');
         expect(state.accessToken, 'stored_access');
         expect(state.loading, isFalse);
-        expect(await PrefsService.getLastAuthenticatedUserId(), '7');
+        expect(await PrefsAuthStorage.getLastAuthenticatedUserId(), '7');
       },
     );
 
@@ -1010,7 +1011,7 @@ void main() {
         final user = container.read(authProvider).user;
         expect(user?['username'], 'new_handle');
         expect(user?['is_public'], 0);
-        final stored = await PrefsService.getUserData();
+        final stored = await PrefsAuthStorage.getUserData();
         expect(stored?['username'], 'new_handle');
         expect(stored?['is_public'], 0);
       },
@@ -1024,7 +1025,7 @@ void main() {
       await notifier.updateUserProfile('ghost', true);
 
       expect(container.read(authProvider).user, isNull);
-      expect(await PrefsService.getUserData(), isNull);
+      expect(await PrefsAuthStorage.getUserData(), isNull);
     });
   });
 
@@ -1066,7 +1067,7 @@ void main() {
       // Yarım yazılmış / bozulmuş auth_user_data. jsonDecode patlar; kullanıcı
       // sonsuza kadar açılış spinner'ında kalmamalı, misafir olarak devam etmeli.
       SharedPreferences.setMockInitialValues({'auth_user_data': '{bozuk-json'});
-      await PrefsService.saveTokens(
+      await PrefsAuthStorage.saveTokens(
         accessToken: 'stored_access',
         refreshToken: 'stored_refresh',
       );
@@ -1091,7 +1092,7 @@ void main() {
         expect(mockApi.logoutCalled, isTrue);
         expect(container.read(authProvider).isAuthenticated, isFalse);
         expect(container.read(authProvider).user, isNull);
-        expect(await PrefsService.getAccessToken(), isNull);
+        expect(await PrefsAuthStorage.getAccessToken(), isNull);
       },
     );
 

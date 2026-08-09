@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
+import 'package:ne_izlesem/services/prefs/sync_meta.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
@@ -166,7 +168,7 @@ void main() {
       expect(watchlistPayload[0]['metadata_locale'], 'und');
 
       // One millisecond overlap prevents equal-watermark writes being skipped.
-      expect(await PrefsService.getLastSyncTime(), 1099);
+      expect(await PrefsSyncMeta.getLastSyncTime(), 1099);
     });
 
     test('push payload API ile ayni dili etiketler', () async {
@@ -399,7 +401,7 @@ void main() {
       expect(dbFavorites[0]['deleted'], 1);
       expect(dbFavorites[0]['title'], '');
 
-      expect(await PrefsService.getLastSyncTime(), 1999);
+      expect(await PrefsSyncMeta.getLastSyncTime(), 1999);
     });
 
     test('should coalesce multiple concurrent sync requests', () async {
@@ -453,7 +455,10 @@ void main() {
     });
 
     test('should cancel stale sync when authenticated user changes', () async {
-      await PrefsService.saveUserData({'id': 1, 'email': 'one@example.com'});
+      await PrefsAuthStorage.saveUserData({
+        'id': 1,
+        'email': 'one@example.com',
+      });
       mockApi.pushStarted = Completer<void>();
       mockApi.pushGate = Completer<void>();
       mockApi.pullResponse = {
@@ -467,13 +472,16 @@ void main() {
 
       final pendingSync = syncService.sync();
       await mockApi.pushStarted!.future;
-      await PrefsService.saveUserData({'id': 2, 'email': 'two@example.com'});
+      await PrefsAuthStorage.saveUserData({
+        'id': 2,
+        'email': 'two@example.com',
+      });
       mockApi.pushGate!.complete();
       await pendingSync;
 
       expect(mockApi.pushCount, 1);
       expect(mockApi.pullCount, 0);
-      expect(await PrefsService.getLastSyncTime(), 1000);
+      expect(await PrefsSyncMeta.getLastSyncTime(), 1000);
     });
 
     test(
@@ -643,8 +651,8 @@ void main() {
         // 1. Arrange: Device time is behind server time.
         // We simulate this by letting the server return a timestamp far in the future (e.g. +10 days),
         // while device writes use the actual current device time.
-        await PrefsService.setLastSyncTime(0);
-        await PrefsService.setLastPushTime(0);
+        await PrefsSyncMeta.setLastSyncTime(0);
+        await PrefsSyncMeta.setLastPushTime(0);
 
         final now = DateTime.now().millisecondsSinceEpoch;
         final t1 = now - 5000;
@@ -681,8 +689,8 @@ void main() {
 
         // Verify that lastSync is the future server time, but lastPush tracks
         // the max pushed updated_at (not wall clock / not server_time).
-        final lastSync = await PrefsService.getLastSyncTime();
-        final lastPush = await PrefsService.getLastPushTime();
+        final lastSync = await PrefsSyncMeta.getLastSyncTime();
+        final lastPush = await PrefsSyncMeta.getLastPushTime();
         expect(lastSync, serverTimeFarAhead - 1);
         expect(lastPush, isNot(serverTimeFarAhead));
         expect(lastPush, t1 - 1);
@@ -713,8 +721,8 @@ void main() {
     );
 
     test('empty push does not advance lastPush via wall clock', () async {
-      await PrefsService.setLastSyncTime(0);
-      await PrefsService.setLastPushTime(42);
+      await PrefsSyncMeta.setLastSyncTime(0);
+      await PrefsSyncMeta.setLastPushTime(42);
 
       mockApi.pullResponse = {
         'server_time': 9999,
@@ -727,15 +735,15 @@ void main() {
 
       await syncService.sync();
 
-      expect(await PrefsService.getLastPushTime(), 42);
+      expect(await PrefsSyncMeta.getLastPushTime(), 42);
       expect(mockApi.pushedPayload!['ratings'], isEmpty);
     });
 
     test(
       'push cursor overlaps one millisecond to replay equal timestamps',
       () async {
-        await PrefsService.setLastSyncTime(0);
-        await PrefsService.setLastPushTime(0);
+        await PrefsSyncMeta.setLastSyncTime(0);
+        await PrefsSyncMeta.setLastPushTime(0);
         await testDb.insert('ratings', {
           'movie_id': 77,
           'is_tv': 0,
@@ -755,7 +763,7 @@ void main() {
         };
 
         await syncService.sync();
-        expect(await PrefsService.getLastPushTime(), 4999);
+        expect(await PrefsSyncMeta.getLastPushTime(), 4999);
 
         await syncService.sync();
         expect(mockApi.pushedPayload!['ratings'], hasLength(1));

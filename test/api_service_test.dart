@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/services/api_service.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'mocks/secure_storage_mock.dart';
 
@@ -14,13 +15,13 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     PrefsService.resetInMemoryCaches();
-    await PrefsService.saveTokens(
+    await PrefsAuthStorage.saveTokens(
       accessToken: 'initial_access',
       refreshToken: 'initial_refresh',
     );
     // Refresh, boş bir oturuma token diriltmemek için kullanıcı verisi de arar;
     // gerçek bir açık oturumu temsil etmek için ikisini birlikte kur.
-    await PrefsService.saveUserData({'id': 1, 'email': 'user@example.com'});
+    await PrefsAuthStorage.saveUserData({'id': 1, 'email': 'user@example.com'});
   });
 
   group('ApiService Tests', () {
@@ -40,8 +41,8 @@ void main() {
           apiService.login(email: 'test@example.com', password: 'secret123'),
           throwsA(isA<TimeoutException>()),
         );
-        expect(await PrefsService.getAccessToken(), 'initial_access');
-        expect(await PrefsService.getRefreshToken(), 'initial_refresh');
+        expect(await PrefsAuthStorage.getAccessToken(), 'initial_access');
+        expect(await PrefsAuthStorage.getRefreshToken(), 'initial_refresh');
       },
     );
 
@@ -320,8 +321,8 @@ void main() {
       // 3. Assert
       expect(res, isNotNull);
       expect(requestCount, 3); // 1 original + 1 refresh + 1 retry
-      expect(await PrefsService.getAccessToken(), 'refreshed_access');
-      expect(await PrefsService.getRefreshToken(), 'refreshed_refresh');
+      expect(await PrefsAuthStorage.getAccessToken(), 'refreshed_access');
+      expect(await PrefsAuthStorage.getRefreshToken(), 'refreshed_refresh');
     });
 
     test('concurrent 401 responses should share one token refresh', () async {
@@ -400,8 +401,8 @@ void main() {
 
         expect(refreshCount, 1);
         expect(sessionExpired, isTrue);
-        expect(await PrefsService.getAccessToken(), isNull);
-        expect(await PrefsService.getRefreshToken(), isNull);
+        expect(await PrefsAuthStorage.getAccessToken(), isNull);
+        expect(await PrefsAuthStorage.getRefreshToken(), isNull);
       },
     );
 
@@ -466,7 +467,7 @@ void main() {
 
         final first = apiService.getFriends();
         await firstStarted.future;
-        await PrefsService.saveTokens(
+        await PrefsAuthStorage.saveTokens(
           accessToken: 'second_access',
           refreshToken: 'second_refresh',
         );

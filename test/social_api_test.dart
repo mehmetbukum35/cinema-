@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ne_izlesem/services/api_service.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,8 +18,8 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     PrefsService.resetInMemoryCaches();
-    await PrefsService.saveTokens(accessToken: 'a', refreshToken: 'r');
-    await PrefsService.saveUserData({'id': 1});
+    await PrefsAuthStorage.saveTokens(accessToken: 'a', refreshToken: 'r');
+    await PrefsAuthStorage.saveUserData({'id': 1});
     requests = [];
   });
 

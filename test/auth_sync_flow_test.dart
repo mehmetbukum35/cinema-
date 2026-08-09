@@ -25,6 +25,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
+import 'package:ne_izlesem/services/prefs/sync_meta.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/sync_service.dart';
 
@@ -227,13 +229,13 @@ void main() {
       password: FakeBackend.password,
     );
     final tokens = data['tokens'] as Map<String, dynamic>;
-    await PrefsService.saveTokens(
+    await PrefsAuthStorage.saveTokens(
       accessToken: tokens['access_token'] as String,
       refreshToken: tokens['refresh_token'] as String,
     );
-    await PrefsService.saveUserData(data['user'] as Map<String, dynamic>);
-    await PrefsService.setLastSyncTime(0);
-    await PrefsService.setLastPushTime(0);
+    await PrefsAuthStorage.saveUserData(data['user'] as Map<String, dynamic>);
+    await PrefsSyncMeta.setLastSyncTime(0);
+    await PrefsSyncMeta.setLastPushTime(0);
   }
 
   setUp(() async {
@@ -282,7 +284,7 @@ void main() {
       expect(backend.store['watchlist']!['202|1'], isNotNull);
 
       // İmleçler ilerledi: bir sonraki sync boş delta göndermeli.
-      expect(await PrefsService.getLastSyncTime(), greaterThan(0));
+      expect(await PrefsSyncMeta.getLastSyncTime(), greaterThan(0));
       await syncService.sync();
       expect(backend.pushCalls, 2);
       final secondPush = backend.store['ratings']!.length;
@@ -301,8 +303,8 @@ void main() {
       // ── Cihaz B: taze DB + sıfır imleçler (aynı hesap) ──
       final deviceB = await openDeviceDb();
       DatabaseHelper.databaseInstance = deviceB;
-      await PrefsService.setLastSyncTime(0);
-      await PrefsService.setLastPushTime(0);
+      await PrefsSyncMeta.setLastSyncTime(0);
+      await PrefsSyncMeta.setLastPushTime(0);
 
       await syncService.sync();
 
@@ -422,8 +424,8 @@ void main() {
       );
 
       expect(sessionExpiredFired, isTrue);
-      expect(await PrefsService.getAccessToken(), isNull);
-      expect(await PrefsService.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
 
       // Çekirdek vaat: oturum düşse bile cihazdaki veri durur.
       final rows = await deviceDb.query('ratings');
@@ -443,7 +445,7 @@ void main() {
         await syncService.sync();
 
         await api.logout(); // sunucuda refresh iptal + yerel auth temizliği
-        expect(await PrefsService.getAccessToken(), isNull);
+        expect(await PrefsAuthStorage.getAccessToken(), isNull);
         expect(await deviceDb.query('ratings'), hasLength(1));
 
         // Yeniden giriş: imleçler sıfırlanır → tüm yerel veri yeniden push

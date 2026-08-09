@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ne_izlesem/services/api_service.dart';
+import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -124,7 +125,7 @@ void main() {
     );
 
     test('getMe returns the decoded profile', () async {
-      await PrefsService.saveTokens(accessToken: 'a', refreshToken: 'r');
+      await PrefsAuthStorage.saveTokens(accessToken: 'a', refreshToken: 'r');
       final api = apiWith(200, {
         'user': {'username': 'mehmet'},
       });
@@ -198,7 +199,7 @@ void main() {
       };
 
       for (final entry in cases.entries) {
-        await PrefsService.saveTokens(accessToken: 'a', refreshToken: 'r');
+        await PrefsAuthStorage.saveTokens(accessToken: 'a', refreshToken: 'r');
         final api = apiWith(400, {'error': 'nope', 'code': 'bad_request'});
 
         await expectLater(
@@ -215,11 +216,11 @@ void main() {
 
   group('AuthApi local session handling', () {
     Future<void> seedSession() async {
-      await PrefsService.saveTokens(
+      await PrefsAuthStorage.saveTokens(
         accessToken: 'access',
         refreshToken: 'refresh',
       );
-      await PrefsService.saveUserData({'id': 1, 'email': 'a@b.com'});
+      await PrefsAuthStorage.saveUserData({'id': 1, 'email': 'a@b.com'});
     }
 
     test('logout revokes the refresh token and clears local data', () async {
@@ -230,9 +231,9 @@ void main() {
 
       expect(recorder.last!.url.path, '/api/auth/logout');
       expect(sentBody(), {'refresh_token': 'refresh'});
-      expect(await PrefsService.getAccessToken(), isNull);
-      expect(await PrefsService.getRefreshToken(), isNull);
-      expect(await PrefsService.getUserData(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getUserData(), isNull);
     });
 
     test('logout still clears local data when the server call fails', () async {
@@ -242,9 +243,9 @@ void main() {
 
       await api.logout();
 
-      expect(await PrefsService.getAccessToken(), isNull);
-      expect(await PrefsService.getRefreshToken(), isNull);
-      expect(await PrefsService.getUserData(), isNull);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getUserData(), isNull);
     });
 
     test(
@@ -274,8 +275,8 @@ void main() {
       expect(recorder.last!.method, 'DELETE');
       expect(recorder.last!.url.path, '/api/me');
       expect(sentBody(), {'password': 'current-password'});
-      expect(await PrefsService.getRefreshToken(), isNull);
-      expect(await PrefsService.getUserData(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getUserData(), isNull);
     });
 
     test('deleteAccount keeps the session when the server refuses', () async {
@@ -287,7 +288,7 @@ void main() {
         throwsA(isA<ApiException>()),
       );
 
-      expect(await PrefsService.getRefreshToken(), 'refresh');
+      expect(await PrefsAuthStorage.getRefreshToken(), 'refresh');
     });
 
     test('changePassword forces re-login by clearing the session', () async {
@@ -297,7 +298,7 @@ void main() {
       await api.changePassword(oldPassword: 'old', newPassword: 'new');
 
       expect(sentBody(), {'old_password': 'old', 'new_password': 'new'});
-      expect(await PrefsService.getRefreshToken(), isNull);
+      expect(await PrefsAuthStorage.getRefreshToken(), isNull);
     });
 
     test('a failed changePassword leaves the session intact', () async {
@@ -311,7 +312,7 @@ void main() {
         ),
       );
 
-      expect(await PrefsService.getRefreshToken(), 'refresh');
+      expect(await PrefsAuthStorage.getRefreshToken(), 'refresh');
     });
   });
 }
