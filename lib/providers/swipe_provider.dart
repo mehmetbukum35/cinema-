@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/recommendation_engine.dart';
 import '../services/db_helper.dart';
@@ -91,7 +92,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   Future<void> init() async {
     final generation = _loadGeneration;
     try {
-      final rated = await PrefsService.getRatedIds();
+      final rated = await PrefsLibraryFacade.getRatedIds();
       if (mounted) {
         state = state.copyWith(ratedIds: rated);
         await loadMore();
@@ -134,7 +135,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         state = state.copyWith(loadingMore: true, error: () => null);
       }
 
-      final likedGenres = await PrefsService.getLikedGenreIds();
+      final likedGenres = await PrefsTastePrefs.getLikedGenreIds();
       final genreStr = likedGenres.isNotEmpty ? likedGenres.join('|') : null;
 
       // Kullanıcının dizi/film zevk oranını hesapla (Movie/TV ratio bias)
@@ -290,7 +291,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final newRatedIds = Set<String>.from(state.ratedIds)..add(key);
 
     // Save to local storage (SQLite)
-    await PrefsService.saveRating(
+    await PrefsLibraryFacade.saveRating(
       movie: movie,
       rating: rating,
       metadataLocale: ref?.read(localeProvider).languageCode ?? 'tr',
@@ -300,7 +301,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
     // İsabet telemetrisi: hangi aday kaynağı gerçekten beğeni üretiyor?
     // (rating>=2 = İyi/Harika → isabet). Best-effort; akışı bloklamaz.
-    PrefsService.recordRecoOutcome(
+    PrefsTastePrefs.recordRecoOutcome(
       source: movie.recoSource ?? 'discover',
       liked: rating >= 2,
     ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
@@ -322,11 +323,14 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final movie = state.queue[previousIndex];
 
     // Get the rating before deleting to check if it was a dislike
-    final ratingRecord = await PrefsService.getRating(movie.id, movie.isTV);
+    final ratingRecord = await PrefsLibraryFacade.getRating(
+      movie.id,
+      movie.isTV,
+    );
     final prevRating = ratingRecord?['rating'] as int?;
 
     // Delete the rating from DB
-    await PrefsService.deleteRating(movie.id, movie.isTV);
+    await PrefsLibraryFacade.deleteRating(movie.id, movie.isTV);
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
     await _engine.invalidateCache(
       isNegativeChange: prevRating == null || prevRating <= 1,
@@ -334,7 +338,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
 
     // Revert recommendation telemetry outcome
     if (prevRating != null) {
-      PrefsService.revertRecoOutcome(
+      PrefsTastePrefs.revertRecoOutcome(
         source: movie.recoSource ?? 'discover',
         liked: prevRating >= 2,
       ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
@@ -353,7 +357,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   /// Reload ratedIds from DB (e.g. after rating from movie detail sheet).
   Future<void> refreshRatedIds() async {
     try {
-      final rated = await PrefsService.getRatedIds();
+      final rated = await PrefsLibraryFacade.getRatedIds();
       if (mounted) {
         state = state.copyWith(ratedIds: rated);
       }

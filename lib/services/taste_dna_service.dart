@@ -9,7 +9,8 @@ import '../models/taste_dna.dart';
 import 'cultural_classifier.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
-import 'prefs_service.dart';
+import 'prefs/library_facade.dart';
+import 'prefs/taste_prefs.dart';
 import 'tmdb_service.dart';
 
 /// Hesap için sadeleştirilmiş puanlama satırı (saf çekirdeğin girdisi).
@@ -349,7 +350,7 @@ class TasteDnaService {
   /// Veriyi toplar (puanlamalar + keyword isimleri + telemetri) ve DNA üretir.
   /// Returns the DNA snapshot together with the input hash used for caching /
   /// publish dedupe — callers must publish and record THAT hash (do not
-  /// re-read [PrefsService.getCachedDna], which can race with another generate).
+  /// re-read [PrefsTastePrefs.getCachedDna], which can race with another generate).
   Future<({TasteDna dna, String hash})> generate({String? userId}) async {
     final db = DatabaseHelper();
     final raw = await db.getRatings();
@@ -364,7 +365,7 @@ class TasteDnaService {
       for (var i = 0; i < favs.length; i++) {
         favGenres.add((
           genreIds: favs[i].genreIds,
-          weight: 2.0 * PrefsService.favoriteRankWeight(i),
+          weight: 2.0 * PrefsLibraryFacade.favoriteRankWeight(i),
         ));
       }
     }
@@ -383,7 +384,7 @@ class TasteDnaService {
             .map((e) => '${e.key}:${e.value.value}')
             .join(',');
 
-    final telemetry = await PrefsService.getRecoTelemetry();
+    final telemetry = await PrefsTastePrefs.getRecoTelemetry();
     var shown = 0;
     var likedCount = 0;
     for (final bucket in telemetry.values) {
@@ -408,7 +409,7 @@ class TasteDnaService {
     final inputHash =
         "v$dnaSchemaVersion|$ratingCount|$privateCount|$maxUpdatedAt|${userId ?? ''}|$shown|$favSig|$cultureSig";
 
-    final cachedData = await PrefsService.getCachedDna();
+    final cachedData = await PrefsTastePrefs.getCachedDna();
     if (cachedData != null && cachedData['hash'] == inputHash) {
       try {
         final decoded = jsonDecode(cachedData['json']!);
@@ -469,7 +470,7 @@ class TasteDnaService {
 
     // Cache the result
     try {
-      await PrefsService.cacheDna(jsonEncode(dna.toJson()), inputHash);
+      await PrefsTastePrefs.cacheDna(jsonEncode(dna.toJson()), inputHash);
     } catch (e) {
       debugPrint("Failed to save DNA to cache: $e");
     }

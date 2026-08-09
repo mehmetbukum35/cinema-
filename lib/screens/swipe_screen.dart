@@ -138,7 +138,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
         }
       }
       // Eşik anı: 5/25/50. puanlamada DNA'yı çekirdek döngünün içinde
-      // keşfettir (bir kez; bkz. PrefsService.pendingDnaMilestone).
+      // keşfettir (bir kez; bkz. PrefsTastePrefs.pendingDnaMilestone).
       if (rated && mounted) {
         await maybeShowDnaMilestone(context);
       }

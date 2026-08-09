@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/providers.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/recommendation_engine.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
@@ -195,14 +195,17 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Future<List<Movie>> _personalRankBatch(List<Movie> batch) async {
     if (!widget.personalRank || batch.length < 2) return batch;
     try {
-      final weights = await PrefsService.getGenreWeights();
+      final weights = await PrefsTastePrefs.getGenreWeights();
       if (weights.isEmpty) return batch;
       final scored = [
         for (final m in batch)
           ScoredMovie(
             m,
             RecommendationEngine.blend(
-              genreSim: PrefsService.calculateSimilarity(weights, m.genreIds),
+              genreSim: PrefsTastePrefs.calculateSimilarity(
+                weights,
+                m.genreIds,
+              ),
               voteAverage: m.voteAverage,
             ),
           ),

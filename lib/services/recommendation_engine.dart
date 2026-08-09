@@ -8,7 +8,8 @@ import '../models/discovery_context.dart';
 import 'cultural_classifier.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
-import 'prefs_service.dart';
+import 'prefs/library_facade.dart';
+import 'prefs/taste_prefs.dart';
 import 'recommendation_experiment_service.dart';
 import 'tmdb_service.dart';
 
@@ -418,7 +419,7 @@ class RecommendationEngine {
             favEntries.add((
               id: favs[i].id,
               isTV: favs[i].isTV,
-              w: 1.5 * PrefsService.favoriteRankWeight(i),
+              w: 1.5 * PrefsLibraryFacade.favoriteRankWeight(i),
             ));
           }
         }
@@ -484,7 +485,7 @@ class RecommendationEngine {
 
       int finalSeedCount = seedCount;
       try {
-        final telemetry = await PrefsService.getRecoTelemetry();
+        final telemetry = await PrefsTastePrefs.getRecoTelemetry();
         final seedBucket = telemetry['seed'] ?? {'shown': 0, 'liked': 0};
         final discoverBucket =
             telemetry['discover'] ?? {'shown': 0, 'liked': 0};
@@ -642,7 +643,7 @@ class RecommendationEngine {
   /// Sınırlar [0.05, 0.20]: keşif hiç sıfırlanmaz ama rayı da ele geçirmez.
   Future<double> adaptiveExploreRate({double base = 0.12}) async {
     try {
-      final telemetry = await PrefsService.getRecoTelemetry();
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
       final explore = telemetry['explore'] ?? {'shown': 0, 'liked': 0};
       final discover = telemetry['discover'] ?? {'shown': 0, 'liked': 0};
       final crExplore = (explore['liked']! + 1) / (explore['shown']! + 2);
@@ -824,14 +825,14 @@ class RecommendationEngine {
     }
     if (fresh.isEmpty) return fresh;
 
-    final userWeights = await PrefsService.getGenreWeights();
+    final userWeights = await PrefsTastePrefs.getGenreWeights();
     final experiment = await RecommendationExperimentService.current();
     final ratingCount = ratings.length;
 
     // Kaba sıralama: tür + puan.
     final scored = <ScoredMovie>[];
     for (final m in fresh) {
-      final genreSim = PrefsService.calculateSimilarity(
+      final genreSim = PrefsTastePrefs.calculateSimilarity(
         userWeights,
         m.genreIds,
       );
@@ -906,11 +907,11 @@ class RecommendationEngine {
       );
       for (var i = 0; i < top.length; i++) {
         final m = top[i].movie;
-        final genreSim = PrefsService.calculateSimilarity(
+        final genreSim = PrefsTastePrefs.calculateSimilarity(
           userWeights,
           m.genreIds,
         );
-        final kwSim = PrefsService.calculateSimilarity(kwVector, kwLists[i]);
+        final kwSim = PrefsTastePrefs.calculateSimilarity(kwVector, kwLists[i]);
 
         // Soft filter penalty check again in re-rank phase
         final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";

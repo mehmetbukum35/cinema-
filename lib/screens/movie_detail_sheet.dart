@@ -20,7 +20,8 @@ import '../models/movie.dart';
 import '../models/cast_member.dart';
 import '../models/watch_provider.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
 import '../services/recommendation_telemetry_service.dart';
@@ -124,8 +125,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     final primaryResults = await Future.wait([
       runSafe(widget.service.getFullDetails(id, isTV: isTV), null),
       runSafe(widget.service.getTrailerKey(id, isTV: isTV), null),
-      runSafe(PrefsService.getRating(id, isTV), null),
-      runSafe(PrefsService.getWatchedSeasons(id), <int>{}),
+      runSafe(PrefsLibraryFacade.getRating(id, isTV), null),
+      runSafe(PrefsLibraryFacade.getWatchedSeasons(id), <int>{}),
     ]);
 
     if (!mounted) return;
@@ -412,8 +413,8 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 
   Future<void> _toggleSeason(int seasonNumber) async {
-    await PrefsService.toggleSeason(widget.movie.id, seasonNumber);
-    final updated = await PrefsService.getWatchedSeasons(widget.movie.id);
+    await PrefsLibraryFacade.toggleSeason(widget.movie.id, seasonNumber);
+    final updated = await PrefsLibraryFacade.getWatchedSeasons(widget.movie.id);
     if (mounted) setState(() => _watchedSeasons = updated);
   }
 
@@ -437,12 +438,15 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           if (!mounted) return;
         }
         final oldRating = _currentRating;
-        await PrefsService.deleteRating(widget.movie.id, widget.movie.isTV);
+        await PrefsLibraryFacade.deleteRating(
+          widget.movie.id,
+          widget.movie.isTV,
+        );
         if (!mounted) return;
 
         final recoSource = widget.movie.recoSource;
         if (recoSource != null && oldRating != null) {
-          PrefsService.revertRecoOutcome(
+          PrefsTastePrefs.revertRecoOutcome(
             source: recoSource,
             liked: oldRating >= 2,
           ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
@@ -460,7 +464,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         });
       } else {
         final commentText = _commentController.text.trim();
-        await PrefsService.saveRating(
+        await PrefsLibraryFacade.saveRating(
           movie: widget.movie,
           rating: rating,
           comment: commentText.isEmpty ? null : commentText,
@@ -479,7 +483,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         // sayaçları kirletmesin diye recoSource'suz yapımlar atlanır.
         final recoSource = widget.movie.recoSource;
         if (recoSource != null) {
-          PrefsService.recordRecoOutcome(
+          PrefsTastePrefs.recordRecoOutcome(
             source: recoSource,
             liked: rating >= 2,
           ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
@@ -530,7 +534,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }) async {
     // Puan silme ile yarışmasın; silinmiş/yok satırı deleted:0 ile diriltme.
     if (_ratingBusy || _currentRating == null) return;
-    final existing = await PrefsService.getRating(
+    final existing = await PrefsLibraryFacade.getRating(
       widget.movie.id,
       widget.movie.isTV,
     );
@@ -538,7 +542,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     if (existing == null || (existing['deleted'] as int? ?? 0) == 1) return;
 
     final commentText = _commentController.text.trim();
-    await PrefsService.saveRating(
+    await PrefsLibraryFacade.saveRating(
       movie: widget.movie,
       rating: _currentRating!,
       comment: commentText.isEmpty ? null : commentText,
@@ -560,7 +564,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     if (_currentRating == null) return;
     try {
       final commentText = _commentController.text.trim();
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: widget.movie,
         rating: _currentRating!,
         comment: commentText.isEmpty ? null : commentText,

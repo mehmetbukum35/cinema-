@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import '../services/sync_service.dart';
 import '../services/localization_service.dart';
@@ -35,7 +35,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
   }
 
   Future<void> _load() async {
-    final rows = await PrefsService.getCommentedRatings();
+    final rows = await PrefsLibraryFacade.getCommentedRatings();
     if (mounted) setState(() => _items = rows);
   }
 
@@ -112,7 +112,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     );
     if (confirmed != true) return;
 
-    await PrefsService.deleteComment(
+    await PrefsLibraryFacade.deleteComment(
       item['movie_id'] as int,
       (item['is_tv'] as int) == 1,
     );

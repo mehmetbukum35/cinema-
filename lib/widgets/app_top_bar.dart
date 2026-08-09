@@ -9,7 +9,7 @@ import '../providers/social_provider.dart';
 import '../services/api_service.dart';
 import '../services/localization_service.dart';
 import '../services/prefs/app_settings.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../screens/movie_detail_sheet.dart';
@@ -81,7 +81,7 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
       }
 
       final service = ref.read(tmdbServiceProvider);
-      final likedGenres = await PrefsService.getLikedGenreIds();
+      final likedGenres = await PrefsTastePrefs.getLikedGenreIds();
       var results = await service.discoverByGenres(likedGenres, isTV: false);
       if (results.isEmpty) {
         results = await service.getPopular(isTV: false);

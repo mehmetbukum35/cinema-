@@ -8,7 +8,7 @@ import '../models/movie.dart';
 import '../models/taste_dna.dart';
 import '../services/api_service.dart';
 import '../services/localization_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/taste_dna_presenter.dart';
 import '../theme/app_theme.dart';
@@ -55,12 +55,13 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
       // Publish the same hash generate() just computed — do not re-read cache.
       if (isAuthenticated) {
         final currentHash = generated.hash;
-        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+        final lastPublishedHash =
+            await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
           apiService!
               .publishTasteDna(dna.toJson())
-              .then((_) => PrefsService.setLastPublishedDnaHash(currentHash))
+              .then((_) => PrefsTastePrefs.setLastPublishedDnaHash(currentHash))
               .catchError((e) => debugPrint('DNA publish failed: $e'));
         }
       }

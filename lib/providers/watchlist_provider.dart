@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/notification_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
@@ -19,7 +19,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     this.ref, {
     Future<List<Movie>> Function()? readWatchlist,
     bool autoLoad = true,
-  }) : _readWatchlist = readWatchlist ?? PrefsService.getWatchlist,
+  }) : _readWatchlist = readWatchlist ?? PrefsLibraryFacade.getWatchlist,
        super(const AsyncValue.loading()) {
     if (autoLoad) unawaited(load());
   }
@@ -67,12 +67,12 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<bool> add(Movie movie) async {
     ++_loadGeneration;
     try {
-      await PrefsService.addToWatchlist(
+      await PrefsLibraryFacade.addToWatchlist(
         movie,
         metadataLocale: ref.read(localeProvider).languageCode,
       );
       if (mounted) {
-        final list = state.value ?? await PrefsService.getWatchlist();
+        final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
         if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {
           state = AsyncValue.data([movie, ...list]);
         } else {
@@ -110,9 +110,9 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<bool> remove(int id, bool isTV) async {
     ++_loadGeneration;
     try {
-      await PrefsService.removeFromWatchlist(id, isTV);
+      await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
       if (mounted) {
-        final list = state.value ?? await PrefsService.getWatchlist();
+        final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
         state = AsyncValue.data(
           list.where((m) => !(m.id == id && m.isTV == isTV)).toList(),
         );
@@ -159,7 +159,7 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
     this.ref, {
     Future<Map<String, dynamic>> Function()? readStats,
     bool autoLoad = true,
-  }) : _readStats = readStats ?? PrefsService.getStats,
+  }) : _readStats = readStats ?? PrefsLibraryFacade.getStats,
        super(const AsyncValue.loading()) {
     if (autoLoad) Future.microtask(() => load());
   }

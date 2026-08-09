@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import '../services/sync_service.dart';
 import '../services/localization_service.dart';
@@ -52,7 +52,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    PrefsService.getSearchHistory().then((h) {
+    PrefsLibraryFacade.getSearchHistory().then((h) {
       if (mounted) setState(() => _history = h);
     });
   }
@@ -105,8 +105,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _saveToHistory(String q) async {
     final clean = q.trim();
     if (clean.length < 2) return;
-    await PrefsService.addSearchHistory(clean);
-    final history = await PrefsService.getSearchHistory();
+    await PrefsLibraryFacade.addSearchHistory(clean);
+    final history = await PrefsLibraryFacade.getSearchHistory();
     if (mounted) {
       setState(() => _history = history);
     }
@@ -121,7 +121,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Future<void> _clearHistory() async {
     HapticFeedback.mediumImpact();
-    await PrefsService.clearSearchHistory();
+    await PrefsLibraryFacade.clearSearchHistory();
     if (mounted) setState(() => _history = []);
     if (ref.read(authProvider).isLoggedIn) {
       unawaited(ref.read(syncServiceProvider).sync());

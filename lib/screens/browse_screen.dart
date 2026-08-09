@@ -8,8 +8,9 @@ import '../models/discovery_context.dart';
 import '../models/dismiss_feedback.dart';
 import '../models/cultural_preferences.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
 import '../services/prefs/app_settings.dart';
+import '../services/prefs/library_facade.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/db_helper.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
@@ -227,7 +228,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Tür örnekleme: hep aynı "top-3 tür" yerine ağırlık dağılımından örnekle
       // (uzun kuyruktaki türler de ara sıra havuza girer).
-      final likedGenres = await PrefsService.sampleLikedGenreIds(
+      final likedGenres = await PrefsTastePrefs.sampleLikedGenreIds(
         Random(daySeed + _reloadNonce * 101),
       );
 
@@ -313,11 +314,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
 
       // Zaten puanlanmış + kullanıcının engellediği yapımlar vitrine dönmesin.
-      final ratedIds = await PrefsService.getRatedIds();
+      final ratedIds = await PrefsLibraryFacade.getRatedIds();
       final blockedKeys = await PrefsAppSettings.getBlockedKeys();
 
       // Impression cooldown: son 72 saatte gösterilenler hafif geri çekilir.
-      final impressions = await PrefsService.getRecoImpressions();
+      final impressions = await PrefsTastePrefs.getRecoImpressions();
       final nowMs = now.millisecondsSinceEpoch;
       const coolWindowMs = 72 * 3600 * 1000;
       final cooldownKeys = {
@@ -342,7 +343,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       // Vitrin havuzu: tepe 12 aday; son 7 gün vitrin olmuş yapımlar elenir
       // (havuz boşalırsa kısıt gevşetilir). Başlangıç noktası tepe 5 içinden
       // güne bağlı seçilir — argmax'ın "hep aynı film" tekelini kırar.
-      final tonightHistory = await PrefsService.getTonightHistory();
+      final tonightHistory = await PrefsTastePrefs.getTonightHistory();
       const tonightCooldownMs = 7 * 24 * 3600 * 1000;
       final topSlice = ranked.take(12).toList();
       var pool = topSlice.where((m) {
@@ -413,7 +414,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         if (tonightPick != null) _movieKey(tonightPick),
         ...finalPersonal.take(10).map(_movieKey),
       ];
-      unawaited(PrefsService.recordRecoImpressions(shownKeys));
+      unawaited(PrefsTastePrefs.recordRecoImpressions(shownKeys));
       unawaited(
         RecommendationTelemetryService.recordShown([
           ?tonightPick,
@@ -421,10 +422,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ], surface: 'browse'),
       );
       if (tonightPick != null) {
-        unawaited(PrefsService.recordTonightPick(_movieKey(tonightPick)));
+        unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(tonightPick)));
       }
 
-      final ratingCount = await PrefsService.getRatingCount();
+      final ratingCount = await PrefsLibraryFacade.getRatingCount();
       final bannerDismissed =
           await PrefsAppSettings.isOnboardingBannerDismissed();
       final initialGenres = await PrefsAppSettings.getInitialGenres();
@@ -516,8 +517,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     });
     final pick = _tonight;
     if (pick != null) {
-      unawaited(PrefsService.recordTonightPick(_movieKey(pick)));
-      unawaited(PrefsService.recordRecoImpressions([_movieKey(pick)]));
+      unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
+      unawaited(PrefsTastePrefs.recordRecoImpressions([_movieKey(pick)]));
     }
   }
 
@@ -528,7 +529,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     if (dismissed == null) return;
     HapticFeedback.mediumImpact();
     DismissFeedbackReason reason = DismissFeedbackReason.notInterested;
-    final shouldAsk = await PrefsService.shouldAskDismissFeedback(
+    final shouldAsk = await PrefsTastePrefs.shouldAskDismissFeedback(
       matchScore: dismissed.matchScore,
     );
     if (shouldAsk && mounted) {
@@ -564,7 +565,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         unawaited(ref.read(syncProvider.notifier).performSync());
       }
     }
-    await PrefsService.recordDismissFeedback(
+    await PrefsTastePrefs.recordDismissFeedback(
       movieKey: _movieKey(dismissed),
       reason: reason.name,
       source: dismissed.recoSource ?? 'discover',
@@ -585,7 +586,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     }
     final pick = _tonight;
     if (pick != null) {
-      unawaited(PrefsService.recordTonightPick(_movieKey(pick)));
+      unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
     }
   }
 

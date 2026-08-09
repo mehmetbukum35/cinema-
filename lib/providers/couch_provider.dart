@@ -8,7 +8,7 @@ import '../models/movie.dart';
 import '../models/social.dart';
 import '../services/api_service.dart';
 import '../services/prefs/app_settings.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import 'auth_provider.dart';
 
@@ -248,7 +248,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
           ...await service.getPopular(),
         ];
         final excluded = {
-          ...await PrefsService.getRatedIds(),
+          ...await PrefsLibraryFacade.getRatedIds(),
           ...await PrefsAppSettings.getBlockedKeys(),
         };
         try {

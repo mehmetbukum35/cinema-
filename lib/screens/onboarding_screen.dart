@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
 import '../services/prefs/app_settings.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
@@ -137,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       setState(() => _step = 3);
     } else if (_step == 3) {
       // Birleştir, üzerine yazma: kullanıcının mevcut Top 20'si (varsa) korunur.
-      await PrefsService.mergeFavoriteMovies(
+      await PrefsLibraryFacade.mergeFavoriteMovies(
         _favMovies,
         metadataLocale: ref.read(localeProvider).languageCode,
       );
@@ -145,7 +145,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       if (!mounted) return;
       setState(() => _step = 4);
     } else if (_step == 4) {
-      await PrefsService.mergeFavoriteTvShows(
+      await PrefsLibraryFacade.mergeFavoriteTvShows(
         _favTvShows,
         metadataLocale: ref.read(localeProvider).languageCode,
       );
@@ -224,7 +224,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _processing = true;
     try {
       final movie = _items[_current];
-      await PrefsService.saveRating(
+      await PrefsLibraryFacade.saveRating(
         movie: movie,
         rating: rating,
         metadataLocale: ref.read(localeProvider).languageCode,

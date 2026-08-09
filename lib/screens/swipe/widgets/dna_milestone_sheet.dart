@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../services/localization_service.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/library_facade.dart';
+import '../../../services/prefs/taste_prefs.dart';
 import '../../../theme/app_theme.dart';
 import '../../taste_dna_screen.dart';
 
@@ -13,15 +14,15 @@ import '../../taste_dna_screen.dart';
 /// öğrenmiyordu. Bu sheet, DNA'yı tam da onu besleyen eylemin (puanlama)
 /// içinde keşfettirir ve ölçülen isabet oranını ilk kez kullanıcıya söyler.
 Future<void> maybeShowDnaMilestone(BuildContext context) async {
-  final count = await PrefsService.getRatingCount();
-  final threshold = await PrefsService.pendingDnaMilestone(count);
+  final count = await PrefsLibraryFacade.getRatingCount();
+  final threshold = await PrefsTastePrefs.pendingDnaMilestone(count);
   if (threshold == null) return;
 
   // İsabet oranı: öneri telemetrisinden. DNA'daki accuracy ile aynı eşik
   // (>=8 gösterim) — küçük örneklemde yanıltıcı yüzde göstermeyiz.
   int? accuracyPercent;
   try {
-    final telemetry = await PrefsService.getRecoTelemetry();
+    final telemetry = await PrefsTastePrefs.getRecoTelemetry();
     var shown = 0;
     var liked = 0;
     for (final bucket in telemetry.values) {
@@ -47,7 +48,7 @@ Future<void> maybeShowDnaMilestone(BuildContext context) async {
     ),
   );
   // Mark only after the sheet was actually presented (or dismissed).
-  await PrefsService.markDnaMilestoneShown(threshold);
+  await PrefsTastePrefs.markDnaMilestoneShown(threshold);
   if (action == 'open_dna' && context.mounted) {
     await Navigator.of(
       context,
@@ -71,7 +72,7 @@ class DnaMilestoneSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final tr = AppLocalizations.of(context);
-    final isFirst = threshold == PrefsService.dnaMilestones.first;
+    final isFirst = threshold == PrefsTastePrefs.dnaMilestones.first;
 
     final title = isFirst
         ? (tr?.get('dna_milestone_unlocked_title') ?? "Sinema DNA'n hazır!")

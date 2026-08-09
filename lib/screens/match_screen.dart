@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../models/social.dart';
 import '../services/tmdb_service.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
@@ -128,7 +128,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         _service.getRecommendations(movie.id, isTV: movie.isTV),
         _service.getSimilar(movie.id, isTV: movie.isTV),
         _service.discoverForMatch(movie.genreIds, isTV: movie.isTV),
-        PrefsService.getRatedIds(),
+        PrefsLibraryFacade.getRatedIds(),
       ]);
 
       final recommended = results[0] as List<Movie>;

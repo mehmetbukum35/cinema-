@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/library_facade.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/spring_button.dart';
@@ -66,7 +66,7 @@ class MyReviewsCard extends StatelessWidget {
               ),
             ),
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: PrefsService.getCommentedRatings(),
+              future: PrefsLibraryFacade.getCommentedRatings(),
               builder: (_, snap) {
                 final count = snap.data?.length ?? 0;
                 if (count == 0) return const SizedBox.shrink();

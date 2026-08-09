@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
@@ -219,11 +219,14 @@ class ProfileScreen extends ConsumerWidget {
     );
 
     if (ok == true) {
-      final ratingRecord = await PrefsService.getRating(movie.id, movie.isTV);
+      final ratingRecord = await PrefsLibraryFacade.getRating(
+        movie.id,
+        movie.isTV,
+      );
       final prevRating = ratingRecord?['rating'] as int?;
-      await PrefsService.deleteRating(movie.id, movie.isTV);
+      await PrefsLibraryFacade.deleteRating(movie.id, movie.isTV);
       if (prevRating != null) {
-        PrefsService.revertRecoOutcome(
+        PrefsTastePrefs.revertRecoOutcome(
           source: movie.recoSource ?? 'discover',
           liked: prevRating >= 2,
         ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
@@ -254,11 +257,12 @@ class ProfileScreen extends ConsumerWidget {
         final generated = await dnaService.generate(userId: userId);
         final dna = generated.dna;
         final currentHash = generated.hash;
-        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+        final lastPublishedHash =
+            await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
           await apiService.publishTasteDna(dna.toJson());
-          await PrefsService.setLastPublishedDnaHash(currentHash);
+          await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
           debugPrint("Background DNA auto-publish succeeded!");
         } else {
           debugPrint(

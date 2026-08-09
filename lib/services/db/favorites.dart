@@ -29,7 +29,7 @@ mixin DbFavoritesMixin {
           'genre_ids': jsonEncode(item.genreIds),
           // created_at = liste içi 0-tabanlı SIRA (rank), zaman damgası değil.
           // DB (sqflite) yolu da 'created_at': i yazar; öneri motoru bunu sıra
-          // ağırlığı olarak okur (bkz. PrefsService.favoriteRankWeight).
+          // ağırlığı olarak okur (bkz. PrefsLibraryFacade.favoriteRankWeight).
           'created_at': i,
           'updated_at': now,
           'deleted': 0,

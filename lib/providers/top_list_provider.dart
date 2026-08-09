@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
@@ -24,7 +24,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<List<Movie>>? _readFuture;
 
   /// Panteon sınırı: liste en fazla 20 öğe tutar.
-  static const cap = PrefsService.favoritesCap;
+  static const cap = PrefsLibraryFacade.favoritesCap;
 
   TopListNotifier(
     this.ref,
@@ -35,19 +35,19 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   }) : _readList =
            readList ??
            (isTV
-               ? PrefsService.getFavoriteTvShows
-               : PrefsService.getFavoriteMovies),
+               ? PrefsLibraryFacade.getFavoriteTvShows
+               : PrefsLibraryFacade.getFavoriteMovies),
        // Tear-off yerine closure: metadataLocale adlandırılmış parametresi
        // eklendikten sonra imza `Future<void> Function(List<Movie>)` ile
        // uyuşmuyor. Dil yazma anında okunur.
        _writeList =
            writeList ??
            ((List<Movie> list) => isTV
-               ? PrefsService.saveFavoriteTvShows(
+               ? PrefsLibraryFacade.saveFavoriteTvShows(
                    list,
                    metadataLocale: ref.read(localeProvider).languageCode,
                  )
-               : PrefsService.saveFavoriteMovies(
+               : PrefsLibraryFacade.saveFavoriteMovies(
                    list,
                    metadataLocale: ref.read(localeProvider).languageCode,
                  )),

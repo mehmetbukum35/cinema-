@@ -6,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
 import 'prefs/auth_storage.dart';
 import 'prefs/sync_meta.dart';
-import 'prefs_service.dart';
+import 'prefs/taste_prefs.dart';
 import 'api_service.dart';
 import 'providers.dart';
 import '../providers/auth_provider.dart';
@@ -255,7 +255,7 @@ class SyncService {
     }
     await PrefsSyncMeta.setLastSyncTime(0);
     await PrefsSyncMeta.setLastPushTime(0);
-    PrefsService.invalidateGenreWeights();
+    PrefsTastePrefs.invalidateGenreWeights();
     await _ref?.read(recommendationEngineProvider).invalidateCache();
     _ref?.invalidate(watchlistProvider);
     _ref?.invalidate(statsProvider);
@@ -359,7 +359,7 @@ class SyncService {
       await _applyRemoteCulturalPreferences(pullResult);
       await _ensureSession(sessionUserId);
       await PrefsSyncMeta.setLastSyncTime(_overlappingCursor(serverTime));
-      PrefsService.invalidateGenreWeights();
+      PrefsTastePrefs.invalidateGenreWeights();
       await _ref?.read(recommendationEngineProvider).invalidateCache();
       debugPrint(
         "Sync complete (mock DB). pull cursor: $serverTime, push cursor: $lastPush",
@@ -752,7 +752,7 @@ class SyncService {
     // Pull imleci sunucu saatiyle, push imleci cihaz saatiyle ilerler.
     await _ensureSession(sessionUserId);
     await PrefsSyncMeta.setLastSyncTime(_overlappingCursor(serverTime));
-    PrefsService.invalidateGenreWeights();
+    PrefsTastePrefs.invalidateGenreWeights();
 
     // Invalidate recommendation engine cache and DNA cache
     await _ref?.read(recommendationEngineProvider).invalidateCache();
@@ -810,13 +810,14 @@ class SyncService {
             .generate(userId: userId);
         final dna = generated.dna;
         final currentHash = generated.hash;
-        final lastPublishedHash = await PrefsService.getLastPublishedDnaHash();
+        final lastPublishedHash =
+            await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
           await _ensureSession(userId);
           await _apiService.publishTasteDna(dna.toJson());
           await _ensureSession(userId);
-          await PrefsService.setLastPublishedDnaHash(currentHash);
+          await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
           debugPrint("Sync auto-publish DNA succeeded!");
         } else {
           debugPrint("Sync auto-publish DNA skipped (already up to date).");
