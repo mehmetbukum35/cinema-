@@ -39,9 +39,9 @@ Hiç testi olmayan ve risk taşıyan modüller — yukarıdan başla:
 
 ### A2. Genişletilmesi gereken mevcut testler
 
-- [ ] `tmdb_service_test.dart`: sadece `searchMulti` var. Ekle → `discoverByGenres`, `getRecommendations`, `getTrending`, hata/timeout yolu, boş sonuç.
-- [ ] `swipe_notifier_test.dart`: undo, dil/platform filtresi, "içerik kalmadı" durumu, `loadMore`.
-- [ ] Widget testleri: en az bir testte **açık tema** ile render (regresyon yakalar).
+- [x] `tmdb_service_test.dart`: `discoverByGenres`, `getRecommendations`, `getTrending`, boş sonuç, timeout/`TmdbApiException`.
+- [x] `swipe_notifier_test.dart`: undo, dil/provider filtresi (`updateFilters`), "içerik kalmadı", `loadMore` concurrency/dedupe.
+- [x] Widget testleri: en az bir testte **açık tema** ile render (`widget_test.dart` — `theme_mode: light` → `Brightness.light` + `AppColorsLight.bg`).
 - [x] Widget smoke testleri: `profile_screen`, `browse_screen`, `social_screen`, `movie_detail_sheet` (`test/*_widget_test.dart`).
 
 ### A3. Backend testleri (PHP — 165 test ve 551 assertion ile tamamlandı)

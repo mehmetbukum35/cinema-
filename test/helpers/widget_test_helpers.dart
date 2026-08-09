@@ -13,11 +13,17 @@ Widget pumpApp(
   List<Override> overrides = const [],
   Locale locale = const Locale('en', 'US'),
   MediaQueryData? mediaQueryData,
+  ThemeData? theme,
+  ThemeData? darkTheme,
+  ThemeMode themeMode = ThemeMode.system,
 }) {
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
       locale: locale,
+      theme: theme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
       builder: mediaQueryData == null
           ? null
           : (context, child) => MediaQuery(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ne_izlesem/main.dart';
+import 'package:ne_izlesem/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mocks/secure_storage_mock.dart';
 
@@ -119,5 +120,27 @@ void main() {
       await tester.pump(const Duration(milliseconds: 320));
       expect(find.text('Press back again to exit'), findsOneWidget);
     });
+
+    testWidgets(
+      'App should apply light theme when theme_mode pref is light',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({'theme_mode': 'light'});
+
+        await tester.pumpWidget(
+          const ProviderScope(child: NeIzlesemApp(showOnboarding: false)),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 2600));
+        await tester.pump(const Duration(milliseconds: 380));
+        await tester.pump(const Duration(milliseconds: 420));
+        await tester.pump(const Duration(milliseconds: 480));
+        await tester.pump();
+
+        final context = tester.element(find.text('Browse'));
+        final theme = Theme.of(context);
+        expect(theme.brightness, Brightness.light);
+        expect(theme.scaffoldBackgroundColor, AppColorsLight.bg);
+      },
+    );
   });
 }
