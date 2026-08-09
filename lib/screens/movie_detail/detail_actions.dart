@@ -6,7 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/watchlist_provider.dart';
 import '../../services/localization_service.dart';
-import '../../services/prefs_service.dart';
+import '../../services/prefs/app_settings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_toast.dart';
 import 'recommend_sheet.dart';
@@ -110,7 +110,7 @@ void confirmBlockMovieDialog({
           onPressed: () async {
             Navigator.pop(ctx); // Close dialog
 
-            await PrefsService.blockMovie(movie.id, movie.isTV);
+            await PrefsAppSettings.blockMovie(movie.id, movie.isTV);
 
             if (context.mounted) {
               showAppToast(

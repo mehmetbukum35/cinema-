@@ -6,7 +6,7 @@ import '../models/cast_member.dart';
 import '../models/watch_provider.dart';
 import '../models/review.dart';
 import 'app_config.dart';
-import 'prefs_service.dart';
+import 'prefs/app_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'db_helper.dart';
 import 'package:flutter/foundation.dart';
@@ -439,7 +439,7 @@ class TmdbServiceBase {
 
     // Family Mode: drop explicit-adult titles on endpoints that cannot take
     // certification query params (trending, airing_today, on_the_air, etc.).
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       list = list.where((m) => !m.adult).toList();
     }

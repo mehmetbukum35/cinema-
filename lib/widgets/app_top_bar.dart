@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/social_provider.dart';
 import '../services/api_service.dart';
 import '../services/localization_service.dart';
+import '../services/prefs/app_settings.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
@@ -43,7 +44,7 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
     HapticFeedback.lightImpact();
 
     try {
-      final isFirst = await PrefsService.isFirstTimeDice();
+      final isFirst = await PrefsAppSettings.isFirstTimeDice();
       if (!mounted) return;
       if (isFirst) {
         final tr = AppLocalizations.of(context);

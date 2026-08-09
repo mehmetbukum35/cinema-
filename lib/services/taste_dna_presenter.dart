@@ -1,6 +1,6 @@
 import '../models/taste_dna.dart';
 import 'localization_service.dart';
-import 'prefs_service.dart';
+import 'prefs/app_settings.dart';
 
 /// DNA sinyallerini lokalize, gösterilebilir metne çevirir. Ekranı metin
 /// kurmaktan arındırır; arketip/sinyal metinleri tek yerde yaşar (web kartı
@@ -221,7 +221,7 @@ class TasteDnaPresenter {
           text: _t('dna_blind', 'Kör noktan: {g} — sana pek hitap etmiyor.')
               .replaceFirst(
                 '{g}',
-                PrefsService.genreName(
+                PrefsAppSettings.genreName(
                   dna.blindSpotGenre!,
                   locale: _localeCode,
                 ),
@@ -239,14 +239,17 @@ class TasteDnaPresenter {
           text: _t('dna_shift', 'Zevkinin rotası: {from} → {to}.')
               .replaceFirst(
                 '{from}',
-                PrefsService.genreName(
+                PrefsAppSettings.genreName(
                   dna.shiftFromGenre!,
                   locale: _localeCode,
                 ),
               )
               .replaceFirst(
                 '{to}',
-                PrefsService.genreName(dna.shiftToGenre!, locale: _localeCode),
+                PrefsAppSettings.genreName(
+                  dna.shiftToGenre!,
+                  locale: _localeCode,
+                ),
               ),
         ),
       );
@@ -320,7 +323,7 @@ class TasteDnaPresenter {
 
   // ── Tür çipleri ──
   List<String> get genreChips => dna.topGenres
-      .map((id) => PrefsService.genreName(id, locale: _localeCode))
+      .map((id) => PrefsAppSettings.genreName(id, locale: _localeCode))
       .toList();
 
   // ── Kanıtlı isabet ──

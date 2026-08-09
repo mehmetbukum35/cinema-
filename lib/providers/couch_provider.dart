@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../models/social.dart';
 import '../services/api_service.dart';
+import '../services/prefs/app_settings.dart';
 import '../services/prefs_service.dart';
 import '../services/providers.dart';
 import 'auth_provider.dart';
@@ -248,7 +249,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
         ];
         final excluded = {
           ...await PrefsService.getRatedIds(),
-          ...await PrefsService.getBlockedKeys(),
+          ...await PrefsAppSettings.getBlockedKeys(),
         };
         try {
           final usedKeys = await _api.getUsedCouchMovies(friend.id);

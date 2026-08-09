@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/localization_service.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/app_settings.dart';
 import '../../../theme/app_theme.dart';
 
 /// İlk kullanımda gösterilen swipe jest rehberi katmanı.
@@ -101,7 +101,7 @@ class SwipeGestureGuideOverlay extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () async {
                     HapticFeedback.mediumImpact();
-                    await PrefsService.setSwipeGuideShown();
+                    await PrefsAppSettings.setSwipeGuideShown();
                     onDismiss();
                   },
                   style: ElevatedButton.styleFrom(

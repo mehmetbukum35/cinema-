@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
+import '../services/prefs/app_settings.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../services/sync_service.dart';
@@ -126,7 +128,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       setState(() => _step = 1);
     } else if (_step == 1) {
       final all = {..._selectedMovieGenres, ..._selectedTvGenres};
-      await PrefsService.saveInitialGenres(all.toList());
+      await PrefsTastePrefs.saveInitialGenres(all.toList());
       if (!mounted) return;
       setState(() => _step = 2);
     } else if (_step == 2) {
@@ -193,7 +195,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
       // Ağ tamamen başarısız oldu - değerlendirme adımını atla
       if (merged.isEmpty) {
-        await PrefsService.setOnboardingDone();
+        await PrefsAppSettings.setOnboardingDone();
         if (!mounted) return;
         Navigator.of(
           context,
@@ -209,7 +211,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _fadeCtrl.forward();
     } on Exception {
       if (!mounted) return;
-      await PrefsService.setOnboardingDone();
+      await PrefsAppSettings.setOnboardingDone();
       if (!mounted) return;
       Navigator.of(
         context,
@@ -228,7 +230,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         metadataLocale: ref.read(localeProvider).languageCode,
       );
       if (_current + 1 >= _items.length) {
-        await PrefsService.setOnboardingDone();
+        await PrefsAppSettings.setOnboardingDone();
         if (!mounted) return;
         Navigator.of(
           context,
@@ -271,7 +273,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   Future<void> _skipOnboarding() async {
-    await PrefsService.skipOnboarding();
+    await PrefsAppSettings.skipOnboarding();
     if (!mounted) return;
     Navigator.of(
       context,

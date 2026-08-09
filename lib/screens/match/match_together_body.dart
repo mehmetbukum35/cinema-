@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/localization_service.dart';
-import '../../services/prefs_service.dart';
+import '../../services/prefs/app_settings.dart';
 import '../../theme/app_theme.dart';
 import 'match_constants.dart';
 import 'match_widgets.dart';
@@ -145,7 +145,7 @@ class MatchTogetherBody extends StatelessWidget {
             itemBuilder: (ctx, i) {
               final palette = ctx.c;
               final (id, _) = togetherGenres[i];
-              final name = PrefsService.genreName(
+              final name = PrefsAppSettings.genreName(
                 id,
                 locale: Localizations.localeOf(ctx).languageCode,
               );
@@ -398,7 +398,7 @@ class _GenreChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = PrefsService.genreName(
+    final name = PrefsAppSettings.genreName(
       id,
       locale: Localizations.localeOf(context).languageCode,
     );

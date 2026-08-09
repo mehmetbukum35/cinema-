@@ -17,7 +17,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     startDate ??= _decadeStart(decade);
     endDate ??= _decadeEnd(decade, isMovie: true);
 
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     final params = {
       'api_key': _apiKey,
       'language': _language,
@@ -63,7 +63,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     startDate ??= _decadeStart(decade);
     endDate ??= _decadeEnd(decade, isMovie: false);
 
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     final params = {
       'api_key': _apiKey,
       'language': _language,
@@ -141,7 +141,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     // Use top 2 genres with AND (comma) for tight matching
     final genreStr = mapped.take(2).join(',');
     final path = isTV ? '/3/discover/tv' : '/3/discover/movie';
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     final params = {
       'api_key': _apiKey,
       'language': _language,

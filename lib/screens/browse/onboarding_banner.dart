@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../services/prefs_service.dart';
+import '../../services/prefs/app_settings.dart';
 import '../../services/localization_service.dart';
 import '../../theme/app_theme.dart';
 import '../onboarding_screen.dart';
@@ -97,7 +97,7 @@ class OnboardingReminderBanner extends StatelessWidget {
               icon: Icon(Icons.close_rounded, color: c.dim, size: 18),
               onPressed: () async {
                 HapticFeedback.lightImpact();
-                await PrefsService.dismissOnboardingBanner();
+                await PrefsAppSettings.dismissOnboardingBanner();
                 onDismissed();
               },
               constraints: const BoxConstraints(),

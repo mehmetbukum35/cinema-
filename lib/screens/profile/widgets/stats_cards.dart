@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/app_settings.dart';
 import '../../../services/localization_service.dart';
 import '../../../theme/app_theme.dart';
 
@@ -93,7 +93,7 @@ class StatsOverviewCard extends StatelessWidget {
                             : null,
                       ),
                       child: Text(
-                        PrefsService.genreName(
+                        PrefsAppSettings.genreName(
                           g as int,
                           locale: Localizations.localeOf(context).languageCode,
                         ),

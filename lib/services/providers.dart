@@ -16,7 +16,7 @@ import 'package:http/http.dart' as http;
 import 'app_config.dart';
 import 'tmdb_service.dart';
 import 'db_helper.dart';
-import 'prefs_service.dart';
+import 'prefs/app_settings.dart';
 import 'recommendation_engine.dart';
 import 'taste_dna_service.dart';
 import '../models/discovery_context.dart';
@@ -42,7 +42,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
   }
 
   Future<void> setLocale(String langCode) async {
-    await PrefsService.setSelectedLanguage(langCode);
+    await PrefsAppSettings.setSelectedLanguage(langCode);
     state = Locale(langCode);
   }
 }
@@ -58,7 +58,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   void _init() async {
-    state = _parse(await PrefsService.getThemeMode());
+    state = _parse(await PrefsAppSettings.getThemeMode());
   }
 
   static ThemeMode _parse(String s) {
@@ -84,7 +84,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   Future<void> setMode(ThemeMode mode) async {
-    await PrefsService.setThemeMode(_str(mode));
+    await PrefsAppSettings.setThemeMode(_str(mode));
     state = mode;
   }
 

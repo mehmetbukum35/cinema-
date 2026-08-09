@@ -7,7 +7,7 @@ mixin TmdbListsMixin on TmdbServiceBase {
   /// Discover equivalent with certs — those fall back to client `adult` filter
   /// in [_sanitizeList].
   Future<List<Movie>> getPopular({bool isTV = false, int page = 1}) async {
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       return _fetchList(isTV ? '/3/discover/tv' : '/3/discover/movie', {
         'api_key': _apiKey,
@@ -30,7 +30,7 @@ mixin TmdbListsMixin on TmdbServiceBase {
   }
 
   Future<List<Movie>> getTopRated({bool isTV = false}) async {
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       return _fetchList(isTV ? '/3/discover/tv' : '/3/discover/movie', {
         'api_key': _apiKey,
@@ -70,7 +70,7 @@ mixin TmdbListsMixin on TmdbServiceBase {
   }
 
   Future<List<Movie>> getUpcoming() async {
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       final today = DateTime.now().toIso8601String().substring(0, 10);
       return _fetchList('/3/discover/movie', {
@@ -92,7 +92,7 @@ mixin TmdbListsMixin on TmdbServiceBase {
   }
 
   Future<List<Movie>> getNowPlaying() async {
-    final isFamily = await PrefsService.isFamilyMode();
+    final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       // Theatrical now-playing window via Discover so certification applies.
       final now = DateTime.now();

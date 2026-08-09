@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/localization_service.dart';
-import '../../services/prefs_service.dart';
+import '../../services/prefs/app_settings.dart';
 import '../../theme/app_theme.dart';
 import 'onboarding_helpers.dart';
 
@@ -66,7 +66,7 @@ class GenreStep extends StatelessWidget {
             itemCount: genres.length,
             itemBuilder: (ctx, i) {
               final (id, _, icon) = genres[i];
-              final name = PrefsService.genreName(
+              final name = PrefsAppSettings.genreName(
                 id,
                 locale: Localizations.localeOf(ctx).languageCode,
               );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../services/prefs_service.dart';
+import '../../../services/prefs/app_settings.dart';
 import '../../../services/localization_service.dart';
 import '../../../services/providers.dart';
 import '../../../services/db_helper.dart';
@@ -26,7 +26,7 @@ class _FamilyModeCardState extends ConsumerState<FamilyModeCard> {
   }
 
   Future<void> _loadFamilyMode() async {
-    final val = await PrefsService.isFamilyMode();
+    final val = await PrefsAppSettings.isFamilyMode();
     if (mounted) {
       setState(() {
         _familyMode = val;
@@ -37,7 +37,7 @@ class _FamilyModeCardState extends ConsumerState<FamilyModeCard> {
 
   Future<void> _toggleFamilyMode(bool value) async {
     HapticFeedback.lightImpact();
-    await PrefsService.setFamilyMode(value);
+    await PrefsAppSettings.setFamilyMode(value);
     if (!mounted) return;
     setState(() {
       _familyMode = value;

@@ -9,6 +9,7 @@ import '../models/dismiss_feedback.dart';
 import '../models/cultural_preferences.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs_service.dart';
+import '../services/prefs/app_settings.dart';
 import '../services/db_helper.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
@@ -313,7 +314,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Zaten puanlanmış + kullanıcının engellediği yapımlar vitrine dönmesin.
       final ratedIds = await PrefsService.getRatedIds();
-      final blockedKeys = await PrefsService.getBlockedKeys();
+      final blockedKeys = await PrefsAppSettings.getBlockedKeys();
 
       // Impression cooldown: son 72 saatte gösterilenler hafif geri çekilir.
       final impressions = await PrefsService.getRecoImpressions();
@@ -424,8 +425,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
 
       final ratingCount = await PrefsService.getRatingCount();
-      final bannerDismissed = await PrefsService.isOnboardingBannerDismissed();
-      final initialGenres = await PrefsService.getInitialGenres();
+      final bannerDismissed =
+          await PrefsAppSettings.isOnboardingBannerDismissed();
+      final initialGenres = await PrefsAppSettings.getInitialGenres();
       final showBanner =
           ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
 
@@ -542,7 +544,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     }
     if (reason != DismissFeedbackReason.notNow &&
         reason != DismissFeedbackReason.tooLong) {
-      await PrefsService.blockMovie(dismissed.id, dismissed.isTV);
+      await PrefsAppSettings.blockMovie(dismissed.id, dismissed.isTV);
     }
     if (reason == DismissFeedbackReason.tooLong) {
       final current = ref.read(discoveryContextProvider);

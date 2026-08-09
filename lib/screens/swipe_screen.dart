@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/providers.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/app_settings.dart';
 import '../services/localization_service.dart';
 import '../services/recommendation_telemetry_service.dart';
 import '../providers/swipe_provider.dart';
@@ -62,7 +62,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
   }
 
   Future<void> _checkGuide() async {
-    final shown = await PrefsService.isSwipeGuideShown();
+    final shown = await PrefsAppSettings.isSwipeGuideShown();
     if (!shown && mounted) {
       setState(() => _showGuide = true);
     }

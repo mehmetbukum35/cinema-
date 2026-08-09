@@ -12,7 +12,7 @@ import 'screens/onboarding_screen.dart';
 import 'dart:convert';
 import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
-import 'services/prefs_service.dart';
+import 'services/prefs/app_settings.dart';
 import 'services/db_helper.dart';
 import 'services/localization_service.dart';
 import 'services/notification_service.dart';
@@ -110,10 +110,10 @@ Future<void> _bootstrap() async {
     }),
   );
 
-  final onboardingDone = await PrefsService.isOnboardingDone();
+  final onboardingDone = await PrefsAppSettings.isOnboardingDone();
   // Dil runApp'ten ÖNCE okunur: aksi halde tercih diskten gelene kadar geçen
   // pencerede ilk isteklerin Accept-Language başlığı yanlış dile takılır.
-  final savedLanguage = await PrefsService.getSelectedLanguage();
+  final savedLanguage = await PrefsAppSettings.getSelectedLanguage();
   runApp(
     ProviderScope(
       overrides: rootOverrides(savedLanguage),

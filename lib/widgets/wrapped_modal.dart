@@ -6,7 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'app_cached_image.dart';
 import '../utils/share_helper.dart';
 import '../models/movie.dart';
-import '../services/prefs_service.dart';
+import '../services/prefs/app_settings.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -44,7 +44,7 @@ class _WrappedModalState extends State<WrappedModal> {
 
     final genreNames = topGenres
         .map(
-          (id) => PrefsService.genreName(
+          (id) => PrefsAppSettings.genreName(
             id as int,
             locale: Localizations.localeOf(context).languageCode,
           ),
@@ -433,7 +433,7 @@ class _WrappedModalState extends State<WrappedModal> {
             ...topGenres.asMap().entries.map((entry) {
               final index = entry.key;
               final genreId = entry.value as int;
-              final name = PrefsService.genreName(
+              final name = PrefsAppSettings.genreName(
                 genreId,
                 locale: Localizations.localeOf(context).languageCode,
               );
@@ -603,7 +603,7 @@ class _WrappedModalState extends State<WrappedModal> {
     final topGenres = widget.stats['topGenres'] as List<dynamic>? ?? [];
     final genreNames = topGenres
         .map(
-          (id) => PrefsService.genreName(
+          (id) => PrefsAppSettings.genreName(
             id as int,
             locale: Localizations.localeOf(context).languageCode,
           ),

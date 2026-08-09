@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/prefs_service.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/localization_service.dart';
 import '../providers/watchlist_provider.dart';
@@ -271,7 +272,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _restartOnboarding(BuildContext context) async {
-    await PrefsService.resetOnboarding();
+    await PrefsTastePrefs.resetOnboarding();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const OnboardingScreen()),
