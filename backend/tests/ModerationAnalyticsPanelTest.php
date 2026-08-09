@@ -3,16 +3,14 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/../src/ModerationPanelRenderer.php';
+
 final class ModerationAnalyticsPanelTest extends TestCase
 {
     public function testPanelIncludesRecommendationMetricsAndModelTable(): void
     {
-        $db = new PDO('sqlite::memory:');
-        $moderation = new Moderation($db, 'secret');
-        $method = new ReflectionMethod(Moderation::class, 'html');
-        $method->setAccessible(true);
-
-        $html = $method->invoke($moderation, 'csrf', [], [], [], [
+        $renderer = new ModerationPanelRenderer();
+        $html = $renderer->render('csrf', '/admin/moderation/action', [], [], [], [
             'period_days' => 30,
             'groups' => [[
                 'model_version' => 'recommendation_v4_ab_control',
@@ -37,12 +35,14 @@ final class ModerationAnalyticsPanelTest extends TestCase
 
     public function testPanelExplainsMissingRecommendationTable(): void
     {
-        $db = new PDO('sqlite::memory:');
-        $moderation = new Moderation($db, 'secret');
-        $method = new ReflectionMethod(Moderation::class, 'html');
-        $method->setAccessible(true);
-
-        $html = $method->invoke($moderation, 'csrf', [], [], [], null);
+        $html = (new ModerationPanelRenderer())->render(
+            'csrf',
+            '/admin/moderation/action',
+            [],
+            [],
+            [],
+            null,
+        );
 
         self::assertStringContainsString('Öneri analizi şu anda kullanılamıyor', $html);
         self::assertStringContainsString('028 migration', $html);
