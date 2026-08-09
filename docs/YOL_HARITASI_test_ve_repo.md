@@ -56,8 +56,8 @@ Flutter tarafı iyi ama `backend/src/*.php` hiç test edilmiyordu. Artık tam bi
 ### A4. Kapsam ölçümü (coverage)
 
 - [x] Flutter: `flutter test --coverage` → `coverage/lcov.info` (CI'da otomatik kontrol ediliyor).
-- [ ] Yerel rapor: `genhtml coverage/lcov.info -o coverage/html` (lcov kurulu olmalı).
-- [x] Hedef koy: CI'da mantık katmanı için %50+, PHP için %60+ satır kapsamı barajı eklendi.
+- [x] Yerel rapor: `tool/coverage_html.sh` (`genhtml` / lcov gerekir; Windows'ta WSL veya Chocolatey).
+- [x] Hedef koy: CI'da mantık katmanı için %70+, PHP için %60+ satır kapsamı barajı eklendi.
 
 ### A5. "Otomatik" kısmı — CI kurulumu (en yüksek getiri)
 
@@ -110,17 +110,17 @@ jobs:
 
 ### B1. README (şu an varsayılan Flutter şablonu)
 
-`README.md` artık CI rozeti ve güncel backend/frontend kurulum detaylarını içeriyor. Eksik ekran görüntüleri ve lisans dosyası eklenmelidir.
+`README.md` CI rozeti, pitch, özellikler, mimari, kurulum, test/coverage, tech stack ve MIT lisansını içeriyor. Ekran PNG'leri hâlâ manuel (`docs/screenshots/`).
 
-- [ ] **Başlık + tek cümle pitch** — "cinema+: ruh haline göre film/dizi keşfi, swipe ile puanlama ve arkadaşlarınla sosyal öneri."
-- [ ] **Ekran görüntüleri / GIF** — 3-4 ekran (Keşfet, Swipe, Sosyal, Profil). Görsel, README'nin en ikna edici kısmı.
-- [ ] **Özellikler** — mood tabanlı keşif, 4'lü puanlama, eşleştir/birlikte modu, offline-first sync, sosyal ağ, TR/EN, koyu/açık tema.
-- [ ] **Mimari** — `Flutter (Riverpod) → PHP REST API → MySQL`, offline-first SQLite cache. Bir diyagram cümlesi yeter.
-- [ ] **Kurulum** — `flutter pub get`, TMDB API anahtarı nasıl verilir, `flutter run`.
-- [ ] **Backend kurulumu** — `backend/README.md`'ye link + `config.php` ve migration adımı.
-- [ ] **Test** — `flutter test`, coverage komutu.
-- [ ] **Teknoloji yığını** — Flutter, Riverpod, sqflite, PHP 8.4, MariaDB, TMDB.
-- [ ] **Lisans** — `LICENSE` dosyası ekle (MIT öneri).
+- [x] **Başlık + tek cümle pitch** — mood-based discovery + swipe + social (README).
+- [ ] **Ekran görüntüleri / GIF** — 3–4 ekran; capture guide: `docs/screenshots/README.md` (PNG'ler manuel).
+- [x] **Özellikler** — swipe, search, match, social, offline sync, TR/EN, …
+- [x] **Mimari** — Flutter → PHP → MySQL + SQLite cache cümlesi.
+- [x] **Kurulum** — `flutter pub get`, `API_BASE_URL`, `flutter run`.
+- [x] **Backend kurulumu** — Config.sample → Config + `composer install` / `php -S`.
+- [x] **Test** — `flutter test`, `--coverage`, `tool/coverage_html.sh`, PHPUnit.
+- [x] **Teknoloji yığını** — Flutter, Riverpod, sqflite, PHP 8.4, MariaDB, TMDB.
+- [x] **Lisans** — `LICENSE` (MIT).
 - [x] **CI rozeti** — workflow kurulunca eklendi.
 
 ### B2. Commit mesajı disiplini (Conventional Commits)
@@ -154,7 +154,7 @@ Senin son commit'lerinin düzgün karşılığı:
 
 - [ ] **Semantic Versioning** — `pubspec.yaml`'daki `version: 1.0.0+1` ile uyumlu git tag'leri (`v1.0.0`).
 - [ ] Yayın yaptıkça `git tag -a v1.x.x -m "..."`.
-- [ ] `CHANGELOG.md` — "Keep a Changelog" formatı; `feat`/`fix` commit'lerden beslenir.
+- [x] `CHANGELOG.md` — "Keep a Changelog" formatı; Unreleased + sürüm notları.
 - [x] **Store release checklist** — `docs/STORE_RELEASE_CHECKLIST.md` + screenshot capture guide (`docs/screenshots/README.md`). Gerçek PNG'ler hâlâ manuel.
 
 ### B4. Dal (branch) stratejisi
@@ -165,10 +165,10 @@ Senin son commit'lerinin düzgün karşılığı:
 
 ### B5. Repo temizliği
 
-- [x] `.gitignore` denetle — `.claude/`, `.cursor/`, `.env` eklendi; build artıkları ve sırlar hariç tutuldu.
-- [ ] Kök dizindeki `flutter_01.png` (0 bayt) gibi artıkları sil.
-- [ ] Sırlar repoda olmasın — TMDB anahtarı, JWT secret, DB bilgileri yalnız sunucu config'inde.
-- [ ] `.github/` altına PR şablonu + (opsiyonel) issue şablonu.
+- [x] `.gitignore` denetle — `.claude/`, `.cursor/`, `.env`, `.superpowers/` eklendi; build artıkları ve sırlar hariç tutuldu.
+- [x] Kök dizindeki `flutter_01.png` gibi artıkları sil (yok).
+- [x] Sırlar repoda olmasın — TMDB/JWT/DB yalnız `Config.php` (sample commit'lenir, gerçek dosya değil).
+- [x] `.github/` altına PR şablonu (`.github/PULL_REQUEST_TEMPLATE.md`); issue şablonu opsiyonel.
 
 ### B6. (Opsiyonel) Otomasyon cilası
 
@@ -184,8 +184,8 @@ Senin son commit'lerinin düzgün karşılığı:
 1. [x] `sync_service` + `api_service` testleri yazıldı
 2. [x] CI workflow'u push/PR'da test+analyze çalıştırıyor
 3. [x] Backend için en az `Social` + `Jwt` PHPUnit testi
-4. [ ] README gerçek içerikle yeniden yazıldı (+ekran görüntüsü)
+4. [x] README gerçek içerikle yeniden yazıldı (ekran PNG'leri hâlâ manuel — `docs/screenshots/`)
 5. [x] Conventional Commits kuralı `CONTRIBUTING.md`'de, bundan sonra uygulanıyor
 6. [x] `LICENSE` + `.gitignore` denetimi + artık dosyalar silindi
 
-Bu altısı tamamlanınca repo, koduyla aynı olgunluk seviyesine gelir.
+Asgari paket metin/CI tarafında tamam; kalan: branch protection (A5/B4), store ekran görselleri, isteğe bağlı Dependabot/pre-commit.

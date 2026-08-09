@@ -61,6 +61,14 @@ Run all unit and widget tests:
 flutter test
 ```
 
+Coverage (logic-layer gate is enforced in CI):
+```bash
+flutter test --coverage
+# Optional HTML report — requires genhtml (lcov package):
+./tool/coverage_html.sh
+# Windows: install lcov via Chocolatey, or run the script under WSL/Git Bash
+```
+
 ### Backend Tests
 Run all PHPUnit tests:
 ```bash

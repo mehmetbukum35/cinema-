@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml/badge.svg)](https://github.com/mehmetbukum35/cinema-/actions/workflows/ci.yml)
 
-**cinema+** (Ne İzlesem?) is a Flutter mobile app with a PHP backend for movie and TV discovery, swipe-based ratings, social features, and offline-first sync.
+**cinema+** (Ne İzlesem?) — mood-based movie/TV discovery, swipe ratings, match modes, and social recommendations. Flutter client (offline-first SQLite) + PHP REST API.
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+See [CHANGELOG.md](CHANGELOG.md) for release history. Store/README screenshot frames: [docs/screenshots/README.md](docs/screenshots/README.md).
 
 ## Repository layout
 
@@ -61,10 +61,12 @@ Copy `backend/src/Config.sample.php` to `backend/src/Config.php` and set DB cred
 dart format .
 flutter analyze
 flutter test
+flutter test --coverage          # → coverage/lcov.info
+./tool/coverage_html.sh          # HTML report (needs `genhtml` from lcov)
 cd backend && composer test
 ```
 
-CI runs format check, analyze, Flutter tests with coverage, and PHPUnit on push/PR to `main`.
+CI runs format check, analyze, Flutter tests with coverage gates, and PHPUnit on push/PR to `main`.
 
 ## Error monitoring
 
@@ -81,10 +83,20 @@ CI runs format check, analyze, Flutter tests with coverage, and PHPUnit on push/
 
 ## Architecture
 
+`Flutter (Riverpod) → PHP REST API → MySQL/MariaDB`, with offline-first SQLite cache and TMDB via the backend proxy.
+
 - **State:** Riverpod
 - **Local data:** SQLite (sqflite) + SharedPreferences
 - **Network:** HTTP, JWT rotation, delta sync
 - **Backend modules:** Auth, Sync, Tmdb proxy, Social (split under `backend/src/Social/`)
+
+## Tech stack
+
+Flutter, Riverpod, sqflite, PHP 8.4, MariaDB/MySQL, TMDB (server-side), JWT auth.
+
+## License
+
+[MIT](LICENSE)
 
 ## Releases
 
