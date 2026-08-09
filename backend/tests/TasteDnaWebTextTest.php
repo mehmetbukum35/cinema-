@@ -196,13 +196,14 @@ class TasteDnaWebTextTest extends TestCase
         $this->assertArrayHasKey('revenge', $jsonMap);
         $this->assertEquals('intikam', $jsonMap['revenge']);
 
-        // Test TasteDnaWebText class can load it successfully
-        $ref = new ReflectionClass(TasteDnaWebText::class);
-        $method = $ref->getMethod('getThemesTr');
-        $method->setAccessible(true);
-        $loadedMap = $method->invoke(null);
+        $view = TasteDnaWebText::build([
+            'archetype' => 'genre_nomad',
+            'total_rated' => 20,
+            'themes' => ['revenge', 'not_in_dictionary'],
+        ], 'tr');
 
-        $this->assertEquals($jsonMap, $loadedMap, 'TasteDnaWebText::getThemesTr() must load the JSON correctly.');
+        self::assertNotNull($view);
+        self::assertSame(['İntikam'], $view['themes']);
     }
 
     public function testBuildsEnglishArchetypeThemesAndGenres(): void
