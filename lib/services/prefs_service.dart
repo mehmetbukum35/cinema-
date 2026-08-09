@@ -3,12 +3,12 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:uuid/uuid.dart';
 import '../models/movie.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs/app_settings.dart';
 import 'prefs/auth_storage.dart';
+import 'prefs/sync_meta.dart';
 
 class PrefsService {
   static const _keyInitialGenres = 'initial_genres';
@@ -723,9 +723,6 @@ class PrefsService {
   }
 
   // ─── Authentication & Sync ──────────────────────────────────────────────────
-  static const _keyLastSyncTime = 'sync_last_time';
-  static const _keyLastPushTime = 'sync_last_push_time';
-  static const _keySyncDeviceId = 'sync_device_id';
 
   static Future<String?> getAccessToken() => PrefsAuthStorage.getAccessToken();
 
@@ -740,39 +737,17 @@ class PrefsService {
   static Future<String?> getRefreshToken() =>
       PrefsAuthStorage.getRefreshToken();
 
-  static Future<int> getLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyLastSyncTime) ?? 0;
-  }
+  static Future<int> getLastSyncTime() => PrefsSyncMeta.getLastSyncTime();
 
-  static Future<void> setLastSyncTime(int time) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyLastSyncTime, time);
-  }
+  static Future<void> setLastSyncTime(int time) =>
+      PrefsSyncMeta.setLastSyncTime(time);
 
-  /// Push imleci: CİHAZ saatiyle tutulur (pull imleci ise sunucu saatiyle).
-  /// Eski kurulumlarda anahtar yoksa mevcut davranışı korumak için
-  /// sync_last_time'a düşer.
-  static Future<int> getLastPushTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyLastPushTime) ??
-        prefs.getInt(_keyLastSyncTime) ??
-        0;
-  }
+  static Future<int> getLastPushTime() => PrefsSyncMeta.getLastPushTime();
 
-  static Future<void> setLastPushTime(int time) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyLastPushTime, time);
-  }
+  static Future<void> setLastPushTime(int time) =>
+      PrefsSyncMeta.setLastPushTime(time);
 
-  static Future<String> getSyncDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(_keySyncDeviceId);
-    if (existing != null && existing.length >= 16) return existing;
-    final generated = const Uuid().v4();
-    await prefs.setString(_keySyncDeviceId, generated);
-    return generated;
-  }
+  static Future<String> getSyncDeviceId() => PrefsSyncMeta.getSyncDeviceId();
 
   static Future<Map<String, dynamic>?> getUserData() =>
       PrefsAuthStorage.getUserData();
@@ -788,9 +763,7 @@ class PrefsService {
 
   static Future<void> clearAuthData() async {
     await PrefsAuthStorage.clearTokens();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyLastSyncTime);
-    await prefs.remove(_keyLastPushTime);
+    await PrefsSyncMeta.clearSyncCursors();
     await clearDnaCache();
   }
 
