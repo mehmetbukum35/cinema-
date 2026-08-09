@@ -56,7 +56,9 @@ app.*.map.json
 .cursor/
 .worktrees/
 .env
+graphify-out/
 
 # Backend runtime configuration — contains database, JWT and API secrets.
 /backend/src/Config.php
+
 
