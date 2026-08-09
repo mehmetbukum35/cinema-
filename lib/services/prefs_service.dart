@@ -15,79 +15,145 @@ import 'prefs/sync_meta.dart';
 import 'prefs/taste_prefs.dart';
 
 class PrefsService {
+  /// Prefer [PrefsAppSettings.genreName].
+  @Deprecated('Use PrefsAppSettings.genreName instead')
   static String genreName(int id, {required String locale}) =>
       PrefsAppSettings.genreName(id, locale: locale);
 
+  /// Prefer [PrefsAppSettings.getSelectedLanguage].
+  @Deprecated('Use PrefsAppSettings.getSelectedLanguage instead')
   static Future<String?> getSelectedLanguage() => PrefsAppSettings.getSelectedLanguage();
 
+  /// Prefer [PrefsAppSettings.setSelectedLanguage].
+  @Deprecated('Use PrefsAppSettings.setSelectedLanguage instead')
   static Future<void> setSelectedLanguage(String lang) =>
       PrefsAppSettings.setSelectedLanguage(lang);
 
+  /// Prefer [PrefsAppSettings.isFamilyMode].
+  @Deprecated('Use PrefsAppSettings.isFamilyMode instead')
   static Future<bool> isFamilyMode() => PrefsAppSettings.isFamilyMode();
 
+  /// Prefer [PrefsAppSettings.setFamilyMode].
+  @Deprecated('Use PrefsAppSettings.setFamilyMode instead')
   static Future<void> setFamilyMode(bool value) => PrefsAppSettings.setFamilyMode(value);
 
+  /// Prefer [PrefsAppSettings.blockMovie].
+  @Deprecated('Use PrefsAppSettings.blockMovie instead')
   static Future<void> blockMovie(int id, bool isTV) => PrefsAppSettings.blockMovie(id, isTV);
 
+  /// Prefer [PrefsAppSettings.isMovieBlocked].
+  @Deprecated('Use PrefsAppSettings.isMovieBlocked instead')
   static Future<bool> isMovieBlocked(int id, bool isTV) =>
       PrefsAppSettings.isMovieBlocked(id, isTV);
 
+  /// Prefer [PrefsAppSettings.getBlockedKeys].
+  @Deprecated('Use PrefsAppSettings.getBlockedKeys instead')
   static Future<Set<String>> getBlockedKeys() => PrefsAppSettings.getBlockedKeys();
 
+  /// Prefer [PrefsAppSettings.getThemeMode].
+  @Deprecated('Use PrefsAppSettings.getThemeMode instead')
   static Future<String> getThemeMode() => PrefsAppSettings.getThemeMode();
 
+  /// Prefer [PrefsAppSettings.setThemeMode].
+  @Deprecated('Use PrefsAppSettings.setThemeMode instead')
   static Future<void> setThemeMode(String mode) => PrefsAppSettings.setThemeMode(mode);
 
+  /// Prefer [PrefsAppSettings.isOnboardingDone].
+  @Deprecated('Use PrefsAppSettings.isOnboardingDone instead')
   static Future<bool> isOnboardingDone() => PrefsAppSettings.isOnboardingDone();
 
+  /// Prefer [PrefsAppSettings.setOnboardingDone].
+  @Deprecated('Use PrefsAppSettings.setOnboardingDone instead')
   static Future<void> setOnboardingDone() => PrefsAppSettings.setOnboardingDone();
 
+  /// Prefer [PrefsAppSettings.skipOnboarding].
+  @Deprecated('Use PrefsAppSettings.skipOnboarding instead')
   static Future<void> skipOnboarding() => PrefsAppSettings.skipOnboarding();
 
+  /// Prefer [PrefsTastePrefs.resetOnboarding].
+  @Deprecated('Use PrefsTastePrefs.resetOnboarding instead')
   static Future<void> resetOnboarding() => PrefsTastePrefs.resetOnboarding();
 
+  /// Prefer [PrefsAppSettings.isOnboardingBannerDismissed].
+  @Deprecated('Use PrefsAppSettings.isOnboardingBannerDismissed instead')
   static Future<bool> isOnboardingBannerDismissed() =>
       PrefsAppSettings.isOnboardingBannerDismissed();
 
+  /// Prefer [PrefsAppSettings.dismissOnboardingBanner].
+  @Deprecated('Use PrefsAppSettings.dismissOnboardingBanner instead')
   static Future<void> dismissOnboardingBanner() => PrefsAppSettings.dismissOnboardingBanner();
 
+  /// Prefer [PrefsTastePrefs.saveInitialGenres].
+  @Deprecated('Use PrefsTastePrefs.saveInitialGenres instead')
   static Future<void> saveInitialGenres(List<int> genreIds) =>
       PrefsTastePrefs.saveInitialGenres(genreIds);
 
+  /// Prefer [PrefsAppSettings.getInitialGenres].
+  @Deprecated('Use PrefsAppSettings.getInitialGenres instead')
   static Future<List<int>> getInitialGenres() => PrefsAppSettings.getInitialGenres();
 
+  /// Prefer [PrefsAppSettings.isSwipeGuideShown].
+  @Deprecated('Use PrefsAppSettings.isSwipeGuideShown instead')
   static Future<bool> isSwipeGuideShown() => PrefsAppSettings.isSwipeGuideShown();
 
+  /// Prefer [PrefsAppSettings.setSwipeGuideShown].
+  @Deprecated('Use PrefsAppSettings.setSwipeGuideShown instead')
   static Future<void> setSwipeGuideShown() => PrefsAppSettings.setSwipeGuideShown();
 
+  /// Prefer [PrefsAppSettings.isFirstTimeDice].
+  @Deprecated('Use PrefsAppSettings.isFirstTimeDice instead')
   static Future<bool> isFirstTimeDice() => PrefsAppSettings.isFirstTimeDice();
 
+  /// Prefer [PrefsAuthStorage.getAccessToken].
+  @Deprecated('Use PrefsAuthStorage.getAccessToken instead')
   static Future<String?> getAccessToken() => PrefsAuthStorage.getAccessToken();
 
+  /// Prefer [PrefsAuthStorage.saveTokens].
+  @Deprecated('Use PrefsAuthStorage.saveTokens instead')
   static Future<void> saveTokens({required String accessToken, required String refreshToken}) =>
       PrefsAuthStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
 
+  /// Prefer [PrefsAuthStorage.getRefreshToken].
+  @Deprecated('Use PrefsAuthStorage.getRefreshToken instead')
   static Future<String?> getRefreshToken() => PrefsAuthStorage.getRefreshToken();
 
+  /// Prefer [PrefsAuthStorage.getUserData].
+  @Deprecated('Use PrefsAuthStorage.getUserData instead')
   static Future<Map<String, dynamic>?> getUserData() => PrefsAuthStorage.getUserData();
 
+  /// Prefer [PrefsAuthStorage.saveUserData].
+  @Deprecated('Use PrefsAuthStorage.saveUserData instead')
   static Future<void> saveUserData(Map<String, dynamic> userData) =>
       PrefsAuthStorage.saveUserData(userData);
 
+  /// Prefer [PrefsAuthStorage.getLastAuthenticatedUserId].
+  @Deprecated('Use PrefsAuthStorage.getLastAuthenticatedUserId instead')
   static Future<String?> getLastAuthenticatedUserId() =>
       PrefsAuthStorage.getLastAuthenticatedUserId();
 
+  /// Prefer [PrefsAuthStorage.setLastAuthenticatedUserId].
+  @Deprecated('Use PrefsAuthStorage.setLastAuthenticatedUserId instead')
   static Future<void> setLastAuthenticatedUserId(String? userId) =>
       PrefsAuthStorage.setLastAuthenticatedUserId(userId);
 
+  /// Prefer [PrefsSyncMeta.getLastSyncTime].
+  @Deprecated('Use PrefsSyncMeta.getLastSyncTime instead')
   static Future<int> getLastSyncTime() => PrefsSyncMeta.getLastSyncTime();
 
+  /// Prefer [PrefsSyncMeta.setLastSyncTime].
+  @Deprecated('Use PrefsSyncMeta.setLastSyncTime instead')
   static Future<void> setLastSyncTime(int time) => PrefsSyncMeta.setLastSyncTime(time);
 
+  /// Prefer [PrefsSyncMeta.getLastPushTime].
+  @Deprecated('Use PrefsSyncMeta.getLastPushTime instead')
   static Future<int> getLastPushTime() => PrefsSyncMeta.getLastPushTime();
 
+  /// Prefer [PrefsSyncMeta.setLastPushTime].
+  @Deprecated('Use PrefsSyncMeta.setLastPushTime instead')
   static Future<void> setLastPushTime(int time) => PrefsSyncMeta.setLastPushTime(time);
 
+  /// Prefer [PrefsSyncMeta.getSyncDeviceId].
+  @Deprecated('Use PrefsSyncMeta.getSyncDeviceId instead')
   static Future<String> getSyncDeviceId() => PrefsSyncMeta.getSyncDeviceId();
 
   static Future<void> recordRecoOutcome({required String source, required bool liked}) =>
