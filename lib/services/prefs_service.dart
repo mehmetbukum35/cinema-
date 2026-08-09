@@ -7,11 +7,11 @@ import 'package:uuid/uuid.dart';
 import '../models/movie.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
+import 'prefs/app_settings.dart';
 
 class PrefsService {
   static const _keyOnboardingDone = 'onboarding_complete';
   static const _keyInitialGenres = 'initial_genres';
-  static const _keyLanguage = 'selected_language';
   static const _keyThemeMode = 'theme_mode'; // 'dark' | 'light' | 'system'
   static const _keyFamilyMode = 'family_mode';
   static const _keyBlockedMovies = 'blocked_movie_ids';
@@ -82,17 +82,11 @@ class PrefsService {
     }
   }
 
-  static Future<String?> getSelectedLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyLanguage);
-  }
+  static Future<String?> getSelectedLanguage() =>
+      PrefsAppSettings.getSelectedLanguage();
 
-  /// Yalnızca kalıcılaştırır. Aktif dilin sahibi `LocaleNotifier`'dır; buradan
-  /// ikinci bir yazma yapılırsa iki kaynak ayrışır.
-  static Future<void> setSelectedLanguage(String lang) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyLanguage, lang);
-  }
+  static Future<void> setSelectedLanguage(String lang) =>
+      PrefsAppSettings.setSelectedLanguage(lang);
 
   static Future<bool> isFamilyMode() async {
     final prefs = await SharedPreferences.getInstance();
