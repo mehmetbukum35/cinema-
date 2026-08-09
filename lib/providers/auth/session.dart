@@ -7,8 +7,8 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
   Future<void> _initSession() async {
     state = state.copyWith(loading: true);
     try {
-      final token = await PrefsService.getAccessToken();
-      final userData = await PrefsService.getUserData();
+      final token = await PrefsAuthStorage.getAccessToken();
+      final userData = await PrefsAuthStorage.getUserData();
       if (!mounted) return;
       if (token != null && userData != null) {
         state = state.copyWith(
@@ -22,7 +22,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
         // Migration: Ensure last_authenticated_user_id is set
         final currentUserId = userData['id']?.toString();
         if (currentUserId != null) {
-          await PrefsService.setLastAuthenticatedUserId(currentUserId);
+          await PrefsAuthStorage.setLastAuthenticatedUserId(currentUserId);
         }
 
         Future(() async {
@@ -62,7 +62,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
     final tokens = data['tokens'] as Map<String, dynamic>;
 
     final newUserId = user['id']?.toString();
-    final lastUserId = await PrefsService.getLastAuthenticatedUserId();
+    final lastUserId = await PrefsAuthStorage.getLastAuthenticatedUserId();
     final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
     if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
@@ -90,7 +90,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(loading: true);
 
-    final previousUserId = await PrefsService.getLastAuthenticatedUserId();
+    final previousUserId = await PrefsAuthStorage.getLastAuthenticatedUserId();
     final newUserId = user['id']?.toString();
     final accountSwitched =
         previousUserId != null &&
@@ -108,13 +108,13 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
     await PrefsService.setLastSyncTime(0);
     await PrefsService.setLastPushTime(0);
 
-    await PrefsService.saveTokens(
+    await PrefsAuthStorage.saveTokens(
       accessToken: tokens['access_token'] as String,
       refreshToken: tokens['refresh_token'] as String,
     );
-    await PrefsService.saveUserData(user);
+    await PrefsAuthStorage.saveUserData(user);
 
-    await PrefsService.setLastAuthenticatedUserId(newUserId);
+    await PrefsAuthStorage.setLastAuthenticatedUserId(newUserId);
 
     state = state.copyWith(
       accessToken: tokens['access_token'] as String,
@@ -205,7 +205,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
     if (wipeLocalData) {
       await DatabaseHelper().hardClearAllData();
       await PrefsService.clearAccountScopedPreferences();
-      await PrefsService.setLastAuthenticatedUserId(null);
+      await PrefsAuthStorage.setLastAuthenticatedUserId(null);
     }
     await _invalidateGuestProviders();
     _ref.read(syncProvider.notifier).resetStatus();
@@ -298,7 +298,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       }
       final user = Map<String, dynamic>.from(state.user ?? {});
       user.addAll(userData);
-      await PrefsService.saveUserData(user);
+      await PrefsAuthStorage.saveUserData(user);
       if (mounted) {
         state = state.copyWith(user: user);
       }
@@ -313,7 +313,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       final updatedUser = Map<String, dynamic>.from(state.user!);
       updatedUser['username'] = username;
       updatedUser['is_public'] = isPublic ? 1 : 0;
-      await PrefsService.saveUserData(updatedUser);
+      await PrefsAuthStorage.saveUserData(updatedUser);
       state = state.copyWith(user: updatedUser);
     }
   }

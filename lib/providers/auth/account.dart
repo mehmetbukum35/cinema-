@@ -97,7 +97,7 @@ mixin AuthAccountMixin on StateNotifier<AuthState> {
       await _apiService.unlinkGoogle(password: password);
       final user = Map<String, dynamic>.from(state.user ?? {});
       user.remove('google_sub');
-      await PrefsService.saveUserData(user);
+      await PrefsAuthStorage.saveUserData(user);
       state = state.copyWith(loading: false, user: user);
       return true;
     } on ApiException catch (e) {
@@ -147,7 +147,7 @@ mixin AuthAccountMixin on StateNotifier<AuthState> {
       await _apiService.unlinkApple(password: password);
       final user = Map<String, dynamic>.from(state.user ?? {});
       user.remove('apple_sub');
-      await PrefsService.saveUserData(user);
+      await PrefsAuthStorage.saveUserData(user);
       state = state.copyWith(loading: false, user: user);
       return true;
     } on ApiException catch (e) {
@@ -188,7 +188,7 @@ mixin AuthAccountMixin on StateNotifier<AuthState> {
   Future<void> _finishProviderUnlink(String key) async {
     final user = Map<String, dynamic>.from(state.user ?? {});
     user.remove(key);
-    await PrefsService.saveUserData(user);
+    await PrefsAuthStorage.saveUserData(user);
     state = state.copyWith(loading: false, user: user);
   }
 }

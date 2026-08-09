@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../models/social.dart';
 import 'app_config.dart';
 import 'crash_reporting_service.dart';
+import 'prefs/auth_storage.dart';
 import 'prefs_service.dart';
 
 part 'api/auth_api.dart';
@@ -78,7 +79,7 @@ class ApiClient {
       headers['X-Request-ID'] = requestId;
     }
     if (requireAuth) {
-      final token = await PrefsService.getAccessToken();
+      final token = await PrefsAuthStorage.getAccessToken();
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -158,7 +159,9 @@ class ApiClient {
     // A path alone is not an identity. Account switches and locale changes can
     // happen while an older request is still in flight; never hand that
     // response to the new session/language.
-    final authToken = requireAuth ? await PrefsService.getAccessToken() : null;
+    final authToken = requireAuth
+        ? await PrefsAuthStorage.getAccessToken()
+        : null;
     final key = (localeCode(), authToken, path);
     final existing = _inFlightGets[key];
     if (existing != null) {
@@ -294,8 +297,8 @@ class ApiClient {
     _refreshFuture = completer.future;
 
     try {
-      final initialRefreshToken = await PrefsService.getRefreshToken();
-      final userData = await PrefsService.getUserData();
+      final initialRefreshToken = await PrefsAuthStorage.getRefreshToken();
+      final userData = await PrefsAuthStorage.getUserData();
       if (initialRefreshToken == null) {
         if (userData != null) {
           debugPrint(
@@ -324,8 +327,8 @@ class ApiClient {
           final newRefreshToken = tokens?['refresh_token']?.toString();
           // Logout / wipe can clear auth while refresh is in flight — never
           // resurrect tokens into an empty session.
-          final stillRefresh = await PrefsService.getRefreshToken();
-          final stillUser = await PrefsService.getUserData();
+          final stillRefresh = await PrefsAuthStorage.getRefreshToken();
+          final stillUser = await PrefsAuthStorage.getUserData();
           if (stillRefresh == null ||
               stillUser == null ||
               newAccessToken == null ||
@@ -335,7 +338,7 @@ class ApiClient {
             // Another refresh already rotated the token; treat as success.
             completer.complete(RefreshOutcome.success);
           } else {
-            await PrefsService.saveTokens(
+            await PrefsAuthStorage.saveTokens(
               accessToken: newAccessToken,
               refreshToken: newRefreshToken,
             );

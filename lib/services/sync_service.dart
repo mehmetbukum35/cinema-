@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
+import 'prefs/auth_storage.dart';
 import 'prefs_service.dart';
 import 'api_service.dart';
 import 'providers.dart';
@@ -106,7 +107,7 @@ class SyncService {
   }
 
   Future<String?> _currentUserId() async {
-    final user = await PrefsService.getUserData();
+    final user = await PrefsAuthStorage.getUserData();
     return user?['id']?.toString();
   }
 

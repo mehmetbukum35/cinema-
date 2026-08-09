@@ -140,7 +140,7 @@ mixin AuthApi on ApiClient {
   }
 
   Future<void> logout() async {
-    final refreshToken = await PrefsService.getRefreshToken();
+    final refreshToken = await PrefsAuthStorage.getRefreshToken();
     if (refreshToken != null) {
       try {
         await _request(
