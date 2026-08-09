@@ -22,6 +22,16 @@ class PrefsTastePrefs {
     _cachedGenreWeights = null;
   }
 
+  static Future<void> resetOnboarding() async {
+    await PrefsAppSettings.resetOnboarding();
+    invalidateGenreWeights();
+  }
+
+  static Future<void> saveInitialGenres(List<int> genreIds) async {
+    await PrefsAppSettings.saveInitialGenres(genreIds);
+    invalidateGenreWeights();
+  }
+
   static Future<Map<int, double>> getGenreWeights() async {
     if (_cachedGenreWeights != null) {
       return _cachedGenreWeights!;

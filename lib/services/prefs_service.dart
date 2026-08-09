@@ -1,8 +1,8 @@
-import 'dart:math';
+// dart format width=100
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../models/movie.dart';
+
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs/app_settings.dart';
@@ -12,273 +12,87 @@ import 'prefs/sync_meta.dart';
 import 'prefs/taste_prefs.dart';
 
 class PrefsService {
-  static String genreName(int id, {required String locale}) =>
-      PrefsAppSettings.genreName(id, locale: locale);
-
-  static Future<String?> getSelectedLanguage() =>
-      PrefsAppSettings.getSelectedLanguage();
-
-  static Future<void> setSelectedLanguage(String lang) =>
-      PrefsAppSettings.setSelectedLanguage(lang);
-
-  static Future<bool> isFamilyMode() => PrefsAppSettings.isFamilyMode();
-
-  static Future<void> setFamilyMode(bool value) =>
-      PrefsAppSettings.setFamilyMode(value);
-
-  static Future<void> blockMovie(int id, bool isTV) =>
-      PrefsAppSettings.blockMovie(id, isTV);
-
-  static Future<bool> isMovieBlocked(int id, bool isTV) =>
-      PrefsAppSettings.isMovieBlocked(id, isTV);
-
-  static Future<Set<String>> getBlockedKeys() =>
-      PrefsAppSettings.getBlockedKeys();
-
-  static Future<String> getThemeMode() => PrefsAppSettings.getThemeMode();
-
-  static Future<void> setThemeMode(String mode) =>
-      PrefsAppSettings.setThemeMode(mode);
-
-  static Future<bool> isOnboardingDone() => PrefsAppSettings.isOnboardingDone();
-
-  static Future<void> setOnboardingDone() =>
-      PrefsAppSettings.setOnboardingDone();
-
-  static Future<void> skipOnboarding() => PrefsAppSettings.skipOnboarding();
-
-  static Future<void> resetOnboarding() =>
-      PrefsAppSettings.resetOnboarding().then((_) => invalidateGenreWeights());
-
-  static Future<bool> isOnboardingBannerDismissed() =>
-      PrefsAppSettings.isOnboardingBannerDismissed();
-
-  static Future<void> dismissOnboardingBanner() =>
-      PrefsAppSettings.dismissOnboardingBanner();
-
-  static Future<void> saveInitialGenres(List<int> genreIds) =>
-      PrefsAppSettings.saveInitialGenres(
-        genreIds,
-      ).then((_) => invalidateGenreWeights());
-
-  static Future<List<int>> getInitialGenres() =>
-      PrefsAppSettings.getInitialGenres();
-
-  // ─── Favourite movies / shows ────────────────────────────────────────────────
-
-  static Future<List<Movie>> getFavoriteMovies() =>
-      PrefsLibraryFacade.getFavoriteMovies();
-
-  static Future<List<Movie>> getFavoriteTvShows() =>
-      PrefsLibraryFacade.getFavoriteTvShows();
-
-  /// Favori listesinin tamamını (sıra dahil) yeniden yazar. Top 20 düzenleme
-  /// ekranı ve sıralama işlemleri buradan geçer — liste otoritedir.
-  static Future<void> saveFavoriteMovies(
-    List<Movie> movies, {
-    required String metadataLocale,
-  }) => PrefsLibraryFacade.saveFavoriteMovies(
-    movies,
-    metadataLocale: metadataLocale,
-  );
-
-  static Future<void> saveFavoriteTvShows(
-    List<Movie> shows, {
-    required String metadataLocale,
-  }) => PrefsLibraryFacade.saveFavoriteTvShows(
-    shows,
-    metadataLocale: metadataLocale,
-  );
-
+  static final genreName = PrefsAppSettings.genreName;
+  static final getSelectedLanguage = PrefsAppSettings.getSelectedLanguage;
+  static final setSelectedLanguage = PrefsAppSettings.setSelectedLanguage;
+  static final isFamilyMode = PrefsAppSettings.isFamilyMode;
+  static final setFamilyMode = PrefsAppSettings.setFamilyMode;
+  static final blockMovie = PrefsAppSettings.blockMovie;
+  static final isMovieBlocked = PrefsAppSettings.isMovieBlocked;
+  static final getBlockedKeys = PrefsAppSettings.getBlockedKeys;
+  static final getThemeMode = PrefsAppSettings.getThemeMode;
+  static final setThemeMode = PrefsAppSettings.setThemeMode;
+  static final isOnboardingDone = PrefsAppSettings.isOnboardingDone;
+  static final setOnboardingDone = PrefsAppSettings.setOnboardingDone;
+  static final skipOnboarding = PrefsAppSettings.skipOnboarding;
+  static final resetOnboarding = PrefsTastePrefs.resetOnboarding;
+  static final isOnboardingBannerDismissed = PrefsAppSettings.isOnboardingBannerDismissed;
+  static final dismissOnboardingBanner = PrefsAppSettings.dismissOnboardingBanner;
+  static final saveInitialGenres = PrefsTastePrefs.saveInitialGenres;
+  static final getInitialGenres = PrefsAppSettings.getInitialGenres;
+  static final isSwipeGuideShown = PrefsAppSettings.isSwipeGuideShown;
+  static final setSwipeGuideShown = PrefsAppSettings.setSwipeGuideShown;
+  static final isFirstTimeDice = PrefsAppSettings.isFirstTimeDice;
+  static final getAccessToken = PrefsAuthStorage.getAccessToken;
+  static final saveTokens = PrefsAuthStorage.saveTokens;
+  static final getRefreshToken = PrefsAuthStorage.getRefreshToken;
+  static final getUserData = PrefsAuthStorage.getUserData;
+  static final saveUserData = PrefsAuthStorage.saveUserData;
+  static final getLastAuthenticatedUserId = PrefsAuthStorage.getLastAuthenticatedUserId;
+  static final setLastAuthenticatedUserId = PrefsAuthStorage.setLastAuthenticatedUserId;
+  static final getLastSyncTime = PrefsSyncMeta.getLastSyncTime;
+  static final setLastSyncTime = PrefsSyncMeta.setLastSyncTime;
+  static final getLastPushTime = PrefsSyncMeta.getLastPushTime;
+  static final setLastPushTime = PrefsSyncMeta.setLastPushTime;
+  static final getSyncDeviceId = PrefsSyncMeta.getSyncDeviceId;
+  static final recordRecoOutcome = PrefsTastePrefs.recordRecoOutcome;
+  static final revertRecoOutcome = PrefsTastePrefs.revertRecoOutcome;
+  static final getRecoTelemetry = PrefsTastePrefs.getRecoTelemetry;
+  static final shouldAskDismissFeedback = PrefsTastePrefs.shouldAskDismissFeedback;
+  static final recordDismissFeedback = PrefsTastePrefs.recordDismissFeedback;
+  static final getDismissFeedback = PrefsTastePrefs.getDismissFeedback;
+  static final getLikedGenreIds = PrefsTastePrefs.getLikedGenreIds;
+  static final sampleLikedGenreIds = PrefsTastePrefs.sampleLikedGenreIds;
+  static final getRecoImpressions = PrefsTastePrefs.getRecoImpressions;
+  static final recordRecoImpressions = PrefsTastePrefs.recordRecoImpressions;
+  static final getTonightHistory = PrefsTastePrefs.getTonightHistory;
+  static final recordTonightPick = PrefsTastePrefs.recordTonightPick;
+  static final invalidateGenreWeights = PrefsTastePrefs.invalidateGenreWeights;
+  static final getGenreWeights = PrefsTastePrefs.getGenreWeights;
+  static final calculateSimilarity = PrefsTastePrefs.calculateSimilarity;
+  static final getCachedDna = PrefsTastePrefs.getCachedDna;
+  static final cacheDna = PrefsTastePrefs.cacheDna;
+  static final getLastPublishedDnaHash = PrefsTastePrefs.getLastPublishedDnaHash;
+  static final setLastPublishedDnaHash = PrefsTastePrefs.setLastPublishedDnaHash;
+  static final clearDnaCache = PrefsTastePrefs.clearDnaCache;
+  static const dnaMilestones = PrefsTastePrefs.dnaMilestones;
+  static final pendingDnaMilestone = PrefsTastePrefs.pendingDnaMilestone;
+  static final markDnaMilestoneShown = PrefsTastePrefs.markDnaMilestoneShown;
+  static final getFavoriteMovies = PrefsLibraryFacade.getFavoriteMovies;
+  static final getFavoriteTvShows = PrefsLibraryFacade.getFavoriteTvShows;
+  static final saveFavoriteMovies = PrefsLibraryFacade.saveFavoriteMovies;
+  static final saveFavoriteTvShows = PrefsLibraryFacade.saveFavoriteTvShows;
   static const favoritesCap = PrefsLibraryFacade.favoritesCap;
-
-  /// Favorinin 0-tabanlı sırasını [0.2, 1.0] ağırlık çarpanına eşler: #1 (rank 0)
-  /// = 1.0, son sıra (cap-1) ≈ 0.2. Öneri motorunun sıra eğrisinin tek kaynağı —
-  /// hem tür ağırlığı hem keyword vektörü bunu kullanır (bkz. RecommendationEngine).
-  static double favoriteRankWeight(int rank) =>
-      PrefsLibraryFacade.favoriteRankWeight(rank);
-
-  /// Yeni seçimleri mevcut favorilerin ÜSTÜNE YAZMADAN birleştirir: var olan
-  /// sıra korunur, listede olmayan yeni öğeler sona eklenir (20 sınırı). Onboarding
-  /// buradan geçer — böylece "Zevk Analizini Yeniden Başlat" kullanıcının Top 20'sini
-  /// 3'e düşürmez (bkz. TOP20_PLANI.md, Faz 1 clobber düzeltmesi).
-  static Future<void> mergeFavoriteMovies(
-    List<Movie> picks, {
-    required String metadataLocale,
-  }) => PrefsLibraryFacade.mergeFavoriteMovies(
-    picks,
-    metadataLocale: metadataLocale,
-  );
-
-  static Future<void> mergeFavoriteTvShows(
-    List<Movie> picks, {
-    required String metadataLocale,
-  }) => PrefsLibraryFacade.mergeFavoriteTvShows(
-    picks,
-    metadataLocale: metadataLocale,
-  );
-
-  // ─── Öneri isabet telemetrisi ────────────────────────────────────────────────
-
-  static Future<void> recordRecoOutcome({
-    required String source,
-    required bool liked,
-  }) => PrefsTastePrefs.recordRecoOutcome(source: source, liked: liked);
-
-  static Future<void> revertRecoOutcome({
-    required String source,
-    required bool liked,
-  }) => PrefsTastePrefs.revertRecoOutcome(source: source, liked: liked);
-
-  /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
-  static Future<Map<String, Map<String, int>>> getRecoTelemetry() =>
-      PrefsTastePrefs.getRecoTelemetry();
-
-  static Future<bool> shouldAskDismissFeedback({required int matchScore}) =>
-      PrefsTastePrefs.shouldAskDismissFeedback(matchScore: matchScore);
-
-  static Future<void> recordDismissFeedback({
-    required String movieKey,
-    required String reason,
-    required String source,
-  }) => PrefsTastePrefs.recordDismissFeedback(
-    movieKey: movieKey,
-    reason: reason,
-    source: source,
-  );
-
-  static Future<List<Map<String, dynamic>>> getDismissFeedback() =>
-      PrefsTastePrefs.getDismissFeedback();
-
-  // ─── Ratings ────────────────────────────────────────────────────────────────
-
-  static Future<void> saveRating({
-    Movie? movie,
-    int? movieId,
-    bool? isTV,
-    required int rating,
-    List<int>? genreIds,
-    Object? comment = DatabaseHelper.unset,
-    Object? isSpoiler = DatabaseHelper.unset,
-    Object? isPrivate = DatabaseHelper.unset,
-    required String metadataLocale,
-  }) => PrefsLibraryFacade.saveRating(
-    movie: movie,
-    movieId: movieId,
-    isTV: isTV,
-    rating: rating,
-    genreIds: genreIds,
-    comment: comment,
-    isSpoiler: isSpoiler,
-    isPrivate: isPrivate,
-    metadataLocale: metadataLocale,
-  );
-
-  static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) =>
-      PrefsLibraryFacade.getRating(movieId, isTV);
-
-  /// Yorumu puandan bağımsız siler (puan korunur, sync'e yansır).
-  static Future<void> deleteComment(int movieId, bool isTV) =>
-      PrefsLibraryFacade.deleteComment(movieId, isTV);
-
-  /// Yorum yazılmış tüm puanlar, en yeni önce ("Yorumlarım" ekranı).
-  static Future<List<Map<String, dynamic>>> getCommentedRatings() =>
-      PrefsLibraryFacade.getCommentedRatings();
-
-  static Future<List<int>> getLikedGenreIds() =>
-      PrefsTastePrefs.getLikedGenreIds();
-
-  /// Tür ağırlık dağılımından, ağırlıkla orantılı olasılıkla [count] FARKLI
-  /// tür örnekler (yerine koymadan). Hep aynı "top-3 tür" sorgusu yerine
-  /// güne/tura bağlı bir [rng] ile çağrılırsa keşif havuzu çeşitlenir:
-  /// 4-5. sıradaki türler de ara sıra vitrine aday üretir. Pozitif ağırlıklı
-  /// tür sayısı yetersizse klasik getLikedGenreIds'e düşer.
-  static Future<List<int>> sampleLikedGenreIds(Random rng, {int count = 3}) =>
-      PrefsTastePrefs.sampleLikedGenreIds(rng, count: count);
-
-  // ─── Öneri gösterim hafızası (impression cooldown) ─────────────────────────
-
-  /// key → son gösterim (ms). 14 gün pencere, en fazla 400 kayıt.
-  static Future<Map<String, int>> getRecoImpressions() =>
-      PrefsTastePrefs.getRecoImpressions();
-
-  static Future<void> recordRecoImpressions(List<String> keys) =>
-      PrefsTastePrefs.recordRecoImpressions(keys);
-
-  /// Vitrin ("Bu Gece Ne İzlesem?") geçmişi: aynı yapım 7 gün içinde tekrar
-  /// vitrin olmasın diye ayrı ve daha uzun pencereli tutulur.
-  static Future<Map<String, int>> getTonightHistory() =>
-      PrefsTastePrefs.getTonightHistory();
-
-  static Future<void> recordTonightPick(String key) =>
-      PrefsTastePrefs.recordTonightPick(key);
-
-  static void invalidateGenreWeights() =>
-      PrefsTastePrefs.invalidateGenreWeights();
-
-  static Future<Map<int, double>> getGenreWeights() =>
-      PrefsTastePrefs.getGenreWeights();
-
-  static double calculateSimilarity(
-    Map<int, double> userVector,
-    List<int> movieGenres,
-  ) => PrefsTastePrefs.calculateSimilarity(userVector, movieGenres);
-
-  static Future<Set<String>> getRatedIds() => PrefsLibraryFacade.getRatedIds();
-
-  static Future<void> deleteRating(int movieId, bool isTV) =>
-      PrefsLibraryFacade.deleteRating(movieId, isTV);
-
-  static Future<int> getRatingCount() => PrefsLibraryFacade.getRatingCount();
-
-  static Future<Map<String, dynamic>> getStats() =>
-      PrefsLibraryFacade.getStats();
-
-  // ─── Watchlist ───────────────────────────────────────────────────────────────
-
-  static Future<void> addToWatchlist(
-    Movie movie, {
-    required String metadataLocale,
-  }) =>
-      PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: metadataLocale);
-
-  static Future<void> removeFromWatchlist(int id, bool isTV) =>
-      PrefsLibraryFacade.removeFromWatchlist(id, isTV);
-
-  static Future<bool> isInWatchlist(int id, bool isTV) =>
-      PrefsLibraryFacade.isInWatchlist(id, isTV);
-
-  static Future<List<Movie>> getWatchlist() =>
-      PrefsLibraryFacade.getWatchlist();
-
-  // ─── Search history ─────────────────────────────────────────────────────────
-
-  static Future<void> addSearchHistory(String query) =>
-      PrefsLibraryFacade.addSearchHistory(query);
-
-  static Future<List<String>> getSearchHistory() =>
-      PrefsLibraryFacade.getSearchHistory();
-
-  static Future<void> clearSearchHistory() =>
-      PrefsLibraryFacade.clearSearchHistory();
-
-  // ─── Season tracking ────────────────────────────────────────────────────────
-
-  static Future<void> toggleSeason(int tvId, int seasonNumber) =>
-      PrefsLibraryFacade.toggleSeason(tvId, seasonNumber);
-
-  static Future<Set<int>> getWatchedSeasons(int tvId) =>
-      PrefsLibraryFacade.getWatchedSeasons(tvId);
-
-  // ─── Reset ──────────────────────────────────────────────────────────────────
-
-  static const _secureStorage = FlutterSecureStorage();
-
-  /// Bellekte tutulan performans cache'lerini sıfırlar. Diske dokunmaz.
-  ///
-  /// Testler için gerekli: bu cache'ler statik olduğundan bir testin yazdığı
-  /// token veya tür ağırlığı aynı dosyadaki sonraki testlere sızar ve testleri
-  /// çalışma sırasına bağımlı kılar.
+  static final favoriteRankWeight = PrefsLibraryFacade.favoriteRankWeight;
+  static final mergeFavoriteMovies = PrefsLibraryFacade.mergeFavoriteMovies;
+  static final mergeFavoriteTvShows = PrefsLibraryFacade.mergeFavoriteTvShows;
+  static final saveRating = PrefsLibraryFacade.saveRating;
+  static final getRating = PrefsLibraryFacade.getRating;
+  static final deleteComment = PrefsLibraryFacade.deleteComment;
+  static final getCommentedRatings = PrefsLibraryFacade.getCommentedRatings;
+  static final getRatedIds = PrefsLibraryFacade.getRatedIds;
+  static final deleteRating = PrefsLibraryFacade.deleteRating;
+  static final getRatingCount = PrefsLibraryFacade.getRatingCount;
+  static final getStats = PrefsLibraryFacade.getStats;
+  static final addToWatchlist = PrefsLibraryFacade.addToWatchlist;
+  static final removeFromWatchlist = PrefsLibraryFacade.removeFromWatchlist;
+  static final isInWatchlist = PrefsLibraryFacade.isInWatchlist;
+  static final getWatchlist = PrefsLibraryFacade.getWatchlist;
+  static final addSearchHistory = PrefsLibraryFacade.addSearchHistory;
+  static final getSearchHistory = PrefsLibraryFacade.getSearchHistory;
+  static final clearSearchHistory = PrefsLibraryFacade.clearSearchHistory;
+  static final toggleSeason = PrefsLibraryFacade.toggleSeason;
+  static final getWatchedSeasons = PrefsLibraryFacade.getWatchedSeasons;
   @visibleForTesting
   static void resetInMemoryCaches() {
     PrefsAuthStorage.clearTokenCache();
@@ -289,48 +103,9 @@ class PrefsService {
     resetInMemoryCaches();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    await _secureStorage.deleteAll();
+    await PrefsAuthStorage.deleteAllSecure();
     await DatabaseHelper().clearAllData();
   }
-
-  // ─── Authentication & Sync ──────────────────────────────────────────────────
-
-  static Future<String?> getAccessToken() => PrefsAuthStorage.getAccessToken();
-
-  static Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) => PrefsAuthStorage.saveTokens(
-    accessToken: accessToken,
-    refreshToken: refreshToken,
-  );
-
-  static Future<String?> getRefreshToken() =>
-      PrefsAuthStorage.getRefreshToken();
-
-  static Future<int> getLastSyncTime() => PrefsSyncMeta.getLastSyncTime();
-
-  static Future<void> setLastSyncTime(int time) =>
-      PrefsSyncMeta.setLastSyncTime(time);
-
-  static Future<int> getLastPushTime() => PrefsSyncMeta.getLastPushTime();
-
-  static Future<void> setLastPushTime(int time) =>
-      PrefsSyncMeta.setLastPushTime(time);
-
-  static Future<String> getSyncDeviceId() => PrefsSyncMeta.getSyncDeviceId();
-
-  static Future<Map<String, dynamic>?> getUserData() =>
-      PrefsAuthStorage.getUserData();
-
-  static Future<void> saveUserData(Map<String, dynamic> userData) =>
-      PrefsAuthStorage.saveUserData(userData);
-
-  static Future<String?> getLastAuthenticatedUserId() =>
-      PrefsAuthStorage.getLastAuthenticatedUserId();
-
-  static Future<void> setLastAuthenticatedUserId(String? userId) =>
-      PrefsAuthStorage.setLastAuthenticatedUserId(userId);
 
   static Future<void> clearAuthData() async {
     await PrefsAuthStorage.clearTokens();
@@ -338,48 +113,8 @@ class PrefsService {
     await PrefsTastePrefs.clearDnaCache();
   }
 
-  /// Hesaba özel yerel tercihler (kültür + DNA cache). Wipe / hesap değişiminde.
   static Future<void> clearAccountScopedPreferences() async {
     await CulturalPreferenceService.clear();
     await PrefsTastePrefs.clearDnaCache();
   }
-
-  // ─── DNA Caching ─────────────────────────────────────────────────────────────
-
-  static Future<Map<String, String>?> getCachedDna() =>
-      PrefsTastePrefs.getCachedDna();
-
-  static Future<void> cacheDna(String json, String hash) =>
-      PrefsTastePrefs.cacheDna(json, hash);
-
-  static Future<String?> getLastPublishedDnaHash() =>
-      PrefsTastePrefs.getLastPublishedDnaHash();
-
-  static Future<void> setLastPublishedDnaHash(String? hash) =>
-      PrefsTastePrefs.setLastPublishedDnaHash(hash);
-
-  static Future<void> clearDnaCache() => PrefsTastePrefs.clearDnaCache();
-
-  // ─── DNA eşik anları (swipe akışındaki keşif kartı) ─────────────────────
-
-  /// İlk eşik, DNA'nın kilidinin açıldığı 5 puanla (bkz. DnaLockedCard) aynı.
-  static const dnaMilestones = PrefsTastePrefs.dnaMilestones;
-
-  /// [ratingCount] için gösterilmemiş en YÜKSEK eşik; hepsi gösterildiyse
-  /// veya sayı ilk eşiğin altındaysa null.
-  static Future<int?> pendingDnaMilestone(int ratingCount) =>
-      PrefsTastePrefs.pendingDnaMilestone(ratingCount);
-
-  /// [threshold] ve altındaki TÜM eşikleri gösterildi sayar: 50'nin kartını
-  /// gören kullanıcıya sonradan 5'inki gösterilmez.
-  static Future<void> markDnaMilestoneShown(int threshold) =>
-      PrefsTastePrefs.markDnaMilestoneShown(threshold);
-
-  static Future<bool> isSwipeGuideShown() =>
-      PrefsAppSettings.isSwipeGuideShown();
-
-  static Future<void> setSwipeGuideShown() =>
-      PrefsAppSettings.setSwipeGuideShown();
-
-  static Future<bool> isFirstTimeDice() => PrefsAppSettings.isFirstTimeDice();
 }

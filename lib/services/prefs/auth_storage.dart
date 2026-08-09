@@ -98,4 +98,6 @@ class PrefsAuthStorage {
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyUserData);
   }
+
+  static Future<void> deleteAllSecure() => _secureStorage.deleteAll();
 }
