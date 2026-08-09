@@ -5,27 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db_helper.dart';
 import 'app_settings.dart';
+import 'library_facade.dart';
 
 /// Zevk sinyalleri: tür ağırlıkları, benzerlik, öneri telemetrisi/gösterim
 /// hafızası, dismiss geri bildirimi ve DNA cache + eşikleri.
 ///
 /// Public çağrı yüzeyi hâlâ [PrefsService]; bu sınıf taşıma hedefidir.
 ///
-/// Cycle kuralı: bu dosya `prefs_service.dart` import ETMEZ. Favoriler henüz
-/// `PrefsService` altında olduğundan (Task 6'ya kadar), tür ağırlığı hesabı
-/// favori sırası formülünü kendi içinde geçici olarak kopyalar; Task 6'da
-/// `PrefsLibraryFacade.favoriteRankWeight` tek kaynağa indirgenecek.
+/// Cycle kuralı: bu dosya `prefs_service.dart` import ETMEZ. `library_facade.dart`
+/// ile karşılıklı import vardır (favori sıra ağırlığı formülü için buradan,
+/// `saveRating`/favori yazma sonrası cache geçersizleştirme için ordan) — bu,
+/// Dart'ta desteklenen zararsız bir döngüdür ve iki dosya da `prefs_service.dart`'a
+/// geri dönmez.
 class PrefsTastePrefs {
-  // ─── Favori sıra ağırlığı (geçici kopya — bkz. sınıf dokümanı) ────────────
-
-  static const _favoritesCap = 20;
-  static const _favoriteGenreBase = 3.0;
-
-  static double _favoriteRankWeight(int rank) {
-    final r = rank.clamp(0, _favoritesCap - 1);
-    return 1.0 - 0.8 * (r / (_favoritesCap - 1));
-  }
-
   // ─── Tür ağırlıkları ────────────────────────────────────────────────────────
 
   static Map<int, double>? _cachedGenreWeights;
@@ -82,7 +74,9 @@ class PrefsTastePrefs {
           ? decodedGenreIds
           : const [];
       final int rank = fav['created_at'] as int? ?? 0;
-      final double w = _favoriteGenreBase * _favoriteRankWeight(rank);
+      final double w =
+          PrefsLibraryFacade.favoriteGenreBase *
+          PrefsLibraryFacade.favoriteRankWeight(rank);
       for (final id in genreIds) {
         if (id is int) {
           weights[id] = (weights[id] ?? 0.0) + w;

@@ -7,6 +7,7 @@ import 'cultural_preference_service.dart';
 import 'db_helper.dart';
 import 'prefs/app_settings.dart';
 import 'prefs/auth_storage.dart';
+import 'prefs/library_facade.dart';
 import 'prefs/sync_meta.dart';
 import 'prefs/taste_prefs.dart';
 
@@ -66,82 +67,56 @@ class PrefsService {
   // ─── Favourite movies / shows ────────────────────────────────────────────────
 
   static Future<List<Movie>> getFavoriteMovies() =>
-      DatabaseHelper().getFavorites(false);
+      PrefsLibraryFacade.getFavoriteMovies();
 
   static Future<List<Movie>> getFavoriteTvShows() =>
-      DatabaseHelper().getFavorites(true);
+      PrefsLibraryFacade.getFavoriteTvShows();
 
   /// Favori listesinin tamamını (sıra dahil) yeniden yazar. Top 20 düzenleme
   /// ekranı ve sıralama işlemleri buradan geçer — liste otoritedir.
   static Future<void> saveFavoriteMovies(
     List<Movie> movies, {
     required String metadataLocale,
-  }) async {
-    await DatabaseHelper().saveFavorites(
-      movies,
-      false,
-      metadataLocale: metadataLocale,
-    );
-    invalidateGenreWeights();
-  }
+  }) => PrefsLibraryFacade.saveFavoriteMovies(
+    movies,
+    metadataLocale: metadataLocale,
+  );
 
   static Future<void> saveFavoriteTvShows(
     List<Movie> shows, {
     required String metadataLocale,
-  }) async {
-    await DatabaseHelper().saveFavorites(
-      shows,
-      true,
-      metadataLocale: metadataLocale,
-    );
-    invalidateGenreWeights();
-  }
+  }) => PrefsLibraryFacade.saveFavoriteTvShows(
+    shows,
+    metadataLocale: metadataLocale,
+  );
+
+  static const favoritesCap = PrefsLibraryFacade.favoritesCap;
+
+  /// Favorinin 0-tabanlı sırasını [0.2, 1.0] ağırlık çarpanına eşler: #1 (rank 0)
+  /// = 1.0, son sıra (cap-1) ≈ 0.2. Öneri motorunun sıra eğrisinin tek kaynağı —
+  /// hem tür ağırlığı hem keyword vektörü bunu kullanır (bkz. RecommendationEngine).
+  static double favoriteRankWeight(int rank) =>
+      PrefsLibraryFacade.favoriteRankWeight(rank);
 
   /// Yeni seçimleri mevcut favorilerin ÜSTÜNE YAZMADAN birleştirir: var olan
   /// sıra korunur, listede olmayan yeni öğeler sona eklenir (20 sınırı). Onboarding
   /// buradan geçer — böylece "Zevk Analizini Yeniden Başlat" kullanıcının Top 20'sini
   /// 3'e düşürmez (bkz. TOP20_PLANI.md, Faz 1 clobber düzeltmesi).
-  static const favoritesCap = 20;
-
-  /// Favorinin 0-tabanlı sırasını [0.2, 1.0] ağırlık çarpanına eşler: #1 (rank 0)
-  /// = 1.0, son sıra (cap-1) ≈ 0.2. Öneri motorunun sıra eğrisinin tek kaynağı —
-  /// hem tür ağırlığı hem keyword vektörü bunu kullanır (bkz. RecommendationEngine).
-  static double favoriteRankWeight(int rank) {
-    final r = rank.clamp(0, favoritesCap - 1);
-    return 1.0 - 0.8 * (r / (favoritesCap - 1));
-  }
-
   static Future<void> mergeFavoriteMovies(
     List<Movie> picks, {
     required String metadataLocale,
-  }) => _mergeFavorites(picks, false, metadataLocale);
+  }) => PrefsLibraryFacade.mergeFavoriteMovies(
+    picks,
+    metadataLocale: metadataLocale,
+  );
 
   static Future<void> mergeFavoriteTvShows(
     List<Movie> picks, {
     required String metadataLocale,
-  }) => _mergeFavorites(picks, true, metadataLocale);
-
-  static Future<void> _mergeFavorites(
-    List<Movie> picks,
-    bool isTV,
-    String metadataLocale,
-  ) async {
-    final existing = await DatabaseHelper().getFavorites(isTV);
-    final merged = <Movie>[...existing];
-    for (final pick in picks) {
-      if (merged.length >= favoritesCap) break;
-      if (merged.any((m) => m.id == pick.id)) continue;
-      merged.add(pick);
-    }
-    // Değişiklik yoksa gereksiz yazma/sıra bozulması olmasın.
-    if (merged.length == existing.length) return;
-    await DatabaseHelper().saveFavorites(
-      merged,
-      isTV,
-      metadataLocale: metadataLocale,
-    );
-    invalidateGenreWeights();
-  }
+  }) => PrefsLibraryFacade.mergeFavoriteTvShows(
+    picks,
+    metadataLocale: metadataLocale,
+  );
 
   // ─── Öneri isabet telemetrisi ────────────────────────────────────────────────
 
@@ -187,41 +162,28 @@ class PrefsService {
     Object? isSpoiler = DatabaseHelper.unset,
     Object? isPrivate = DatabaseHelper.unset,
     required String metadataLocale,
-  }) async {
-    await DatabaseHelper().saveRating(
-      movie: movie,
-      movieId: movieId,
-      isTV: isTV,
-      rating: rating,
-      genreIds: genreIds,
-      comment: comment,
-      isSpoiler: isSpoiler,
-      isPrivate: isPrivate,
-      metadataLocale: metadataLocale,
-    );
-    invalidateGenreWeights();
-    // Best-effort: yeterli sınıflandırılmış beğeni birikince kültürel tercihleri
-    // yumuşak güncelle. Hata öneri akışını bozmasın.
-    try {
-      await CulturalPreferenceService.learnFromRatings();
-    } catch (e) {
-      debugPrint('Cultural preference learning failed: $e');
-    }
-  }
+  }) => PrefsLibraryFacade.saveRating(
+    movie: movie,
+    movieId: movieId,
+    isTV: isTV,
+    rating: rating,
+    genreIds: genreIds,
+    comment: comment,
+    isSpoiler: isSpoiler,
+    isPrivate: isPrivate,
+    metadataLocale: metadataLocale,
+  );
 
-  static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) async {
-    return DatabaseHelper().getRating(movieId, isTV);
-  }
+  static Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) =>
+      PrefsLibraryFacade.getRating(movieId, isTV);
 
   /// Yorumu puandan bağımsız siler (puan korunur, sync'e yansır).
-  static Future<void> deleteComment(int movieId, bool isTV) async {
-    await DatabaseHelper().deleteComment(movieId, isTV);
-  }
+  static Future<void> deleteComment(int movieId, bool isTV) =>
+      PrefsLibraryFacade.deleteComment(movieId, isTV);
 
   /// Yorum yazılmış tüm puanlar, en yeni önce ("Yorumlarım" ekranı).
-  static Future<List<Map<String, dynamic>>> getCommentedRatings() async {
-    return DatabaseHelper().getCommentedRatings();
-  }
+  static Future<List<Map<String, dynamic>>> getCommentedRatings() =>
+      PrefsLibraryFacade.getCommentedRatings();
 
   static Future<List<int>> getLikedGenreIds() =>
       PrefsTastePrefs.getLikedGenreIds();
@@ -262,121 +224,51 @@ class PrefsService {
     List<int> movieGenres,
   ) => PrefsTastePrefs.calculateSimilarity(userVector, movieGenres);
 
-  static Future<Set<String>> getRatedIds() async {
-    return await DatabaseHelper().getRatedIds();
-  }
+  static Future<Set<String>> getRatedIds() => PrefsLibraryFacade.getRatedIds();
 
-  static Future<void> deleteRating(int movieId, bool isTV) async {
-    await DatabaseHelper().deleteRating(movieId, isTV);
-    invalidateGenreWeights();
-  }
+  static Future<void> deleteRating(int movieId, bool isTV) =>
+      PrefsLibraryFacade.deleteRating(movieId, isTV);
 
-  static Future<int> getRatingCount() async {
-    return await DatabaseHelper().getRatingCount();
-  }
+  static Future<int> getRatingCount() => PrefsLibraryFacade.getRatingCount();
 
-  static Future<Map<String, dynamic>> getStats() async {
-    final ratings = await DatabaseHelper().getRatings();
-
-    final counts = <int, int>{0: 0, 1: 0, 2: 0, 3: 0};
-    final Map<int, int> genreCounts = {};
-    final List<Map<String, dynamic>> ratedMovies = [];
-
-    for (final item in ratings) {
-      final rating = item['rating'] as int;
-      if (rating >= 0) {
-        counts[rating] = (counts[rating] ?? 0) + 1;
-        if (rating >= 2) {
-          final genreList = item['genreIds'] as List? ?? const [];
-          for (final id in genreList) {
-            if (id is int) {
-              genreCounts[id] = (genreCounts[id] ?? 0) + 1;
-            }
-          }
-        }
-        final movie = item['movie'] as Movie?;
-        if (movie != null && movie.title.isNotEmpty) {
-          ratedMovies.add({
-            'movie': movie,
-            'rating': rating,
-            'is_private': item['is_private'] as int? ?? 0,
-          });
-        }
-      }
-    }
-
-    List<int> topGenres;
-    if (genreCounts.isEmpty) {
-      // Fall back to weighted genre scores (favourites > initial prefs)
-      final allGenres = await getLikedGenreIds();
-      topGenres = allGenres.take(3).toList();
-    } else {
-      topGenres =
-          (genreCounts.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value)))
-              .take(3)
-              .map((e) => e.key)
-              .toList();
-    }
-
-    return {
-      'total': ratings.where((e) => (e['rating'] as int) >= 0).length,
-      'berbat': counts[0]!,
-      'eh': counts[1]!,
-      'iyi': counts[2]!,
-      'harika': counts[3]!,
-      'topGenres': topGenres,
-      'ratedMovies': ratedMovies.reversed.toList(),
-    };
-  }
+  static Future<Map<String, dynamic>> getStats() =>
+      PrefsLibraryFacade.getStats();
 
   // ─── Watchlist ───────────────────────────────────────────────────────────────
 
   static Future<void> addToWatchlist(
     Movie movie, {
     required String metadataLocale,
-  }) async {
-    await DatabaseHelper().addToWatchlist(
-      movie,
-      metadataLocale: metadataLocale,
-    );
-  }
+  }) =>
+      PrefsLibraryFacade.addToWatchlist(movie, metadataLocale: metadataLocale);
 
-  static Future<void> removeFromWatchlist(int id, bool isTV) async {
-    await DatabaseHelper().removeFromWatchlist(id, isTV);
-  }
+  static Future<void> removeFromWatchlist(int id, bool isTV) =>
+      PrefsLibraryFacade.removeFromWatchlist(id, isTV);
 
-  static Future<bool> isInWatchlist(int id, bool isTV) async {
-    return await DatabaseHelper().isInWatchlist(id, isTV);
-  }
+  static Future<bool> isInWatchlist(int id, bool isTV) =>
+      PrefsLibraryFacade.isInWatchlist(id, isTV);
 
-  static Future<List<Movie>> getWatchlist() async {
-    return await DatabaseHelper().getWatchlist();
-  }
+  static Future<List<Movie>> getWatchlist() =>
+      PrefsLibraryFacade.getWatchlist();
 
   // ─── Search history ─────────────────────────────────────────────────────────
 
-  static Future<void> addSearchHistory(String query) async {
-    await DatabaseHelper().addSearchHistory(query);
-  }
+  static Future<void> addSearchHistory(String query) =>
+      PrefsLibraryFacade.addSearchHistory(query);
 
-  static Future<List<String>> getSearchHistory() async {
-    return await DatabaseHelper().getSearchHistory();
-  }
+  static Future<List<String>> getSearchHistory() =>
+      PrefsLibraryFacade.getSearchHistory();
 
-  static Future<void> clearSearchHistory() async {
-    await DatabaseHelper().clearSearchHistory();
-  }
+  static Future<void> clearSearchHistory() =>
+      PrefsLibraryFacade.clearSearchHistory();
 
   // ─── Season tracking ────────────────────────────────────────────────────────
 
-  static Future<void> toggleSeason(int tvId, int seasonNumber) async {
-    await DatabaseHelper().toggleSeason(tvId, seasonNumber);
-  }
+  static Future<void> toggleSeason(int tvId, int seasonNumber) =>
+      PrefsLibraryFacade.toggleSeason(tvId, seasonNumber);
 
-  static Future<Set<int>> getWatchedSeasons(int tvId) async {
-    return await DatabaseHelper().getWatchedSeasons(tvId);
-  }
+  static Future<Set<int>> getWatchedSeasons(int tvId) =>
+      PrefsLibraryFacade.getWatchedSeasons(tvId);
 
   // ─── Reset ──────────────────────────────────────────────────────────────────
 
