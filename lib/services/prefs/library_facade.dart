@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/movie.dart';
 import '../cultural_preference_service.dart';
 import '../db_helper.dart';
+import 'favorite_weights.dart' as favorite_weights;
 import 'taste_prefs.dart';
 
 /// Kütüphane verisi: favoriler, puanlar, izleme listesi, arama geçmişi ve
@@ -48,20 +49,17 @@ class PrefsLibraryFacade {
   /// sıra korunur, listede olmayan yeni öğeler sona eklenir (20 sınırı). Onboarding
   /// buradan geçer — böylece "Zevk Analizini Yeniden Başlat" kullanıcının Top 20'sini
   /// 3'e düşürmez (bkz. TOP20_PLANI.md, Faz 1 clobber düzeltmesi).
-  static const favoritesCap = 20;
+  static const favoritesCap = favorite_weights.favoritesCap;
 
   /// Favori türlerin tür-ağırlığı formülünde [favoriteRankWeight] ile çarpılan
-  /// taban katsayı. Bu sınıfta yaşar çünkü favorilerin sıra/ağırlık modeline
-  /// ait — tüketicisi `PrefsTastePrefs._calculateGenreWeights`.
-  static const favoriteGenreBase = 3.0;
+  /// taban katsayı.
+  static const favoriteGenreBase = favorite_weights.favoriteGenreBase;
 
   /// Favorinin 0-tabanlı sırasını [0.2, 1.0] ağırlık çarpanına eşler: #1 (rank 0)
   /// = 1.0, son sıra (cap-1) ≈ 0.2. Öneri motorunun sıra eğrisinin tek kaynağı —
   /// hem tür ağırlığı hem keyword vektörü bunu kullanır (bkz. RecommendationEngine).
-  static double favoriteRankWeight(int rank) {
-    final r = rank.clamp(0, favoritesCap - 1);
-    return 1.0 - 0.8 * (r / (favoritesCap - 1));
-  }
+  static double favoriteRankWeight(int rank) =>
+      favorite_weights.favoriteRankWeight(rank);
 
   static Future<void> mergeFavoriteMovies(
     List<Movie> picks, {
