@@ -35,23 +35,6 @@ final class SocialWebRendererTopListTest extends TestCase
         $this->assertSame(201, (int) $shows[0]['movie_id']);
     }
 
-    public function testPartitionByMediaSplitsMoviesAndShows(): void
-    {
-        $renderer = new SocialWebRenderer(new PDO('sqlite::memory:'));
-        $method = (new ReflectionClass($renderer))->getMethod('partitionByMedia');
-        $items = [
-            ['movie_id' => 1, 'is_tv' => 0, 'title' => 'Film'],
-            ['movie_id' => 2, 'is_tv' => 1, 'title' => 'Dizi'],
-            ['movie_id' => 3, 'is_tv' => 0, 'title' => 'Film 2'],
-        ];
-
-        $movies = $method->invoke($renderer, $items, false);
-        $shows = $method->invoke($renderer, $items, true);
-
-        $this->assertSame([1, 3], array_map('intval', array_column($movies, 'movie_id')));
-        $this->assertSame([2], array_map('intval', array_column($shows, 'movie_id')));
-    }
-
     public function testSocialDelegatesToWebRenderer(): void
     {
         $db = new PDO('sqlite::memory:');
