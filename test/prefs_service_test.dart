@@ -15,7 +15,7 @@ void main() {
     await PrefsService.resetAll();
   });
 
-  group('PrefsService Unit Tests', () {
+  group('PrefsTastePrefs genre weights (via PrefsService)', () {
     test(
       'getLikedGenreIds should calculate correct weighted genre ranks',
       () async {
@@ -88,6 +88,99 @@ void main() {
       expect(w[18]! > w[27]!, isTrue);
     });
 
+    test(
+      'revertRecoOutcome should correctly decrement recommendation telemetry counters',
+      () async {
+        // Record outcomes
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: false);
+        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
+
+        var telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 3);
+        expect(telemetry['discover']?['liked'], 2);
+
+        // Revert one liked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 2);
+        expect(telemetry['discover']?['liked'], 1);
+
+        // Revert one disliked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: false);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 1);
+        expect(telemetry['discover']?['liked'], 1);
+
+        // Revert another liked outcome
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 0);
+        expect(telemetry['discover']?['liked'], 0);
+
+        // Revert when already 0 should not go negative
+        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
+        telemetry = await PrefsService.getRecoTelemetry();
+        expect(telemetry['discover']?['shown'], 0);
+        expect(telemetry['discover']?['liked'], 0);
+      },
+    );
+
+    test('concurrent recommendation outcomes do not lose increments', () async {
+      await Future.wait(
+        List.generate(
+          50,
+          (index) => PrefsService.recordRecoOutcome(
+            source: 'discover',
+            liked: index.isEven,
+          ),
+        ),
+      );
+
+      final telemetry = await PrefsService.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 50);
+      expect(telemetry['discover']?['liked'], 25);
+    });
+
+    test('dismiss feedback prompt respects the daily cooldown', () async {
+      expect(
+        await PrefsService.shouldAskDismissFeedback(matchScore: 80),
+        isTrue,
+      );
+      expect(
+        await PrefsService.shouldAskDismissFeedback(matchScore: 95),
+        isFalse,
+      );
+    });
+
+    test(
+      'dismiss feedback records its reason and recommendation source',
+      () async {
+        await PrefsService.recordDismissFeedback(
+          movieKey: 'movie_550',
+          reason: 'notNow',
+          source: 'culture',
+        );
+
+        final events = await PrefsService.getDismissFeedback();
+        expect(events, hasLength(1));
+        expect(events.single['movie_key'], 'movie_550');
+        expect(events.single['reason'], 'notNow');
+        expect(events.single['source'], 'culture');
+      },
+    );
+
+    test('resetAll invalidates cached genre weights', () async {
+      await PrefsService.saveInitialGenres([28]);
+      expect(await PrefsService.getGenreWeights(), contains(28));
+
+      await PrefsService.resetAll();
+
+      expect(await PrefsService.getGenreWeights(), isEmpty);
+    });
+  });
+
+  group('PrefsLibraryFacade (via PrefsService)', () {
     test('favoriteRankWeight: #1 tam, sona doğru azalır', () {
       expect(PrefsService.favoriteRankWeight(0), closeTo(1.0, 1e-9));
       expect(PrefsService.favoriteRankWeight(19), closeTo(0.2, 1e-9));
@@ -215,166 +308,6 @@ void main() {
       },
     );
 
-    test(
-      'revertRecoOutcome should correctly decrement recommendation telemetry counters',
-      () async {
-        // Record outcomes
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: false);
-        await PrefsService.recordRecoOutcome(source: 'discover', liked: true);
-
-        var telemetry = await PrefsService.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 3);
-        expect(telemetry['discover']?['liked'], 2);
-
-        // Revert one liked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 2);
-        expect(telemetry['discover']?['liked'], 1);
-
-        // Revert one disliked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: false);
-        telemetry = await PrefsService.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 1);
-        expect(telemetry['discover']?['liked'], 1);
-
-        // Revert another liked outcome
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 0);
-        expect(telemetry['discover']?['liked'], 0);
-
-        // Revert when already 0 should not go negative
-        await PrefsService.revertRecoOutcome(source: 'discover', liked: true);
-        telemetry = await PrefsService.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 0);
-        expect(telemetry['discover']?['liked'], 0);
-      },
-    );
-
-    test('concurrent recommendation outcomes do not lose increments', () async {
-      await Future.wait(
-        List.generate(
-          50,
-          (index) => PrefsService.recordRecoOutcome(
-            source: 'discover',
-            liked: index.isEven,
-          ),
-        ),
-      );
-
-      final telemetry = await PrefsService.getRecoTelemetry();
-      expect(telemetry['discover']?['shown'], 50);
-      expect(telemetry['discover']?['liked'], 25);
-    });
-
-    test('dismiss feedback prompt respects the daily cooldown', () async {
-      expect(
-        await PrefsService.shouldAskDismissFeedback(matchScore: 80),
-        isTrue,
-      );
-      expect(
-        await PrefsService.shouldAskDismissFeedback(matchScore: 95),
-        isFalse,
-      );
-    });
-
-    test(
-      'dismiss feedback records its reason and recommendation source',
-      () async {
-        await PrefsService.recordDismissFeedback(
-          movieKey: 'movie_550',
-          reason: 'notNow',
-          source: 'culture',
-        );
-
-        final events = await PrefsService.getDismissFeedback();
-        expect(events, hasLength(1));
-        expect(events.single['movie_key'], 'movie_550');
-        expect(events.single['reason'], 'notNow');
-        expect(events.single['source'], 'culture');
-      },
-    );
-
-    test('resetAll invalidates cached genre weights', () async {
-      await PrefsService.saveInitialGenres([28]);
-      expect(await PrefsService.getGenreWeights(), contains(28));
-
-      await PrefsService.resetAll();
-
-      expect(await PrefsService.getGenreWeights(), isEmpty);
-    });
-  });
-
-  group('PrefsService bellek ici cache', () {
-    // Access token secure storage'da tutulur ama her HTTP isteginde okumak
-    // pahali oldugu icin bellekte cache'lenir. Cache statik oldugundan bir
-    // testin yazdigi token sonraki testlere sizar; resetInMemoryCaches bunu
-    // kirar.
-    const accessTokenKey = 'auth_access_token';
-
-    test(
-      'resetInMemoryCaches cache ile depolama ayristiginda depolamayi okur',
-      () async {
-        await PrefsService.saveTokens(
-          accessToken: 'cached_value',
-          refreshToken: 'cached_refresh',
-        );
-        // Depolamayi PrefsService'i atlayarak degistir: cache artik bayat.
-        await const FlutterSecureStorage().write(
-          key: accessTokenKey,
-          value: 'storage_value',
-        );
-        expect(
-          await PrefsService.getAccessToken(),
-          'cached_value',
-          reason: 'cache canli olmali, aksi halde test bir sey kanitlamaz',
-        );
-
-        PrefsService.resetInMemoryCaches();
-
-        expect(await PrefsService.getAccessToken(), 'storage_value');
-      },
-    );
-
-    test('saveTokens token depolamaya da yazar, yalniz cache degil', () async {
-      await PrefsService.saveTokens(
-        accessToken: 'token_a',
-        refreshToken: 'refresh_a',
-      );
-
-      PrefsService.resetInMemoryCaches();
-
-      expect(await PrefsService.getAccessToken(), 'token_a');
-    });
-
-    test('clearAuthData cache icindeki tokeni da dusurur', () async {
-      await PrefsService.saveTokens(
-        accessToken: 'token_b',
-        refreshToken: 'refresh_b',
-      );
-      expect(await PrefsService.getAccessToken(), 'token_b');
-
-      await PrefsService.clearAuthData();
-
-      expect(await PrefsService.getAccessToken(), isNull);
-    });
-  });
-
-  group('PrefsService.genreName', () {
-    test('tur adi verilen dile gore cozulur', () {
-      expect(PrefsService.genreName(28, locale: 'tr'), 'Aksiyon');
-      expect(PrefsService.genreName(28, locale: 'en'), 'Action');
-    });
-
-    test('bilinmeyen tur id dile uygun yedek dondurur', () {
-      expect(PrefsService.genreName(999999, locale: 'tr'), 'Bilinmeyen');
-      expect(PrefsService.genreName(999999, locale: 'en'), 'Unknown');
-    });
-  });
-
-  group('PrefsService metadataLocale', () {
     // metadata_locale, onbellege alinan baslik metadatasinin hangi dilde
     // oldugunu soyler. Sabitlenirse Ingilizce oturumun verisi 'tr' etiketiyle
     // diske yazilir ve dil degisiminde yanlis metin gosterilir.
@@ -447,5 +380,72 @@ void main() {
         );
       },
     );
+  });
+
+  group('PrefsAuthStorage cache (via PrefsService)', () {
+    // Access token secure storage'da tutulur ama her HTTP isteginde okumak
+    // pahali oldugu icin bellekte cache'lenir. Cache statik oldugundan bir
+    // testin yazdigi token sonraki testlere sizar; resetInMemoryCaches bunu
+    // kirar.
+    const accessTokenKey = 'auth_access_token';
+
+    test(
+      'resetInMemoryCaches cache ile depolama ayristiginda depolamayi okur',
+      () async {
+        await PrefsService.saveTokens(
+          accessToken: 'cached_value',
+          refreshToken: 'cached_refresh',
+        );
+        // Depolamayi PrefsService'i atlayarak degistir: cache artik bayat.
+        await const FlutterSecureStorage().write(
+          key: accessTokenKey,
+          value: 'storage_value',
+        );
+        expect(
+          await PrefsService.getAccessToken(),
+          'cached_value',
+          reason: 'cache canli olmali, aksi halde test bir sey kanitlamaz',
+        );
+
+        PrefsService.resetInMemoryCaches();
+
+        expect(await PrefsService.getAccessToken(), 'storage_value');
+      },
+    );
+
+    test('saveTokens token depolamaya da yazar, yalniz cache degil', () async {
+      await PrefsService.saveTokens(
+        accessToken: 'token_a',
+        refreshToken: 'refresh_a',
+      );
+
+      PrefsService.resetInMemoryCaches();
+
+      expect(await PrefsService.getAccessToken(), 'token_a');
+    });
+
+    test('clearAuthData cache icindeki tokeni da dusurur', () async {
+      await PrefsService.saveTokens(
+        accessToken: 'token_b',
+        refreshToken: 'refresh_b',
+      );
+      expect(await PrefsService.getAccessToken(), 'token_b');
+
+      await PrefsService.clearAuthData();
+
+      expect(await PrefsService.getAccessToken(), isNull);
+    });
+  });
+
+  group('PrefsAppSettings (via PrefsService)', () {
+    test('tur adi verilen dile gore cozulur', () {
+      expect(PrefsService.genreName(28, locale: 'tr'), 'Aksiyon');
+      expect(PrefsService.genreName(28, locale: 'en'), 'Action');
+    });
+
+    test('bilinmeyen tur id dile uygun yedek dondurur', () {
+      expect(PrefsService.genreName(999999, locale: 'tr'), 'Bilinmeyen');
+      expect(PrefsService.genreName(999999, locale: 'en'), 'Unknown');
+    });
   });
 }
