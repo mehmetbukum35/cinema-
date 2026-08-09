@@ -35,6 +35,7 @@ linter:
   rules:
     - cancel_subscriptions
     - close_sinks
+    - deprecated_member_use_from_same_package
     - no_adjacent_strings_in_list
     - only_throw_errors
     - test_types_in_equals
