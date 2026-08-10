@@ -81,6 +81,38 @@ class AuthTest extends TestCase
         }
     }
 
+    public function testRecordSignupSourceRejectsUnknownSource(): void
+    {
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        try {
+            $auth->recordSignupSource(7, ['source' => 'whatever_the_client_sent']);
+        } finally {
+            // Beyaz liste olmadan istemciden gelen her metin kolona yazılırdı.
+            $this->assertSame(400, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testRecordSignupSourceWritesOnlyWhenStillUnset(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())
+            ->method('execute')
+            ->with(['ghost_card', 7]);
+
+        $this->db->expects($this->once())
+            ->method('prepare')
+            // İlk atıf doğru olandır; sonraki girişler onu ezmemeli.
+            ->with($this->stringContains('signup_source IS NULL'))
+            ->willReturn($stmt);
+
+        $auth = new Auth($this->db, $this->cfg);
+        $auth->recordSignupSource(7, ['source' => 'ghost_card']);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+    }
+
     public function testLoginSuccess(): void
     {
         $email = 'user@example.com';

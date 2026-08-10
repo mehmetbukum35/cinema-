@@ -252,6 +252,7 @@ CREATE TABLE `users` (
   `cultural_preferences_updated_at` bigint(20) NOT NULL DEFAULT 0,
   `google_sub` varchar(255) DEFAULT NULL,
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `signup_source` varchar(32) DEFAULT NULL,
   `review_banned` tinyint(1) NOT NULL DEFAULT 0,
   `apple_sub` varchar(64) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

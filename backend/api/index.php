@@ -263,6 +263,11 @@ switch (true) {
         $auth->logout(read_json());
         break;
 
+    // ── Kayıt kaynağı ölçümü (davet yüzeyi atfı) ───────────────────────────
+    case $route === 'POST /auth/signup-source':
+        $auth->recordSignupSource($auth->requireUser(), read_json());
+        break;
+
     // Not: eski "GET /config/tmdb" ucu KALDIRILDI — ham TMDB anahtarını
     // kimliksiz herkese döndürüyordu. Yerine GET /tmdb/* proxy'si geldi
     // (yukarıda, dinamik yol çözümleyicilerde); anahtar artık client'a hiç

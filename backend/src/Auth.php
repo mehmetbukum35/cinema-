@@ -54,6 +54,29 @@ class Auth
         return $uid;
     }
 
+    /**
+     * Davet yüzeyi ölçümü: hangi yüzey bu kaydı üretti.
+     *
+     * Yalnızca kolon HÂLÂ boşken yazılır. İlk atıf doğru olandır; kullanıcı
+     * daha sonra başka bir yüzeyden tekrar giriş yaptığında ölçüm bozulmasın.
+     *
+     * @param array<string, mixed> $body
+     */
+    public function recordSignupSource(int $uid, array $body): void
+    {
+        $source = (string) ($body['source'] ?? '');
+        // Beyaz liste: istemciden gelen serbest metni kolona yazmak hem
+        // analitiği çöpe çevirir hem de kolona ne geldiğini denetlenemez kılar.
+        if (!in_array($source, ['ghost_card', 'couch_wall', 'profile_card'], true)) {
+            fail(400, 'Geçersiz kayıt kaynağı.', 'invalid_signup_source');
+        }
+        $st = $this->db->prepare(
+            'UPDATE users SET signup_source = ? WHERE id = ? AND signup_source IS NULL'
+        );
+        $st->execute([$source, $uid]);
+        json_out(200, ['ok' => true]);
+    }
+
     // ─── POST /auth/register ────────────────────────────────────────────────
     // E-posta doğrulamalı kayıt: hesap `email_verified = 0` olarak açılır,
     // token VERİLMEZ. E-postaya 6 haneli kod gider; oturum ancak
