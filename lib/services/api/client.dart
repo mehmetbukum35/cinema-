@@ -205,6 +205,13 @@ class ApiClient {
     // geçersizse 401 döner (bkz. Auth::optionalUser). Bu dal olmasaydı token
     // eskiyen kullanıcı sessizce misafir yanıtını alırdı.
     if (response.statusCode == 401 && (requireAuth || optionalAuth)) {
+      // Snapshot BEFORE refresh: logout/wipe during flight also empties storage
+      // and returns denied — that case must still fire onSessionExpired.
+      // Only skip clear when we were already guest at the 401.
+      final hadLocalSession =
+          (await PrefsAuthStorage.getAccessToken()) != null ||
+          (await PrefsAuthStorage.getRefreshToken()) != null ||
+          (await PrefsAuthStorage.getUserData()) != null;
       debugPrint("Access token expired (401). Attempting silent refresh...");
       final outcome = await _attemptTokenRefresh();
       if (outcome == RefreshOutcome.success) {
@@ -216,12 +223,7 @@ class ApiClient {
         );
         response = await _sendTransport(method, url, newHeaders, bodyStr);
       } else if (outcome == RefreshOutcome.denied) {
-        // Misafir (hiç token/user yok) auth'lu uçlara 401 alınca buraya düşer;
-        // oturum yokken clear + session-expired snackbar gösterme.
-        final hadAccess = await PrefsAuthStorage.getAccessToken();
-        final hadRefresh = await PrefsAuthStorage.getRefreshToken();
-        final hadUser = await PrefsAuthStorage.getUserData();
-        if (hadAccess == null && hadRefresh == null && hadUser == null) {
+        if (!hadLocalSession) {
           debugPrint(
             '401 with no local session (guest); skipping session clear.',
           );

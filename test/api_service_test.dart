@@ -406,6 +406,28 @@ void main() {
       },
     );
 
+    test('guest 401 does not fire session-expired', () async {
+      await PrefsService.clearAuthData();
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, isNot(contains('/auth/refresh')));
+        return http.Response('Unauthorized', 401);
+      });
+
+      var sessionExpired = false;
+      final apiService = ApiService(client: mockClient)
+        ..onSessionExpired = () => sessionExpired = true;
+
+      await expectLater(
+        apiService.getFriends(),
+        throwsA(
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401),
+        ),
+      );
+
+      expect(sessionExpired, isFalse);
+      expect(await PrefsAuthStorage.getAccessToken(), isNull);
+    });
+
     test('non-JSON error body should surface as ApiException', () async {
       final mockClient = MockClient((request) async {
         return http.Response('<html>502 Bad Gateway</html>', 502);
