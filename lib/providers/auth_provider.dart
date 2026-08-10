@@ -171,6 +171,7 @@ class AuthNotifier extends Notifier<AuthState>
     const codeMap = {
       'email_exists': 'auth_err_email_exists',
       'invalid_credentials': 'auth_err_invalid_credentials',
+      'use_google_or_reset': 'auth_err_use_google_or_reset',
       'email_invalid': 'auth_forgot_err_email_invalid',
       'password_too_short': 'auth_forgot_err_pass_length',
       'wrong_password': 'auth_err_wrong_password',
@@ -181,7 +182,8 @@ class AuthNotifier extends Notifier<AuthState>
       'verify_code_failed': 'auth_err_verify_code_failed',
       'email_unverified': 'auth_err_email_unverified',
       'rate_limited': 'auth_err_rate_limited',
-      'password_reset_unavailable': 'auth_err_forgot_send_failed',
+      // Eski sunucu 503: SMTP/FPM yolu kapalı — "kod gönderilemedi"den ayrı tut.
+      'password_reset_unavailable': 'auth_err_password_reset_unavailable',
       'forgot_send_failed': 'auth_err_forgot_send_failed',
     };
     final mapped = codeMap[e.code];
@@ -199,6 +201,10 @@ class AuthNotifier extends Notifier<AuthState>
         return 'auth_err_email_exists';
       case 'E-posta veya parola hatalı.':
         return 'auth_err_invalid_credentials';
+      case 'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.':
+        return 'auth_err_use_google_or_reset';
+      case 'Parola sıfırlama hizmeti geçici olarak kullanılamıyor.':
+        return 'auth_err_password_reset_unavailable';
       case 'Geçersiz e-posta.':
       case 'Geçersiz e-posta formatı.':
       case 'E-posta adresi gerekli.':

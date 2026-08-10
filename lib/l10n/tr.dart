@@ -295,8 +295,12 @@ const Map<String, String> kTrStrings = {
       'Parola değiştirilemedi. Lütfen tekrar deneyin.',
   'auth_err_email_exists': 'Bu e-posta zaten kayıtlı.',
   'auth_err_invalid_credentials': 'E-posta veya parola hatalı.',
+  'auth_err_use_google_or_reset':
+      'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.',
   'auth_err_wrong_password': 'Mevcut parola hatalı.',
   'auth_err_user_not_found': 'Kullanıcı bulunamadı.',
+  'auth_err_password_reset_unavailable':
+      'Parola sıfırlama hizmeti geçici olarak kullanılamıyor. Google ile giriş yapmayı deneyin veya biraz sonra tekrar deneyin.',
   'auth_err_forgot_send_failed':
       'Sıfırlama kodu gönderilemedi. Biraz sonra tekrar deneyin veya spam klasörünü kontrol edin.',
   'auth_err_verify_code_failed':

@@ -176,6 +176,40 @@ class AuthIntegrationTest extends TestCase
         }
     }
 
+    public function testWrongPasswordOnGoogleLinkedAccountHintsGoogleOrReset(): void
+    {
+        $uid = $this->seedUser('google-linked@example.com', 'real-password');
+        $this->db->prepare('UPDATE users SET google_sub = ? WHERE id = ?')
+            ->execute(['google-sub-hint', $uid]);
+
+        try {
+            $this->auth->login([
+                'email' => 'google-linked@example.com',
+                'password' => 'wrong-password',
+            ]);
+            $this->fail('Yanlış parolada Google yönlendirmesi beklenir');
+        } catch (TestExitException) {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
+            $this->assertSame('use_google_or_reset', TestHelperRegistry::$lastBody['code'] ?? null);
+        }
+    }
+
+    public function testWrongPasswordWithoutGoogleStaysGeneric(): void
+    {
+        $this->seedUser('plain@example.com', 'real-password');
+
+        try {
+            $this->auth->login([
+                'email' => 'plain@example.com',
+                'password' => 'wrong-password',
+            ]);
+            $this->fail('Genel invalid_credentials beklenir');
+        } catch (TestExitException) {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
+            $this->assertSame('invalid_credentials', TestHelperRegistry::$lastBody['code'] ?? null);
+        }
+    }
+
     public function testVerifyEmailMarksVerifiedAndIssuesTokens(): void
     {
         $this->auth->register([

@@ -841,6 +841,43 @@ void main() {
       expect(state.isAuthenticated, isFalse);
     });
 
+    test('login maps Google-linked password failure to use_google_or_reset', () async {
+      mockApi.loginError = ApiException(
+        statusCode: 401,
+        message:
+            'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.',
+        code: 'use_google_or_reset',
+      );
+      final notifier = container.read(authProvider.notifier);
+      await pumpEventQueue();
+
+      final result = await notifier.login('test@example.com', 'wrong-pass');
+
+      expect(result.errorMessage, 'auth_err_use_google_or_reset');
+      expect(container.read(authProvider).error, 'auth_err_use_google_or_reset');
+    });
+
+    test(
+      'forgotPassword maps legacy password_reset_unavailable separately from send failure',
+      () async {
+        mockApi.forgotPasswordError = ApiException(
+          statusCode: 503,
+          message: 'Parola sıfırlama hizmeti geçici olarak kullanılamıyor.',
+          code: 'password_reset_unavailable',
+        );
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
+
+        final ok = await notifier.forgotPassword('test@example.com');
+
+        expect(ok, isFalse);
+        expect(
+          container.read(authProvider).error,
+          'auth_err_password_reset_unavailable',
+        );
+      },
+    );
+
     test(
       'login falls back to the legacy message map when the server sends no code',
       () async {

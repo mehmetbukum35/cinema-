@@ -290,8 +290,12 @@ const Map<String, String> kEnStrings = {
   'auth_err_change_pass_failed': 'Failed to change password. Please try again.',
   'auth_err_email_exists': 'This email is already registered.',
   'auth_err_invalid_credentials': 'Invalid email or password.',
+  'auth_err_use_google_or_reset':
+      'This account is linked to Google. Sign in with Google, or reset your password.',
   'auth_err_wrong_password': 'Current password is incorrect.',
   'auth_err_user_not_found': 'User not found.',
+  'auth_err_password_reset_unavailable':
+      'Password reset is temporarily unavailable. Try Google sign-in, or try again later.',
   'auth_err_forgot_send_failed':
       'Could not send the reset code. Try again shortly, and check your spam folder.',
   'auth_err_verify_code_failed':

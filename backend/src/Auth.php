@@ -359,6 +359,15 @@ class Auth
             fail(401, 'E-posta veya parola hatalı.', 'invalid_credentials');
         }
         if (!password_verify($pass, $u['password_hash'])) {
+            // Google ile bağlanmış hesaplarda parola bilinçli olarak silinmiş
+            // veya unutulmuş olabilir; genel "hatalı parola" yerine net yönlendir.
+            if (!empty($u['google_sub'])) {
+                fail(
+                    401,
+                    'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.',
+                    'use_google_or_reset'
+                );
+            }
             fail(401, 'E-posta veya parola hatalı.', 'invalid_credentials');
         }
         if ((int) $u['email_verified'] !== 1) {
