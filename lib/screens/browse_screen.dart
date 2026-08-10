@@ -18,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/entrance.dart';
 import '../widgets/tonight_pick_card.dart';
+import 'browse/browse_guest_list_card.dart';
 import 'browse/browse_skeleton.dart';
 import 'browse/browse_error_view.dart';
 import 'browse/browse_header_block.dart';
@@ -79,6 +80,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   List<Movie> _onTheAir = [];
   bool _loading = true;
   bool _phase2Pending = false;
+
+  /// Misafirin kendi listesi; girişliyken ya da yeterli beğeni yokken null.
+  GuestListPreview? _guestPreview;
 
   Future<void> _editDiscoveryContext() async {
     final current = ref.read(discoveryContextProvider);
@@ -205,6 +209,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     }
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
     final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
+    // Misafirin kendi listesi tamamen yereldir; sunucuya istek yok.
+    final guestPreview = isAuthenticated ? null : await GuestListPreview.load();
+    if (!mounted || loadGeneration != _loadGeneration) return;
+    setState(() => _guestPreview = guestPreview);
+
     // Popüler profiller herkese açık; arkadaş feed'i auth ister.
     // initState/build sırasında provider state'i değiştirmek yasaktır
     // (Riverpod "Tried to modify a provider while the widget tree was
@@ -789,8 +798,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             const BrowseFriendsActivityTeaser(),
 
           // ── Popüler Üyeler ─────────────────────────────────────────────────────────
-          if (socialState.topProfiles.isNotEmpty)
-            BrowseTopProfilesSection(profiles: socialState.topProfiles),
+          if (socialState.topProfiles.isNotEmpty || _guestPreview != null)
+            BrowseTopProfilesSection(
+              profiles: socialState.topProfiles,
+              leadingCard: _guestPreview == null
+                  ? null
+                  : BrowseGuestListCard(preview: _guestPreview!),
+            ),
 
           // ── Topluluğun Favorileri: Popüler Top 20 (Film + Dizi) ───────────────
           BrowsePopularCommunitySection(isTV: false, onOpen: _openDetail),
