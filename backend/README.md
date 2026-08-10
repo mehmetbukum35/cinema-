@@ -30,24 +30,42 @@ cron. The command is CLI-only and uses a lock file to prevent overlapping runs:
 
 ```bash
 php migrate.php
-php maintenance.php          # all: cleanup + Popular Top 20
+php maintenance.php          # all: cleanup + Popular Top 20 + title backfill
 php maintenance.php cleanup  # database housekeeping only
 php maintenance.php popular  # Popular Top 20 precompute only
+php maintenance.php titles   # TMDB title-catalog backfill only
 ```
 
-The mode argument lets cleanup and the community "Popular Top 20" precompute run
-on different cadences. They use separate lock files, so the hourly `popular` run
-never blocks (or is blocked by) the daily `cleanup` run.
+The mode argument lets the three jobs run on different cadences. Each uses its
+own lock file, so none blocks another.
 
-Example split cron — daily cleanup, hourly Top 20 (replace with real absolute
-paths):
+Example split cron — **all three modes** (replace with real absolute paths):
 
 ```cron
 20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php cleanup >> /home/USER/logs/cinema-maintenance.log 2>&1
 0 * * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php popular >> /home/USER/logs/cinema-popular.log 2>&1
+30 * * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php titles >> /home/USER/logs/cinema-titles.log 2>&1
 ```
 
-Or keep a single daily run that does both (the previous behaviour):
+**Schedule all three, or drop one silently.** `titles` drains the queue of
+titles the client wrote (`source='client'`) that TMDB has not authoritatively
+refreshed yet, `titles_refresh_batch` (default 20) at a time. Omit it from the
+cron and the catalog just goes stale — nothing fails, nothing warns. A split
+cron that only scheduled `cleanup` and `popular` ran in production for weeks
+before this was noticed.
+
+`titles` sits at minute 30 to stay off `popular`'s top-of-hour slot: it makes
+one TMDB call per title, and shared hosting has shown timeouts reaching TMDB.
+
+**Use `>>`, not `>`.** On failure the command writes to stderr and exits
+non-zero; with `>` that message is erased by the next successful run, so an
+intermittently failing job leaves a log that looks perfectly healthy. Appending
+costs about 1 MB/year for the two hourly jobs.
+
+If `titles_refreshed` is always 0, check that `tmdb_api_key` is set in
+`Config.php` — without it `runTitles()` returns 0 rather than failing.
+
+Or keep a single daily run that does all three (the previous behaviour):
 
 ```cron
 20 3 * * * /usr/bin/php /home/USER/cinema/backend/maintenance.php >> /home/USER/logs/cinema-maintenance.log 2>&1
