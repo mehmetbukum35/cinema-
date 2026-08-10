@@ -86,18 +86,35 @@ mixin AuthSessionMixin on Notifier<AuthState> {
     // Sayılar completeLogin'den ÖNCE okunur: o çağrı _postAuthSessionRestore
     // üzerinden sync tetikliyor ve sunucudan gelen kayıtlar sayıyı şişirirdi.
     // Kullanıcıya "senin taşıdığın" sayı söylenmeli, "sende toplam kaç var" değil.
-    final merged = hasLocalData
+    //
+    // Özet yalnızca cihazda daha önce HİÇ oturum açılmamışsa (lastUserId ==
+    // null) anlamlıdır — gerçek bir ilk misafir taşıması. `lastUserId` doluysa
+    // (dönen kullanıcı: normal çıkışta yerel veri silinmez, veya oturum süresi
+    // dolmuş) `hasLocalData` yine true olur ama taşınan hiçbir şey yoktur;
+    // "42 puanın hesabına taşındı" o zaman yalandır — 42, kütüphanenin tamamıdır.
+    final merged = (lastUserId == null && hasLocalData)
         ? MergedGuestData(
             ratingCount: await PrefsLibraryFacade.getRatingCount(),
-            watchlistCount: (await PrefsLibraryFacade.getWatchlist()).length,
+            watchlistCount: await PrefsLibraryFacade.getWatchlistCount(),
           )
         : null;
 
-    await completeLogin(
-      user: user,
-      tokens: tokens,
-      resolution: ConflictResolution.merge,
-    );
+    try {
+      await completeLogin(
+        user: user,
+        tokens: tokens,
+        resolution: ConflictResolution.merge,
+      );
+    } catch (e, st) {
+      // Token'lar zaten kaydedildi ve state canlı (bkz. completeLogin: kayıt
+      // sync'ten ÖNCE yapılıyor) — buradan sonraki bir hata (ör. sync) bir
+      // kayıt/giriş arızası DEĞİLDİR. Öyle raporlanırsa kullanıcı oturum
+      // açıkken kırmızı "başarısız" bandı görür. SyncNotifier hatayı zaten
+      // global olarak gösteriyor; burada sadece logla, yutma.
+      debugPrint(
+        'Post-login sync failed after the session was established: $e\n$st',
+      );
+    }
     return AuthResult(
       status: AuthStatus.success,
       mergedGuestData: merged != null && !merged.isEmpty ? merged : null,

@@ -233,6 +233,10 @@ class PrefsLibraryFacade {
     return await DatabaseHelper().getWatchlist();
   }
 
+  static Future<int> getWatchlistCount() async {
+    return await DatabaseHelper().getWatchlistCount();
+  }
+
   // ─── Search history ─────────────────────────────────────────────────────────
 
   static Future<void> addSearchHistory(String query) async {

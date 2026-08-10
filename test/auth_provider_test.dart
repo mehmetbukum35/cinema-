@@ -78,6 +78,7 @@ class MockApiService implements ApiService {
   Exception? logoutError;
   Exception? resendVerificationError;
   Exception? getMeError;
+  Exception? pullError;
 
   @override
   Future<Map<String, dynamic>> login({
@@ -208,10 +209,13 @@ class MockApiService implements ApiService {
   Future<Map<String, dynamic>> pull(
     int since, {
     bool localReset = false,
-  }) async => {
-    'changes': [],
-    'server_time': DateTime.now().millisecondsSinceEpoch,
-  };
+  }) async {
+    if (pullError != null) throw pullError!;
+    return {
+      'changes': [],
+      'server_time': DateTime.now().millisecondsSinceEpoch,
+    };
+  }
 
   @override
   Future<void> registerDevice(String token, {String? platform}) async {}
@@ -673,20 +677,32 @@ void main() {
       expect(result.mergedGuestData!.watchlistCount, 1);
     });
 
-    test('a returning user with no guest data reports no merge', () async {
-      final notifier = container.read(authProvider.notifier);
+    test(
+      'a returning user signing back into their own account reports no merge',
+      () async {
+        final notifier = container.read(authProvider.notifier);
 
-      await PrefsAuthStorage.setLastAuthenticatedUserId(null);
-      // Yerel veri yok → taşınan da yok → özet gösterilmemeli.
+        // Cihazda daha önce AYNI hesaba (mock register'ın döndürdüğü id '2')
+        // girilmiş: normal "Çıkış Yap" yerel veriyi silmez, veya oturum süresi
+        // dolmuş olabilir. hasLocalData true olsa bile bu bir misafir taşıması
+        // DEĞİL — kullanıcı zaten sahibi. Özet gösterilmemeli (I1 regresyonu).
+        await PrefsAuthStorage.setLastAuthenticatedUserId('2');
+        await PrefsLibraryFacade.saveRating(
+          movieId: 321,
+          isTV: false,
+          rating: 3,
+          metadataLocale: 'tr',
+        );
 
-      final result = await notifier.register(
-        'nothing_to_move@example.com',
-        'secret123',
-      );
+        final result = await notifier.register(
+          'returning_user@example.com',
+          'secret123',
+        );
 
-      expect(result.status, AuthStatus.success);
-      expect(result.mergedGuestData, isNull);
-    });
+        expect(result.status, AuthStatus.success);
+        expect(result.mergedGuestData, isNull);
+      },
+    );
 
     test(
       'unlinkGoogle should call API and update state by removing google_sub',
@@ -1198,6 +1214,26 @@ void main() {
         final ok = await notifier.resendVerificationCode('reg@example.com');
 
         expect(ok, isFalse);
+      },
+    );
+
+    test(
+      'a post-login sync failure does not turn a live session into a reported failure',
+      () async {
+        // Token'lar completeLogin içinde sync'ten ÖNCE kaydedilir; sync
+        // (burada pull) patlarsa oturum yine de canlıdır. Bunu "kayıt
+        // başarısız" olarak raporlamak kullanıcıyı zaten girişliyken kırmızı
+        // bir hata bandıyla karşılar (I3).
+        mockApi.pullError = FakeNetworkException();
+        final notifier = container.read(authProvider.notifier);
+
+        final result = await notifier.register(
+          'sync_fail_guest@example.com',
+          'secret123',
+        );
+
+        expect(result.status, AuthStatus.success);
+        expect(container.read(authProvider).isAuthenticated, isTrue);
       },
     );
 

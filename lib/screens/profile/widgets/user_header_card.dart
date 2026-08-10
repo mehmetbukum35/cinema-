@@ -13,6 +13,7 @@ import '../../../widgets/spring_button.dart';
 import '../../../widgets/logout_confirm_dialog.dart';
 import '../../../widgets/auth_conflict_dialog.dart';
 import '../../../widgets/app_toast.dart';
+import '../../../widgets/guest_merge_toast.dart';
 import '../../login_screen.dart';
 import 'sync_header_action.dart';
 
@@ -45,6 +46,12 @@ class UserHeaderCard extends ConsumerWidget {
       if (result.status == AuthStatus.success) {
         ref.invalidate(watchlistProvider);
         ref.invalidate(statsProvider);
+        // Profildeki hızlı Google/Apple girişi de LoginScreen'deki gibi
+        // taşınan veriyi bildirsin — burada bir merge sessizce yutulmasın.
+        final merged = result.mergedGuestData;
+        if (merged != null && context.mounted) {
+          showGuestDataMergedToast(context, merged);
+        }
       } else if (result.status == AuthStatus.conflict) {
         final resolution = await showAuthConflictDialog(context);
         if (resolution != null && context.mounted) {

@@ -135,6 +135,21 @@ mixin DbWatchlistMixin {
         .toList();
   }
 
+  /// Sadece sayı gerektiğinde tüm satırları `Movie`'ye çevirmeden (genre-id
+  /// JSON çözümü dahil) hızlı sayım — bkz. getRatingCount() (ratings.dart).
+  Future<int> getWatchlistCount() async {
+    final db = await database;
+    if (db == null) {
+      return DatabaseHelper._mockWatchlist
+          .where((e) => e['deleted'] != 1)
+          .length;
+    }
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM watchlist WHERE deleted = 0'),
+    );
+    return count ?? 0;
+  }
+
   Future<List<Map<String, dynamic>>> getWatchlistRaw() async {
     final db = await database;
     if (db == null) {

@@ -216,6 +216,9 @@ const Map<String, String> kTrStrings = {
       'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
   'auth_guest_data_merged':
       '{} puanın ve {} izleme listesi kaydın hesabına taşındı.',
+  'auth_guest_data_merged_ratings': '{} puanın hesabına taşındı.',
+  'auth_guest_data_merged_watchlist':
+      '{} izleme listesi kaydın hesabına taşındı.',
   'auth_conflict_title': 'Hesap Çakışması',
   'auth_conflict_desc':
       'Bu cihazda, giriş yaptığınız hesaba henüz bağlı olmayan yerel veriler (puanlar, listeler) var — misafir olarak ya da başka bir hesapla oluşturulmuş olabilir. "Cihazdakileri Sil" seçeneği bu verileri cihazdan kalıcı olarak siler. Nasıl devam etmek istersiniz?',
