@@ -70,12 +70,17 @@ class RecommendationEngine {
   }
 
   /// Oylamaları bellekten veya veritabanından çeken yardımcı metot.
+  /// Gizli puanlar reco sinyallerine (keyword / negatif seed / cultural boost)
+  /// sızmasın — [getRatingsForWeights] ile aynı kural.
   Future<List<Map<String, dynamic>>> _getRatings() async {
     final cached = _cachedRatings;
     if (cached != null) return cached;
     final ratings = await DatabaseHelper().getRatings();
-    _cachedRatings = ratings;
-    return ratings;
+    final public = ratings
+        .where((r) => (r['is_private'] as int? ?? 0) != 1)
+        .toList(growable: false);
+    _cachedRatings = public;
+    return public;
   }
 
   // ── Harman ağırlıkları (tek doğruluk kaynağı) ─────────────────────────────

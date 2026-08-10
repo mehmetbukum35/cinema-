@@ -303,6 +303,8 @@ mixin AuthSessionMixin on Notifier<AuthState> {
   Future<void> wipeAllData() async {
     final wasLoggedIn = state.isAuthenticated;
     state = AuthState();
+    // Logout ile aynı: uçuştaki sync yeni oturumu kilitlemesin.
+    ref.read(syncProvider.notifier).resetForSessionChange();
     if (wasLoggedIn) {
       await NotificationService.instance.unregisterToken();
       await NotificationService.instance.invalidateLocalToken();
@@ -316,6 +318,7 @@ mixin AuthSessionMixin on Notifier<AuthState> {
     }
     await PrefsService.resetAll();
     await _invalidateGuestProviders();
+    ref.read(syncProvider.notifier).resetStatus();
   }
 
   Future<void> clearSession() async {

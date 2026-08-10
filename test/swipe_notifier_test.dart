@@ -411,5 +411,80 @@ void main() {
       expect(container.read(swipeProvider).queue, isEmpty);
       expect(container.read(swipeProvider).loading, isFalse);
     });
+
+    test(
+      'refreshRatedIds advances past the current card when already rated',
+      () async {
+        final mockMovies = {
+          'results': [
+            {
+              'id': 11,
+              'title': 'First',
+              'vote_average': 7.0,
+              'genre_ids': [18],
+              'poster_path': '/a.jpg',
+              'vote_count': 100,
+            },
+            {
+              'id': 22,
+              'title': 'Second',
+              'vote_average': 8.0,
+              'genre_ids': [28],
+              'poster_path': '/b.jpg',
+              'vote_count': 100,
+            },
+          ],
+        };
+        final mockTv = {
+          'results': [
+            {
+              'id': 33,
+              'name': 'TV Side',
+              'vote_average': 7.5,
+              'genre_ids': [35],
+              'poster_path': '/c.jpg',
+              'vote_count': 100,
+            },
+          ],
+        };
+        final client = MockClient((request) async {
+          if (request.url.path.endsWith('/3/movie/popular') ||
+              request.url.path.endsWith('/3/discover/movie')) {
+            return http.Response(jsonEncode(mockMovies), 200);
+          } else if (request.url.path.endsWith('/3/tv/popular') ||
+              request.url.path.endsWith('/3/discover/tv')) {
+            return http.Response(jsonEncode(mockTv), 200);
+          }
+          return http.Response(jsonEncode({'results': []}), 200);
+        });
+        final service = TmdbService(client: client);
+        final (:container, :notifier) = makeSwipe(service);
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        expect(
+          container.read(swipeProvider).queue.length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(container.read(swipeProvider).current, 0);
+
+        final first = container.read(swipeProvider).queue.first;
+        await PrefsLibraryFacade.saveRating(
+          movie: first,
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+        await notifier.refreshRatedIds();
+
+        final state = container.read(swipeProvider);
+        expect(
+          state.ratedIds.contains(
+            '${first.isTV ? 'tv' : 'movie'}_${first.id}',
+          ),
+          isTrue,
+        );
+        expect(state.current, greaterThan(0));
+        expect(state.queue[state.current].id, isNot(first.id));
+      },
+    );
   });
 }

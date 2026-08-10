@@ -751,6 +751,49 @@ void main() {
         expect(vector3.containsKey(20), isTrue);
       },
     );
+
+    test('buildUserKeywordVector ignores private ratings', () async {
+      final client = MockClient((request) async {
+        if (request.url.path.contains('/100/keywords')) {
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                {'id': 10, 'name': 'action'},
+              ],
+            }),
+            200,
+          );
+        }
+        if (request.url.path.contains('/200/keywords')) {
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                {'id': 99, 'name': 'secret'},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(jsonEncode({'keywords': []}), 200);
+      });
+      final engine = RecommendationEngine(TmdbService(client: client));
+
+      await PrefsLibraryFacade.saveRating(
+        movie: _movie(100, title: 'Public'),
+        rating: 3,
+        metadataLocale: 'tr',
+      );
+      await PrefsLibraryFacade.saveRating(
+        movie: _movie(200, title: 'Private'),
+        rating: 3,
+        isPrivate: 1,
+        metadataLocale: 'tr',
+      );
+
+      final vector = await engine.buildUserKeywordVector();
+      expect(vector.containsKey(10), isTrue);
+      expect(vector.containsKey(99), isFalse);
+    });
   });
 
   group('RecommendationEngine dil enjeksiyonu', () {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,31 @@ List<dynamic> _decodeJsonList(Object? value) {
   } on FormatException {
     return const [];
   }
+}
+
+/// Titles join boş/eksik gelince REPLACE yerel türleri `[]` ile ezmesin.
+Future<String> _resolveGenreIdsJson(
+  Transaction txn, {
+  required String table,
+  required String where,
+  required List<Object?> whereArgs,
+  required Object? remoteGenreIds,
+}) async {
+  final remote = _decodeJsonList(remoteGenreIds);
+  if (remote.isNotEmpty) return jsonEncode(remote);
+
+  final existing = await txn.query(
+    table,
+    columns: ['genre_ids'],
+    where: where,
+    whereArgs: whereArgs,
+    limit: 1,
+  );
+  if (existing.isNotEmpty) {
+    final local = _decodeJsonList(existing.first['genre_ids']);
+    if (local.isNotEmpty) return jsonEncode(local);
+  }
+  return '[]';
 }
 
 /// Bir milisaniyelik örtüşme, watermark ile tam aynı anda yazılan satırların
@@ -104,6 +130,21 @@ class SyncService {
   void abandonInFlightSync() {
     _syncFuture = null;
     _declareLocalReset = false;
+  }
+
+  /// Sync sonrası sosyal state boş kalmasın: invalidate + auth'a göre reload.
+  void _invalidateSocialAndReload() {
+    final ref = _ref;
+    if (ref == null) return;
+    ref.invalidate(socialProvider);
+    final notifier = ref.read(socialProvider.notifier);
+    final authed = ref.read(authProvider).isAuthenticated;
+    if (authed) {
+      unawaited(notifier.loadFriends());
+      unawaited(notifier.loadActivityFeed());
+      unawaited(notifier.loadRecommendations());
+    }
+    unawaited(notifier.loadTopProfiles());
   }
 
   Future<String?> _currentUserId() async {
@@ -262,7 +303,7 @@ class SyncService {
     // sunucudan çekilen favoriler bayat provider yüzünden ekrana gelmiyordu.
     _ref?.invalidate(topListProvider);
     _ref?.invalidate(swipeProvider);
-    _ref?.invalidate(socialProvider);
+    _invalidateSocialAndReload();
     return pending;
   }
 
@@ -610,12 +651,19 @@ class SyncService {
             : (originCountries is String && originCountries.isNotEmpty
                   ? originCountries
                   : null);
+        final genreIdsJson = await _resolveGenreIdsJson(
+          txn,
+          table: 'ratings',
+          where: 'movie_id = ? AND is_tv = ?',
+          whereArgs: [_asInt(r['movie_id']), _asInt(r['is_tv'])],
+          remoteGenreIds: r['genre_ids'],
+        );
         await txn.insert('ratings', {
           'movie_id': _asInt(r['movie_id']),
           'is_tv': _asInt(r['is_tv']),
           'metadata_locale': r['metadata_locale'] ?? _apiService.localeCode(),
           'rating': _asInt(r['rating']),
-          'genre_ids': jsonEncode(_decodeJsonList(r['genre_ids'])),
+          'genre_ids': genreIdsJson,
           'title': r['title'],
           'poster_path': r['poster_path'],
           'backdrop_path': r['backdrop_path'],
@@ -644,6 +692,13 @@ class SyncService {
         ], w['updated_at'])) {
           continue;
         }
+        final genreIdsJson = await _resolveGenreIdsJson(
+          txn,
+          table: 'watchlist',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [_asInt(w['id']), _asInt(w['is_tv'])],
+          remoteGenreIds: w['genre_ids'],
+        );
         await txn.insert('watchlist', {
           'id': _asInt(w['id']),
           'is_tv': _asInt(w['is_tv']),
@@ -657,7 +712,7 @@ class SyncService {
           'overview': w['overview'],
           'vote_average': _asDouble(w['vote_average']),
           'release_date': w['release_date'],
-          'genre_ids': jsonEncode(_decodeJsonList(w['genre_ids'])),
+          'genre_ids': genreIdsJson,
           'created_at': _asInt(w['created_at']),
           'updated_at': _asInt(w['updated_at']),
           'deleted': _asDeletedFlag(w['deleted']),
@@ -674,6 +729,13 @@ class SyncService {
         ], f['updated_at'])) {
           continue;
         }
+        final genreIdsJson = await _resolveGenreIdsJson(
+          txn,
+          table: 'favorites',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [_asInt(f['id']), _asInt(f['is_tv'])],
+          remoteGenreIds: f['genre_ids'],
+        );
         await txn.insert('favorites', {
           'id': _asInt(f['id']),
           'is_tv': _asInt(f['is_tv']),
@@ -685,7 +747,7 @@ class SyncService {
           'overview': f['overview'],
           'vote_average': _asDouble(f['vote_average']),
           'release_date': f['release_date'],
-          'genre_ids': jsonEncode(_decodeJsonList(f['genre_ids'])),
+          'genre_ids': genreIdsJson,
           'created_at': _asInt(f['created_at']),
           'updated_at': _asInt(f['updated_at']),
           'deleted': _asDeletedFlag(f['deleted']),
@@ -771,7 +833,7 @@ class SyncService {
       // provider bayat kalıp giriş sonrası boş görünüyordu).
       _ref?.invalidate(topListProvider);
       _ref?.invalidate(swipeProvider);
-      _ref?.invalidate(socialProvider);
+      _invalidateSocialAndReload();
       // Buluttan gelen puanlar "Sana Özel" / Tonight seçkisini değiştirir.
       _ref?.read(browseRefreshTriggerProvider.notifier).fire();
     }

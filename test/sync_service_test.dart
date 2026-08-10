@@ -405,6 +405,49 @@ void main() {
       expect(await PrefsSyncMeta.getLastSyncTime(), 1999);
     });
 
+    test('pull keeps local genre_ids when remote join is empty', () async {
+      await testDb.insert('ratings', {
+        'movie_id': 555,
+        'is_tv': 0,
+        'rating': 3,
+        'genre_ids': jsonEncode([28, 12]),
+        'title': 'Local',
+        'created_at': 1001,
+        'updated_at': 1002,
+        'deleted': 0,
+      });
+      mockApi.pullResponse = {
+        'server_time': 2000,
+        'ratings': [
+          {
+            'movie_id': 555,
+            'is_tv': 0,
+            'metadata_locale': 'tr',
+            'rating': 2,
+            'genre_ids': null,
+            'title': 'Remote title',
+            'created_at': 1001,
+            'updated_at': 1500,
+            'deleted': false,
+          },
+        ],
+        'watchlist': [],
+        'favorites': [],
+        'watched_seasons': [],
+        'search_history': [],
+      };
+
+      await syncService.sync();
+
+      final row = await testDb.query(
+        'ratings',
+        where: 'movie_id = ?',
+        whereArgs: [555],
+      );
+      expect(row.single['rating'], 2);
+      expect(jsonDecode(row.single['genre_ids'] as String), [28, 12]);
+    });
+
     test('should coalesce multiple concurrent sync requests', () async {
       mockApi.delay = const Duration(milliseconds: 50);
       mockApi.pullResponse = {

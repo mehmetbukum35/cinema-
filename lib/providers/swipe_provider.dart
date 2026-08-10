@@ -404,11 +404,25 @@ class SwipeNotifier extends Notifier<SwipeState> {
   }
 
   /// Reload ratedIds from DB (e.g. after rating from movie detail sheet).
+  /// Detaydan puanlanan kart destenin başındaysa ilerlet — aksi halde aynı
+  /// başlık swipe'ta kalır.
   Future<void> refreshRatedIds() async {
     try {
       final rated = await PrefsLibraryFacade.getRatedIds();
-      if (ref.mounted) {
-        state = state.copyWith(ratedIds: rated);
+      if (!ref.mounted) return;
+      var current = state.current;
+      final queue = state.queue;
+      while (current < queue.length) {
+        final movie = queue[current];
+        final key = '${movie.isTV ? 'tv' : 'movie'}_${movie.id}';
+        if (!rated.contains(key)) break;
+        current++;
+      }
+      final advanced = current != state.current;
+      state = state.copyWith(ratedIds: rated, current: current);
+      if (advanced) _afterRate();
+      if (current >= queue.length - 5) {
+        await loadMore();
       }
     } catch (e) {
       debugPrint('Failed to refresh swipe ratedIds: $e');
