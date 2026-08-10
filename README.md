@@ -12,7 +12,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history. Store/README screenshot fr
 |------|---------|
 | `/` | Flutter app (Android, iOS, Web, Desktop targets) |
 | `/backend` | PHP 8.4+ REST API, MySQL/MariaDB, JWT auth |
-| `/docs` | Project docs, [store release checklist](docs/STORE_RELEASE_CHECKLIST.md), [screenshots](docs/screenshots/README.md) |
+| `/docs` | Project docs, [store release checklist](docs/STORE_RELEASE_CHECKLIST.md), [known issues](docs/KNOWN_ISSUES.md), [screenshots](docs/screenshots/README.md) |
 
 ## Features
 

@@ -2,7 +2,7 @@
 
 Use this before the first Play Console / App Store Connect upload and again on every store-facing version bump.
 
-Current app version in `pubspec.yaml`: check `version:` (`1.0.0+1` = name `1.0.0`, build `1`). CI overrides **build number** with `$GITHUB_RUN_NUMBER` on release workflows.
+Current app version in `pubspec.yaml`: check `version:` (`1.1.0+2` = name `1.1.0`, build `2`). CI overrides **build number** with `$GITHUB_RUN_NUMBER` on release workflows.
 
 ---
 
