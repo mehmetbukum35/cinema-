@@ -90,11 +90,19 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   /// Effective language filter. Seeded from [widget.originalLanguage]; clear
   /// sets null and must NOT fall back to the widget again.
   String? _filterLanguage;
+  String? _filterDecade;
+  String? _filterGenreStr;
+  int? _filterProviderId;
+  double? _filterMinRating;
 
   @override
   void initState() {
     super.initState();
     _filterLanguage = widget.originalLanguage;
+    _filterDecade = widget.decade;
+    _filterGenreStr = widget.genreStr;
+    _filterProviderId = widget.providerId;
+    _filterMinRating = widget.minRating;
     _scrollCtrl.addListener(_onScroll);
     _loadFirstPage();
   }
@@ -125,17 +133,18 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final minYear = _yearRange.start.round();
     final maxYear = _yearRange.end.round();
     final isDefaultRange = !resultsIsYearRangeActive(_yearRange, _currentYear);
-    final decade = isDefaultRange ? widget.decade : null;
+    // Custom year range overrides decade; cleared decade stays null.
+    final decade = isDefaultRange ? _filterDecade : null;
     final startDate = isDefaultRange ? null : '$minYear-01-01';
     final endDate = isDefaultRange ? null : '$maxYear-12-31';
 
     return _service.discover(
-      genreStr: widget.genreStr,
+      genreStr: _filterGenreStr,
       maxRuntime: widget.maxRuntime,
-      providerId: widget.providerId,
+      providerId: _filterProviderId,
       originalLanguage: _filterLanguage,
       originCountry: widget.originCountry,
-      minRating: widget.minRating,
+      minRating: _filterMinRating,
       decade: decade,
       startDate: startDate,
       endDate: endDate,
@@ -279,6 +288,16 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       setState(() {
         _yearRange = result.yearRange;
         _filterLanguage = result.language;
+        // Applying a custom year range replaces decade intent.
+        if (resultsIsYearRangeActive(result.yearRange, _currentYear)) {
+          _filterDecade = null;
+        }
+        if (result.clearRouteFilters) {
+          _filterDecade = null;
+          _filterGenreStr = null;
+          _filterProviderId = null;
+          _filterMinRating = null;
+        }
       });
       _loadFirstPage();
     }
@@ -320,9 +339,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             : [
                 IconButton(
                   icon: Badge(
-                    isLabelVisible:
-                        _filterLanguage != null ||
-                        resultsIsYearRangeActive(_yearRange, _currentYear),
+                    isLabelVisible: _hasActiveFilters,
                     backgroundColor: c.red,
                     child: Icon(Icons.tune_rounded, color: c.ink, size: 20),
                   ),
@@ -340,11 +357,16 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     );
   }
 
+  bool get _hasActiveFilters =>
+      _filterLanguage != null ||
+      resultsIsYearRangeActive(_yearRange, _currentYear) ||
+      _filterDecade != null ||
+      (_filterGenreStr != null && _filterGenreStr!.isNotEmpty) ||
+      _filterProviderId != null ||
+      _filterMinRating != null;
+
   Widget _bodyContent() {
-    final hasActiveFilters =
-        _filterLanguage != null ||
-        resultsIsYearRangeActive(_yearRange, _currentYear);
-    if (!hasActiveFilters) return _grid();
+    if (!_hasActiveFilters) return _grid();
 
     return Column(
       children: [
@@ -352,6 +374,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           filterLanguage: _filterLanguage,
           yearRange: _yearRange,
           currentYear: _currentYear,
+          filterDecade: _filterDecade,
+          filterGenreStr: _filterGenreStr,
+          filterProviderId: _filterProviderId,
+          filterMinRating: _filterMinRating,
           onClearLanguage: () {
             setState(() => _filterLanguage = null);
             _loadFirstPage();
@@ -359,7 +385,25 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           onClearYear: () {
             setState(() {
               _yearRange = RangeValues(1970, _currentYear.toDouble());
+              // Clearing year must not revive the mood decade.
+              _filterDecade = null;
             });
+            _loadFirstPage();
+          },
+          onClearDecade: () {
+            setState(() => _filterDecade = null);
+            _loadFirstPage();
+          },
+          onClearGenre: () {
+            setState(() => _filterGenreStr = null);
+            _loadFirstPage();
+          },
+          onClearProvider: () {
+            setState(() => _filterProviderId = null);
+            _loadFirstPage();
+          },
+          onClearMinRating: () {
+            setState(() => _filterMinRating = null);
             _loadFirstPage();
           },
         ),

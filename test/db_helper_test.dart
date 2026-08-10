@@ -807,6 +807,29 @@ void main() {
         final raw = await helper.getFavoritesRaw();
         expect(raw, hasLength(1));
       });
+
+      test('saveFavorites does not retouch historical tombstones', () async {
+        await helper.saveFavorites([movie(1, 'A')], false);
+        await helper.saveFavorites([movie(2, 'B')], false); // A → deleted=1
+        final tombstoneBefore = await db.query(
+          'favorites',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [1, 0],
+        );
+        final tombstoneUpdatedAt = tombstoneBefore.single['updated_at'] as int;
+
+        // Wait a tick so now would differ if we retouched.
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+        await helper.saveFavorites([movie(2, 'B'), movie(3, 'C')], false);
+
+        final tombstoneAfter = await db.query(
+          'favorites',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [1, 0],
+        );
+        expect(tombstoneAfter.single['deleted'], 1);
+        expect(tombstoneAfter.single['updated_at'], tombstoneUpdatedAt);
+      });
     });
 
     group('clear / reset', () {

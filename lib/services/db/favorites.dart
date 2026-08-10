@@ -11,11 +11,22 @@ mixin DbFavoritesMixin {
     final db = await database;
     final now = DateTime.now().millisecondsSinceEpoch;
     if (db == null) {
-      DatabaseHelper._mockFavorites.removeWhere(
-        (e) => e['is_tv'] == (isTV ? 1 : 0),
-      );
+      final isTvFlag = isTV ? 1 : 0;
+      // Soft-delete: listeden çıkanları tombstone yap (hard remove değil).
+      for (final e in DatabaseHelper._mockFavorites) {
+        if (e['is_tv'] == isTvFlag && _dbInt(e['deleted']) != 1) {
+          final stillKept = items.any((m) => m.id == e['id']);
+          if (!stillKept) {
+            e['deleted'] = 1;
+            e['updated_at'] = now;
+          }
+        }
+      }
       for (var i = 0; i < items.length; i++) {
         final item = items[i];
+        DatabaseHelper._mockFavorites.removeWhere(
+          (e) => e['id'] == item.id && e['is_tv'] == isTvFlag,
+        );
         DatabaseHelper._mockFavorites.add({
           'id': item.id,
           'title': item.title,
@@ -24,7 +35,7 @@ mixin DbFavoritesMixin {
           'overview': item.overview,
           'vote_average': item.voteAverage,
           'release_date': item.releaseDate,
-          'is_tv': isTV ? 1 : 0,
+          'is_tv': isTvFlag,
           'metadata_locale': metadataLocale,
           'genre_ids': jsonEncode(item.genreIds),
           // created_at = liste içi 0-tabanlı SIRA (rank), zaman damgası değil.
@@ -38,10 +49,12 @@ mixin DbFavoritesMixin {
       return;
     }
     await db.transaction((txn) async {
+      // Yalnızca aktif satırları tombstone yap — eski tombstone'ların
+      // updated_at'ini retouch etme (LWW ile başka cihazdaki revive'ı ezmesin).
       await txn.update(
         'favorites',
         {'deleted': 1, 'updated_at': now},
-        where: 'is_tv = ?',
+        where: 'is_tv = ? AND deleted = 0',
         whereArgs: [isTV ? 1 : 0],
       );
 

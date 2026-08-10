@@ -30,6 +30,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       if (genreStr == null || !genreStr.contains('16')) 'without_genres': '16',
       if (maxRuntime != null) 'with_runtime.lte': maxRuntime.toString(),
       if (providerId != null) 'with_watch_providers': providerId.toString(),
+      if (providerId != null) 'with_watch_monetization_types': 'flatrate',
       'with_original_language': ?originalLanguage,
       'with_origin_country': ?originCountry,
       if (minRating != null) 'vote_average.gte': minRating.toString(),
@@ -76,6 +77,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       if (tvGenreStr == null || !tvGenreStr.contains('16'))
         'without_genres': '16',
       if (providerId != null) 'with_watch_providers': providerId.toString(),
+      if (providerId != null) 'with_watch_monetization_types': 'flatrate',
       'with_original_language': ?originalLanguage,
       'with_origin_country': ?originCountry,
       if (minRating != null) 'vote_average.gte': minRating.toString(),

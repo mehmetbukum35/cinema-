@@ -8,7 +8,15 @@ class ResultsFilterResult {
   final RangeValues yearRange;
   final String? language;
 
-  const ResultsFilterResult({required this.yearRange, this.language});
+  /// Filter sheet "Clear" then Apply — also drop route-seeded filters
+  /// (genre / provider / decade / minRating).
+  final bool clearRouteFilters;
+
+  const ResultsFilterResult({
+    required this.yearRange,
+    this.language,
+    this.clearRouteFilters = false,
+  });
 }
 
 class ResultsFilterSheet extends StatefulWidget {
@@ -30,6 +38,7 @@ class ResultsFilterSheet extends StatefulWidget {
 class _ResultsFilterSheetState extends State<ResultsFilterSheet> {
   late RangeValues _tempYear;
   late String? _tempLang;
+  bool _cleared = false;
 
   @override
   void initState() {
@@ -42,13 +51,18 @@ class _ResultsFilterSheetState extends State<ResultsFilterSheet> {
     setState(() {
       _tempYear = RangeValues(1970, widget.currentYear.toDouble());
       _tempLang = null;
+      _cleared = true;
     });
   }
 
   void _apply() {
     Navigator.pop(
       context,
-      ResultsFilterResult(yearRange: _tempYear, language: _tempLang),
+      ResultsFilterResult(
+        yearRange: _tempYear,
+        language: _tempLang,
+        clearRouteFilters: _cleared,
+      ),
     );
   }
 

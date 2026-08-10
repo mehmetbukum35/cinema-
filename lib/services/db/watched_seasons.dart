@@ -17,8 +17,13 @@ mixin DbWatchedSeasonsMixin {
       );
       if (index >= 0) {
         if (deleted == null) {
-          // Normal toggle behavior (remove if exist)
-          DatabaseHelper._mockWatchedSeasons.removeAt(index);
+          // Normal toggle: soft-delete / revive (DB yolu ile aynı).
+          final wasDeleted =
+              _dbInt(DatabaseHelper._mockWatchedSeasons[index]['deleted']) == 1;
+          DatabaseHelper._mockWatchedSeasons[index]['deleted'] = wasDeleted
+              ? 0
+              : 1;
+          DatabaseHelper._mockWatchedSeasons[index]['updated_at'] = now;
         } else {
           DatabaseHelper._mockWatchedSeasons[index]['deleted'] = deleted;
           DatabaseHelper._mockWatchedSeasons[index]['updated_at'] = now;

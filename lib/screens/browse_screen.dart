@@ -237,9 +237,16 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       if (background || !hasProfiles) {
         ref.read(socialProvider.notifier).loadTopProfiles();
       }
-      if (isAuthenticated && background) {
-        ref.read(socialProvider.notifier).loadFriends();
-        ref.read(socialProvider.notifier).loadActivityFeed();
+      // Soğuk açılışta da arkadaş/aktivite gelsin; yalnızca pull-to-refresh
+      // (background) ile sınırlı olmasın. Boşsa veya yenilemedeyse çek.
+      if (isAuthenticated) {
+        final social = ref.read(socialProvider);
+        if (background || social.friends.isEmpty) {
+          ref.read(socialProvider.notifier).loadFriends();
+        }
+        if (background || social.activityFeed.isEmpty) {
+          ref.read(socialProvider.notifier).loadActivityFeed();
+        }
       }
     });
 

@@ -317,6 +317,34 @@ void main() {
       expect(capturedPage, '3');
     });
 
+    test('discover with providerId sends flatrate monetization', () async {
+      String? movieMonetization;
+      String? tvMonetization;
+      final client = MockClient((request) async {
+        final mono =
+            request.url.queryParameters['with_watch_monetization_types'];
+        if (request.url.path.endsWith('/3/discover/movie')) {
+          movieMonetization = mono;
+          expect(request.url.queryParameters['with_watch_providers'], '8');
+          return http.Response(jsonEncode(mockMovies), 200);
+        }
+        if (request.url.path.endsWith('/3/discover/tv')) {
+          tvMonetization = mono;
+          expect(request.url.queryParameters['with_watch_providers'], '8');
+          return http.Response(jsonEncode(mockTv), 200);
+        }
+        return http.Response(jsonEncode({'results': []}), 200);
+      });
+      final service = TmdbService(client: client);
+      await service.discover(
+        providerId: 8,
+        includeMovies: true,
+        includeTv: true,
+      );
+      expect(movieMonetization, 'flatrate');
+      expect(tvMonetization, 'flatrate');
+    });
+
     test(
       'discoverByGenres should call discover with correct genre ids',
       () async {
