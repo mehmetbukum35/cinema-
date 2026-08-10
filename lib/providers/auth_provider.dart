@@ -8,6 +8,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../services/api_service.dart';
 import '../services/app_config.dart';
 import '../services/prefs/auth_storage.dart';
+import '../services/prefs/library_facade.dart';
 import '../services/prefs/sync_meta.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';
@@ -33,13 +34,37 @@ enum AuthStatus { success, conflict, error, cancelled, pendingVerification }
 
 enum ConflictResolution { merge, delete }
 
+/// Misafirken biriken ve girişte hesaba taşınan yerel verinin özeti.
+/// Sayılar birleştirmeden ÖNCE okunur: `_postAuthSessionRestore` sync'i
+/// tetikliyor ve sunucudan gelen kayıtlar sayıları değiştirebiliyor.
+class MergedGuestData {
+  final int ratingCount;
+  final int watchlistCount;
+
+  const MergedGuestData({
+    required this.ratingCount,
+    required this.watchlistCount,
+  });
+
+  bool get isEmpty => ratingCount == 0 && watchlistCount == 0;
+}
+
 class AuthResult {
   final AuthStatus status;
   final Map<String, dynamic>? user;
   final Map<String, dynamic>? tokens;
   final String? errorMessage;
 
-  AuthResult({required this.status, this.user, this.tokens, this.errorMessage});
+  /// Yalnızca misafir verisi hesaba taşındığında dolu; aksi halde null.
+  final MergedGuestData? mergedGuestData;
+
+  AuthResult({
+    required this.status,
+    this.user,
+    this.tokens,
+    this.errorMessage,
+    this.mergedGuestData,
+  });
 }
 
 class AuthState {

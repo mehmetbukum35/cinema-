@@ -7,6 +7,7 @@ import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/providers/social_provider.dart';
 import 'package:ne_izlesem/providers/watchlist_provider.dart';
 import 'package:ne_izlesem/models/cultural_preferences.dart';
+import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/cultural_preference_service.dart';
 import 'package:ne_izlesem/services/prefs/auth_storage.dart';
@@ -644,6 +645,47 @@ void main() {
 
       expect(result.status, AuthStatus.success);
       expect(container.read(authProvider).isAuthenticated, isTrue);
+    });
+
+    test('guest merge reports what moved to the account', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      await PrefsAuthStorage.setLastAuthenticatedUserId(null);
+      await PrefsLibraryFacade.saveRating(
+        movieId: 123,
+        isTV: false,
+        rating: 3,
+        metadataLocale: 'tr',
+      );
+      await PrefsLibraryFacade.addToWatchlist(
+        Movie(id: 999, title: 'Watch Me', overview: '', voteAverage: 7),
+        metadataLocale: 'tr',
+      );
+
+      final result = await notifier.register(
+        'summary_guest@example.com',
+        'secret123',
+      );
+
+      expect(result.status, AuthStatus.success);
+      expect(result.mergedGuestData, isNotNull);
+      expect(result.mergedGuestData!.ratingCount, 1);
+      expect(result.mergedGuestData!.watchlistCount, 1);
+    });
+
+    test('a returning user with no guest data reports no merge', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      await PrefsAuthStorage.setLastAuthenticatedUserId(null);
+      // Yerel veri yok → taşınan da yok → özet gösterilmemeli.
+
+      final result = await notifier.register(
+        'nothing_to_move@example.com',
+        'secret123',
+      );
+
+      expect(result.status, AuthStatus.success);
+      expect(result.mergedGuestData, isNull);
     });
 
     test(

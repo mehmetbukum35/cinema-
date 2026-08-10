@@ -213,6 +213,8 @@ const Map<String, String> kEnStrings = {
   'auth_logout_wipe_local': 'Also remove data from this device',
   'session_expired_message':
       'Your session has expired. Your data is safe on this device. Please sign in again.',
+  'auth_guest_data_merged':
+      '{} ratings and {} watchlist items moved to your account.',
   'auth_conflict_title': 'Account Conflict',
   'auth_conflict_desc':
       'This device has local data (ratings, lists) that is not yet linked to the account you are signing into — it may have been created as a guest or with another account. "Delete Local Data" will permanently erase it from this device. How would you like to proceed?',

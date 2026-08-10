@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/app_config.dart';
 import '../services/localization_service.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/auth_conflict_dialog.dart';
 import '../widgets/auth_loading_overlay.dart';
 import '../widgets/forgot_password_sheet.dart';
@@ -111,6 +112,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             .cancelPendingLogin(verifyResult.tokens);
       }
     } else if (result.status == AuthStatus.success) {
+      // Toast kök Overlay'e çizildiği için (bkz. showAppSnackBar) bu ekran
+      // pop edildikten sonra da ayakta kalır; pop'tan ÖNCE göstermek yeterli.
+      final merged = result.mergedGuestData;
+      if (merged != null && mounted) {
+        final tr = AppLocalizations.of(context);
+        showAppToast(
+          context,
+          (tr?.get('auth_guest_data_merged') ??
+                  '{} puanın ve {} izleme listesi kaydın hesabına taşındı.')
+              .replaceFirst('{}', '${merged.ratingCount}')
+              .replaceFirst('{}', '${merged.watchlistCount}'),
+        );
+      }
       if (mounted) Navigator.of(context).pop();
     } else if (result.status == AuthStatus.conflict) {
       final resolution = await showAuthConflictDialog(context);

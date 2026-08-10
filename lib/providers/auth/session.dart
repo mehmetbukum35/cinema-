@@ -83,12 +83,25 @@ mixin AuthSessionMixin on Notifier<AuthState> {
       );
     }
 
+    // Sayılar completeLogin'den ÖNCE okunur: o çağrı _postAuthSessionRestore
+    // üzerinden sync tetikliyor ve sunucudan gelen kayıtlar sayıyı şişirirdi.
+    // Kullanıcıya "senin taşıdığın" sayı söylenmeli, "sende toplam kaç var" değil.
+    final merged = hasLocalData
+        ? MergedGuestData(
+            ratingCount: await PrefsLibraryFacade.getRatingCount(),
+            watchlistCount: (await PrefsLibraryFacade.getWatchlist()).length,
+          )
+        : null;
+
     await completeLogin(
       user: user,
       tokens: tokens,
       resolution: ConflictResolution.merge,
     );
-    return AuthResult(status: AuthStatus.success);
+    return AuthResult(
+      status: AuthStatus.success,
+      mergedGuestData: merged != null && !merged.isEmpty ? merged : null,
+    );
   }
 
   /// Completes the login process once conflict is resolved or when no conflict is present.

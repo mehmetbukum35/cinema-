@@ -214,6 +214,8 @@ const Map<String, String> kTrStrings = {
   'auth_logout_wipe_local': 'Bu cihazdaki verileri de sil',
   'session_expired_message':
       'Oturumunuz sona erdi. Verileriniz bu cihazda güvende. Tekrar giriş yapın.',
+  'auth_guest_data_merged':
+      '{} puanın ve {} izleme listesi kaydın hesabına taşındı.',
   'auth_conflict_title': 'Hesap Çakışması',
   'auth_conflict_desc':
       'Bu cihazda, giriş yaptığınız hesaba henüz bağlı olmayan yerel veriler (puanlar, listeler) var — misafir olarak ya da başka bir hesapla oluşturulmuş olabilir. "Cihazdakileri Sil" seçeneği bu verileri cihazdan kalıcı olarak siler. Nasıl devam etmek istersiniz?',
