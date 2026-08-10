@@ -62,12 +62,14 @@ class _SocialScreenState extends ConsumerState<SocialScreen>
     // Initial data load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(socialProvider.notifier).loadFriends();
-      ref.read(socialProvider.notifier).loadActivityFeed();
-      ref.read(socialProvider.notifier).loadRecommendations();
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
+        ref.read(socialProvider.notifier).loadFriends();
+        ref.read(socialProvider.notifier).loadActivityFeed();
+        ref.read(socialProvider.notifier).loadRecommendations();
+      }
       ref.read(socialProvider.notifier).loadTopProfiles();
 
-      final auth = ref.read(authProvider);
       if (auth.user != null) {
         setState(() {
           _usernameCtrl.text = auth.user!['username'] as String? ?? '';

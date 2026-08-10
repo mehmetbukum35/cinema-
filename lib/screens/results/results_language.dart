@@ -12,8 +12,19 @@ const resultsLanguages = [
   (code: 'hi', label: 'Hintçe'),
 ];
 
+String resultsLanguageFallbackLabel(String code) {
+  for (final l in resultsLanguages) {
+    if (l.code == code) return l.label;
+  }
+  if (code.contains('|')) return 'Avrupa';
+  return code;
+}
+
 String resultsLanguageLabel(String code, String fallback, String localeCode) {
   final isTr = localeCode == 'tr';
+  if (code.contains('|')) {
+    return isTr ? 'Avrupa' : 'European';
+  }
   if (isTr) return fallback;
   switch (code) {
     case 'tr':

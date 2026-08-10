@@ -173,6 +173,69 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     bool includeTv = true,
     int page = 1,
   }) async {
+    // TMDB `with_original_language` tek ISO kod bekler (genres'teki pipe-OR yok).
+    // "Avrupa" gibi `fr|es|de|…` anahtarlarını dil başına fan-out edip birleştir.
+    final List<String?> codes;
+    if (originalLanguage == null || originalLanguage.isEmpty) {
+      codes = const [null];
+    } else {
+      final parts = originalLanguage
+          .split('|')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      codes = parts.isEmpty ? const [null] : parts;
+    }
+
+    final perLang = await Future.wait(
+      codes.map(
+        (lang) => _discoverSingleLanguage(
+          genreStr: genreStr,
+          maxRuntime: maxRuntime,
+          providerId: providerId,
+          originalLanguage: lang,
+          originCountry: originCountry,
+          minRating: minRating,
+          decade: decade,
+          startDate: startDate,
+          endDate: endDate,
+          sortBy: sortBy,
+          tvStatus: tvStatus,
+          includeMovies: includeMovies,
+          includeTv: includeTv,
+          page: page,
+        ),
+      ),
+    );
+
+    final seen = <String>{};
+    final all = <Movie>[];
+    for (final list in perLang) {
+      for (final m in list) {
+        final key = '${m.isTV ? 'tv' : 'movie'}_${m.id}';
+        if (seen.add(key)) all.add(m);
+      }
+    }
+    all.sort(_discoverComparator(sortBy));
+    return all;
+  }
+
+  Future<List<Movie>> _discoverSingleLanguage({
+    String? genreStr,
+    int? maxRuntime,
+    int? providerId,
+    String? originalLanguage,
+    String? originCountry,
+    double? minRating,
+    String? decade,
+    String? startDate,
+    String? endDate,
+    String sortBy = 'popularity.desc',
+    String? tvStatus,
+    bool includeMovies = true,
+    bool includeTv = true,
+    int page = 1,
+  }) async {
     final futures = <Future<List<Movie>>>[];
 
     if (includeMovies) {
@@ -212,11 +275,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     }
 
     final results = await Future.wait(futures);
-    final all = results.expand((list) => list).toList();
-    // Film ve dizi tek listede birleştiğinde, kullanıcının seçtiği sıralamayı
-    // koru (önceden her zaman puana göre sıralanıyordu — bu seçimi eziyordu).
-    all.sort(_discoverComparator(sortBy));
-    return all;
+    return results.expand((list) => list).toList();
   }
 
   /// Birleştirilmiş film+dizi listesini, kullanıcının seçtiği [sortBy] kriterine

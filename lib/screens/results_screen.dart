@@ -86,11 +86,15 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   // Filter state
   late final int _currentYear = DateTime.now().year;
   late RangeValues _yearRange = RangeValues(1970, _currentYear.toDouble());
+
+  /// Effective language filter. Seeded from [widget.originalLanguage]; clear
+  /// sets null and must NOT fall back to the widget again.
   String? _filterLanguage;
 
   @override
   void initState() {
     super.initState();
+    _filterLanguage = widget.originalLanguage;
     _scrollCtrl.addListener(_onScroll);
     _loadFirstPage();
   }
@@ -129,7 +133,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       genreStr: widget.genreStr,
       maxRuntime: widget.maxRuntime,
       providerId: widget.providerId,
-      originalLanguage: _filterLanguage ?? widget.originalLanguage,
+      originalLanguage: _filterLanguage,
       originCountry: widget.originCountry,
       minRating: widget.minRating,
       decade: decade,

@@ -655,6 +655,21 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       }
     });
 
+    // Oturum restore / giriş / çıkış: hayalet kart ve sosyal raylar auth'a uysun.
+    ref.listen(authProvider, (previous, next) {
+      final wasIn = previous?.isAuthenticated ?? false;
+      final isIn = next.isAuthenticated;
+      if (wasIn == isIn) return;
+      if (isIn && _guestPreview != null) {
+        setState(() => _guestPreview = null);
+      }
+      _authSyncRefreshDebounce?.cancel();
+      _authSyncRefreshDebounce = Timer(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        _load(background: true);
+      });
+    });
+
     // Giriş/çıkış veya sync sonrası: iskelete düşmeden rayları yenile.
     // Auth restore + sync aynı anda iki kez tetikleyebilir → kısa debounce.
     ref.listen<int>(browseRefreshTriggerProvider, (previous, next) {
@@ -808,12 +823,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             const BrowseFriendsActivityTeaser(),
 
           // ── Popüler Üyeler ─────────────────────────────────────────────────────────
-          if (socialState.topProfiles.isNotEmpty || _guestPreview != null)
+          if (socialState.topProfiles.isNotEmpty ||
+              (!isAuthenticated && _guestPreview != null))
             BrowseTopProfilesSection(
               profiles: socialState.topProfiles,
-              leadingCard: _guestPreview == null
-                  ? null
-                  : BrowseGuestListCard(preview: _guestPreview!),
+              leadingCard: (!isAuthenticated && _guestPreview != null)
+                  ? BrowseGuestListCard(preview: _guestPreview!)
+                  : null,
             ),
 
           // ── Topluluğun Favorileri: Popüler Top 20 (Film + Dizi) ───────────────

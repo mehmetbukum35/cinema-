@@ -144,8 +144,10 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       _watchedSeasons = primaryResults[3] as Set<int>;
     });
 
-    _loadFriendsReviews();
-    _loadCommunityScore();
+    if (ref.read(authProvider).isLoggedIn) {
+      _loadFriendsReviews();
+      _loadCommunityScore();
+    }
 
     // Phase 2: Load secondary details asynchronously in the background
     Future.wait([
@@ -579,10 +581,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           .catchError((_) => {});
       ref.invalidate(statsProvider);
       ref.read(syncServiceProvider).sync().catchError((_) => {});
-      ref
-          .read(socialProvider.notifier)
-          .loadActivityFeed()
-          .catchError((_) => {});
+      if (ref.read(authProvider).isLoggedIn) {
+        ref
+            .read(socialProvider.notifier)
+            .loadActivityFeed()
+            .catchError((_) => {});
+      }
 
       if (mounted) {
         setState(() {

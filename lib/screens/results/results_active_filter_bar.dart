@@ -22,6 +22,7 @@ class ResultsActiveFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final localeCode = Localizations.localeOf(context).languageCode;
+    final language = filterLanguage;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -30,16 +31,14 @@ class ResultsActiveFilterBar extends StatelessWidget {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            if (filterLanguage != null)
+            if (language != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: RawChip(
                   label: Text(
                     resultsLanguageLabel(
-                      filterLanguage!,
-                      resultsLanguages
-                          .firstWhere((l) => l.code == filterLanguage)
-                          .label,
+                      language,
+                      resultsLanguageFallbackLabel(language),
                       localeCode,
                     ),
                     style: TextStyle(color: c.ink, fontSize: 12),

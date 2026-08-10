@@ -374,6 +374,8 @@ class SyncService {
 
     // İlk sync veya boş imleç: push'tan ÖNCE sunucu saatini alıp sapmış
     // yerel damgaları kırp — yoksa ileri saatli cihaz LWW'yi bir kez bile çalar.
+    // lastPull watermark'ı "şimdi" değildir; ona karşı heal etmek sync sonrası
+    // meşru düzenlemeleri (5 dk+) eski damgaya çeker ve LWW kaybına yol açar.
     Map<String, dynamic>? earlyPull;
     if (lastPull <= 0) {
       await _ensureSession(sessionUserId);
@@ -382,7 +384,10 @@ class SyncService {
       final earlyServer = _asInt(earlyPull['server_time']);
       await _healSkewedLocalTimestamps(db, earlyServer);
     } else {
-      await _healSkewedLocalTimestamps(db, lastPull + 1);
+      await _healSkewedLocalTimestamps(
+        db,
+        DateTime.now().millisecondsSinceEpoch,
+      );
     }
 
     // 1. Build and PUSH local changes

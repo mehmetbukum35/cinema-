@@ -216,10 +216,20 @@ class ApiClient {
         );
         response = await _sendTransport(method, url, newHeaders, bodyStr);
       } else if (outcome == RefreshOutcome.denied) {
-        debugPrint("Refresh token rejected by server. Ending local session.");
-        // Clear local auth session so the app returns to logged-out state
-        await PrefsService.clearAuthData();
-        onSessionExpired?.call();
+        // Misafir (hiç token/user yok) auth'lu uçlara 401 alınca buraya düşer;
+        // oturum yokken clear + session-expired snackbar gösterme.
+        final hadAccess = await PrefsAuthStorage.getAccessToken();
+        final hadRefresh = await PrefsAuthStorage.getRefreshToken();
+        final hadUser = await PrefsAuthStorage.getUserData();
+        if (hadAccess == null && hadRefresh == null && hadUser == null) {
+          debugPrint(
+            '401 with no local session (guest); skipping session clear.',
+          );
+        } else {
+          debugPrint("Refresh token rejected by server. Ending local session.");
+          await PrefsService.clearAuthData();
+          onSessionExpired?.call();
+        }
       } else {
         // Geçici hata: oturuma DOKUNMA. Refresh token büyük olasılıkla hâlâ
         // geçerli; bu isteği 401 olarak döndürüp bir sonraki denemeye bırak.
