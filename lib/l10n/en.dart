@@ -758,6 +758,9 @@ const Map<String, String> kEnStrings = {
   'activity': 'Activity',
   'top_lists': 'Popular',
   'top_lists_title': 'Popular Lists',
+  'browse_guest_list_title': 'Your List',
+  'browse_guest_list_unpublished': 'not published',
+  'browse_guest_list_cta': 'Sign in and publish',
   'top_lists_empty':
       'No public profiles yet. Share your profile to get things rolling!',
   'top_lists_likes': 'likes',

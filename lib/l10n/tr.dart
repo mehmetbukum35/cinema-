@@ -753,6 +753,9 @@ const Map<String, String> kTrStrings = {
   'activity': 'Akış',
   'top_lists': 'Popüler',
   'top_lists_title': 'Popüler Listeler',
+  'browse_guest_list_title': 'Senin Listen',
+  'browse_guest_list_unpublished': 'yayında değil',
+  'browse_guest_list_cta': 'Giriş yap ve yayınla',
   'top_lists_empty':
       'Henüz herkese açık profil yok. Profilini paylaş, hareket başlasın!',
   'top_lists_likes': 'beğeni',
