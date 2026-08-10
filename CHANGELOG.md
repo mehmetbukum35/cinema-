@@ -4,7 +4,16 @@ All notable changes to **cinema+** are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-08-10
+
 ### Added
+
+**On-device plugin smoke tests** (`integration_test/`) — a test layer that runs on
+a real device/emulator, where the VM suite structurally cannot reach: it proves
+`DatabaseHelper` opens real native SQLite instead of silently falling back to the
+in-memory mock, that the Android Keystore round-trips auth tokens with the memory
+cache bypassed, that the shipped Firebase configuration initializes, and that the
+app draws its first frame without an exception.
 
 **Cultural personalization** — onboarding and profile preferences for cinema
 regions (Korean, European, Hollywood, Turkish, …) now shape recommendations and
@@ -68,6 +77,17 @@ screens, and debounced keystrokes no longer clutter the request stream (also fix
 a web platform error).
 
 ### Changed
+
+**Riverpod 3 migration** — every provider moved off the legacy
+`StateNotifier`/`StateProvider` API onto `Notifier`/`NotifierProvider`; the
+`flutter_riverpod/legacy.dart` import is gone from the codebase. Two behavioral
+notes carried by the new framework:
+
+- `ref.invalidate` now preserves the notifier *instance* and only re-runs
+  `build()`, so fields resolved there must not be `late final`
+- Dependencies previously injected through the constructor (`Ref`, `ApiService`,
+  `TmdbService`) now resolve from `ref` inside `build()`, with constructor
+  parameters kept as test seams
 
 - Search history retention reduced
 - Bootstrap database schema aligned with production
