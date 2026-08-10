@@ -13,9 +13,18 @@ mixin DbWatchlistMixin {
     final now = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
     final delVal = deleted ?? 0;
     if (db == null) {
-      DatabaseHelper._mockWatchlist.removeWhere(
+      final existingIdx = DatabaseHelper._mockWatchlist.indexWhere(
         (e) => e['id'] == movie.id && e['is_tv'] == (movie.isTV ? 1 : 0),
       );
+      final createdAt = existingIdx >= 0
+          ? _dbInt(
+              DatabaseHelper._mockWatchlist[existingIdx]['created_at'],
+              now,
+            )
+          : now;
+      if (existingIdx >= 0) {
+        DatabaseHelper._mockWatchlist.removeAt(existingIdx);
+      }
       DatabaseHelper._mockWatchlist.add({
         'id': movie.id,
         'title': movie.title,
@@ -27,12 +36,23 @@ mixin DbWatchlistMixin {
         'is_tv': movie.isTV ? 1 : 0,
         'metadata_locale': metadataLocale,
         'genre_ids': jsonEncode(movie.genreIds),
-        'created_at': now,
+        'created_at': createdAt,
         'updated_at': now,
         'deleted': delVal,
       });
       return;
     }
+    // Soft-delete revive: eski created_at korunsun (sıra + sync LWW).
+    final existing = await db.query(
+      'watchlist',
+      columns: ['created_at'],
+      where: 'id = ? AND is_tv = ?',
+      whereArgs: [movie.id, movie.isTV ? 1 : 0],
+      limit: 1,
+    );
+    final createdAt = existing.isNotEmpty
+        ? _dbInt(existing.first['created_at'], now)
+        : now;
     await db.insert('watchlist', {
       'id': movie.id,
       'title': movie.title,
@@ -44,7 +64,7 @@ mixin DbWatchlistMixin {
       'is_tv': movie.isTV ? 1 : 0,
       'metadata_locale': metadataLocale,
       'genre_ids': jsonEncode(movie.genreIds),
-      'created_at': now,
+      'created_at': createdAt,
       'updated_at': now,
       'deleted': delVal,
     }, conflictAlgorithm: ConflictAlgorithm.replace);

@@ -266,6 +266,28 @@ void main() {
       },
     );
 
+    test('concurrent additions both remain in UI state', () async {
+      container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
+          syncServiceProvider.overrideWithValue(mockSync),
+          watchlistProvider.overrideWith(
+            () => WatchlistNotifier(autoLoad: false),
+          ),
+        ],
+      );
+      final notifier = container.read(watchlistProvider.notifier);
+      final a = Movie(id: 201, title: 'A', overview: '', voteAverage: 7);
+      final b = Movie(id: 202, title: 'B', overview: '', voteAverage: 7);
+
+      await Future.wait([notifier.add(a), notifier.add(b)]);
+
+      final ids =
+          container.read(watchlistProvider).value?.map((m) => m.id).toSet() ??
+          {};
+      expect(ids, containsAll([201, 202]));
+    });
+
     test('older stats load cannot overwrite a newer result', () async {
       final stale = Completer<Map<String, dynamic>>();
       final fresh = Completer<Map<String, dynamic>>();

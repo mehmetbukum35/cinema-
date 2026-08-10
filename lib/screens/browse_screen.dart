@@ -651,6 +651,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   Widget build(BuildContext context) {
     ref.listen(localeProvider, (previous, next) {
       if (previous != next) {
+        // Top 20 titles join locale'e bağlı; TMDB raylarıyla birlikte tazele.
+        ref.invalidate(popularTitlesProvider(false));
+        ref.invalidate(popularTitlesProvider(true));
         _load();
       }
     });

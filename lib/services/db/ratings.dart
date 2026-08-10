@@ -19,12 +19,14 @@ mixin DbRatingsMixin {
     final db = await database;
     final finalMovieId = movieId ?? movie?.id ?? 0;
     final finalIsTV = isTV ?? movie?.isTV ?? false;
-    final finalGenreIds = genreIds ?? movie?.genreIds ?? const <int>[];
     final now = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
     final delVal = deleted ?? 0;
 
-    final existing = await getRating(finalMovieId, finalIsTV);
-    final createdAt = existing != null ? (existing['created_at'] as int) : now;
+    // Soft-delete tombstone dahil: revive'da created_at / yorum / tür kaybolmasın.
+    final existing = await _getRatingRowAny(finalMovieId, finalIsTV);
+    final createdAt = existing != null
+        ? (_dbInt(existing['created_at'], now))
+        : now;
     final String? finalComment = identical(comment, DatabaseHelper.unset)
         ? (existing?['comment'] as String?)
         : comment as String?;
@@ -34,6 +36,19 @@ mixin DbRatingsMixin {
     final int finalIsPrivate = identical(isPrivate, DatabaseHelper.unset)
         ? (existing?['is_private'] as int? ?? 0)
         : isPrivate as int;
+
+    // Lean Movie / kısmi kayıt çoğu zaman genreIds=[] taşır; dolu mevcutu
+    // boş listeyle ezme (originCountries ile aynı desen).
+    final incomingGenreIds = genreIds ?? movie?.genreIds;
+    final existingGenreIds = existing != null
+        ? _dbIntList(existing['genre_ids'])
+        : const <int>[];
+    final List<int> finalGenreIds =
+        (incomingGenreIds != null && incomingGenreIds.isNotEmpty)
+        ? incomingGenreIds
+        : (existingGenreIds.isNotEmpty
+              ? existingGenreIds
+              : (incomingGenreIds ?? const <int>[]));
 
     final originalLanguage =
         movie?.originalLanguage ?? existing?['original_language'] as String?;
@@ -102,7 +117,15 @@ mixin DbRatingsMixin {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  /// Canlı (silinmemiş) puan satırı; soft-delete sonrası null.
   Future<Map<String, dynamic>?> getRating(int movieId, bool isTV) async {
+    final row = await _getRatingRowAny(movieId, isTV);
+    if (row == null || _dbInt(row['deleted']) == 1) return null;
+    return row;
+  }
+
+  /// Soft-delete tombstone dahil ham satır — saveRating merge / revive için.
+  Future<Map<String, dynamic>?> _getRatingRowAny(int movieId, bool isTV) async {
     final db = await database;
     if (db == null) {
       final match = DatabaseHelper._mockRatings.firstWhere(
@@ -113,13 +136,11 @@ mixin DbRatingsMixin {
     }
     final maps = await db.query(
       'ratings',
-      where: 'movie_id = ? AND is_tv = ? AND deleted = 0',
+      where: 'movie_id = ? AND is_tv = ?',
       whereArgs: [movieId, isTV ? 1 : 0],
+      limit: 1,
     );
-    if (maps.isNotEmpty) {
-      return maps.first;
-    }
-    return null;
+    return maps.isNotEmpty ? maps.first : null;
   }
 
   Future<List<Map<String, dynamic>>> getRatings() async {
@@ -194,7 +215,7 @@ mixin DbRatingsMixin {
     final db = await database;
     if (db == null) {
       return DatabaseHelper._mockRatings
-          .where((m) => m['deleted'] != 1)
+          .where((m) => m['deleted'] != 1 && _dbInt(m['is_private']) != 1)
           .map(
             (m) => {
               'id': _dbInt(m['movie_id']),
@@ -209,7 +230,8 @@ mixin DbRatingsMixin {
     final List<Map<String, dynamic>> maps = await db.query(
       'ratings',
       columns: ['movie_id', 'is_tv', 'rating', 'genre_ids', 'created_at'],
-      where: 'deleted = 0',
+      // Gizli puanlar kişisel not; reco tür ağırlıklarına sızmasın.
+      where: 'deleted = 0 AND is_private = 0',
     );
     return maps.map((m) {
       final genreIdsList = _dbIntList(m['genre_ids']);

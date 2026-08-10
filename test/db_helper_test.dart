@@ -436,6 +436,85 @@ void main() {
         },
       );
 
+      test('lean Movie with empty genreIds preserves stored genres', () async {
+        await helper.saveRating(
+          movie: Movie(
+            id: 43,
+            title: 'Genre Keep',
+            overview: '',
+            voteAverage: 8,
+            genreIds: const [18, 28],
+          ),
+          rating: 3,
+        );
+
+        await helper.saveRating(
+          movie: Movie(
+            id: 43,
+            title: 'Genre Keep',
+            overview: '',
+            voteAverage: 8,
+            genreIds: const [],
+          ),
+          rating: 2,
+        );
+
+        final row = await helper.getRating(43, false);
+        expect(row!['genre_ids'], '[18,28]');
+        expect(row['rating'], 2);
+      });
+
+      test(
+        'delete then re-rate preserves created_at comment and genres',
+        () async {
+          await helper.saveRating(
+            movie: movie(44, 'Revive'),
+            rating: 3,
+            updatedAt: 1000,
+            comment: 'eski yorum',
+            isSpoiler: 1,
+            isPrivate: 1,
+          );
+          await helper.deleteRating(44, false);
+          expect(await helper.getRating(44, false), isNull);
+
+          await helper.saveRating(
+            movie: Movie(
+              id: 44,
+              title: 'Revive',
+              overview: '',
+              voteAverage: 7,
+              genreIds: const [],
+            ),
+            rating: 2,
+            updatedAt: 3000,
+          );
+
+          final row = await helper.getRating(44, false);
+          expect(row, isNotNull);
+          expect(row!['created_at'], 1000);
+          expect(row['updated_at'], 3000);
+          expect(row['comment'], 'eski yorum');
+          expect(row['is_spoiler'], 1);
+          expect(row['is_private'], 1);
+          expect(row['genre_ids'], '[18,28]');
+          expect(row['deleted'], 0);
+        },
+      );
+
+      test('getRatingsForWeights excludes private ratings', () async {
+        await helper.saveRating(movie: movie(50, 'Açık'), rating: 3);
+        await helper.saveRating(
+          movie: movie(51, 'Gizli'),
+          rating: 3,
+          isPrivate: 1,
+        );
+
+        final weights = await helper.getRatingsForWeights();
+        expect(weights, hasLength(1));
+        expect(weights.first['id'], 50);
+      });
+
       test('movie and tv with same id are independent rows', () async {
         await helper.saveRating(movie: movie(7, 'Film'), rating: 1);
         await helper.saveRating(movie: movie(7, 'Dizi', isTV: true), rating: 3);
@@ -582,7 +661,11 @@ void main() {
 
         await helper.addToWatchlist(movie(1, 'Film'), updatedAt: 3000);
         expect(await helper.isInWatchlist(1, false), isTrue);
-        expect(await db.query('watchlist'), hasLength(1));
+        final resurrected = await db.query('watchlist');
+        expect(resurrected, hasLength(1));
+        expect(resurrected.first['deleted'], 0);
+        expect(resurrected.first['created_at'], 1000);
+        expect(resurrected.first['updated_at'], 3000);
       });
 
       test('same id movie and tv are distinct entries', () async {

@@ -72,13 +72,11 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
         movie,
         metadataLocale: ref.read(localeProvider).languageCode,
       );
+      // state.value üzerine yama değil: eşzamanlı add/remove sonrası DB'den oku.
+      // (load() için enjekte edilen _readWatchlist değil — o stale-load testine
+      // bağlanır; mutasyonlar her zaman gerçek library facade'e yazar.)
       if (ref.mounted) {
-        final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
-        if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {
-          state = AsyncValue.data([movie, ...list]);
-        } else {
-          state = AsyncValue.data(list);
-        }
+        state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
       }
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
@@ -113,10 +111,7 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
     try {
       await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
       if (ref.mounted) {
-        final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
-        state = AsyncValue.data(
-          list.where((m) => !(m.id == id && m.isTV == isTV)).toList(),
-        );
+        state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
       }
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
