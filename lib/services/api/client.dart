@@ -50,6 +50,7 @@ class ApiClient {
 
   Future<Map<String, String>> _getHeaders({
     bool requireAuth = true,
+    bool optionalAuth = false,
     String? requestId,
   }) async {
     final Map<String, String> headers = {
@@ -60,11 +61,16 @@ class ApiClient {
     if (requestId case final requestId?) {
       headers['X-Request-ID'] = requestId;
     }
-    // Optional-auth uçları (requireAuth: false) da Bearer varsa gönderir —
-    // örn. GET /social/profiles/top misafire açık ama girişliyken me_liked ister.
-    final token = await PrefsAuthStorage.getAccessToken();
-    if (token != null) {
-      headers['Authorization'] = 'Bearer $token';
+    // Token yalnızca ucun İSTEDİĞİ yerde gider. `optionalAuth` misafire de açık
+    // ama girişliyken kişiselleşen uçlar içindir (ör. GET /social/profiles/top
+    // → me_liked). Bunu "her isteğe ekle" diye genellemek, /auth/login ve
+    // /auth/forgot-password gibi gövdeyle çalışan uçlara da bayat bir token
+    // taşırdı: sunucu okumuyor, ama erişim loglarına düşüyor.
+    if (requireAuth || optionalAuth) {
+      final token = await PrefsAuthStorage.getAccessToken();
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
     }
     return headers;
   }
@@ -128,6 +134,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool requireAuth = true,
+    bool optionalAuth = false,
   }) async {
     if (method != 'GET') {
       return _performRequest(
@@ -135,6 +142,7 @@ class ApiClient {
         path,
         body: body,
         requireAuth: requireAuth,
+        optionalAuth: optionalAuth,
       );
     }
 
@@ -156,6 +164,7 @@ class ApiClient {
           path,
           body: body,
           requireAuth: requireAuth,
+          optionalAuth: optionalAuth,
         ).whenComplete(() {
           if (identical(_inFlightGets[key], request)) {
             _inFlightGets.remove(key);
@@ -170,11 +179,13 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     required bool requireAuth,
+    bool optionalAuth = false,
   }) async {
     final requestId = _newRequestId();
     final url = Uri.parse('$baseUrl$path');
     final headers = await _getHeaders(
       requireAuth: requireAuth,
+      optionalAuth: optionalAuth,
       requestId: requestId,
     );
     final String? bodyStr = body != null ? jsonEncode(body) : null;
@@ -190,13 +201,17 @@ class ApiClient {
       rethrow;
     }
 
-    if (response.statusCode == 401 && requireAuth) {
+    // optionalAuth uçları da yenilemeye dahildir: sunucu, Bearer VARSA ve
+    // geçersizse 401 döner (bkz. Auth::optionalUser). Bu dal olmasaydı token
+    // eskiyen kullanıcı sessizce misafir yanıtını alırdı.
+    if (response.statusCode == 401 && (requireAuth || optionalAuth)) {
       debugPrint("Access token expired (401). Attempting silent refresh...");
       final outcome = await _attemptTokenRefresh();
       if (outcome == RefreshOutcome.success) {
         // Retry the request with the new access token
         final newHeaders = await _getHeaders(
-          requireAuth: true,
+          requireAuth: requireAuth,
+          optionalAuth: optionalAuth,
           requestId: requestId,
         );
         response = await _sendTransport(method, url, newHeaders, bodyStr);

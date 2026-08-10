@@ -10,7 +10,6 @@ import '../../services/localization_service.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
-import '../../widgets/app_toast.dart';
 import '../../widgets/pulsing_placeholder.dart';
 import '../login_screen.dart';
 
@@ -147,13 +146,11 @@ class BrowseTopProfileCard extends ConsumerWidget {
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
+                      // Misafir beğenmeye çalıştı: bu bir hata değil, bir
+                      // davet. Kırmızı hata toast'ı hem tonu yanlış kurar hem
+                      // de hemen ardından açılan giriş ekranının altında
+                      // kalırdı; doğrudan giriş ekranını açmak yeterli.
                       if (!ref.read(authProvider).isLoggedIn) {
-                        showAppToast(
-                          context,
-                          tr?.get('profile_like_need_login') ??
-                              'Sign in to like a profile.',
-                          success: false,
-                        );
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const LoginScreen(),

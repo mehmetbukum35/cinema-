@@ -156,16 +156,14 @@ class TopProfileCard extends ConsumerWidget {
                             ),
                             onPressed: () async {
                               HapticFeedback.lightImpact();
+                              // Misafir beğenmeye çalıştı: bu bir hata değil,
+                              // bir davet. Kırmızı hata toast'ı hem tonu
+                              // yanlış kurar hem de hemen ardından açılan
+                              // giriş ekranının altında kalırdı; doğrudan
+                              // giriş ekranını açmak tek başına yeterince
+                              // açıklayıcı.
                               if (!ref.read(authProvider).isLoggedIn) {
                                 if (context.mounted) {
-                                  showAppToast(
-                                    context,
-                                    AppLocalizations.of(
-                                          context,
-                                        )?.get('profile_like_need_login') ??
-                                        'Sign in to like a profile.',
-                                    success: false,
-                                  );
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) => const LoginScreen(),

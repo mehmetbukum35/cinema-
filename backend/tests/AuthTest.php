@@ -25,6 +25,62 @@ class AuthTest extends TestCase
         ];
     }
 
+    // ─── optionalUser: Bearer'ın YOKLUĞU misafir, GEÇERSİZLİĞİ hata ──────────
+    // Ayrım kritik: geçersiz token'da sessizce misafire düşmek, girişli
+    // kullanıcıya kişiselleştirilmemiş yanıt döndürür ve istemcinin sessiz
+    // yenileme akışı 401 görmediği için hiç tetiklenmez.
+
+    public function testOptionalUserReturnsNullWhenNoBearer(): void
+    {
+        TestHelperRegistry::$mockBearerToken = null;
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->assertNull($auth->optionalUser());
+    }
+
+    public function testOptionalUserRejectsInvalidBearerInsteadOfFallingBackToGuest(): void
+    {
+        TestHelperRegistry::$mockBearerToken = 'not-a-real-jwt';
+        $auth = new Auth($this->db, $this->cfg);
+
+        $this->expectException(TestExitException::class);
+        try {
+            $auth->optionalUser();
+        } finally {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
+        }
+    }
+
+    public function testRequireUserStillDistinguishesMissingHeaderFromInvalidToken(): void
+    {
+        $auth = new Auth($this->db, $this->cfg);
+
+        TestHelperRegistry::$mockBearerToken = null;
+        try {
+            $auth->requireUser();
+            $this->fail('Bearer yokken 401 beklenir');
+        } catch (TestExitException) {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
+            $this->assertSame(
+                'Yetkilendirme başlığı yok.',
+                TestHelperRegistry::$lastBody['error']
+            );
+        }
+
+        TestHelperRegistry::reset();
+        TestHelperRegistry::$mockBearerToken = 'not-a-real-jwt';
+        try {
+            $auth->requireUser();
+            $this->fail('Geçersiz token için 401 beklenir');
+        } catch (TestExitException) {
+            $this->assertSame(401, TestHelperRegistry::$lastStatus);
+            $this->assertSame(
+                'Geçersiz veya süresi dolmuş oturum.',
+                TestHelperRegistry::$lastBody['error']
+            );
+        }
+    }
+
     public function testLoginSuccess(): void
     {
         $email = 'user@example.com';

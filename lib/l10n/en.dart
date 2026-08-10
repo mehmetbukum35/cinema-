@@ -643,7 +643,6 @@ const Map<String, String> kEnStrings = {
   'browse_friends_teaser_body':
       'Friends’ ratings and picks show up here. Sign in to connect — or open Together to see how it works.',
   'browse_friends_teaser_together': 'Open Together',
-  'profile_like_need_login': 'Sign in to like a profile.',
   'browse_rating_good': 'liked it',
   'browse_rating_excellent': 'loved it',
   'recap_journey_title': 'Your {}\nCinema Journey',

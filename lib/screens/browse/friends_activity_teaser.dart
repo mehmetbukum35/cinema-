@@ -45,7 +45,9 @@ class BrowseFriendsActivityTeaser extends StatelessWidget {
                   children: [
                     Text(
                       tr?.get('browse_friends_teaser_body') ??
-                          'Friends’ ratings and picks show up here. Sign in to connect — or open Together to see how it works.',
+                          'Arkadaşlarının puanları ve seçimleri burada görünür. '
+                              'Bağlanmak için giriş yap — ya da Birlikte sekmesinde '
+                              'nasıl çalıştığını gör.',
                       style: TextStyle(
                         color: c.ink.withValues(alpha: 0.85),
                         fontSize: 13.5,
@@ -74,7 +76,7 @@ class BrowseFriendsActivityTeaser extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              tr?.get('auth_title_login') ?? 'Sign In',
+                              tr?.get('auth_title_login') ?? 'Giriş Yap',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -95,7 +97,7 @@ class BrowseFriendsActivityTeaser extends StatelessWidget {
                           },
                           child: Text(
                             tr?.get('browse_friends_teaser_together') ??
-                                'Open Together',
+                                'Birlikte’yi Aç',
                             style: TextStyle(
                               color: c.gold,
                               fontWeight: FontWeight.w700,

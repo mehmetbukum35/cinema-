@@ -233,6 +233,69 @@ void main() {
       await api.getTopProfiles();
       expect(requests.last.headers['Authorization'], 'Bearer a');
     });
+
+    // Bu ucun optional-auth olması, süresi dolmuş token'ı sessizce misafire
+    // düşürmek anlamına GELMEZ: sunucu Bearer varsa ve geçersizse 401 döner,
+    // istemci token'ı tazeleyip isteği tekrarlar. Aksi halde girişli kullanıcı
+    // kendi beğendiği profilleri "beğenilmemiş" görürdü.
+    test(
+      'expired token on the public endpoint still refreshes and retries',
+      () async {
+        var call = 0;
+        final client = MockClient((request) async {
+          requests.add(request);
+          if (request.url.path.endsWith('/auth/refresh')) {
+            return http.Response(
+              jsonEncode({
+                'tokens': {'access_token': 'a2', 'refresh_token': 'r2'},
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          call++;
+          // İlk deneme bayat token'la → 401; yenileme sonrası ikinci deneme 200.
+          if (call == 1) {
+            return http.Response(
+              jsonEncode({'error': 'Geçersiz veya süresi dolmuş oturum.'}),
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'profiles': [
+                {
+                  'id': 1,
+                  'username': 'alice',
+                  'like_count': 1,
+                  'me_liked': true,
+                  'is_me': false,
+                  'liked_titles': 1,
+                  'previews': [],
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final res = await ApiService(client: client).getTopProfiles();
+
+        final topProfileCalls = requests
+            .where((r) => r.url.path.endsWith('/social/profiles/top'))
+            .toList();
+        expect(
+          topProfileCalls,
+          hasLength(2),
+          reason: 'yenileme sonrası tekrar',
+        );
+        expect(topProfileCalls.first.headers['Authorization'], 'Bearer a');
+        expect(topProfileCalls.last.headers['Authorization'], 'Bearer a2');
+        expect((res['profiles'] as List).first['me_liked'], isTrue);
+      },
+    );
   });
 
   group('SocialApi error mapping', () {

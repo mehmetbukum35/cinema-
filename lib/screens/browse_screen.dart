@@ -206,9 +206,18 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
     final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
     // Popüler profiller herkese açık; arkadaş feed'i auth ister.
+    // initState/build sırasında provider state'i değiştirmek yasaktır
+    // (Riverpod "Tried to modify a provider while the widget tree was
+    // building" hatası). Bu yüzden build bitene kadar erteliyoruz.
     Future.microtask(() {
       if (!mounted) return;
-      ref.read(socialProvider.notifier).loadTopProfiles();
+      // Sıralama saatlik cron'la güncellenen bir liste; her Keşfet açılışında
+      // yeniden çekmenin değeri yok. Elde veri yoksa (ilk açılış, misafir
+      // dahil) ya da kullanıcı bilerek yenilediyse iste.
+      final hasProfiles = ref.read(socialProvider).topProfiles.isNotEmpty;
+      if (background || !hasProfiles) {
+        ref.read(socialProvider.notifier).loadTopProfiles();
+      }
       if (isAuthenticated && background) {
         ref.read(socialProvider.notifier).loadFriends();
         ref.read(socialProvider.notifier).loadActivityFeed();

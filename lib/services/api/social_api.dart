@@ -213,7 +213,10 @@ mixin SocialApi on ApiClient {
     final response = await _request(
       'GET',
       '/social/profiles/top',
+      // Misafire açık, ama girişliyken me_liked / engel filtresi için token
+      // gerekiyor — bu yüzden requireAuth değil optionalAuth.
       requireAuth: false,
+      optionalAuth: true,
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
