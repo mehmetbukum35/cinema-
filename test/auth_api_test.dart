@@ -318,6 +318,14 @@ void main() {
 
   group('AuthApi signup source', () {
     test('recordSignupSource posts the source with the bearer token', () async {
+      // seedSession() lives inside the 'AuthApi local session handling'
+      // group closure and isn't reachable here, so the token is seeded
+      // directly — this test must not depend on a token leaked from a
+      // neighboring test via the shared secure-storage mock.
+      await PrefsAuthStorage.saveTokens(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+      );
       final api = apiWith(200, {'ok': true});
 
       await api.recordSignupSource('ghost_card');
