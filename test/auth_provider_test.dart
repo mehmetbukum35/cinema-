@@ -12,6 +12,7 @@ import 'package:ne_izlesem/services/api_service.dart';
 import 'package:ne_izlesem/services/cultural_preference_service.dart';
 import 'package:ne_izlesem/services/prefs/auth_storage.dart';
 import 'package:ne_izlesem/services/prefs/library_facade.dart';
+import 'package:ne_izlesem/services/prefs/signup_attribution.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
@@ -242,6 +243,13 @@ class MockApiService implements ApiService {
   /// SyncService dili buradan okur; ApiService'in gercek alaninin karsiligi.
   @override
   String Function() localeCode = () => 'tr';
+
+  final List<String> recordedSignupSources = [];
+
+  @override
+  Future<void> recordSignupSource(String source) async {
+    recordedSignupSources.add(source);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -675,6 +683,18 @@ void main() {
       expect(result.mergedGuestData, isNotNull);
       expect(result.mergedGuestData!.ratingCount, 1);
       expect(result.mergedGuestData!.watchlistCount, 1);
+    });
+
+    test('a stored invite source is reported once after signup', () async {
+      await PrefsSignupAttribution.remember('ghost_card');
+      final notifier = container.read(authProvider.notifier);
+
+      await notifier.register('attributed@example.com', 'secret123');
+      await pumpEventQueue();
+
+      expect(mockApi.recordedSignupSources, ['ghost_card']);
+      // Tüketildi: ikinci bir oturum açılışı aynı atfı tekrar göndermemeli.
+      expect(await PrefsSignupAttribution.consume(), isNull);
     });
 
     test(

@@ -157,6 +157,12 @@ mixin AuthApi on ApiClient {
     await PrefsService.clearAuthData();
   }
 
+  /// Davet yüzeyi atfını sunucuya bildirir. Ölçüm amaçlıdır: başarısızlığı
+  /// kullanıcıya yansımaz, çağıran `unawaited` ile çağırır.
+  Future<void> recordSignupSource(String source) async {
+    await _request('POST', '/auth/signup-source', body: {'source': source});
+  }
+
   Future<void> revokeRefreshToken(String refreshToken) async {
     try {
       await _request(

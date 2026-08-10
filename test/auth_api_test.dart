@@ -315,6 +315,18 @@ void main() {
       expect(await PrefsAuthStorage.getRefreshToken(), 'refresh');
     });
   });
+
+  group('AuthApi signup source', () {
+    test('recordSignupSource posts the source with the bearer token', () async {
+      final api = apiWith(200, {'ok': true});
+
+      await api.recordSignupSource('ghost_card');
+
+      expect(recorder.last!.url.path, '/api/auth/signup-source');
+      expect(sentBody(), {'source': 'ghost_card'});
+      expect(recorder.last!.headers.containsKey('Authorization'), isTrue);
+    });
+  });
 }
 
 /// MockClient içinden ağ hatası taklit etmek için; dart:io'ya bağlanmadan

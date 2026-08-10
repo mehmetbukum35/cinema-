@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/app_config.dart';
 import '../services/prefs/auth_storage.dart';
 import '../services/prefs/library_facade.dart';
+import '../services/prefs/signup_attribution.dart';
 import '../services/prefs/sync_meta.dart';
 import '../services/prefs_service.dart';
 import '../services/db_helper.dart';

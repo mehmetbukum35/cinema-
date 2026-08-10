@@ -104,10 +104,26 @@ mixin AuthSessionMixin on Notifier<AuthState> {
       tokens: tokens,
       resolution: ConflictResolution.merge,
     );
+
+    // Ölçüm, akışı bloklamaz ve başarısızlığı kullanıcıya yansımaz: atıf
+    // kaybolursa bir satır veri eksilir, oturum etkilenmez.
+    unawaited(_reportSignupSource());
+
     return AuthResult(
       status: AuthStatus.success,
       mergedGuestData: merged != null && !merged.isEmpty ? merged : null,
     );
+  }
+
+  /// Bekleyen davet atfını bir kez sunucuya bildirir.
+  Future<void> _reportSignupSource() async {
+    try {
+      final source = await PrefsSignupAttribution.consume();
+      if (source == null) return;
+      await _apiService.recordSignupSource(source);
+    } catch (e) {
+      debugPrint('Signup source attribution failed (ignored): $e');
+    }
   }
 
   /// Completes the login process once conflict is resolved or when no conflict is present.
