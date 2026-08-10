@@ -64,7 +64,17 @@ mixin AuthSessionMixin on Notifier<AuthState> {
     final lastUserId = await PrefsAuthStorage.getLastAuthenticatedUserId();
     final hasLocalData = await DatabaseHelper().hasAnyLocalData();
 
-    if (hasLocalData && (lastUserId == null || lastUserId != newUserId)) {
+    // Çakışma yalnızca GERÇEK hesap değişiminde vardır: cihazda daha önce
+    // BAŞKA bir hesap oturum açmış olmalı. Hiç giriş yapmamış misafirin
+    // verisi kimseyle çakışmaz, sahibine kavuşur.
+    //
+    // Eskiden `lastUserId == null` de çakışma sayılıyordu ve sonuç şuydu:
+    // kullanıcı veri kaybı korkusuyla kaydoluyor, ödül olarak "Hesap
+    // Çakışması" başlıklı bir diyalog ve "Cihazdakileri Sil & Buluttan
+    // Yükle" seçeneği görüyordu. Yeni hesapta bulut boş olduğu için o
+    // seçenek her şeyi siliyor, yerine hiçbir şey koymuyordu.
+    final isAccountSwitch = lastUserId != null && lastUserId != newUserId;
+    if (hasLocalData && isAccountSwitch) {
       state = state.copyWith(loading: false);
       return AuthResult(
         status: AuthStatus.conflict,

@@ -602,11 +602,11 @@ void main() {
     );
 
     test(
-      'should trigger conflict when guest registers and local data exists',
+      'guest registration merges local data instead of raising a conflict',
       () async {
         final notifier = container.read(authProvider.notifier);
 
-        // Set last authenticated user id to null (guest mode)
+        // Misafir: cihazda daha önce hiç oturum açılmamış.
         await PrefsAuthStorage.setLastAuthenticatedUserId(null);
         await PrefsLibraryFacade.saveRating(
           movieId: 123,
@@ -615,17 +615,36 @@ void main() {
           metadataLocale: 'tr',
         );
 
-        // Attempt to register
         final result = await notifier.register(
           'guest_reg@example.com',
           'secret123',
         );
 
-        // Should be conflict because hasLocalData is true, and lastUserId is null (guest)
-        expect(result.status, AuthStatus.conflict);
-        expect(container.read(authProvider).isAuthenticated, isFalse);
+        // Çakışacak ikinci hesap yok: veri sahibine kavuşur.
+        expect(result.status, AuthStatus.success);
+        expect(container.read(authProvider).isAuthenticated, isTrue);
+
+        // Çekirdek vaat: misafirken verilen puan kaybolmaz.
+        final rating = await PrefsLibraryFacade.getRating(123, false);
+        expect(rating, isNotNull);
+        expect(rating!['rating'], 3);
       },
     );
+
+    test('guest registration with no local data still succeeds', () async {
+      final notifier = container.read(authProvider.notifier);
+
+      await PrefsAuthStorage.setLastAuthenticatedUserId(null);
+      // Yerel veri YOK: hasLocalData false, çakışma dalı zaten çalışmamalı.
+
+      final result = await notifier.register(
+        'empty_guest@example.com',
+        'secret123',
+      );
+
+      expect(result.status, AuthStatus.success);
+      expect(container.read(authProvider).isAuthenticated, isTrue);
+    });
 
     test(
       'unlinkGoogle should call API and update state by removing google_sub',
