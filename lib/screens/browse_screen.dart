@@ -210,7 +210,17 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
     final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
     // Misafirin kendi listesi tamamen yereldir; sunucuya istek yok.
-    final guestPreview = isAuthenticated ? null : await GuestListPreview.load();
+    // Yerel DB okuması başarısız olursa bu davetin sessizce kaybolması doğru:
+    // eksik bir davet Keşfet'i durdurmamalı, tüm ekranı hata durumuna
+    // düşürmemeli. Bu yüzden dış try/catch'e değil, kendi try/catch'ine sarılı.
+    GuestListPreview? guestPreview;
+    if (!isAuthenticated) {
+      try {
+        guestPreview = await GuestListPreview.load();
+      } catch (e, st) {
+        debugPrint("Guest list preview unavailable (non-fatal): $e\n$st");
+      }
+    }
     if (!mounted || loadGeneration != _loadGeneration) return;
     setState(() => _guestPreview = guestPreview);
 

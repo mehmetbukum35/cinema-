@@ -18,7 +18,7 @@ class BrowseTopProfilesSection extends StatelessWidget {
   final List<TopProfile> profiles;
 
   /// Sıralamadan ÖNCE gelen kart (misafirin kendi listesi). Sıralamanın
-  /// parçası olmadığı için rank numarası almaz ve profils sayımını kaydırır.
+  /// parçası olmadığı için rank numarası almaz ve profil sayımını kaydırır.
   final Widget? leadingCard;
 
   @override

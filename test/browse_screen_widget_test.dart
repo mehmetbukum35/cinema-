@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/models/movie.dart';
+import 'package:ne_izlesem/models/social.dart';
 import 'package:ne_izlesem/screens/browse_screen.dart';
 import 'package:ne_izlesem/screens/browse/browse_guest_list_card.dart';
 import 'package:ne_izlesem/screens/browse/browse_top_profile_card.dart';
@@ -140,6 +141,82 @@ void main() {
     // Profil yokken bile ray çizilir: davet tek başına ayakta durur.
     expect(find.byType(BrowseTopProfileCard), findsNothing);
   });
+
+  testWidgets(
+    'ranks still start at #1 after a leading card when ranked profiles exist',
+    (tester) async {
+      final preview = GuestListPreview(
+        posters: [
+          Movie(
+            id: 1,
+            title: 'A',
+            overview: '',
+            voteAverage: 8,
+            posterPath: '/a.jpg',
+          ),
+          Movie(
+            id: 2,
+            title: 'B',
+            overview: '',
+            voteAverage: 8,
+            posterPath: '/b.jpg',
+          ),
+          Movie(
+            id: 3,
+            title: 'C',
+            overview: '',
+            voteAverage: 8,
+            posterPath: '/c.jpg',
+          ),
+        ],
+        likedCount: 3,
+      );
+      final profiles = [
+        TopProfile(
+          id: 1,
+          username: 'first',
+          likeCount: 10,
+          meLiked: false,
+          isMe: false,
+          likedTitles: 5,
+        ),
+        TopProfile(
+          id: 2,
+          username: 'second',
+          likeCount: 8,
+          meLiked: false,
+          isMe: false,
+          likedTitles: 4,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        pumpApp(
+          // BrowseTopProfileCard'ın InkWell'i bir Material atası ister;
+          // önceki testte olmayan bu kart burada gerçekten render olacağı
+          // için Scaffold gerekiyor.
+          Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                BrowseTopProfilesSection(
+                  profiles: profiles,
+                  leadingCard: BrowseGuestListCard(preview: preview),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(BrowseGuestListCard), findsOneWidget);
+      expect(find.byType(BrowseTopProfileCard), findsNWidgets(2));
+      // Öncü kart sıra numarası ALMAZ: sıralanan ilk profil yine #1'dir,
+      // off-by-one yok.
+      expect(find.text('#1'), findsOneWidget);
+      expect(find.text('#2'), findsOneWidget);
+    },
+  );
 
   group('GuestListPreview.load', () {
     // Sunucunun `liked_titles` ölçütünü taklit eder: rating >= 2, gizli
