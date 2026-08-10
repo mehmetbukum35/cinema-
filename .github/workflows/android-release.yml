@@ -20,7 +20,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
+          # Surumu sabit tut: `channel: stable` ile CI kendiliginden yeni bir
+          # Flutter'a atlar ve formatter ciktisi degisince `dart format
+          # --set-exit-if-changed` adimi, kod hic degismeden main'i kirar
+          # (2026-08-09'da tam olarak bu oldu). Yukseltirken DORT workflow'u
+          # birlikte tasi ve ayni surumu yerelde de kur:
+          #   flutter downgrade 3.44.9   /   flutter upgrade
           channel: stable
+          flutter-version: 3.44.9
           cache: true
 
       - name: Install dependencies
