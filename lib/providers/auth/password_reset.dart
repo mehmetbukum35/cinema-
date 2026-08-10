@@ -1,6 +1,6 @@
 part of '../auth_provider.dart';
 
-mixin AuthPasswordResetMixin on StateNotifier<AuthState> {
+mixin AuthPasswordResetMixin on Notifier<AuthState> {
   ApiService get _apiService;
   String _mapApiError(ApiException e);
   Future<void> _endLocalSession({required bool wipeLocalData});

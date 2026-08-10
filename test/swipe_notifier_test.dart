@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -10,6 +11,34 @@ import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
 import 'package:ne_izlesem/providers/swipe_provider.dart';
 import 'mocks/secure_storage_mock.dart';
+
+/// SwipeNotifier artık Riverpod 3 `Notifier`'i: doğrudan kurulamaz, bir
+/// container'a bagli olmali. `enableSideEffects: false` eski davranisi korur
+/// (eskiden `ref` null birakiliyordu): istatistik yenileme, arkadas sinyali
+/// okuma ve debounce'lu sync tetiklenmez.
+({ProviderContainer container, SwipeNotifier notifier}) makeSwipe(
+  TmdbService service,
+) {
+  final container = ProviderContainer(
+    overrides: [
+      swipeProvider.overrideWith(
+        () => SwipeNotifier(
+          service: service,
+          engine: RecommendationEngine(service),
+          enableSideEffects: false,
+        ),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  // autoDispose: dinleyici olmadan ilk mikro gorevde atilir; abonelik testi
+  // boyunca canli tutar.
+  container.listen(swipeProvider, (_, _) {}, fireImmediately: true);
+  return (
+    container: container,
+    notifier: container.read(swipeProvider.notifier),
+  );
+}
 
 void main() {
   setupSecureStorageMock();
@@ -72,12 +101,12 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service, RecommendationEngine(service));
+        final (:container, :notifier) = makeSwipe(service);
 
         // Wait for async init() to complete
         await Future.delayed(const Duration(milliseconds: 100));
 
-        final state = notifier.state;
+        final state = container.read(swipeProvider);
 
         // Expect Movie 1 (id: 1) to be filtered out, so queue contains only TV 1 (id: 2)
         expect(state.loading, isFalse);
@@ -128,15 +157,15 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service, RecommendationEngine(service));
+        final (:container, :notifier) = makeSwipe(service);
 
         await Future.delayed(const Duration(milliseconds: 100));
 
         // Initial state: queue has 2 items, current = 0
-        expect(notifier.state.queue.length, 2);
-        expect(notifier.state.current, 0);
+        expect(container.read(swipeProvider).queue.length, 2);
+        expect(container.read(swipeProvider).current, 0);
 
-        final firstMovie = notifier.state.queue.first;
+        final firstMovie = container.read(swipeProvider).queue.first;
         final expectedKey =
             "${firstMovie.isTV ? 'tv' : 'movie'}_${firstMovie.id}";
 
@@ -144,8 +173,11 @@ void main() {
         await notifier.rate(3);
 
         // Expect current index to become 1, and first movie added to ratedIds
-        expect(notifier.state.current, 1);
-        expect(notifier.state.ratedIds.contains(expectedKey), isTrue);
+        expect(container.read(swipeProvider).current, 1);
+        expect(
+          container.read(swipeProvider).ratedIds.contains(expectedKey),
+          isTrue,
+        );
 
         // Verify that it saved to DatabaseHelper
         var ratedIds = await PrefsLibraryFacade.getRatedIds();
@@ -153,8 +185,11 @@ void main() {
 
         // Undo should bring current back to 0
         await notifier.undo();
-        expect(notifier.state.current, 0);
-        expect(notifier.state.ratedIds.contains(expectedKey), isFalse);
+        expect(container.read(swipeProvider).current, 0);
+        expect(
+          container.read(swipeProvider).ratedIds.contains(expectedKey),
+          isFalse,
+        );
 
         // Verify that it rolled back in DB
         ratedIds = await PrefsLibraryFacade.getRatedIds();
@@ -207,14 +242,14 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service, RecommendationEngine(service));
+        final (:container, :notifier) = makeSwipe(service);
 
         // Wait for initial load to finish (which calls loadMore once)
         await Future.delayed(const Duration(milliseconds: 150));
 
         // Initial load should make 2 calls (1 movie popular, 1 tv popular)
         expect(apiCallCount, 2);
-        expect(notifier.state.queue.length, 2);
+        expect(container.read(swipeProvider).queue.length, 2);
 
         // Trigger loadMore multiple times concurrently
         final futures = <Future<void>>[
@@ -231,7 +266,7 @@ void main() {
 
         // Queue length should still be 2 because the mock returns the same items
         // and they are deduplicated against the existing items in the queue.
-        expect(notifier.state.queue.length, 2);
+        expect(container.read(swipeProvider).queue.length, 2);
       },
     );
 
@@ -284,19 +319,25 @@ void main() {
         });
 
         final service = TmdbService(client: client);
-        final notifier = SwipeNotifier(service, RecommendationEngine(service));
+        final (:container, :notifier) = makeSwipe(service);
 
         await Future.delayed(const Duration(milliseconds: 50));
-        expect(notifier.state.queue.isEmpty, isTrue);
+        expect(container.read(swipeProvider).queue.isEmpty, isTrue);
 
         await notifier.updateFilters(languageFilter: 'ko', providerFilter: 8);
 
-        expect(notifier.state.languageFilter, 'ko');
-        expect(notifier.state.providerFilter, 8);
+        expect(container.read(swipeProvider).languageFilter, 'ko');
+        expect(container.read(swipeProvider).providerFilter, 8);
         expect(discoverCallCount, 2);
-        expect(notifier.state.queue.length, 2);
-        expect(notifier.state.queue.any((m) => m.id == 300), isTrue);
-        expect(notifier.state.queue.any((m) => m.id == 400), isTrue);
+        expect(container.read(swipeProvider).queue.length, 2);
+        expect(
+          container.read(swipeProvider).queue.any((m) => m.id == 300),
+          isTrue,
+        );
+        expect(
+          container.read(swipeProvider).queue.any((m) => m.id == 400),
+          isTrue,
+        );
       },
     );
 
@@ -327,7 +368,7 @@ void main() {
       });
 
       final service = TmdbService(client: client);
-      final notifier = SwipeNotifier(service, RecommendationEngine(service));
+      final (:container, :notifier) = makeSwipe(service);
       await Future.delayed(const Duration(milliseconds: 50));
 
       final staleLoad = notifier.updateFilters(languageFilter: 'zz_old');
@@ -343,19 +384,19 @@ void main() {
       oldTv.complete(http.Response('old failure', 500));
       await staleLoad;
 
-      expect(notifier.state.languageFilter, 'zz_new');
-      expect(notifier.state.loading, isTrue);
-      expect(notifier.state.loadingMore, isTrue);
-      expect(notifier.state.error, isNull);
+      expect(container.read(swipeProvider).languageFilter, 'zz_new');
+      expect(container.read(swipeProvider).loading, isTrue);
+      expect(container.read(swipeProvider).loadingMore, isTrue);
+      expect(container.read(swipeProvider).error, isNull);
 
       final empty = http.Response(jsonEncode({'results': []}), 200);
       freshMovie.complete(empty);
       freshTv.complete(empty);
       await freshLoad;
 
-      expect(notifier.state.loading, isFalse);
-      expect(notifier.state.loadingMore, isFalse);
-      expect(notifier.state.error, isNull);
+      expect(container.read(swipeProvider).loading, isFalse);
+      expect(container.read(swipeProvider).loadingMore, isFalse);
+      expect(container.read(swipeProvider).error, isNull);
     });
 
     test('should handle "no more content" condition correctly', () async {
@@ -364,11 +405,11 @@ void main() {
         return http.Response(jsonEncode({'results': []}), 200);
       });
       final service = TmdbService(client: client);
-      final notifier = SwipeNotifier(service, RecommendationEngine(service));
+      final (:container, :notifier) = makeSwipe(service);
 
       await Future.delayed(const Duration(milliseconds: 50));
-      expect(notifier.state.queue, isEmpty);
-      expect(notifier.state.loading, isFalse);
+      expect(container.read(swipeProvider).queue, isEmpty);
+      expect(container.read(swipeProvider).loading, isFalse);
     });
   });
 }

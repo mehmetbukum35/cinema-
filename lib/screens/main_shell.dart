@@ -41,7 +41,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   void _onTabChange(int index) {
     if (index == _tab) {
       if (index == 0) {
-        ref.read(browseScrollTriggerProvider.notifier).state++;
+        ref.read(browseScrollTriggerProvider.notifier).fire();
       }
       return;
     }

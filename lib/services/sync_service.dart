@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
 import 'prefs/auth_storage.dart';
@@ -769,7 +768,7 @@ class SyncService {
       _ref?.invalidate(swipeProvider);
       _ref?.invalidate(socialProvider);
       // Buluttan gelen puanlar "Sana Özel" / Tonight seçkisini değiştirir.
-      _ref?.read(browseRefreshTriggerProvider.notifier).state++;
+      _ref?.read(browseRefreshTriggerProvider.notifier).fire();
     }
 
     debugPrint(
@@ -911,19 +910,31 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
 enum SyncStatus { idle, syncing, success, error }
 
-class SyncNotifier extends StateNotifier<SyncStatus> {
-  final SyncService _syncService;
-  final Ref? _ref;
+class SyncNotifier extends Notifier<SyncStatus> {
+  /// Testler sahte servisi buradan enjekte eder; uretimde syncServiceProvider.
+  final SyncService? _syncServiceOverride;
 
-  SyncNotifier(this._syncService, [this._ref]) : super(SyncStatus.idle);
+  /// false → oturum durumu sorgulanmaz. Testler bunu kapatarak notifier'i auth
+  /// kablolamasi olmadan surer (migrasyon oncesi `ref` bos birakiliyordu).
+  final bool enforceAuth;
+
+  // `late final` DEGIL: Riverpod 3'te invalidate/rebuild ayni notifier ornegi
+  // uzerinde build()'i yeniden kosar, ikinci atama LateInitializationError verir.
+  late SyncService _syncService;
+
+  SyncNotifier({SyncService? syncService, this.enforceAuth = true})
+    : _syncServiceOverride = syncService;
+
+  @override
+  SyncStatus build() {
+    _syncService = _syncServiceOverride ?? ref.watch(syncServiceProvider);
+    return SyncStatus.idle;
+  }
 
   Future<void> performSync() async {
-    if (_ref != null) {
-      final authState = _ref.read(authProvider);
-      if (!authState.isAuthenticated) {
-        state = SyncStatus.idle;
-        return;
-      }
+    if (enforceAuth && !ref.read(authProvider).isAuthenticated) {
+      state = SyncStatus.idle;
+      return;
     }
     state = SyncStatus.syncing;
     try {
@@ -932,7 +943,7 @@ class SyncNotifier extends StateNotifier<SyncStatus> {
       await _syncService.sync();
       state = SyncStatus.success;
     } catch (e) {
-      if (_ref != null && !_ref.read(authProvider).isAuthenticated) {
+      if (enforceAuth && !ref.read(authProvider).isAuthenticated) {
         state = SyncStatus.idle;
         return;
       }
@@ -952,7 +963,6 @@ class SyncNotifier extends StateNotifier<SyncStatus> {
   }
 }
 
-final syncProvider = StateNotifierProvider<SyncNotifier, SyncStatus>((ref) {
-  final syncService = ref.watch(syncServiceProvider);
-  return SyncNotifier(syncService, ref);
-});
+final syncProvider = NotifierProvider<SyncNotifier, SyncStatus>(
+  SyncNotifier.new,
+);

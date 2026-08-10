@@ -92,13 +92,14 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       builder: (_) => DiscoveryContextSheet(initialValue: current),
     );
     if (selected == null || !mounted) return;
-    ref.read(discoveryContextProvider.notifier).state = selected;
+    ref.read(discoveryContextProvider.notifier).setContext(selected);
     await _load(background: true);
   }
 
   void _clearDiscoveryContext() {
-    ref.read(discoveryContextProvider.notifier).state =
-        const DiscoveryContext();
+    ref
+        .read(discoveryContextProvider.notifier)
+        .setContext(const DiscoveryContext());
     _load(background: true);
   }
 
@@ -548,10 +549,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       await PrefsAppSettings.blockMovie(dismissed.id, dismissed.isTV);
     }
     if (reason == DismissFeedbackReason.tooLong) {
-      final current = ref.read(discoveryContextProvider);
-      ref.read(discoveryContextProvider.notifier).state = current.copyWith(
-        duration: DiscoveryDuration.short,
-      );
+      ref
+          .read(discoveryContextProvider.notifier)
+          .update(
+            (current) => current.copyWith(duration: DiscoveryDuration.short),
+          );
     }
     if (reason == DismissFeedbackReason.wrongCulture) {
       final current = await CulturalPreferenceService.load();

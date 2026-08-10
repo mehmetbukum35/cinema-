@@ -1,6 +1,6 @@
 part of '../auth_provider.dart';
 
-mixin AuthEmailMixin on StateNotifier<AuthState> {
+mixin AuthEmailMixin on Notifier<AuthState> {
   ApiService get _apiService;
   Future<AuthResult> _finalizeAuth(Map<String, dynamic> data);
   String _mapApiError(ApiException e);

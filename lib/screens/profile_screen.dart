@@ -63,7 +63,7 @@ class ProfileScreen extends ConsumerWidget {
         initialValue: initial,
         onSaved: () async {
           await ref.read(recommendationEngineProvider).invalidateCache();
-          ref.read(browseRefreshTriggerProvider.notifier).state++;
+          ref.read(browseRefreshTriggerProvider.notifier).fire();
           if (ref.read(authProvider).isLoggedIn) {
             await ref.read(syncProvider.notifier).performSync();
           }

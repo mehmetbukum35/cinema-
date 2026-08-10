@@ -65,7 +65,7 @@ class _FamilyModeCardState extends ConsumerState<FamilyModeCard> {
     if (!mounted) return;
     ref.invalidate(swipeProvider);
     ref.read(recommendationEngineProvider).invalidateCache().catchError((_) {});
-    ref.read(browseRefreshTriggerProvider.notifier).state++;
+    ref.read(browseRefreshTriggerProvider.notifier).fire();
   }
 
   @override

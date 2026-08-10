@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+
 import '../models/movie.dart';
 import '../services/prefs/library_facade.dart';
 import '../services/providers.dart';
@@ -13,11 +13,11 @@ import '../services/sync_service.dart';
 /// mevcut `favorites` altyapısında yaşar (is_tv ayrımı, created_at = sıra indeksi).
 /// Liste bellek içinde otoritedir: her mutasyon tam listeyi `saveFavorite*` ile
 /// yeniden yazar ve arka planda sync'i tetikler (watchlist deseni).
-class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
-  final Ref ref;
+class TopListNotifier extends Notifier<AsyncValue<List<Movie>>> {
   final bool isTV;
-  final Future<List<Movie>> Function() _readList;
-  final Future<void> Function(List<Movie>) _writeList;
+  final bool autoLoad;
+  final Future<List<Movie>> Function()? _readListOverride;
+  final Future<void> Function(List<Movie>)? _writeListOverride;
   Future<void> _persistTail = Future<void>.value();
   int _loadGeneration = 0;
   List<Movie>? _activeList;
@@ -27,32 +27,35 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   static const cap = PrefsLibraryFacade.favoritesCap;
 
   TopListNotifier(
-    this.ref,
     this.isTV, {
     Future<List<Movie>> Function()? readList,
     Future<void> Function(List<Movie>)? writeList,
-    bool autoLoad = true,
-  }) : _readList =
-           readList ??
-           (isTV
-               ? PrefsLibraryFacade.getFavoriteTvShows
-               : PrefsLibraryFacade.getFavoriteMovies),
-       // Tear-off yerine closure: metadataLocale adlandırılmış parametresi
-       // eklendikten sonra imza `Future<void> Function(List<Movie>)` ile
-       // uyuşmuyor. Dil yazma anında okunur.
-       _writeList =
-           writeList ??
-           ((List<Movie> list) => isTV
-               ? PrefsLibraryFacade.saveFavoriteTvShows(
-                   list,
-                   metadataLocale: ref.read(localeProvider).languageCode,
-                 )
-               : PrefsLibraryFacade.saveFavoriteMovies(
-                   list,
-                   metadataLocale: ref.read(localeProvider).languageCode,
-                 )),
-       super(const AsyncValue.loading()) {
+    this.autoLoad = true,
+  }) : _readListOverride = readList,
+       _writeListOverride = writeList;
+
+  @override
+  AsyncValue<List<Movie>> build() {
     if (autoLoad) unawaited(load());
+    return const AsyncValue.loading();
+  }
+
+  Future<List<Movie>> _readList() => (_readListOverride ?? _defaultRead)();
+
+  Future<void> _writeList(List<Movie> list) =>
+      (_writeListOverride ?? _defaultWrite)(list);
+
+  Future<List<Movie>> _defaultRead() => isTV
+      ? PrefsLibraryFacade.getFavoriteTvShows()
+      : PrefsLibraryFacade.getFavoriteMovies();
+
+  /// Dil, tear-off anında değil yazma anında okunur — kullanıcı arayüz dilini
+  /// değiştirdiğinde bir sonraki kayıt yeni dilin metadata'sıyla gider.
+  Future<void> _defaultWrite(List<Movie> list) {
+    final locale = ref.read(localeProvider).languageCode;
+    return isTV
+        ? PrefsLibraryFacade.saveFavoriteTvShows(list, metadataLocale: locale)
+        : PrefsLibraryFacade.saveFavoriteMovies(list, metadataLocale: locale);
   }
 
   Future<void> load() async {
@@ -61,18 +64,18 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       // Offline-first: yerel liste sync beklenmeden gösterilir, sonra tazelenir
       // (bkz. WatchlistNotifier.load).
       var list = await _read();
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         _activeList = list;
         state = AsyncValue.data(list);
       }
-      if (!mounted || generation != _loadGeneration) return;
+      if (!ref.mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
           list = await _read();
-          if (mounted && generation == _loadGeneration) {
+          if (ref.mounted && generation == _loadGeneration) {
             _activeList = list;
             state = AsyncValue.data(list);
           }
@@ -81,7 +84,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
         }
       }
     } catch (e, st) {
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = AsyncValue.error(e, st);
       }
     }
@@ -131,7 +134,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<void> _persist(List<Movie> list) async {
     ++_loadGeneration;
     _activeList = list;
-    if (mounted) state = AsyncValue.data(list);
+    if (ref.mounted) state = AsyncValue.data(list);
     final previous = _persistTail;
     final operation = previous.catchError((_) {}).then((_) => _writeList(list));
     _persistTail = operation;
@@ -140,7 +143,7 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
     // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)
     await ref.read(recommendationEngineProvider).invalidateCache();
-    ref.read(browseRefreshTriggerProvider.notifier).state++;
+    ref.read(browseRefreshTriggerProvider.notifier).fire();
     final auth = ref.read(authProvider);
     if (auth.isAuthenticated) {
       ref.read(syncProvider.notifier).performSync().catchError((e) {
@@ -152,8 +155,6 @@ class TopListNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
 
 /// `isTV` ile parametrelenmiş aile: `topListProvider(false)` film, `(true)` dizi.
 final topListProvider =
-    StateNotifierProvider.family<
-      TopListNotifier,
-      AsyncValue<List<Movie>>,
-      bool
-    >((ref, isTV) => TopListNotifier(ref, isTV));
+    NotifierProvider.family<TopListNotifier, AsyncValue<List<Movie>>, bool>(
+      TopListNotifier.new,
+    );

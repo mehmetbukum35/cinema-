@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
@@ -12,9 +11,9 @@ import 'helpers/widget_test_helpers.dart';
 import 'mocks/secure_storage_mock.dart';
 import 'support/responsive_test_matrix.dart';
 
-class _LoadingAuthNotifier extends StateNotifier<AuthState>
-    implements AuthNotifier {
-  _LoadingAuthNotifier() : super(AuthState(loading: true));
+class _LoadingAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
+  @override
+  AuthState build() => AuthState(loading: true);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -58,7 +57,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authProvider.overrideWith((ref) => _LoadingAuthNotifier())],
+        overrides: [authProvider.overrideWith(_LoadingAuthNotifier.new)],
         child: MaterialApp(
           initialRoute: '/login',
           routes: {

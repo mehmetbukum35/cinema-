@@ -1,6 +1,6 @@
 part of '../auth_provider.dart';
 
-mixin AuthAccountMixin on StateNotifier<AuthState> {
+mixin AuthAccountMixin on Notifier<AuthState> {
   ApiService get _apiService;
   String _mapApiError(ApiException e);
   Future<void> _endLocalSession({required bool wipeLocalData});
@@ -57,7 +57,7 @@ mixin AuthAccountMixin on StateNotifier<AuthState> {
       return true;
     } catch (e, st) {
       debugPrint("Social account deletion failed: $e\n$st");
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(loading: false, error: 'auth_err_delete_failed');
       }
       return false;

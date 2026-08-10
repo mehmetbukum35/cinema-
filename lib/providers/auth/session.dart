@@ -1,7 +1,6 @@
 part of '../auth_provider.dart';
 
-mixin AuthSessionMixin on StateNotifier<AuthState> {
-  Ref get _ref;
+mixin AuthSessionMixin on Notifier<AuthState> {
   Completer<void> get _sessionReady;
   ApiService get _apiService;
   Future<void> _initSession() async {
@@ -9,7 +8,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
     try {
       final token = await PrefsAuthStorage.getAccessToken();
       final userData = await PrefsAuthStorage.getUserData();
-      if (!mounted) return;
+      if (!ref.mounted) return;
       if (token != null && userData != null) {
         state = state.copyWith(
           accessToken: token,
@@ -27,16 +26,16 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
 
         Future(() async {
           await Future.wait([
-            _ref.read(watchlistProvider.notifier).load(),
-            _ref.read(statsProvider.notifier).load(),
+            ref.read(watchlistProvider.notifier).load(),
+            ref.read(statsProvider.notifier).load(),
           ]);
           await Future.wait([
-            _ref.read(socialProvider.notifier).loadFriends(),
-            _ref.read(socialProvider.notifier).loadActivityFeed(),
-            _ref.read(socialProvider.notifier).loadRecommendations(),
-            _ref.read(socialProvider.notifier).loadSentRecommendations(),
-            _ref.read(socialProvider.notifier).loadReceivedRecommendations(),
-            _ref.read(socialProvider.notifier).loadTopProfiles(),
+            ref.read(socialProvider.notifier).loadFriends(),
+            ref.read(socialProvider.notifier).loadActivityFeed(),
+            ref.read(socialProvider.notifier).loadRecommendations(),
+            ref.read(socialProvider.notifier).loadSentRecommendations(),
+            ref.read(socialProvider.notifier).loadReceivedRecommendations(),
+            ref.read(socialProvider.notifier).loadTopProfiles(),
           ]);
         });
       } else {
@@ -44,7 +43,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       }
     } catch (e, st) {
       debugPrint("Error restoring session: $e\n$st");
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(loading: false);
     } finally {
       if (!_sessionReady.isCompleted) {
@@ -154,52 +153,52 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
 
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
   Future<void> _postAuthSessionRestore() async {
-    _ref.invalidate(socialProvider);
+    ref.invalidate(socialProvider);
     // Logout path Top 20'yi invalidate eder; login da etmeli — aksi halde
     // misafir listesi / hardClear sonrası hayalet Top 20 kalır.
-    _ref.invalidate(topListProvider);
+    ref.invalidate(topListProvider);
     // Giriş ekranını yalnızca temel bulut eşitlemesi bekletsin. Sosyal uçlardan
     // biri yavaşladığında/yanıt vermediğinde kullanıcı girişte sonsuza kadar
     // spinner arkasında kalmamalı.
-    await _ref.read(syncProvider.notifier).performSync();
-    _ref.invalidate(watchlistProvider);
-    _ref.invalidate(statsProvider);
-    _ref.invalidate(topListProvider);
+    await ref.read(syncProvider.notifier).performSync();
+    ref.invalidate(watchlistProvider);
+    ref.invalidate(statsProvider);
+    ref.invalidate(topListProvider);
 
     unawaited(
       Future.wait([
-        _ref.read(socialProvider.notifier).loadFriends(),
-        _ref.read(socialProvider.notifier).loadActivityFeed(),
-        _ref.read(socialProvider.notifier).loadRecommendations(),
-        _ref.read(socialProvider.notifier).loadSentRecommendations(),
-        _ref.read(socialProvider.notifier).loadReceivedRecommendations(),
-        _ref.read(socialProvider.notifier).loadTopProfiles(),
+        ref.read(socialProvider.notifier).loadFriends(),
+        ref.read(socialProvider.notifier).loadActivityFeed(),
+        ref.read(socialProvider.notifier).loadRecommendations(),
+        ref.read(socialProvider.notifier).loadSentRecommendations(),
+        ref.read(socialProvider.notifier).loadReceivedRecommendations(),
+        ref.read(socialProvider.notifier).loadTopProfiles(),
       ]).catchError((Object error, StackTrace stackTrace) {
         debugPrint('Post-login social refresh failed: $error\n$stackTrace');
         return <void>[];
       }),
     );
-    await _ref.read(recommendationEngineProvider).invalidateCache();
-    _ref.invalidate(swipeProvider);
+    await ref.read(recommendationEngineProvider).invalidateCache();
+    ref.invalidate(swipeProvider);
     // Buluttan gelen puan/liste + arkadaş sinyalleri Keşfet'i besler.
-    _ref.read(browseRefreshTriggerProvider.notifier).state++;
+    ref.read(browseRefreshTriggerProvider.notifier).fire();
   }
 
   Future<void> _invalidateGuestProviders() async {
-    _ref.invalidate(watchlistProvider);
-    _ref.invalidate(statsProvider);
-    _ref.invalidate(topListProvider);
-    _ref.invalidate(swipeProvider);
-    _ref.invalidate(socialProvider);
-    _ref.invalidate(couchProvider);
-    await _ref.read(recommendationEngineProvider).invalidateCache();
-    _ref.read(browseRefreshTriggerProvider.notifier).state++;
+    ref.invalidate(watchlistProvider);
+    ref.invalidate(statsProvider);
+    ref.invalidate(topListProvider);
+    ref.invalidate(swipeProvider);
+    ref.invalidate(socialProvider);
+    ref.invalidate(couchProvider);
+    await ref.read(recommendationEngineProvider).invalidateCache();
+    ref.read(browseRefreshTriggerProvider.notifier).fire();
   }
 
   /// Oturumu kapatır. [wipeLocalData] true ise cihazdaki puan/liste verisi silinir.
   Future<void> _endLocalSession({required bool wipeLocalData}) async {
     state = AuthState();
-    _ref.read(syncProvider.notifier).resetForSessionChange();
+    ref.read(syncProvider.notifier).resetForSessionChange();
     await NotificationService.instance.invalidateLocalToken();
     await PrefsService.clearAuthData();
     if (wipeLocalData) {
@@ -208,7 +207,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       await PrefsAuthStorage.setLastAuthenticatedUserId(null);
     }
     await _invalidateGuestProviders();
-    _ref.read(syncProvider.notifier).resetStatus();
+    ref.read(syncProvider.notifier).resetStatus();
   }
 
   // POST /auth/logout
@@ -291,7 +290,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
     final requestedUserId = state.user?['id']?.toString();
     try {
       final userData = await _apiService.getMe();
-      if (!mounted ||
+      if (!ref.mounted ||
           !state.isAuthenticated ||
           state.user?['id']?.toString() != requestedUserId) {
         return;
@@ -299,7 +298,7 @@ mixin AuthSessionMixin on StateNotifier<AuthState> {
       final user = Map<String, dynamic>.from(state.user ?? {});
       user.addAll(userData);
       await PrefsAuthStorage.saveUserData(user);
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(user: user);
       }
     } catch (e, st) {

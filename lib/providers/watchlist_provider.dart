@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/notification_service.dart';
 import '../services/prefs/library_facade.dart';
@@ -10,18 +9,20 @@ import '../services/providers.dart';
 import 'auth_provider.dart';
 import '../services/sync_service.dart';
 
-class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
-  final Ref ref;
+class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   final Future<List<Movie>> Function() _readWatchlist;
+  final bool autoLoad;
   int _loadGeneration = 0;
 
-  WatchlistNotifier(
-    this.ref, {
+  WatchlistNotifier({
     Future<List<Movie>> Function()? readWatchlist,
-    bool autoLoad = true,
-  }) : _readWatchlist = readWatchlist ?? PrefsLibraryFacade.getWatchlist,
-       super(const AsyncValue.loading()) {
+    this.autoLoad = true,
+  }) : _readWatchlist = readWatchlist ?? PrefsLibraryFacade.getWatchlist;
+
+  @override
+  AsyncValue<List<Movie>> build() {
     if (autoLoad) unawaited(load());
+    return const AsyncValue.loading();
   }
 
   Future<void> load() async {
@@ -31,10 +32,10 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       // kullanıcı cihazında hazır duran veriye 20 sn spinner arkasından
       // bakmasın. Sync bittiğinde liste yeniden okunup tazelenir.
       var list = await _readWatchlist();
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = AsyncValue.data(list);
       }
-      if (!mounted || generation != _loadGeneration) return;
+      if (!ref.mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
@@ -43,14 +44,14 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           // Not: recommendation cache'i sync'in kendisi zaten invalidate
           // ediyor; buradaki ikinci çağrı kaldırıldı.
           list = await _readWatchlist();
-          if (mounted && generation == _loadGeneration) {
+          if (ref.mounted && generation == _loadGeneration) {
             state = AsyncValue.data(list);
           }
         } catch (e) {
           // SyncNotifier captures the error state globally
         }
       }
-      if (!mounted || generation != _loadGeneration) return;
+      if (!ref.mounted || generation != _loadGeneration) return;
 
       // Çıkış hatırlatıcılarını listeyle hizala (başka cihazdan sync ile
       // gelen ekleme/çıkarmalar dahil). Best-effort; akışı bloklamaz.
@@ -58,7 +59,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
           .syncReleaseReminders(list)
           .catchError((_) {});
     } catch (e, st) {
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = AsyncValue.error(e, st);
       }
     }
@@ -71,7 +72,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
         movie,
         metadataLocale: ref.read(localeProvider).languageCode,
       );
-      if (mounted) {
+      if (ref.mounted) {
         final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
         if (!list.any((m) => m.id == movie.id && m.isTV == movie.isTV)) {
           state = AsyncValue.data([movie, ...list]);
@@ -111,7 +112,7 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
     ++_loadGeneration;
     try {
       await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
-      if (mounted) {
+      if (ref.mounted) {
         final list = state.value ?? await PrefsLibraryFacade.getWatchlist();
         state = AsyncValue.data(
           list.where((m) => !(m.id == id && m.isTV == isTV)).toList(),
@@ -147,21 +148,24 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
 }
 
 final watchlistProvider =
-    StateNotifierProvider<WatchlistNotifier, AsyncValue<List<Movie>>>((ref) {
-      return WatchlistNotifier(ref);
-    });
+    NotifierProvider<WatchlistNotifier, AsyncValue<List<Movie>>>(
+      WatchlistNotifier.new,
+    );
 
-class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
-  final Ref ref;
+class StatsNotifier extends Notifier<AsyncValue<Map<String, dynamic>>> {
   final Future<Map<String, dynamic>> Function() _readStats;
+  final bool autoLoad;
   int _loadGeneration = 0;
-  StatsNotifier(
-    this.ref, {
+
+  StatsNotifier({
     Future<Map<String, dynamic>> Function()? readStats,
-    bool autoLoad = true,
-  }) : _readStats = readStats ?? PrefsLibraryFacade.getStats,
-       super(const AsyncValue.loading()) {
-    if (autoLoad) Future.microtask(() => load());
+    this.autoLoad = true,
+  }) : _readStats = readStats ?? PrefsLibraryFacade.getStats;
+
+  @override
+  AsyncValue<Map<String, dynamic>> build() {
+    if (autoLoad) Future.microtask(load);
+    return const AsyncValue.loading();
   }
 
   /// [skipSync] true ise yalnızca yerel istatistikler yenilenir; sunucu sync'i
@@ -173,17 +177,17 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
       // Offline-first: yerel istatistikler sync beklenmeden gösterilir;
       // sync bitince yeniden hesaplanıp tazelenir (bkz. WatchlistNotifier.load).
       var stats = await _readStats();
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = AsyncValue.data(stats);
       }
-      if (!mounted || generation != _loadGeneration) return;
+      if (!ref.mounted || generation != _loadGeneration) return;
 
       final auth = ref.read(authProvider);
       if (!skipSync && auth.isAuthenticated) {
         try {
           await ref.read(syncProvider.notifier).performSync();
           stats = await _readStats();
-          if (mounted && generation == _loadGeneration) {
+          if (ref.mounted && generation == _loadGeneration) {
             state = AsyncValue.data(stats);
           }
         } catch (e) {
@@ -191,7 +195,7 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
         }
       }
     } catch (e, st) {
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = AsyncValue.error(e, st);
       }
     }
@@ -199,8 +203,6 @@ class StatsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
 }
 
 final statsProvider =
-    StateNotifierProvider<StatsNotifier, AsyncValue<Map<String, dynamic>>>((
-      ref,
-    ) {
-      return StatsNotifier(ref);
-    });
+    NotifierProvider<StatsNotifier, AsyncValue<Map<String, dynamic>>>(
+      StatsNotifier.new,
+    );

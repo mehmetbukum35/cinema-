@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../services/api_service.dart';
@@ -83,7 +82,7 @@ class AuthState {
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState>
+class AuthNotifier extends Notifier<AuthState>
     with
         AuthSessionMixin,
         AuthEmailMixin,
@@ -92,24 +91,50 @@ class AuthNotifier extends StateNotifier<AuthState>
         AuthPasswordResetMixin {
   static bool _googleInitialized = false;
 
+  /// Testler sahte API'yi buradan enjekte eder; uretimde apiServiceProvider.
+  final ApiService? _apiOverride;
+
+  /// Verilirse oturum diskten okunmaz ve state bu degerle acilir — widget
+  /// testleri gercek AuthNotifier'i (dolayisiyla gercek metotlarini) hazir bir
+  /// oturumla kurabilsin diye.
+  final AuthState? initialState;
+
   @override
-  final ApiService _apiService;
-  @override
-  final Ref _ref;
+  // `late final` DEGIL: Riverpod 3'te invalidate/rebuild ayni notifier ornegi
+  // uzerinde build()'i yeniden kosar, ikinci atama LateInitializationError verir.
+  late ApiService _apiService;
   @override
   final Completer<void> _sessionReady = Completer<void>();
 
-  AuthNotifier(this._apiService, this._ref) : super(AuthState()) {
+  AuthNotifier({ApiService? api, this.initialState}) : _apiOverride = api;
+
+  @override
+  AuthState build() {
+    _apiService = _apiOverride ?? ref.watch(apiServiceProvider);
     _apiService.onSessionExpired = clearSession;
     NotificationService.instance.setAuthReadyHandler(
       () => _sessionReady.future,
     );
     NotificationService.instance.setLocaleSource(
-      () => _ref.read(localeProvider).languageCode,
+      () => ref.read(localeProvider).languageCode,
     );
     // Push bildirim dinleyicilerini bir kez kur (best-effort).
     NotificationService.instance.init(_apiService);
-    _initSession();
+    ref.onDispose(() {
+      NotificationService.instance.setAuthReadyHandler(null);
+      NotificationService.instance.setLocaleSource(null);
+      if (!_sessionReady.isCompleted) {
+        _sessionReady.complete();
+      }
+    });
+    final seeded = initialState;
+    if (seeded != null) {
+      if (!_sessionReady.isCompleted) _sessionReady.complete();
+      return seeded;
+    }
+    // build() donmeden state'e yazilamaz; oturum okuma ilk mikro gorevde.
+    Future.microtask(_initSession);
+    return AuthState();
   }
 
   /// Sunucu hatasını yerel metin anahtarına çevirir. Önce makine-okur `code`
@@ -177,16 +202,6 @@ class AuthNotifier extends StateNotifier<AuthState>
         return message;
     }
   }
-
-  @override
-  void dispose() {
-    NotificationService.instance.setAuthReadyHandler(null);
-    NotificationService.instance.setLocaleSource(null);
-    if (!_sessionReady.isCompleted) {
-      _sessionReady.complete();
-    }
-    super.dispose();
-  }
 }
 
 final apiServiceProvider = Provider<ApiService>((ref) {
@@ -194,7 +209,6 @@ final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService(localeCode: () => ref.read(localeProvider).languageCode);
 });
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return AuthNotifier(apiService, ref);
-});
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

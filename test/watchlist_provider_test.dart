@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/watchlist_provider.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
@@ -28,9 +27,13 @@ class MockSyncService implements SyncService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockAuthNotifier extends StateNotifier<AuthState>
-    implements AuthNotifier {
-  MockAuthNotifier(super.state);
+class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
+  MockAuthNotifier(this._initial);
+
+  final AuthState _initial;
+
+  @override
+  AuthState build() => _initial;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -61,7 +64,7 @@ void main() {
         container = ProviderContainer(
           overrides: [
             authProvider.overrideWith(
-              (ref) => MockAuthNotifier(
+              () => MockAuthNotifier(
                 AuthState(accessToken: 'test_access', user: {'id': 1}),
               ),
             ),
@@ -117,7 +120,7 @@ void main() {
         container = ProviderContainer(
           overrides: [
             authProvider.overrideWith(
-              (ref) => MockAuthNotifier(
+              () => MockAuthNotifier(
                 AuthState(accessToken: 'test_access', user: {'id': 1}),
               ),
             ),
@@ -144,7 +147,7 @@ void main() {
         container = ProviderContainer(
           overrides: [
             authProvider.overrideWith(
-              (ref) => MockAuthNotifier(
+              () => MockAuthNotifier(
                 AuthState(accessToken: 'test_access', user: {'id': 1}),
               ),
             ),
@@ -190,7 +193,7 @@ void main() {
         container = ProviderContainer(
           overrides: [
             authProvider.overrideWith(
-              (ref) => MockAuthNotifier(
+              () => MockAuthNotifier(
                 AuthState(accessToken: 'test_access', user: {'id': 1}),
               ),
             ),
@@ -236,11 +239,10 @@ void main() {
         final staleRead = Completer<List<Movie>>();
         container = ProviderContainer(
           overrides: [
-            authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+            authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
             syncServiceProvider.overrideWithValue(mockSync),
             watchlistProvider.overrideWith(
-              (ref) => WatchlistNotifier(
-                ref,
+              () => WatchlistNotifier(
                 readWatchlist: () => staleRead.future,
                 autoLoad: false,
               ),
@@ -270,10 +272,9 @@ void main() {
       final reads = <Completer<Map<String, dynamic>>>[stale, fresh];
       container = ProviderContainer(
         overrides: [
-          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
           statsProvider.overrideWith(
-            (ref) => StatsNotifier(
-              ref,
+            () => StatsNotifier(
               readStats: () => reads.removeAt(0).future,
               autoLoad: false,
             ),
@@ -295,7 +296,7 @@ void main() {
     test('getWatchlist handles null title and overview safely', () async {
       container = ProviderContainer(
         overrides: [
-          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
         ],
       );
       final movie = Movie(

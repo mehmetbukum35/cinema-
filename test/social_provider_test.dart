@@ -350,7 +350,7 @@ void main() {
     mockApi = MockApiService();
     container = ProviderContainer(
       overrides: [
-        socialProvider.overrideWith((ref) => SocialNotifier(mockApi, ref)),
+        socialProvider.overrideWith(() => SocialNotifier(api: mockApi)),
       ],
     );
   });

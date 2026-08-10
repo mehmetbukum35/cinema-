@@ -121,26 +121,25 @@ void main() {
       expect(find.text('Press back again to exit'), findsOneWidget);
     });
 
-    testWidgets(
-      'App should apply light theme when theme_mode pref is light',
-      (WidgetTester tester) async {
-        SharedPreferences.setMockInitialValues({'theme_mode': 'light'});
+    testWidgets('App should apply light theme when theme_mode pref is light', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'theme_mode': 'light'});
 
-        await tester.pumpWidget(
-          const ProviderScope(child: NeIzlesemApp(showOnboarding: false)),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 2600));
-        await tester.pump(const Duration(milliseconds: 380));
-        await tester.pump(const Duration(milliseconds: 420));
-        await tester.pump(const Duration(milliseconds: 480));
-        await tester.pump();
+      await tester.pumpWidget(
+        const ProviderScope(child: NeIzlesemApp(showOnboarding: false)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2600));
+      await tester.pump(const Duration(milliseconds: 380));
+      await tester.pump(const Duration(milliseconds: 420));
+      await tester.pump(const Duration(milliseconds: 480));
+      await tester.pump();
 
-        final context = tester.element(find.text('Browse'));
-        final theme = Theme.of(context);
-        expect(theme.brightness, Brightness.light);
-        expect(theme.scaffoldBackgroundColor, AppColorsLight.bg);
-      },
-    );
+      final context = tester.element(find.text('Browse'));
+      final theme = Theme.of(context);
+      expect(theme.brightness, Brightness.light);
+      expect(theme.scaffoldBackgroundColor, AppColorsLight.bg);
+    });
   });
 }

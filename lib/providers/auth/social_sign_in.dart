@@ -1,6 +1,6 @@
 part of '../auth_provider.dart';
 
-mixin AuthSocialMixin on StateNotifier<AuthState> {
+mixin AuthSocialMixin on Notifier<AuthState> {
   ApiService get _apiService;
   Future<AuthResult> _finalizeAuth(Map<String, dynamic> data);
   String _mapApiError(ApiException e);
@@ -48,7 +48,7 @@ mixin AuthSocialMixin on StateNotifier<AuthState> {
       // Hesap seçici kapandı — kullanıcı tekrar uygulamada; yükleme UI'ını
       // yeniden tetikle (loading zaten true olsa da yeni state ataması repaint'i
       // garanti eder).
-      if (!mounted) {
+      if (!ref.mounted) {
         return AuthResult(status: AuthStatus.cancelled);
       }
       state = state.copyWith(

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../models/social.dart';
 import '../services/api_service.dart';
@@ -170,11 +169,21 @@ class SocialState {
   }
 }
 
-class SocialNotifier extends StateNotifier<SocialState> {
-  final ApiService _apiService;
-  final Ref _ref;
+class SocialNotifier extends Notifier<SocialState> {
+  /// Testler sahte API'yi buradan enjekte eder; uretimde apiServiceProvider.
+  final ApiService? _apiOverride;
+  // `late final` DEGIL: Riverpod 3'te invalidate/rebuild ayni notifier ornegi
+  // uzerinde build()'i yeniden kosar, ikinci atama LateInitializationError verir.
+  late ApiService _apiService;
 
-  SocialNotifier(this._apiService, this._ref) : super(SocialState());
+  SocialNotifier({ApiService? api}) : _apiOverride = api;
+
+  @override
+  SocialState build() {
+    _apiService = _apiOverride ?? ref.watch(apiServiceProvider);
+    return SocialState();
+  }
+
   bool _friendsLoading = false;
   bool _activityLoading = false;
   int _friendsLoadGeneration = 0;
@@ -194,7 +203,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     final generation = ++_friendSignalsLoadGeneration;
     try {
       final map = await _apiService.getFriendSignals();
-      if (!mounted || generation != _friendSignalsLoadGeneration) return;
+      if (!ref.mounted || generation != _friendSignalsLoadGeneration) return;
       state = state.copyWith(signals: map);
     } catch (e, st) {
       // Fail silently to keep the swiping UI stable
@@ -208,7 +217,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.getFriends();
-      if (!mounted || generation != _friendsLoadGeneration) return;
+      if (!ref.mounted || generation != _friendsLoadGeneration) return;
 
       final friendsList = (res['friends'] is List)
           ? (res['friends'] as List)
@@ -238,16 +247,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
       // Rozetler için uyum skorlarını arka planda yükle (await edilmez).
       unawaited(loadTasteScores());
     } on ApiException catch (e) {
-      if (!mounted || generation != _friendsLoadGeneration) return;
+      if (!ref.mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(loading: _activityLoading, error: () => e.message);
     } catch (e) {
-      if (!mounted || generation != _friendsLoadGeneration) return;
+      if (!ref.mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(
         loading: _activityLoading,
         error: () => e.toString(),
       );
     } finally {
-      if (mounted && generation == _friendsLoadGeneration) {
+      if (ref.mounted && generation == _friendsLoadGeneration) {
         _friendsLoading = false;
       }
     }
@@ -263,7 +272,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     );
     try {
       final page = await _apiService.getActivityFeedPage();
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       final feedList = page.items
           .map((x) => ActivityItem.fromJson(x as Map<String, dynamic>))
           .toList();
@@ -274,16 +283,16 @@ class SocialNotifier extends StateNotifier<SocialState> {
         loading: _friendsLoading,
       );
     } on ApiException catch (e) {
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(loading: _friendsLoading, error: () => e.message);
     } catch (e) {
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         loading: _friendsLoading,
         error: () => e.toString(),
       );
     } finally {
-      if (mounted && generation == _activityLoadGeneration) {
+      if (ref.mounted && generation == _activityLoadGeneration) {
         _activityLoading = false;
       }
     }
@@ -297,7 +306,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(activityLoadingMore: true);
     try {
       final page = await _apiService.getActivityFeedPage(cursor: cursor);
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       final incoming = page.items
           .whereType<Map<dynamic, dynamic>>()
           .map((x) => ActivityItem.fromJson(Map<String, dynamic>.from(x)))
@@ -309,13 +318,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
         activityLoadingMore: false,
       );
     } on ApiException catch (e) {
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         activityLoadingMore: false,
         error: () => e.message,
       );
     } catch (e) {
-      if (!mounted || generation != _activityLoadGeneration) return;
+      if (!ref.mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
         activityLoadingMore: false,
         error: () => e.toString(),
@@ -335,7 +344,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     );
     try {
       final page = await _apiService.getActivityFeedPage(friendId: friendId);
-      if (!mounted ||
+      if (!ref.mounted ||
           generation != _friendActivityLoadGeneration ||
           state.friendActivityFriendId != friendId) {
         return;
@@ -353,10 +362,10 @@ class SocialNotifier extends StateNotifier<SocialState> {
         loading: false,
       );
     } on ApiException catch (e) {
-      if (!mounted || generation != _friendActivityLoadGeneration) return;
+      if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
-      if (!mounted || generation != _friendActivityLoadGeneration) return;
+      if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.toString());
     }
   }
@@ -375,7 +384,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
         friendId: friendId,
         cursor: cursor,
       );
-      if (!mounted ||
+      if (!ref.mounted ||
           generation != _friendActivityLoadGeneration ||
           state.friendActivityFriendId != friendId) {
         return;
@@ -394,13 +403,13 @@ class SocialNotifier extends StateNotifier<SocialState> {
         friendActivityLoadingMore: false,
       );
     } on ApiException catch (e) {
-      if (!mounted || generation != _friendActivityLoadGeneration) return;
+      if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(
         friendActivityLoadingMore: false,
         error: () => e.message,
       );
     } catch (e) {
-      if (!mounted || generation != _friendActivityLoadGeneration) return;
+      if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
       state = state.copyWith(
         friendActivityLoadingMore: false,
         error: () => e.toString(),
@@ -417,7 +426,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
           res['is_public'] == 1 ||
           res['is_public'] == true ||
           res['is_public']?.toString() == '1';
-      await _ref
+      await ref
           .read(authProvider.notifier)
           .updateUserProfile(profileUsername, profileIsPublic);
       state = state.copyWith(loading: false);
@@ -494,14 +503,14 @@ class SocialNotifier extends StateNotifier<SocialState> {
     final scores = <int, int>{};
     try {
       final list = await _apiService.getAllTasteMatches();
-      if (!mounted || generation != _tasteScoresLoadGeneration) return;
+      if (!ref.mounted || generation != _tasteScoresLoadGeneration) return;
       for (final item in list) {
         if (item is! Map<String, dynamic>) continue;
         final id = int.tryParse(item['friend_id']?.toString() ?? '') ?? 0;
         if (id == 0 || item['has_data'] != true) continue;
         scores[id] = int.tryParse(item['score']?.toString() ?? '') ?? 0;
       }
-      if (mounted && generation == _tasteScoresLoadGeneration) {
+      if (ref.mounted && generation == _tasteScoresLoadGeneration) {
         state = state.copyWith(tasteScores: scores);
       }
       return;
@@ -517,7 +526,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     }
 
     for (final f in state.friends) {
-      if (!mounted || generation != _tasteScoresLoadGeneration) return;
+      if (!ref.mounted || generation != _tasteScoresLoadGeneration) return;
       final id = f.id;
       if (id == 0) continue;
       try {
@@ -533,7 +542,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
         debugPrint("Failed to load taste match for friend $id: $e\n$st");
       }
     }
-    if (mounted && generation == _tasteScoresLoadGeneration) {
+    if (ref.mounted && generation == _tasteScoresLoadGeneration) {
       state = state.copyWith(tasteScores: scores);
     }
   }
@@ -543,7 +552,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     final generation = ++_recommendationsLoadGeneration;
     try {
       final res = await _apiService.getRecommendations();
-      if (!mounted || generation != _recommendationsLoadGeneration) return;
+      if (!ref.mounted || generation != _recommendationsLoadGeneration) return;
       final recList = (res['recommendations'] is List)
           ? (res['recommendations'] as List)
                 .whereType<Map<dynamic, dynamic>>()
@@ -575,7 +584,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       await _apiService.markRecommendationsSeen();
     } catch (e, st) {
       debugPrint("Failed to mark recommendations seen: $e\n$st");
-      if (mounted &&
+      if (ref.mounted &&
           generation == _recommendationsLoadGeneration &&
           state.unseenRecommendations == 0) {
         state = state.copyWith(unseenRecommendations: previousUnseen);
@@ -589,7 +598,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(receivedRecommendationsLoadingMore: false);
     try {
       final res = await _apiService.getRecommendations();
-      if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
+      if (!ref.mounted ||
+          generation != _receivedRecommendationsLoadGeneration) {
         return;
       }
       final list = (res['recommendations'] is List)
@@ -618,7 +628,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(sentRecommendationsLoadingMore: false);
     try {
       final res = await _apiService.getSentRecommendations();
-      if (!mounted || generation != _sentRecommendationsLoadGeneration) return;
+      if (!ref.mounted || generation != _sentRecommendationsLoadGeneration) {
+        return;
+      }
       final list = (res['sent'] is List)
           ? (res['sent'] as List)
                 .whereType<Map<dynamic, dynamic>>()
@@ -650,8 +662,9 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(receivedRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getRecommendationsPage(cursor: cursor);
-      if (!mounted || generation != _receivedRecommendationsLoadGeneration) {
-        if (mounted) {
+      if (!ref.mounted ||
+          generation != _receivedRecommendationsLoadGeneration) {
+        if (ref.mounted) {
           state = state.copyWith(receivedRecommendationsLoadingMore: false);
         }
         return;
@@ -678,7 +691,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       );
     } catch (e, st) {
       debugPrint('Failed to load more received recommendations: $e\n$st');
-      if (mounted && generation == _receivedRecommendationsLoadGeneration) {
+      if (ref.mounted && generation == _receivedRecommendationsLoadGeneration) {
         state = state.copyWith(receivedRecommendationsLoadingMore: false);
       }
     }
@@ -695,8 +708,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(sentRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getSentRecommendationsPage(cursor: cursor);
-      if (!mounted || generation != _sentRecommendationsLoadGeneration) {
-        if (mounted) {
+      if (!ref.mounted || generation != _sentRecommendationsLoadGeneration) {
+        if (ref.mounted) {
           state = state.copyWith(sentRecommendationsLoadingMore: false);
         }
         return;
@@ -723,7 +736,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       );
     } catch (e, st) {
       debugPrint('Failed to load more sent recommendations: $e\n$st');
-      if (mounted && generation == _sentRecommendationsLoadGeneration) {
+      if (ref.mounted && generation == _sentRecommendationsLoadGeneration) {
         state = state.copyWith(sentRecommendationsLoadingMore: false);
       }
     }
@@ -804,7 +817,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(topProfilesLoading: true);
     try {
       final res = await _apiService.getTopProfiles();
-      if (!mounted || generation != _topProfilesLoadGeneration) return;
+      if (!ref.mounted || generation != _topProfilesLoadGeneration) return;
       final list = (res['profiles'] is List)
           ? (res['profiles'] as List)
                 .whereType<Map<dynamic, dynamic>>()
@@ -816,7 +829,7 @@ class SocialNotifier extends StateNotifier<SocialState> {
       // Popüler profiller arkadaş listesinin arka plan verisidir; geçici ağ
       // hatası tüm sosyal ekranı hata durumuna sokmamalı.
       debugPrint('Failed to load top profiles: $e\n$st');
-      if (mounted && generation == _topProfilesLoadGeneration) {
+      if (ref.mounted && generation == _topProfilesLoadGeneration) {
         state = state.copyWith(topProfilesLoading: false);
       }
     }
@@ -854,7 +867,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
               profile.id,
               newLiked,
             );
-            if (mounted && _profileLikeGenerations[profile.id] == generation) {
+            if (ref.mounted &&
+                _profileLikeGenerations[profile.id] == generation) {
               state = state.copyWith(
                 topProfiles: apply(state.topProfiles, serverCount),
               );
@@ -863,7 +877,8 @@ class SocialNotifier extends StateNotifier<SocialState> {
           } catch (e, st) {
             debugPrint("Failed to toggle profile like: $e\n$st");
             // Daha yeni bir dokunuş varsa onun iyimser durumunu geri alma.
-            if (mounted && _profileLikeGenerations[profile.id] == generation) {
+            if (ref.mounted &&
+                _profileLikeGenerations[profile.id] == generation) {
               state = state.copyWith(
                 topProfiles: apply(state.topProfiles, profile.likeCount),
               );
@@ -894,25 +909,22 @@ class SocialNotifier extends StateNotifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null, intersection: []);
     try {
       final list = await _apiService.getWatchlistIntersection(friendId);
-      if (!mounted || generation != _intersectionLoadGeneration) return;
+      if (!ref.mounted || generation != _intersectionLoadGeneration) return;
       final movies = list
           .whereType<Map<dynamic, dynamic>>()
           .map((e) => Movie.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       state = state.copyWith(intersection: movies, loading: false);
     } on ApiException catch (e) {
-      if (!mounted || generation != _intersectionLoadGeneration) return;
+      if (!ref.mounted || generation != _intersectionLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.message);
     } catch (e) {
-      if (!mounted || generation != _intersectionLoadGeneration) return;
+      if (!ref.mounted || generation != _intersectionLoadGeneration) return;
       state = state.copyWith(loading: false, error: () => e.toString());
     }
   }
 }
 
-final socialProvider = StateNotifierProvider<SocialNotifier, SocialState>((
-  ref,
-) {
-  final apiService = ref.watch(apiServiceProvider);
-  return SocialNotifier(apiService, ref);
-});
+final socialProvider = NotifierProvider<SocialNotifier, SocialState>(
+  SocialNotifier.new,
+);

@@ -11,7 +11,6 @@ import 'package:flutter/material.dart'
         WidgetsBindingObserver,
         AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:http/http.dart' as http;
 import 'app_config.dart';
 import 'tmdb_service.dart';
@@ -29,9 +28,9 @@ final initialLocaleProvider = Provider<String?>((ref) => null);
 /// Seçili arayüz dilinin tek sahibi. Diğer katmanlar dili buradan enjekte
 /// edilen bir okuyucuyla alır; global bir kopya tutulmaz — iki yazıcı
 /// ayrıştığında kullanıcı Türkçe arayüzde İngilizce bildirim alıyordu.
-class LocaleNotifier extends StateNotifier<Locale> {
-  LocaleNotifier(String? initialLanguageCode)
-    : super(Locale(_resolve(initialLanguageCode)));
+class LocaleNotifier extends Notifier<Locale> {
+  @override
+  Locale build() => Locale(_resolve(ref.watch(initialLocaleProvider)));
 
   /// Dil çözümü tek yerde: kayıtlı tercih varsa o, yoksa platform dili;
   /// desteklenmeyen her dil 'en'e düşer.
@@ -47,18 +46,26 @@ class LocaleNotifier extends StateNotifier<Locale> {
   }
 }
 
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
-  return LocaleNotifier(ref.watch(initialLocaleProvider));
-});
+final localeProvider = NotifierProvider<LocaleNotifier, Locale>(
+  LocaleNotifier.new,
+);
 
 /// Tema modu (koyu/açık). Varsayılan açık; kullanıcı seçimi cihazda saklanır.
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.light) {
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    // Diskten okuma asenkron; ilk kare açık temayla çizilir, kayıtlı tercih
+    // gelince state güncellenir.
     _init();
+    return ThemeMode.light;
   }
 
   void _init() async {
-    state = _parse(await PrefsAppSettings.getThemeMode());
+    final saved = _parse(await PrefsAppSettings.getThemeMode());
+    // Provider okuma tamamlanmadan atılmış olabilir (kısa ömürlü test
+    // container'ı, hot restart); dispose sonrası state yazmak hata fırlatır.
+    if (!ref.mounted) return;
+    state = saved;
   }
 
   static ThemeMode _parse(String s) {
@@ -92,11 +99,9 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
       setMode(state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
 }
 
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
-  ref,
-) {
-  return ThemeModeNotifier();
-});
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 final tmdbServiceProvider = Provider<TmdbService>((ref) {
   final locale = ref.watch(localeProvider);
@@ -134,31 +139,66 @@ final tasteDnaServiceProvider = Provider<TasteDnaService>((ref) {
   return TasteDnaService(ref.watch(tmdbServiceProvider));
 });
 
-final browseScrollTriggerProvider = StateProvider<int>((ref) => 0);
+/// Tek yönlü sayaç tetikleyici: değer taşımaz, yalnız "yeniden bir şey oldu"
+/// sinyali verir. Dinleyiciler `ref.listen` ile artışı yakalar.
+class TriggerNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
 
-/// Keşfet ekranını arka planda yeniden yükle (giriş + sync, dil değişimi dışı).
-final browseRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+  /// Dinleyicileri bir kez uyandırır.
+  void fire() => state++;
+}
 
-/// Yalnızca aktif keşif oturumunu etkiler; kalıcı Taste DNA'ya yazılmaz.
-final discoveryContextProvider = StateProvider<DiscoveryContext>(
-  (ref) => const DiscoveryContext(),
+final browseScrollTriggerProvider = NotifierProvider<TriggerNotifier, int>(
+  TriggerNotifier.new,
 );
 
-class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
+/// Keşfet ekranını arka planda yeniden yükle (giriş + sync, dil değişimi dışı).
+final browseRefreshTriggerProvider = NotifierProvider<TriggerNotifier, int>(
+  TriggerNotifier.new,
+);
+
+/// Yalnızca aktif keşif oturumunu etkiler; kalıcı Taste DNA'ya yazılmaz.
+class DiscoveryContextNotifier extends Notifier<DiscoveryContext> {
+  @override
+  DiscoveryContext build() => const DiscoveryContext();
+
+  void setContext(DiscoveryContext context) => state = context;
+
+  void update(DiscoveryContext Function(DiscoveryContext current) transform) =>
+      state = transform(state);
+}
+
+final discoveryContextProvider =
+    NotifierProvider<DiscoveryContextNotifier, DiscoveryContext>(
+      DiscoveryContextNotifier.new,
+    );
+
+/// Çevrimdışı yoklamasının enjekte edilebilir ucu. Testler bunu override
+/// ederek ağa hiç çıkmadan yarış senaryosu kurar; üretimde /health'e gider.
+final offlineProbeProvider = Provider<Future<bool> Function()>(
+  (ref) => OfflineNotifier._probeApi,
+);
+
+class OfflineNotifier extends Notifier<bool> with WidgetsBindingObserver {
   Timer? _timer;
-  final Future<bool> Function() _probe;
   var _checkGeneration = 0;
   var _observing = false;
 
-  OfflineNotifier({Future<bool> Function()? probe, bool autoStart = true})
-    : _probe = probe ?? _probeApi,
-      super(false) {
+  @override
+  bool build() {
+    ref.onDispose(_teardown);
+
+    // Testlerde periyodik zamanlayıcı ve gerçek ağ yoklaması istemiyoruz;
+    // test kendi tempolu probe'unu override edip checkNow'ı elle sürer.
     final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    if (!autoStart || isTest) return;
-    _observing = true;
-    WidgetsBinding.instance.addObserver(this);
-    checkNow();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => checkNow());
+    if (!isTest) {
+      _observing = true;
+      WidgetsBinding.instance.addObserver(this);
+      checkNow();
+      _timer = Timer.periodic(const Duration(seconds: 30), (_) => checkNow());
+    }
+    return false;
   }
 
   static Future<bool> _probeApi() async {
@@ -176,32 +216,33 @@ class OfflineNotifier extends StateNotifier<bool> with WidgetsBindingObserver {
 
   Future<void> checkNow() async {
     final generation = ++_checkGeneration;
+    final probe = ref.read(offlineProbeProvider);
     try {
-      final isOnline = await _probe();
-      if (mounted && generation == _checkGeneration) {
+      final isOnline = await probe();
+      if (ref.mounted && generation == _checkGeneration) {
         state = !isOnline;
       }
     } catch (e) {
       // API erişimi başarısız olduysa veya zaman aşımına uğradıysa cihaz çevrimdışıdır.
-      if (mounted && generation == _checkGeneration) {
+      if (ref.mounted && generation == _checkGeneration) {
         state = true;
       }
     }
   }
 
-  @override
-  void dispose() {
+  void _teardown() {
     if (_observing) {
       WidgetsBinding.instance.removeObserver(this);
+      _observing = false;
     }
     _timer?.cancel();
-    super.dispose();
+    _timer = null;
   }
 }
 
-final offlineProvider = StateNotifierProvider<OfflineNotifier, bool>((ref) {
-  return OfflineNotifier();
-});
+final offlineProvider = NotifierProvider<OfflineNotifier, bool>(
+  OfflineNotifier.new,
+);
 
 final browsePopularPageProvider = Provider<int>((ref) {
   return 1 + Random().nextInt(5);

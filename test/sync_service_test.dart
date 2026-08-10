@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -632,15 +633,23 @@ void main() {
       'should propagate errors and allow SyncNotifier to update state accordingly',
       () async {
         mockApi.shouldThrow = true;
-        final notifier = SyncNotifier(syncService);
+        final container = ProviderContainer(
+          overrides: [
+            syncProvider.overrideWith(
+              () => SyncNotifier(syncService: syncService, enforceAuth: false),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final notifier = container.read(syncProvider.notifier);
 
-        expect(notifier.state, SyncStatus.idle);
+        expect(container.read(syncProvider), SyncStatus.idle);
 
         try {
           await notifier.performSync();
           fail('Should have thrown an exception');
         } catch (e) {
-          expect(notifier.state, SyncStatus.error);
+          expect(container.read(syncProvider), SyncStatus.error);
         }
       },
     );

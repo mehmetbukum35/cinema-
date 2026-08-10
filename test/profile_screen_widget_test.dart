@@ -112,19 +112,20 @@ void main() {
           const ProfileScreen(),
           overrides: [
             apiServiceProvider.overrideWithValue(mockApi),
-            authProvider.overrideWith((ref) {
-              final notifier = AuthNotifier(mockApi, ref);
-              notifier.state = AuthState(
-                accessToken: 'access_token',
-                user: {
-                  'id': 1,
-                  'email': 'user@google.com',
-                  'display_name': 'Google User',
-                  'google_sub': 'google_123',
-                },
-              );
-              return notifier;
-            }),
+            authProvider.overrideWith(
+              () => AuthNotifier(
+                api: mockApi,
+                initialState: AuthState(
+                  accessToken: 'access_token',
+                  user: {
+                    'id': 1,
+                    'email': 'user@google.com',
+                    'display_name': 'Google User',
+                    'google_sub': 'google_123',
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -157,19 +158,20 @@ void main() {
           const ProfileScreen(),
           overrides: [
             apiServiceProvider.overrideWithValue(mockApi),
-            authProvider.overrideWith((ref) {
-              final notifier = AuthNotifier(mockApi, ref);
-              notifier.state = AuthState(
-                accessToken: 'access_token',
-                user: {
-                  'id': 2,
-                  'email': 'user@apple.com',
-                  'display_name': 'Apple User',
-                  'apple_sub': 'apple_456',
-                },
-              );
-              return notifier;
-            }),
+            authProvider.overrideWith(
+              () => AuthNotifier(
+                api: mockApi,
+                initialState: AuthState(
+                  accessToken: 'access_token',
+                  user: {
+                    'id': 2,
+                    'email': 'user@apple.com',
+                    'display_name': 'Apple User',
+                    'apple_sub': 'apple_456',
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       );

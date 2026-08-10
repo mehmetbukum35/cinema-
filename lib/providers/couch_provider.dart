@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../models/movie.dart';
 import '../models/social.dart';
@@ -128,9 +127,12 @@ class CouchState {
       session != null && session!.status == 'pending' && !session!.isHost;
 }
 
-class CouchNotifier extends StateNotifier<CouchState> {
-  final ApiService _api;
-  final Ref _ref;
+class CouchNotifier extends Notifier<CouchState> {
+  /// Testler mock API'yi buradan enjekte eder; uretimde apiServiceProvider.
+  final ApiService? _apiOverride;
+  // `late final` DEGIL: Riverpod 3'te invalidate/rebuild ayni notifier ornegi
+  // uzerinde build()'i yeniden kosar, ikinci atama LateInitializationError verir.
+  late ApiService _api;
   Timer? _pollTimer;
   int _sessionRevision = 0;
   bool _startInFlight = false;
@@ -139,12 +141,16 @@ class CouchNotifier extends StateNotifier<CouchState> {
   Future<void>? _refreshFlight;
   int? _refreshRevision;
 
-  CouchNotifier(this._api, this._ref) : super(const CouchState());
+  CouchNotifier({ApiService? api}) : _apiOverride = api;
 
   @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
+  CouchState build() {
+    _api = _apiOverride ?? ref.watch(apiServiceProvider);
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    });
+    return const CouchState();
   }
 
   /// Test kancası: oturumu sunucu payload'ıyla doğrudan kurar (auth/engine
@@ -153,7 +159,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
   void debugSetSession(Map<String, dynamic>? json) => _apply(json);
 
   void _apply(Map<String, dynamic>? json) {
-    if (!mounted) return;
+    if (!ref.mounted) return;
     _sessionRevision++;
     final prev = state.session;
     final session = json == null ? null : CouchSession.fromJson(json);
@@ -190,14 +196,14 @@ class CouchNotifier extends StateNotifier<CouchState> {
   }
 
   Future<void> _performActiveCheck() async {
-    if (!_ref.read(authProvider).isAuthenticated) {
+    if (!ref.read(authProvider).isAuthenticated) {
       _apply(null);
       return;
     }
     final revision = _sessionRevision;
     try {
       final response = await _api.getActiveCouchSession();
-      if (mounted && revision == _sessionRevision) _apply(response);
+      if (ref.mounted && revision == _sessionRevision) _apply(response);
     } catch (e) {
       debugPrint('Couch checkActive failed: $e');
     }
@@ -240,8 +246,8 @@ class CouchNotifier extends StateNotifier<CouchState> {
 
       // 2) Öneri motoru: host'un puanladıkları hariç kişisel sıralama.
       if (deckMovies.length < deckSize) {
-        final engine = _ref.read(recommendationEngineProvider);
-        final service = _ref.read(tmdbServiceProvider);
+        final engine = ref.read(recommendationEngineProvider);
+        final service = ref.read(tmdbServiceProvider);
         final candidates = <Movie>[
           ...await engine.fetchSeedCandidates(),
           ...await service.getTrending(),
@@ -277,11 +283,11 @@ class CouchNotifier extends StateNotifier<CouchState> {
             },
         ],
       );
-      if (!mounted || revision != _sessionRevision) return false;
+      if (!ref.mounted || revision != _sessionRevision) return false;
       _apply(session);
       return true;
     } on ApiException catch (e) {
-      if (mounted && revision == _sessionRevision) {
+      if (ref.mounted && revision == _sessionRevision) {
         // 404 = sunucu bu ucu tanımıyor (backend deploy + migration 014
         // yapılmamış). Ham "Bilinmeyen uç" yerine yol gösteren mesaj.
         state = state.copyWith(
@@ -293,7 +299,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
       return false;
     } catch (e) {
       debugPrint('Couch start failed: $e');
-      if (mounted && revision == _sessionRevision) {
+      if (ref.mounted && revision == _sessionRevision) {
         state = state.copyWith(loading: false, error: () => e.toString());
       }
       return false;
@@ -317,12 +323,12 @@ class CouchNotifier extends StateNotifier<CouchState> {
         isTv: card.isTV,
         liked: liked,
       );
-      if (mounted && revision == _sessionRevision) _apply(updated);
+      if (ref.mounted && revision == _sessionRevision) _apply(updated);
     } on ApiException catch (e) {
       // 409: oturum bu arada bitti/iptal edildi → durumu tazele.
       if (e.statusCode == 409) {
         await refresh();
-      } else if (mounted) {
+      } else if (ref.mounted) {
         state = state.copyWith(error: () => e.message);
       }
     } catch (e) {
@@ -358,7 +364,7 @@ class CouchNotifier extends StateNotifier<CouchState> {
     final revision = _sessionRevision;
     try {
       final response = await _api.getCouchSession(session.id);
-      if (mounted &&
+      if (ref.mounted &&
           revision == _sessionRevision &&
           state.session?.id == session.id) {
         _apply(response);
@@ -409,7 +415,6 @@ class CouchNotifier extends StateNotifier<CouchState> {
   }
 }
 
-final couchProvider = StateNotifierProvider<CouchNotifier, CouchState>((ref) {
-  final api = ref.watch(apiServiceProvider);
-  return CouchNotifier(api, ref);
-});
+final couchProvider = NotifierProvider<CouchNotifier, CouchState>(
+  CouchNotifier.new,
+);

@@ -7,11 +7,14 @@ import 'package:ne_izlesem/providers/couch_provider.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
 import 'package:ne_izlesem/models/social.dart';
 import 'package:ne_izlesem/services/api_service.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
-class MockAuthNotifier extends StateNotifier<AuthState>
-    implements AuthNotifier {
-  MockAuthNotifier(super.state);
+class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
+  MockAuthNotifier(this._initial);
+
+  final AuthState _initial;
+
+  @override
+  AuthState build() => _initial;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -134,11 +137,11 @@ void main() {
     container = ProviderContainer(
       overrides: [
         authProvider.overrideWith(
-          (ref) => MockAuthNotifier(
+          () => MockAuthNotifier(
             AuthState(accessToken: 'token', user: {'id': 1}),
           ),
         ),
-        couchProvider.overrideWith((ref) => CouchNotifier(mockApi, ref)),
+        couchProvider.overrideWith(() => CouchNotifier(api: mockApi)),
       ],
     );
   });

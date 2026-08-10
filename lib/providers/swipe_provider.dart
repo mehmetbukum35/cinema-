@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../services/prefs/library_facade.dart';
@@ -66,39 +65,90 @@ class SwipeState {
   }
 }
 
-class SwipeNotifier extends StateNotifier<SwipeState> {
-  final TmdbService _service;
-  final RecommendationEngine _engine;
-  final Ref? ref;
-  final void Function()? onRated;
+class SwipeNotifier extends Notifier<SwipeState> {
+  final TmdbService? _serviceOverride;
+  final RecommendationEngine? _engineOverride;
+
+  /// false → puanlama sonrası istatistik yenileme, arkadaş sinyali okuma ve
+  /// debounce'lu sync tetiklenmez. Testler bunu kapatarak notifier'ı yan
+  /// etkisiz sürer (migrasyon öncesi `ref` null bırakılarak yapılıyordu).
+  final bool enableSideEffects;
+
+  // `late final` DEGIL: Riverpod 3'te invalidate/rebuild ayni notifier ornegi
+  // uzerinde build()'i yeniden kosar, ikinci atama LateInitializationError verir.
+  late TmdbService _service;
+  late RecommendationEngine _engine;
+  Timer? _syncTimer;
   int _loadGeneration = 0;
 
-  SwipeNotifier(this._service, this._engine, {this.ref, this.onRated})
-    : super(
-        SwipeState(
-          queue: [],
-          ratedIds: {},
-          page: 1,
-          current: 0,
-          loading: true,
-          loadingMore: false,
-          languageFilter: null,
-          providerFilter: null,
-        ),
-      ) {
-    init();
+  SwipeNotifier({
+    TmdbService? service,
+    RecommendationEngine? engine,
+    this.enableSideEffects = true,
+  }) : _serviceOverride = service,
+       _engineOverride = engine;
+
+  @override
+  SwipeState build() {
+    _service = _serviceOverride ?? ref.watch(tmdbServiceProvider);
+    _engine = _engineOverride ?? ref.watch(recommendationEngineProvider);
+    ref.onDispose(_flushPendingSync);
+    // build() dönmeden state'e dokunulmamalı; init ilk mikro görevde başlar.
+    Future.microtask(init);
+    return SwipeState(
+      queue: [],
+      ratedIds: {},
+      page: 1,
+      current: 0,
+      loading: true,
+      loadingMore: false,
+      languageFilter: null,
+      providerFilter: null,
+    );
+  }
+
+  /// Puanlamadan sonra: istatistikleri tazele ve push'u 5 sn geciktir — her
+  /// swipe'ta ağa çıkmamak için debounce.
+  void _afterRate() {
+    if (!enableSideEffects) return;
+    ref.read(statsProvider.notifier).load(skipSync: true);
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(seconds: 5), () {
+      ref.read(syncProvider.notifier).performSync().catchError((e) {
+        debugPrint("Background sync failed on swipe: $e");
+      });
+    });
+  }
+
+  /// Ekran kapanırken bekleyen debounce'u kaybetmeden push'u boşalt.
+  void _flushPendingSync() {
+    if (_syncTimer?.isActive != true) return;
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    try {
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
+        ref.read(syncProvider.notifier).performSync().catchError((e) {
+          debugPrint("Background sync failed on swipe dispose flush: $e");
+        });
+      }
+    } catch (e) {
+      debugPrint("Failed to flush swipe sync on dispose: $e");
+    }
   }
 
   Future<void> init() async {
     final generation = _loadGeneration;
     try {
       final rated = await PrefsLibraryFacade.getRatedIds();
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(ratedIds: rated);
         await loadMore();
       }
     } catch (e) {
-      if (mounted && generation == _loadGeneration) {
+      if (ref.mounted && generation == _loadGeneration) {
         state = state.copyWith(loading: false, error: () => e.toString());
       }
     }
@@ -108,7 +158,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     String? languageFilter,
     int? providerFilter,
   }) async {
-    if (mounted) {
+    if (ref.mounted) {
       ++_loadGeneration;
       state = state.copyWith(
         queue: [],
@@ -131,7 +181,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final startLang = state.languageFilter;
     final startProv = state.providerFilter;
     try {
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(loadingMore: true, error: () => null);
       }
 
@@ -216,7 +266,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
           : <Movie>[];
 
       // Check if state changed/reset during network call
-      if (!mounted ||
+      if (!ref.mounted ||
           generation != _loadGeneration ||
           state.page != startPage ||
           state.languageFilter != startLang ||
@@ -227,10 +277,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       final allCandidates = [...merged, ...similarCandidates];
 
       Map<String, List<String>> friendSignals = const {};
-      final refInstance = ref;
-      if (refInstance != null) {
+      if (enableSideEffects) {
         try {
-          friendSignals = refInstance
+          friendSignals = ref
               .read(socialProvider)
               .signals
               .toRecommendationMap();
@@ -254,7 +303,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         suppressFranchises: true,
       );
 
-      if (mounted &&
+      if (ref.mounted &&
           generation == _loadGeneration &&
           state.page == startPage &&
           state.languageFilter == startLang &&
@@ -268,7 +317,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
         );
       }
     } catch (e) {
-      if (mounted &&
+      if (ref.mounted &&
           generation == _loadGeneration &&
           state.page == startPage &&
           state.languageFilter == startLang &&
@@ -294,7 +343,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     await PrefsLibraryFacade.saveRating(
       movie: movie,
       rating: rating,
-      metadataLocale: ref?.read(localeProvider).languageCode ?? 'tr',
+      metadataLocale: ref.read(localeProvider).languageCode,
     );
     // Zevk profili değişti → keyword vektörü yeniden hesaplansın.
     await _engine.invalidateCache(isNegativeChange: rating <= 1);
@@ -306,9 +355,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
       liked: rating >= 2,
     ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
 
-    if (mounted) {
+    if (ref.mounted) {
       state = state.copyWith(ratedIds: newRatedIds, current: state.current + 1);
-      onRated?.call();
+      _afterRate();
     }
 
     // Preload more when near end of the current queue
@@ -348,9 +397,9 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
     final newRatedIds = Set<String>.from(state.ratedIds)..remove(key);
 
-    if (mounted) {
+    if (ref.mounted) {
       state = state.copyWith(ratedIds: newRatedIds, current: previousIndex);
-      onRated?.call();
+      _afterRate();
     }
   }
 
@@ -358,7 +407,7 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   Future<void> refreshRatedIds() async {
     try {
       final rated = await PrefsLibraryFacade.getRatedIds();
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(ratedIds: rated);
       }
     } catch (e) {
@@ -367,45 +416,6 @@ class SwipeNotifier extends StateNotifier<SwipeState> {
   }
 }
 
-final swipeProvider =
-    StateNotifierProvider.autoDispose<SwipeNotifier, SwipeState>((ref) {
-      final service = ref.watch(tmdbServiceProvider);
-      final engine = ref.watch(recommendationEngineProvider);
-
-      Timer? syncTimer;
-      ref.onDispose(() {
-        if (syncTimer?.isActive == true) {
-          syncTimer?.cancel();
-          try {
-            final auth = ref.read(authProvider);
-            if (auth.isAuthenticated) {
-              ref.read(syncProvider.notifier).performSync().catchError((e) {
-                debugPrint("Background sync failed on swipe dispose flush: $e");
-              });
-            }
-          } catch (e) {
-            debugPrint("Failed to flush swipe sync on dispose: $e");
-          }
-        }
-      });
-
-      return SwipeNotifier(
-        service,
-        engine,
-        ref: ref,
-        onRated: () {
-          // skipSync: her swipe'ta anlık sync tetiklememek için — push zaten
-          // aşağıdaki debounce'lu timer ile 5 sn içinde yapılıyor.
-          ref.read(statsProvider.notifier).load(skipSync: true);
-          final auth = ref.read(authProvider);
-          if (auth.isAuthenticated) {
-            syncTimer?.cancel();
-            syncTimer = Timer(const Duration(seconds: 5), () {
-              ref.read(syncProvider.notifier).performSync().catchError((e) {
-                debugPrint("Background sync failed on swipe: $e");
-              });
-            });
-          }
-        },
-      );
-    });
+final swipeProvider = NotifierProvider.autoDispose<SwipeNotifier, SwipeState>(
+  SwipeNotifier.new,
+);

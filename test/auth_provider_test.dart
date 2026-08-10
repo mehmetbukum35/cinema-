@@ -242,11 +242,26 @@ class MockApiService implements ApiService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Riverpod 3'te `ref.invalidate` notifier ÖRNEĞİNİ korur ve yalnızca
+/// `build()`'i yeniden koşar; ayrıca `const AsyncValue.loading()`
+/// canonicalize edildiği için state kimliği de sıfırlanmayı ölçmez.
+/// Sıfırlanmanın doğrudan ölçüsü sağlayıcının atılmış (dispose edilmiş)
+/// olmasıdır — bunu gözlemciyle kaydediyoruz.
+final class _DisposeRecorder extends ProviderObserver {
+  final disposed = <Object?>{};
+
+  @override
+  void didDisposeProvider(ProviderObserverContext context) {
+    disposed.add(context.provider);
+  }
+}
+
 void main() {
   setupSecureStorageMock();
 
   late MockApiService mockApi;
   late ProviderContainer container;
+  late _DisposeRecorder disposeRecorder;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -256,10 +271,12 @@ void main() {
     // puan, sonraki login'i "hesap değişimi" çakışmasına düşürür.
     await DatabaseHelper().hardClearAllData();
     mockApi = MockApiService();
+    disposeRecorder = _DisposeRecorder();
     container = ProviderContainer(
+      observers: [disposeRecorder],
       overrides: [
         apiServiceProvider.overrideWithValue(mockApi),
-        authProvider.overrideWith((ref) => AuthNotifier(mockApi, ref)),
+        authProvider.overrideWith(() => AuthNotifier(api: mockApi)),
       ],
     );
   });
@@ -422,8 +439,11 @@ void main() {
         localTokenInvalidated = true;
       });
       await notifier.login('test@example.com', 'secret123');
-      final oldSocial = container.read(socialProvider.notifier);
-      final oldWatchlist = container.read(watchlistProvider.notifier);
+      // Kullanıcıya bağlı sağlayıcıları oturum boyunca ayağa kaldır ki
+      // oturum bitiminde atılıp atılmadıkları ölçülebilsin.
+      container.read(socialProvider);
+      container.read(watchlistProvider);
+      disposeRecorder.disposed.clear();
 
       final success = await notifier.resetPassword(
         'test@example.com',
@@ -436,11 +456,9 @@ void main() {
       expect(container.read(authProvider).isAuthenticated, isFalse);
       expect(await PrefsAuthStorage.getAccessToken(), isNull);
       expect(localTokenInvalidated, isTrue);
-      expect(container.read(socialProvider.notifier), isNot(same(oldSocial)));
-      expect(
-        container.read(watchlistProvider.notifier),
-        isNot(same(oldWatchlist)),
-      );
+      // Oturum bitti → kullanıcıya bağlı state sonraki oturuma sızmamalı.
+      expect(disposeRecorder.disposed, contains(socialProvider));
+      expect(disposeRecorder.disposed, contains(watchlistProvider));
     });
 
     test('deleteAccount should invoke API and clear session', () async {

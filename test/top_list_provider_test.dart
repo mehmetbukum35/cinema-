@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/providers/top_list_provider.dart';
 import 'package:ne_izlesem/providers/auth_provider.dart';
@@ -24,9 +23,13 @@ class MockSyncService implements SyncService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockAuthNotifier extends StateNotifier<AuthState>
-    implements AuthNotifier {
-  MockAuthNotifier(super.state);
+class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
+  MockAuthNotifier(this._initial);
+
+  final AuthState _initial;
+
+  @override
+  AuthState build() => _initial;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -52,7 +55,7 @@ void main() {
     return ProviderContainer(
       overrides: [
         authProvider.overrideWith(
-          (ref) => MockAuthNotifier(
+          () => MockAuthNotifier(
             authed
                 ? AuthState(accessToken: 'tok', user: {'id': 1})
                 : AuthState(),
@@ -113,11 +116,10 @@ void main() {
       final staleRead = Completer<List<Movie>>();
       container = ProviderContainer(
         overrides: [
-          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
           syncServiceProvider.overrideWithValue(mockSync),
           topListProvider(false).overrideWith(
-            (ref) => TopListNotifier(
-              ref,
+            () => TopListNotifier(
               false,
               readList: () => staleRead.future,
               autoLoad: false,
@@ -141,11 +143,10 @@ void main() {
       final writes = <List<int>>[];
       container = ProviderContainer(
         overrides: [
-          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          authProvider.overrideWith(() => MockAuthNotifier(AuthState())),
           syncServiceProvider.overrideWithValue(mockSync),
           topListProvider(false).overrideWith(
-            (ref) => TopListNotifier(
-              ref,
+            () => TopListNotifier(
               false,
               readList: () async => const [],
               writeList: (list) async {
