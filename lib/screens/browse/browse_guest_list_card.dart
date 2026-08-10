@@ -23,7 +23,17 @@ class GuestListPreview {
   /// Gösterilecek bir şey yoksa `null` döner — ve o zaman davet de yoktur.
   static Future<GuestListPreview?> load() async {
     final ratings = await DatabaseHelper().getRatings();
-    final liked = <Movie>[];
+
+    // Sayım ve afiş listesi KASITLI olarak iki ayrı süzgeçten geçer.
+    // Sunucudaki `liked_titles` alt sorgusu (rating >= 2, gizli değil) afiş
+    // aramaz — afişi eksik bir yapım (tamamlanmamış TMDB verisi) yine de
+    // "beğenilmiş" sayılır. Sayımı afiş şartına bağlarsak misafirin sayısı
+    // sunucununkinden daha katı olur ve yan yana durduğu gerçek kartlarla
+    // kıyas dürüst kalmaz. Bu yüzden: eşiği ve `likedCount`'u afişsiz
+    // `qualifying` listesi belirler; `posters` ondan türeyen alt kümedir.
+    // Bu iki listeyi tek süzgeçte "sadeleştirmeyin" — o an bu yorum haklı
+    // çıkan hatayı geri getirir.
+    final qualifying = <Movie>[];
     for (final row in ratings) {
       final rating = row['rating'];
       final isPrivate = row['is_private'];
@@ -31,19 +41,24 @@ class GuestListPreview {
       if (isPrivate is int && isPrivate == 1) continue;
       final movie = row['movie'];
       if (movie is! Movie) continue;
-      if ((movie.posterPath ?? '').isEmpty) continue;
-      liked.add(movie);
+      qualifying.add(movie);
     }
-    if (liked.length < 3) return null;
-    return GuestListPreview(
-      posters: liked.take(4).toList(),
-      likedCount: liked.length,
-    );
+    if (qualifying.length < 3) return null;
+
+    final posters = qualifying
+        .where((movie) => (movie.posterPath ?? '').isNotEmpty)
+        .take(4)
+        .toList();
+    // Eşik geçildi ama gösterecek tek bir afiş yoksa: boş afiş sırasıyla
+    // kart göstermek, kart hiç göstermemekten daha kötü bir davettir.
+    if (posters.isEmpty) return null;
+
+    return GuestListPreview(posters: posters, likedCount: qualifying.length);
   }
 }
 
 /// "Popüler Listeler" rayının ilk kartı: kullanıcının kendi listesi, henüz
-/// yayında değil. Sıra numarası yok; kesik çizgili kenarlık onu sıralamanın
+/// yayında değil. Sıra numarası yok; altın tonlu kenarlık onu sıralamanın
 /// bir parçası değil, bir davet yapar.
 class BrowseGuestListCard extends StatelessWidget {
   const BrowseGuestListCard({super.key, required this.preview});

@@ -5,6 +5,8 @@ import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/screens/browse_screen.dart';
 import 'package:ne_izlesem/screens/browse/browse_guest_list_card.dart';
 import 'package:ne_izlesem/screens/browse/friends_activity_teaser.dart';
+import 'package:ne_izlesem/services/db_helper.dart';
+import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/providers.dart';
 import 'package:ne_izlesem/widgets/shimmer.dart';
 import 'mocks/secure_storage_mock.dart';
@@ -14,8 +16,9 @@ import 'support/responsive_test_matrix.dart';
 void main() {
   setupSecureStorageMock();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await DatabaseHelper().hardClearAllData();
   });
 
   responsiveTestWidgets(
@@ -85,5 +88,79 @@ void main() {
     expect(find.text('Your List'), findsOneWidget);
     expect(find.text('not published'), findsOneWidget);
     expect(find.text('Sign in and publish'), findsOneWidget);
+  });
+
+  group('GuestListPreview.load', () {
+    // Sunucunun `liked_titles` ölçütünü taklit eder: rating >= 2, gizli
+    // değil. `withPoster: false` afişi eksik bir TMDB kaydını simüle eder.
+    Future<void> rate(
+      int id, {
+      required int rating,
+      int isPrivate = 0,
+      bool withPoster = true,
+    }) async {
+      await PrefsLibraryFacade.saveRating(
+        movie: Movie(
+          id: id,
+          title: 'Movie $id',
+          overview: '',
+          voteAverage: 7,
+          posterPath: withPoster ? '/poster$id.jpg' : null,
+        ),
+        rating: rating,
+        isPrivate: isPrivate,
+        metadataLocale: 'tr',
+      );
+    }
+
+    test('exactly 3 qualifying titles returns a non-null preview', () async {
+      await rate(1, rating: 2);
+      await rate(2, rating: 3);
+      await rate(3, rating: 4);
+
+      final preview = await GuestListPreview.load();
+
+      expect(preview, isNotNull);
+      expect(preview!.likedCount, 3);
+      expect(preview.posters.length, 3);
+    });
+
+    test('exactly 2 qualifying titles returns null', () async {
+      await rate(1, rating: 2);
+      await rate(2, rating: 3);
+
+      expect(await GuestListPreview.load(), isNull);
+    });
+
+    test('a rating below 2 does not count toward the threshold', () async {
+      await rate(1, rating: 2);
+      await rate(2, rating: 3);
+      await rate(3, rating: 1); // eşiğin altında, sayılmaz
+
+      expect(await GuestListPreview.load(), isNull);
+    });
+
+    test('a private rating does not count toward the threshold', () async {
+      await rate(1, rating: 2);
+      await rate(2, rating: 3);
+      await rate(3, rating: 4, isPrivate: 1);
+
+      expect(await GuestListPreview.load(), isNull);
+    });
+
+    test(
+      '3 qualifying titles where one lacks a poster still counts fully',
+      () async {
+        await rate(1, rating: 2);
+        await rate(2, rating: 3);
+        await rate(3, rating: 4, withPoster: false);
+
+        final preview = await GuestListPreview.load();
+
+        expect(preview, isNotNull);
+        expect(preview!.likedCount, 3);
+        expect(preview.posters.length, 2);
+      },
+    );
   });
 }
