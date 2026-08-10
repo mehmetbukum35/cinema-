@@ -1234,6 +1234,42 @@ void main() {
 
         expect(result.status, AuthStatus.success);
         expect(container.read(authProvider).isAuthenticated, isTrue);
+        // Yükleme örtüsü kapanmalı: finally her iki durumda da çalışır.
+        expect(container.read(authProvider).loading, isFalse);
+      },
+    );
+
+    test(
+      'a failure BEFORE the session goes live is still reported as an error',
+      () async {
+        // Sync hatasını yutan catch, oturumun canlandığı noktadan SONRAYA
+        // dar tutulmalı. Aksi halde saveTokens (Keystore) ya da eksik
+        // access_token gibi oturum ÖNCESİ arızalar da "başarılı" sayılır:
+        // oturum kurulmaz, hata gösterilmez ve `loading` true'da asılı
+        // kaldığı için tam ekran yükleme örtüsü açık kalır.
+        //
+        // Burada sunucu yanıtından access_token düşürülüyor; completeLogin
+        // içindeki cast, oturum canlanmadan ÖNCE patlar.
+        mockApi.registerResponse = {
+          'tokens': {'refresh_token': 'reg_refresh'},
+          'user': {
+            'id': 2,
+            'email': 'reg@example.com',
+            'username': 'reguser',
+            'display_name': 'Reg User',
+            'is_public': 1,
+          },
+        };
+        final notifier = container.read(authProvider.notifier);
+
+        final result = await notifier.register(
+          'pre_session_fail@example.com',
+          'secret123',
+        );
+
+        expect(result.status, AuthStatus.error);
+        expect(container.read(authProvider).isAuthenticated, isFalse);
+        expect(container.read(authProvider).loading, isFalse);
       },
     );
 

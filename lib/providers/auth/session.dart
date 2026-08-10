@@ -99,22 +99,11 @@ mixin AuthSessionMixin on Notifier<AuthState> {
           )
         : null;
 
-    try {
-      await completeLogin(
-        user: user,
-        tokens: tokens,
-        resolution: ConflictResolution.merge,
-      );
-    } catch (e, st) {
-      // Token'lar zaten kaydedildi ve state canlı (bkz. completeLogin: kayıt
-      // sync'ten ÖNCE yapılıyor) — buradan sonraki bir hata (ör. sync) bir
-      // kayıt/giriş arızası DEĞİLDİR. Öyle raporlanırsa kullanıcı oturum
-      // açıkken kırmızı "başarısız" bandı görür. SyncNotifier hatayı zaten
-      // global olarak gösteriyor; burada sadece logla, yutma.
-      debugPrint(
-        'Post-login sync failed after the session was established: $e\n$st',
-      );
-    }
+    await completeLogin(
+      user: user,
+      tokens: tokens,
+      resolution: ConflictResolution.merge,
+    );
     return AuthResult(
       status: AuthStatus.success,
       mergedGuestData: merged != null && !merged.isEmpty ? merged : null,
@@ -162,8 +151,25 @@ mixin AuthSessionMixin on Notifier<AuthState> {
       loadingMessageKey: 'auth_syncing_data',
     );
 
+    // Buraya gelindiğinde oturum CANLI: token'lar diske yazıldı ve state
+    // yukarıda güncellendi. Dolayısıyla buradaki bir hata bir giriş/kayıt
+    // arızası değildir — sync arızasıdır. Yukarı fırlatılırsa register()'ın
+    // genel catch'i "kayıt başarısız" döner ve kullanıcı oturum açıkken
+    // kırmızı bant görür; ikinci denemede de "e-posta zaten kayıtlı" alır.
+    //
+    // Catch bilerek BURADA, completeLogin'i saran bir yerde değil: satır
+    // 130'daki `loading: true` ile oturumun canlandığı satır arasında
+    // saveTokens (Android Keystore) ve `access_token` cast'i gibi gerçek
+    // arıza yolları var. Onları yutmak, kurtarılabilir bir hatayı ekranda
+    // asılı kalan bir yükleme örtüsüne çevirirdi.
+    //
+    // SyncNotifier hatayı zaten global olarak gösteriyor; burada logla, yut.
     try {
       await _postAuthSessionRestore();
+    } catch (e, st) {
+      debugPrint(
+        'Post-login sync failed after the session was established: $e\n$st',
+      );
     } finally {
       state = state.copyWith(loading: false, loadingMessageKey: null);
     }
