@@ -152,6 +152,18 @@ class BrowseGuestListCard extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              tr?.get('guest_local_only_hint') ??
+                  'Hesap olmadan zevkin yalnızca bu cihazda kalır.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: c.dim.withValues(alpha: 0.9),
+                fontSize: 10.5,
+                height: 1.25,
+              ),
+            ),
           ],
         ),
       ),

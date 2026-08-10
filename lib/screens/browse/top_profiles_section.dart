@@ -38,7 +38,7 @@ class BrowseTopProfilesSection extends StatelessWidget {
               gradient: CinemaGradients.crimson,
             ),
             SizedBox(
-              height: 136,
+              height: 160,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),

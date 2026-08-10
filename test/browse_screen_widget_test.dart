@@ -91,6 +91,10 @@ void main() {
     expect(find.text('Your List'), findsOneWidget);
     expect(find.text('not published'), findsOneWidget);
     expect(find.text('Sign in and publish'), findsOneWidget);
+    expect(
+      find.text('Without an account, your taste lives only on this device.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the rail puts the guest card before the ranked profiles', (

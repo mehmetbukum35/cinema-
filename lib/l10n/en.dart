@@ -761,6 +761,8 @@ const Map<String, String> kEnStrings = {
   'browse_guest_list_title': 'Your List',
   'browse_guest_list_unpublished': 'not published',
   'browse_guest_list_cta': 'Sign in and publish',
+  'guest_local_only_hint':
+      'Without an account, your taste lives only on this device.',
   'top_lists_empty':
       'No public profiles yet. Share your profile to get things rolling!',
   'top_lists_likes': 'likes',
