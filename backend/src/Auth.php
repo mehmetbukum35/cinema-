@@ -263,8 +263,12 @@ class Auth
 
     /**
      * Yanıtı hemen döndürür, çağıranın kalan işi (e-posta gönderimi) arka
-     * planda sürer. Test ortamında json_out zaten exit etmez; production'da
-     * fastcgi_finish_request bağlantıyı kapatır (bkz. forgotPassword).
+     * planda sürer. Test ortamında json_out zaten exit etmez.
+     *
+     * Production SAPI sırası:
+     * 1) fastcgi_finish_request (PHP-FPM)
+     * 2) litespeed_finish_request (LiteSpeed)
+     * 3) ignore_user_abort + flush (Apache mod_php / CGI yedek)
      *
      * @param array<string, mixed> $body
      */
@@ -277,9 +281,23 @@ class Auth
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($body, JSON_UNESCAPED_UNICODE);
+
         if (function_exists('fastcgi_finish_request')) {
             fastcgi_finish_request();
+            return;
         }
+        if (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+            return;
+        }
+
+        // Finish helper yok: istemciyi mümkün olduğunca erken serbest bırak.
+        // SMTP hâlâ bu request içinde sürebilir; 503 ile özelliği kapatmayız.
+        ignore_user_abort(true);
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+        flush();
     }
 
     /**
@@ -905,32 +923,12 @@ class Auth
             fail(422, 'Geçersiz e-posta formatı.', 'email_invalid');
         }
 
-        $isTest = defined('PHPUNIT_TESTING')
-            || class_exists('PHPUnit\Framework\TestCase', false);
-        // SMTP işi request içinde sürerken yanıtı gerçekten kapatamayan SAPIs
-        // kullanıcı var/yok süresini açığa çıkarır. Güvenli bir kuyruk olmadan
-        // sahte bir "erken yanıt" vermek yerine bu ortamda özelliği kapat.
-        if (!$isTest && !function_exists('fastcgi_finish_request')) {
-            fail(
-                503,
-                'Parola sıfırlama hizmeti geçici olarak kullanılamıyor.',
-                'password_reset_unavailable'
-            );
-        }
-
         $st = $this->db->prepare('SELECT id FROM users WHERE email = ?');
         $st->execute([$email]);
         $u = $st->fetch();
 
-        // Send 200 OK response instantly to close client connection and eliminate timing attacks
-        if ($isTest) {
-            json_out(200, ['ok' => true]);
-        } else {
-            http_response_code(200);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-            fastcgi_finish_request();
-        }
+        // Her durumda 200 — e-posta varlığını yanıtla sızdırma. Mail arka planda.
+        $this->respondThenContinue(200, ['ok' => true]);
 
         // If the user doesn't exist, stop background execution
         if (!$u) {

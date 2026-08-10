@@ -64,9 +64,10 @@ return [
         'pass' => 'your_smtp_password',
     ],
 
-    // Parola sıfırlama e-postası, hesap varlığını yanıt süresinden sızdırmamak
-    // için fastcgi_finish_request() sonrasında gönderilir. Üretimde PHP-FPM /
-    // FastCGI kullanın; bu fonksiyon yoksa endpoint güvenli biçimde 503 döner.
+    // Parola sıfırlama / doğrulama e-postası yanıt döndükten sonra gönderilir
+    // (fastcgi_finish_request, LiteSpeed finish veya flush yedeği). PHP-FPM
+    // şart değil; finish yoksa istek SMTP bitene kadar sürebilir ama 503
+    // ile özellik kapatılmaz.
 
     // ── Google Sign-In (POST /auth/google) ─────────────────────────────────
     // client_ids: ID token'ın "aud" claim'inde kabul edilecek OAuth client ID'leri.
