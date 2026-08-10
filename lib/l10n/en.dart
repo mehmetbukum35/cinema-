@@ -261,7 +261,7 @@ const Map<String, String> kEnStrings = {
       'Enter your registered email address to receive a password reset code.',
   'auth_forgot_code_title': 'Verify Code',
   'auth_forgot_code_desc':
-      'Enter the 6-digit verification code sent to your email.',
+      'Enter the 6-digit code from your email. Check spam if it is missing; if you signed up with Google, this flow also sets a password.',
   'auth_forgot_reset_title': 'Reset Password',
   'auth_forgot_reset_desc':
       'Set a new password of at least 8 characters for your account.',
@@ -293,7 +293,7 @@ const Map<String, String> kEnStrings = {
   'auth_err_wrong_password': 'Current password is incorrect.',
   'auth_err_user_not_found': 'User not found.',
   'auth_err_forgot_send_failed':
-      'Failed to send reset code. Please check your connection.',
+      'Could not send the reset code. Try again shortly, and check your spam folder.',
   'auth_err_verify_code_failed':
       'Verification code is invalid. Please try again.',
   'auth_err_email_unverified':

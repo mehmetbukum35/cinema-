@@ -263,7 +263,7 @@ const Map<String, String> kTrStrings = {
       'Şifre sıfırlama kodunu almak için kayıtlı e-posta adresinizi girin.',
   'auth_forgot_code_title': 'Kodu Doğrula',
   'auth_forgot_code_desc':
-      'E-postanıza gönderilen 6 haneli doğrulama kodunu girin.',
+      'E-postanıza gönderilen 6 haneli kodu girin. Gelmediyse spam klasörüne bakın; Google ile kayıt olduysanız bu adımla parola belirleyebilirsiniz.',
   'auth_forgot_reset_title': 'Şifreyi Sıfırla',
   'auth_forgot_reset_desc':
       'Hesabınız için en az 8 karakterli yeni bir şifre belirleyin.',
@@ -298,7 +298,7 @@ const Map<String, String> kTrStrings = {
   'auth_err_wrong_password': 'Mevcut parola hatalı.',
   'auth_err_user_not_found': 'Kullanıcı bulunamadı.',
   'auth_err_forgot_send_failed':
-      'Sıfırlama kodu gönderilemedi. Lütfen bağlantınızı kontrol edin.',
+      'Sıfırlama kodu gönderilemedi. Biraz sonra tekrar deneyin veya spam klasörünü kontrol edin.',
   'auth_err_verify_code_failed':
       'Doğrulama kodu geçersiz. Lütfen tekrar deneyin.',
   'auth_err_email_unverified':

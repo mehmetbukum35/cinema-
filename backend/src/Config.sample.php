@@ -54,6 +54,10 @@ return [
     ],
 
     'smtp' => [
+        // 465 → implicit SSL (ssl://). 587 → STARTTLS (tcp + upgrade).
+        // Hosting panelindeki “SMTP / gönderen” ayarlarını birebir kullanın.
+        // Yanlış port/şifre: forgot-password API yine 200 döner ama mail gitmez;
+        // sunucu error_log’da “SMTP …” satırına bakın.
         'host' => 'mail.example.com',
         'port' => 465,
         'user' => 'your_smtp_email',

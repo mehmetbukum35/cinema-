@@ -181,6 +181,8 @@ class AuthNotifier extends Notifier<AuthState>
       'verify_code_failed': 'auth_err_verify_code_failed',
       'email_unverified': 'auth_err_email_unverified',
       'rate_limited': 'auth_err_rate_limited',
+      'password_reset_unavailable': 'auth_err_forgot_send_failed',
+      'forgot_send_failed': 'auth_err_forgot_send_failed',
     };
     final mapped = codeMap[e.code];
     if (mapped != null) return mapped;
