@@ -821,6 +821,25 @@ class SocialIntegrationTest extends TestCase
         $this->assertContains('bob', array_column($carolProfiles, 'username'));
     }
 
+    public function testTopProfilesAvailableWithoutAuth(): void
+    {
+        $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);
+        $this->insertRating(1, 101, 0, 3, 'The Matrix', 2000);
+
+        TestHelperRegistry::reset();
+        $this->social->getTopProfiles(null);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $profiles = TestHelperRegistry::$lastBody['profiles'];
+        $this->assertNotEmpty($profiles);
+        foreach ($profiles as $profile) {
+            $this->assertFalse($profile['me_liked']);
+            $this->assertFalse($profile['is_me']);
+        }
+        // Misafir engel filtresi uygulamaz; herkese açık üyeler görünür.
+        $this->assertContains('bob', array_column($profiles, 'username'));
+        $this->assertContains('alice', array_column($profiles, 'username'));
+    }
+
     public function testBlockedUsersCannotLikeProfilesAndOldLikesAreRemoved(): void
     {
         $this->social->likeProfile(1, ['owner_id' => 2, 'liked' => true]);

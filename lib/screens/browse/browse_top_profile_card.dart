@@ -3,13 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/social.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/localization_service.dart';
 import '../../services/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
+import '../../widgets/app_toast.dart';
 import '../../widgets/pulsing_placeholder.dart';
+import '../login_screen.dart';
 
 /// Keşfet'teki yatay "Popüler Listeler" rayının profil kartı: sıra rengi,
 /// beğeni kalbi ve poster önizlemeleri. Dokununca web profili açılır.
@@ -144,6 +147,20 @@ class BrowseTopProfileCard extends ConsumerWidget {
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
+                      if (!ref.read(authProvider).isLoggedIn) {
+                        showAppToast(
+                          context,
+                          tr?.get('profile_like_need_login') ??
+                              'Sign in to like a profile.',
+                          success: false,
+                        );
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        );
+                        return;
+                      }
                       ref
                           .read(socialProvider.notifier)
                           .toggleProfileLike(profile);

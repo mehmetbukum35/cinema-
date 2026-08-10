@@ -64,7 +64,7 @@ trait SocialProfilesPublicTrait
     // kalmasın diye beğenisi olmayan üyeler de listelenir; eşitlik, beğendiği
     // yapım sayısıyla (rating >= 2) bozulur. Her üye için en sevdiği
     // yapımlardan 4 afiş önizlemesi eklenir.
-    public function getTopProfiles(int $uid): void
+    public function getTopProfiles(?int $uid = null): void
     {
         $locale = cinema_content_locale();
         $profiles = $this->readTopProfilesCache($locale);
@@ -119,25 +119,27 @@ trait SocialProfilesPublicTrait
             $this->writeTopProfilesCache($locale, $profiles);
         }
 
-        $blockedUsers = $this->db->prepare(
-            'SELECT blocked_user_id AS id FROM user_blocks WHERE user_id = ?
-             UNION
-             SELECT user_id AS id FROM user_blocks WHERE blocked_user_id = ?'
-        );
-        $blockedUsers->execute([$uid, $uid]);
-        $blockedIds = array_fill_keys(
-            array_map('intval', $blockedUsers->fetchAll(PDO::FETCH_COLUMN)),
-            true
-        );
-        if ($blockedIds !== []) {
-            $profiles = array_values(array_filter(
-                $profiles,
-                static fn(array $profile): bool => !isset($blockedIds[(int) $profile['id']])
-            ));
+        if ($uid !== null) {
+            $blockedUsers = $this->db->prepare(
+                'SELECT blocked_user_id AS id FROM user_blocks WHERE user_id = ?
+                 UNION
+                 SELECT user_id AS id FROM user_blocks WHERE blocked_user_id = ?'
+            );
+            $blockedUsers->execute([$uid, $uid]);
+            $blockedIds = array_fill_keys(
+                array_map('intval', $blockedUsers->fetchAll(PDO::FETCH_COLUMN)),
+                true
+            );
+            if ($blockedIds !== []) {
+                $profiles = array_values(array_filter(
+                    $profiles,
+                    static fn(array $profile): bool => !isset($blockedIds[(int) $profile['id']])
+                ));
+            }
         }
 
         $likedOwnerIds = [];
-        if ($profiles !== []) {
+        if ($uid !== null && $profiles !== []) {
             $ids = array_column($profiles, 'id');
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $likes = $this->db->prepare(
@@ -148,7 +150,7 @@ trait SocialProfilesPublicTrait
         }
         foreach ($profiles as &$profile) {
             $profile['me_liked'] = isset($likedOwnerIds[(int) $profile['id']]);
-            $profile['is_me'] = (int) $profile['id'] === $uid;
+            $profile['is_me'] = $uid !== null && (int) $profile['id'] === $uid;
         }
         unset($profile);
         json_out(200, ['profiles' => $profiles]);

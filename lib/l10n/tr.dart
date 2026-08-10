@@ -634,6 +634,10 @@ const Map<String, String> kTrStrings = {
   'match_button': 'Eşleştir',
   'swipe_failed': 'Bağlantı kurulamadı.',
   'browse_friends_activity': 'Arkadaşlarından Son Sinyaller',
+  'browse_friends_teaser_body':
+      'Arkadaşlarının puanları ve seçimleri burada görünür. Bağlanmak için giriş yap — ya da Birlikte sekmesinde nasıl çalıştığını gör.',
+  'browse_friends_teaser_together': 'Birlikte’yi Aç',
+  'profile_like_need_login': 'Profil beğenmek için giriş yapmalısın.',
   'browse_rating_good': 'İyi dedi',
   'browse_rating_excellent': 'Harika dedi',
   'recap_journey_title': '{}\nSinema Yolculuğun',

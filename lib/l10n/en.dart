@@ -640,6 +640,10 @@ const Map<String, String> kEnStrings = {
       'Search by movie name\nto add your favorites',
   'onboarding_search_empty_tv': 'Search by TV show name\nto add your favorites',
   'browse_friends_activity': 'Recent Activity from Friends',
+  'browse_friends_teaser_body':
+      'Friends’ ratings and picks show up here. Sign in to connect — or open Together to see how it works.',
+  'browse_friends_teaser_together': 'Open Together',
+  'profile_like_need_login': 'Sign in to like a profile.',
   'browse_rating_good': 'liked it',
   'browse_rating_excellent': 'loved it',
   'recap_journey_title': 'Your {}\nCinema Journey',

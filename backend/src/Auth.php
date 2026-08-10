@@ -11,19 +11,36 @@ class Auth
     // ─── Korumalı uçlar için: Bearer access token'ı doğrula, user_id döndür ──
     public function requireUser(): int
     {
-        $token = bearer_token();
-        if (!$token) fail(401, 'Yetkilendirme başlığı yok.');
-        $payload = Jwt::decode($token, $this->cfg['jwt_secret']);
-        if (!$payload || ($payload['typ'] ?? '') !== 'access') {
+        $uid = $this->optionalUser();
+        if ($uid === null) {
+            // optionalUser Bearer yokken null döner; korumalı uçlarda daha net
+            // mesaj için başlık kontrolünü ayrıca yap.
+            if (!bearer_token()) {
+                fail(401, 'Yetkilendirme başlığı yok.');
+            }
             fail(401, 'Geçersiz veya süresi dolmuş oturum.');
         }
+        return $uid;
+    }
+
+    // ─── İsteğe bağlı kimlik: Bearer yoksa null; varsa doğrula (401 yok) ───
+    // Herkese açık uçlar (ör. GET /social/profiles/top) kişiselleştirme için
+    // oturumu kullanır; misafirler de aynı içeriği alır.
+    public function optionalUser(): ?int
+    {
+        $token = bearer_token();
+        if (!$token) {
+            return null;
+        }
+        $payload = Jwt::decode($token, $this->cfg['jwt_secret']);
+        if (!$payload || ($payload['typ'] ?? '') !== 'access') {
+            return null;
+        }
         $uid = (int) $payload['sub'];
-        // Hesap silindikten sonra access JWT ~2 saat geçerli kalabilir; FK 500
-        // yerine oturumu düşür.
         $st = $this->db->prepare('SELECT 1 FROM users WHERE id = ?');
         $st->execute([$uid]);
         if ($st->fetchColumn() === false) {
-            fail(401, 'Geçersiz veya süresi dolmuş oturum.');
+            return null;
         }
         return $uid;
     }

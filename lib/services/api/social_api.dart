@@ -213,7 +213,7 @@ mixin SocialApi on ApiClient {
     final response = await _request(
       'GET',
       '/social/profiles/top',
-      requireAuth: true,
+      requireAuth: false,
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {

@@ -398,7 +398,8 @@ switch (true) {
 
     // ── Popüler Listeler (profil beğenileri) ───────────────────────────────
     case $route === 'GET /social/profiles/top':
-        $social->getTopProfiles($auth->requireUser());
+        // Herkese açık sıralama; Bearer varsa me_liked / engel filtresi uygulanır.
+        $social->getTopProfiles($auth->optionalUser());
         break;
 
     // ── Topluluk "Popüler Top 20" (başlık listeleri) ───────────────────────

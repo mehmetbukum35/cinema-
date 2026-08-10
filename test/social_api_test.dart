@@ -202,6 +202,39 @@ void main() {
     });
   });
 
+  group('SocialApi public top profiles', () {
+    test('getTopProfiles works without auth tokens', () async {
+      PrefsService.resetInMemoryCaches();
+      SharedPreferences.setMockInitialValues({});
+      await PrefsAuthStorage.clearTokens();
+
+      final api = apiWith(200, {
+        'profiles': [
+          {
+            'id': 1,
+            'username': 'alice',
+            'like_count': 0,
+            'me_liked': false,
+            'is_me': false,
+            'liked_titles': 1,
+            'previews': [],
+          },
+        ],
+      });
+
+      final res = await api.getTopProfiles();
+      expect(requests.last.url.path, '/api/social/profiles/top');
+      expect(requests.last.headers.containsKey('Authorization'), isFalse);
+      expect(res['profiles'], hasLength(1));
+    });
+
+    test('getTopProfiles still sends Bearer when logged in', () async {
+      final api = apiWith(200, {'profiles': []});
+      await api.getTopProfiles();
+      expect(requests.last.headers['Authorization'], 'Bearer a');
+    });
+  });
+
   group('SocialApi error mapping', () {
     test(
       'every failing endpoint throws ApiException with the server code',

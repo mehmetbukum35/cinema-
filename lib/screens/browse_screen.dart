@@ -22,6 +22,7 @@ import 'browse/browse_skeleton.dart';
 import 'browse/browse_error_view.dart';
 import 'browse/browse_header_block.dart';
 import 'browse/friends_activity_section.dart';
+import 'browse/friends_activity_teaser.dart';
 import 'browse/top_profiles_section.dart';
 import 'browse/popular_community_section.dart';
 import 'browse/movie_rail_section.dart';
@@ -204,17 +205,15 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     }
     final isAuthenticated = ref.read(authProvider).isAuthenticated;
     final apiService = isAuthenticated ? ref.read(apiServiceProvider) : null;
-    if (isAuthenticated && background) {
-      // initState/build sırasında provider state'i değiştirmek yasaktır
-      // (Riverpod "Tried to modify a provider while the widget tree was
-      // building" hatası). Bu yüzden build bitene kadar erteliyoruz.
-      Future.microtask(() {
-        if (!mounted) return;
+    // Popüler profiller herkese açık; arkadaş feed'i auth ister.
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(socialProvider.notifier).loadTopProfiles();
+      if (isAuthenticated && background) {
         ref.read(socialProvider.notifier).loadFriends();
         ref.read(socialProvider.notifier).loadActivityFeed();
-        ref.read(socialProvider.notifier).loadTopProfiles();
-      });
-    }
+      }
+    });
 
     try {
       final page = ref.read(browsePopularPageProvider);
@@ -776,10 +775,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               feed: socialState.activityFeed,
               onOpen: _openDetail,
               onBlocked: _removeBlockedMovie,
-            ),
+            )
+          else if (!isAuthenticated)
+            const BrowseFriendsActivityTeaser(),
 
           // ── Popüler Üyeler ─────────────────────────────────────────────────────────
-          if (isAuthenticated && socialState.topProfiles.isNotEmpty)
+          if (socialState.topProfiles.isNotEmpty)
             BrowseTopProfilesSection(profiles: socialState.topProfiles),
 
           // ── Topluluğun Favorileri: Popüler Top 20 (Film + Dizi) ───────────────

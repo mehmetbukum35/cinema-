@@ -60,11 +60,11 @@ class ApiClient {
     if (requestId case final requestId?) {
       headers['X-Request-ID'] = requestId;
     }
-    if (requireAuth) {
-      final token = await PrefsAuthStorage.getAccessToken();
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+    // Optional-auth uçları (requireAuth: false) da Bearer varsa gönderir —
+    // örn. GET /social/profiles/top misafire açık ama girişliyken me_liked ister.
+    final token = await PrefsAuthStorage.getAccessToken();
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
     }
     return headers;
   }
@@ -140,10 +140,9 @@ class ApiClient {
 
     // A path alone is not an identity. Account switches and locale changes can
     // happen while an older request is still in flight; never hand that
-    // response to the new session/language.
-    final authToken = requireAuth
-        ? await PrefsAuthStorage.getAccessToken()
-        : null;
+    // response to the new session/language. Optional-auth GETs still key on
+    // the token so a guest coalesce cannot steal a personalized response.
+    final authToken = await PrefsAuthStorage.getAccessToken();
     final key = (localeCode(), authToken, path);
     final existing = _inFlightGets[key];
     if (existing != null) {
