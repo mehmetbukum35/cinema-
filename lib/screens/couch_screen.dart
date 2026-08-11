@@ -28,7 +28,7 @@ class CouchScreen extends ConsumerStatefulWidget {
 }
 
 class _CouchScreenState extends ConsumerState<CouchScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   // dispose() içinde ref KULLANILAMAZ ("Cannot use ref after the widget was
   // disposed"); notifier referansı initState'te alınır, dispose ref'siz çalışır.
   late final CouchNotifier _couch;
@@ -39,6 +39,7 @@ class _CouchScreenState extends ConsumerState<CouchScreen>
   void initState() {
     super.initState();
     _couch = ref.read(couchProvider.notifier);
+    WidgetsBinding.instance.addObserver(this);
 
     _theirProgressAnimController = AnimationController(
       vsync: this,
@@ -66,8 +67,25 @@ class _CouchScreenState extends ConsumerState<CouchScreen>
     });
   }
 
+  /// Poll 2.5 sn'de bir istek atıyor. Ekran mounted kaldığı sürece uygulama
+  /// arka plandayken de dönüyordu: cebe konan bir telefon saatte ~1.440 istek
+  /// üretiyordu. Arka planda kimse ekrana bakmıyor; eşleşmeyi zaten push
+  /// haber veriyor. Öne dönünce arada kaçırılan durum checkActive ile alınır.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    if (state == AppLifecycleState.resumed) {
+      _couch.startPolling();
+      _couch.checkActive();
+    } else {
+      _couch.stopPolling();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _theirProgressAnimController?.dispose();
     // Poll yalnızca bu ekran açıkken çalışır (pil/istek tasarrufu).
     _couch.stopPolling();
