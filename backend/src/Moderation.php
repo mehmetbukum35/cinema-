@@ -121,7 +121,7 @@ class Moderation
              LEFT JOIN titles t ON t.tmdb_id = r.movie_id AND t.is_tv = r.is_tv AND t.locale = 'tr'
              LEFT JOIN titles tf ON tf.tmdb_id = r.movie_id AND tf.is_tv = r.is_tv AND tf.locale = 'und'
              JOIN users u ON u.id = rr.reported_user_id
-              WHERE rr.status = 'open'
+              WHERE rr.status = 'open' AND r.deleted = 0
               GROUP BY rr.reported_user_id, rr.movie_id, rr.is_tv
               ORDER BY report_count DESC, last_report_at DESC
               LIMIT 200"

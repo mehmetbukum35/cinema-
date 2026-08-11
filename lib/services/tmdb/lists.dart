@@ -51,16 +51,35 @@ mixin TmdbListsMixin on TmdbServiceBase {
     }, isTV: isTV);
   }
 
-  Future<List<Movie>> getTrending() {
-    // Trending has no certification query params; Family Mode relies on
-    // client-side adult filtering in _sanitizeList.
+  Future<List<Movie>> getTrending() async {
+    final isFamily = await PrefsAppSettings.isFamilyMode();
+    if (isFamily) {
+      // Trending API sertifika kabul etmez — family'de cert'li popular karışımı.
+      final results = await Future.wait([
+        getPopular(isTV: false),
+        getPopular(isTV: true),
+      ]);
+      final mixed = <Movie>[];
+      final movies = results[0];
+      final shows = results[1];
+      final n = movies.length > shows.length ? movies.length : shows.length;
+      for (var i = 0; i < n; i++) {
+        if (i < movies.length) mixed.add(movies[i]);
+        if (i < shows.length) mixed.add(shows[i]);
+      }
+      return mixed;
+    }
     return _fetchListMixed('/3/trending/all/week', {
       'api_key': _apiKey,
       'language': _language,
     });
   }
 
-  Future<List<Movie>> getTrendingPaged({required bool isTV, int page = 1}) {
+  Future<List<Movie>> getTrendingPaged({required bool isTV, int page = 1}) async {
+    final isFamily = await PrefsAppSettings.isFamilyMode();
+    if (isFamily) {
+      return getPopular(isTV: isTV, page: page);
+    }
     final path = isTV ? '/3/trending/tv/week' : '/3/trending/movie/week';
     return _fetchList(path, {
       'api_key': _apiKey,
@@ -125,7 +144,20 @@ mixin TmdbListsMixin on TmdbServiceBase {
   }
 
   Future<List<Movie>> getAiringToday() async {
-    // /tv/airing_today has no certification params; adult filtered in _sanitizeList.
+    final isFamily = await PrefsAppSettings.isFamilyMode();
+    if (isFamily) {
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      return _fetchList('/3/discover/tv', {
+        'api_key': _apiKey,
+        'language': _language,
+        'sort_by': 'popularity.desc',
+        'include_adult': 'false',
+        'air_date.gte': today,
+        'air_date.lte': today,
+        'certification_country': 'US',
+        'certification.lte': 'TV-14',
+      }, isTV: true);
+    }
     return _fetchList('/3/tv/airing_today', {
       'api_key': _apiKey,
       'language': _language,
@@ -133,7 +165,25 @@ mixin TmdbListsMixin on TmdbServiceBase {
   }
 
   Future<List<Movie>> getOnTheAir() async {
-    // /tv/on_the_air has no certification params; adult filtered in _sanitizeList.
+    final isFamily = await PrefsAppSettings.isFamilyMode();
+    if (isFamily) {
+      final now = DateTime.now();
+      final gte = now.toIso8601String().substring(0, 10);
+      final lte = now
+          .add(const Duration(days: 7))
+          .toIso8601String()
+          .substring(0, 10);
+      return _fetchList('/3/discover/tv', {
+        'api_key': _apiKey,
+        'language': _language,
+        'sort_by': 'popularity.desc',
+        'include_adult': 'false',
+        'air_date.gte': gte,
+        'air_date.lte': lte,
+        'certification_country': 'US',
+        'certification.lte': 'TV-14',
+      }, isTV: true);
+    }
     return _fetchList('/3/tv/on_the_air', {
       'api_key': _apiKey,
       'language': _language,

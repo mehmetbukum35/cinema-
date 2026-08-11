@@ -168,7 +168,7 @@ class SyncService {
     }
   }
 
-  Future<int> _pushPayloadInChunks(
+  Future<({int applied, int serverTime})> _pushPayloadInChunks(
     Map<String, dynamic> payload,
     String? sessionUserId,
   ) async {
@@ -185,6 +185,7 @@ class SyncService {
     });
     final batchCount = maxLength == 0 ? 1 : (maxLength / _pushBatchSize).ceil();
     var applied = 0;
+    var serverTime = 0;
 
     for (var batch = 0; batch < batchCount; batch++) {
       final start = batch * _pushBatchSize;
@@ -214,6 +215,8 @@ class SyncService {
       final result = await _apiService.push(chunk);
       await _ensureSession(sessionUserId);
       applied += _asInt(result['applied']);
+      final st = _asInt(result['server_time']);
+      if (st > serverTime) serverTime = st;
       final accepted = (result['accepted_event_ids'] as List?)
           ?.map((id) => id.toString())
           .toSet();
@@ -221,7 +224,7 @@ class SyncService {
         await RecommendationTelemetryService.removeEvents(accepted);
       }
     }
-    return applied;
+    return (applied: applied, serverTime: serverTime);
   }
 
   // Core 2-way delta-sync method.
@@ -572,18 +575,22 @@ class SyncService {
         .toList();
 
     // Push local updates to server
-    final applied = await _pushPayloadInChunks(payload, sessionUserId);
-    debugPrint("Push complete. Applied changes: $applied");
+    final pushResult = await _pushPayloadInChunks(payload, sessionUserId);
+    debugPrint("Push complete. Applied changes: ${pushResult.applied}");
 
     // Push imlecini gönderilen satırların max(updated_at)'ine bağla — duvar
     // saati değil. Boş push'ta ilerleme yok (saat geri alınca veri kaybı olmaz).
-    // Bir milisaniyelik örtüşme, snapshot alındıktan sonra aynı ms damgasıyla
-    // yazılan yerel değişikliklerin sonraki turda kaybolmasını önler.
+    // İleri saatli istemci damgasını server_time+skew ile kırp — aksi halde
+    // soft-delete sonrası revive hiç push edilmez.
     final pushedMax = _maxUpdatedAtInPayload(payload);
-    final nextPushCursor = pushedMax > lastPush
+    var nextPushCursor = pushedMax > lastPush
         ? _overlappingCursor(pushedMax)
         : lastPush;
-    if (pushedMax > lastPush) {
+    if (pushResult.serverTime > 0) {
+      final cap = pushResult.serverTime + _clockSkewMs;
+      if (nextPushCursor > cap) nextPushCursor = cap;
+    }
+    if (nextPushCursor > lastPush) {
       await PrefsSyncMeta.setLastPushTime(nextPushCursor);
     }
 
@@ -972,17 +979,24 @@ class SyncService {
           .toList(),
     };
 
-    final applied = await _pushPayloadInChunks(payload, sessionUserId);
+    final pushResult = await _pushPayloadInChunks(payload, sessionUserId);
     final pushedMax = _maxUpdatedAtInPayload(payload);
     if (pushedMax > 0) {
       final lastPush = await PrefsSyncMeta.getLastPushTime();
-      if (pushedMax > lastPush) {
-        await PrefsSyncMeta.setLastPushTime(_overlappingCursor(pushedMax));
+      var next = pushedMax > lastPush
+          ? _overlappingCursor(pushedMax)
+          : lastPush;
+      if (pushResult.serverTime > 0) {
+        final cap = pushResult.serverTime + _clockSkewMs;
+        if (next > cap) next = cap;
+      }
+      if (next > lastPush) {
+        await PrefsSyncMeta.setLastPushTime(next);
       }
     }
     debugPrint(
       'Sync pushed ${rows.length} favorites after cap normalize '
-      '(applied=$applied).',
+      '(applied=${pushResult.applied}).',
     );
   }
 }

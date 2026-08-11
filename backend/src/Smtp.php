@@ -83,7 +83,7 @@ class Smtp
                 "To: <{$to}>",
                 'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
                 'Date: ' . date('r'),
-                'Message-ID: <' . time() . '-' . md5($this->user . $to) . '@' . $this->host . '>',
+                'Message-ID: <' . time() . '.' . bin2hex(random_bytes(8)) . '-' . md5($this->user . $to) . '@' . $this->host . '>',
             ];
 
             $message = implode("\r\n", $headers) . "\r\n\r\n" . $body . "\r\n.";

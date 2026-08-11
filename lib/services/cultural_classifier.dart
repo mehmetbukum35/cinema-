@@ -63,8 +63,7 @@ class CulturalClassifier {
       result.add('indian');
     }
     if (countries.contains('IR') || language == 'fa') result.add('iranian');
-    if (countries.any(_hollywoodCountries.contains) ||
-        (language == 'en' && countries.isEmpty)) {
+    if (countries.any(_hollywoodCountries.contains)) {
       result.add('hollywood');
     }
     if (countries.any(_europeanCountries.contains)) result.add('european');
