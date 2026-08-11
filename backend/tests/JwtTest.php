@@ -183,4 +183,33 @@ class JwtTest extends TestCase
         $decoded = Jwt::decode($token, $secrets);
         $this->assertNull($decoded, 'Unknown kid olan token null dönmeli.');
     }
+
+    public function testDecodeRejectsTokenWithFutureNbf(): void
+    {
+        $payload = ['sub' => 200, 'exp' => time() + 3600, 'nbf' => time() + 300];
+        $token = Jwt::encode($payload, self::SECRET);
+
+        $decoded = Jwt::decode($token, self::SECRET);
+        $this->assertNull($decoded, 'nbf henüz gelmemişse token geçersiz sayılmalı.');
+    }
+
+    public function testDecodeRejectsTokenWithFarFutureIat(): void
+    {
+        $payload = ['sub' => 201, 'exp' => time() + 3600, 'iat' => time() + 120];
+        $token = Jwt::encode($payload, self::SECRET);
+
+        $decoded = Jwt::decode($token, self::SECRET);
+        $this->assertNull($decoded, 'iat gelecekte (60 s üstü) olan token reddedilmeli.');
+    }
+
+    public function testDecodeAcceptsTokenWithIatWithinSkew(): void
+    {
+        // 30 saniyelik skew tolerans içinde
+        $payload = ['sub' => 202, 'exp' => time() + 3600, 'iat' => time() + 30];
+        $token = Jwt::encode($payload, self::SECRET);
+
+        $decoded = Jwt::decode($token, self::SECRET);
+        $this->assertIsArray($decoded, 'iat 60 s tolerans içindeyse token kabul edilmeli.');
+        $this->assertSame(202, $decoded['sub']);
+    }
 }

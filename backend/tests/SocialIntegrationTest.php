@@ -800,6 +800,31 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame(0, (int) $isPublic);
     }
 
+    public function testSetupProfileRejectsDuplicateUsername(): void
+    {
+        // bob (id=2) zaten 'bob' username'ine sahip; alice (id=1) aynısını almaya çalışır.
+        try {
+            $this->social->setupProfile(1, ['username' => 'bob']);
+            $this->fail('Alınmış username için 409 beklenir');
+        } catch (TestExitException) {
+            $this->assertSame(409, TestHelperRegistry::$lastStatus);
+            $this->assertSame('username_taken', TestHelperRegistry::$lastBody['code'] ?? null);
+        }
+
+        // alice'in username'i değişmemiş olmalı
+        $aliceUsername = $this->db->query("SELECT username FROM users WHERE id = 1")->fetchColumn();
+        $this->assertSame('alice', $aliceUsername);
+    }
+
+    public function testSetupProfileAllowsSameUsernameForSameUser(): void
+    {
+        // alice mevcut 'alice' username'ini koruyabilmeli (is_public değiştirebilmeli)
+        $this->social->setupProfile(1, ['username' => 'alice', 'is_public' => 0]);
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $isPublic = $this->db->query('SELECT is_public FROM users WHERE id = 1')->fetchColumn();
+        $this->assertSame(0, (int) $isPublic);
+    }
+
     public function testTopProfilesHidesBlockedUsersInBothDirections(): void
     {
         $this->social->blockUser(1, ['user_id' => 2]);

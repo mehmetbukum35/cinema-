@@ -91,19 +91,25 @@ trait SocialReviewsTrait
         $st->execute([$reportedId, $movieId, $isTV]);
         if (!$st->fetch()) fail(404, 'Şikayet edilecek yorum bulunamadı.');
 
-        // Motor bağımsız idempotent ekleme (önce kontrol, sonra yaz).
-        $chk = $this->db->prepare(
-            'SELECT 1 FROM review_reports
-              WHERE reporter_id = ? AND reported_user_id = ? AND movie_id = ? AND is_tv = ?'
-        );
-        $chk->execute([$uid, $reportedId, $movieId, $isTV]);
-        if (!$chk->fetch()) {
+        // INSERT OR IGNORE (SQLite) / INSERT IGNORE (MySQL) ile atomik idempotent
+        // ekleme: SELECT→INSERT arasındaki race condition yoktur; UNIQUE ihlali
+        // sessizce görmezden gelinir. Eğer driver desteklemiyorsa PDOException
+        // yakalanır ve 409 döner.
+        $driver = (string) $this->db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        $orIgnore = $driver === 'mysql' ? 'INSERT IGNORE' : 'INSERT OR IGNORE';
+        try {
             $ins = $this->db->prepare(
-                'INSERT INTO review_reports
+                "$orIgnore INTO review_reports
                    (reporter_id, reported_user_id, movie_id, is_tv, reason, status, created_at)
-                 VALUES (?, ?, ?, ?, ?, \'open\', ?)'
+                 VALUES (?, ?, ?, ?, ?, 'open', ?)"
             );
             $ins->execute([$uid, $reportedId, $movieId, $isTV, $reason, now_ms()]);
+        } catch (\PDOException $e) {
+            if (str_starts_with((string) $e->getCode(), '23')) {
+                // Zaten raporlanmış; idempotent 200 döndür.
+            } else {
+                throw $e;
+            }
         }
 
         $cnt = $this->db->prepare(

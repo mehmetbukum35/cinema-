@@ -213,7 +213,11 @@ class Auth
         try {
             $code = sprintf('%06d', random_int(0, 999999));
         } catch (Throwable $e) {
-            $code = strval(rand(100000, 999999));
+            // random_int yalnızca sistem entropy kaynağı tamamen bittiğinde
+            // atar; bu durumda kriptografik olarak zayıf rand() kullanmak
+            // yerine işlemi iptal et; kullanıcı yeniden deneyebilir.
+            cinema_error('random_int failed in sendVerificationCode: ' . $e->getMessage());
+            return;
         }
 
         $expiresAt = now_ms() + 15 * 60 * 1000; // 15 dk
@@ -947,7 +951,8 @@ class Auth
         try {
             $code = sprintf('%06d', random_int(0, 999999));
         } catch (Throwable $e) {
-            $code = strval(rand(100000, 999999));
+            cinema_error('random_int failed in forgotPassword: ' . $e->getMessage());
+            return;
         }
 
         $expiresAt = now_ms() + 15 * 60 * 1000; // 15 mins

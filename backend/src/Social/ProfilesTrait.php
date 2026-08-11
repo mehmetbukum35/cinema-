@@ -19,16 +19,37 @@ trait SocialProfilesTrait
             fail(422, 'Kullanıcı adı 3-30 karakter olmalı ve sadece harf, sayı veya alt çizgi içermelidir.');
         }
 
-        // Kendisi hariç bu kullanıcı adını alan başkası var mı kontrol et
-        $st = $this->db->prepare('SELECT id FROM users WHERE username = ? AND id != ?');
-        $st->execute([$username, $uid]);
-        if ($st->fetch()) {
-            fail(409, 'Bu kullanıcı adı zaten alınmış.');
+        // UNIQUE constraint ihlalini yakala; SELECT→UPDATE arasında race olsa
+        // bile veritabanı ikinci yazımı reddeder (409 döneriz).
+        try {
+            $up = $this->db->prepare(
+                'UPDATE users SET username = ?, is_public = ?, updated_at = ?
+                  WHERE id = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM users u2
+                         WHERE u2.username = ? AND u2.id != ?
+                    )'
+            );
+            $up->execute([$username, $isPublic, now_ms(), $uid, $username, $uid]);
+        } catch (\PDOException $e) {
+            // UNIQUE constraint violation (SQLSTATE 23*)
+            if (str_starts_with((string) $e->getCode(), '23')) {
+                fail(409, 'Bu kullanıcı adı zaten alınmış.', 'username_taken');
+            }
+            throw $e;
         }
 
-        // Güncelle
-        $up = $this->db->prepare('UPDATE users SET username = ?, is_public = ?, updated_at = ? WHERE id = ?');
-        $up->execute([$username, $isPublic, now_ms(), $uid]);
+        if ($up->rowCount() === 0) {
+            // Satır güncellenmedi: ya kullanıcı yoktur ya da username çakıştı.
+            // Kullanıcı varlığını doğrula; yoksa 404, varsa username çakışması.
+            $exists = $this->db->prepare('SELECT 1 FROM users WHERE id = ?');
+            $exists->execute([$uid]);
+            if (!$exists->fetch()) {
+                fail(404, 'Kullanıcı bulunamadı.');
+            }
+            fail(409, 'Bu kullanıcı adı zaten alınmış.', 'username_taken');
+        }
+
         $this->invalidateTopProfilesCache();
 
         json_out(200, ['ok' => true, 'username' => $username, 'is_public' => $isPublic]);

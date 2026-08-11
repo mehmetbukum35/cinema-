@@ -108,25 +108,27 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
 
   // ─── Veri yükleme fazları ─────────────────────────────────────────────────
 
+  /// Bir detay isteğini sessizce yutmadan hata ayıklar; başarısızsa varsayılan
+  /// değeri döner. Hem Phase 1 hem Phase 2 tarafından kullanılır.
+  Future<T> _runSafe<T>(Future<T> future, T defaultValue) async {
+    try {
+      return await future;
+    } catch (e, st) {
+      debugPrint('Error loading detail item: $e\n$st');
+      return defaultValue;
+    }
+  }
+
   Future<void> _loadExtras() async {
     final id = widget.movie.id;
     final isTV = widget.movie.isTV;
 
-    Future<T> runSafe<T>(Future<T> future, T defaultValue) async {
-      try {
-        return await future;
-      } catch (e, st) {
-        debugPrint('Error loading detail item: $e\n$st');
-        return defaultValue;
-      }
-    }
-
     // Phase 1: Load critical information needed for the upper fold immediately
     final primaryResults = await Future.wait([
-      runSafe(widget.service.getFullDetails(id, isTV: isTV), null),
-      runSafe(widget.service.getTrailerKey(id, isTV: isTV), null),
-      runSafe(PrefsLibraryFacade.getRating(id, isTV), null),
-      runSafe(PrefsLibraryFacade.getWatchedSeasons(id), <int>{}),
+      _runSafe(widget.service.getFullDetails(id, isTV: isTV), null),
+      _runSafe(widget.service.getTrailerKey(id, isTV: isTV), null),
+      _runSafe(PrefsLibraryFacade.getRating(id, isTV), null),
+      _runSafe(PrefsLibraryFacade.getWatchedSeasons(id), <int>{}),
     ]);
 
     if (!mounted) return;
@@ -149,17 +151,28 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       _loadCommunityScore();
     }
 
-    // Phase 2: Load secondary details asynchronously in the background
-    Future.wait([
-      runSafe(
-        widget.service.getWatchProviders(id, isTV: isTV),
-        <WatchProvider>[],
-      ),
-      runSafe(widget.service.getCredits(id, isTV: isTV), <CastMember>[]),
-      runSafe(widget.service.getSimilar(id, isTV: isTV), <Movie>[]),
-      runSafe(widget.service.getReviews(id, isTV: isTV), <Review>[]),
-      runSafe(widget.service.getKeywords(id, isTV: isTV), <String>[]),
-    ]).then((secondaryResults) async {
+    // Phase 2: Load secondary details asynchronously in the background.
+    // unawaited + catchError ile exception'lar sessizce yutulmaz; crash yerine
+    // log bırakılır ve widget'ın geri kalanı çalışmaya devam eder.
+    unawaited(_loadSecondary(id: id, isTV: isTV, details: details));
+  }
+
+  Future<void> _loadSecondary({
+    required int id,
+    required bool isTV,
+    required Map<String, dynamic>? details,
+  }) async {
+    try {
+      final secondaryResults = await Future.wait([
+        _runSafe(
+          widget.service.getWatchProviders(id, isTV: isTV),
+          <WatchProvider>[],
+        ),
+        _runSafe(widget.service.getCredits(id, isTV: isTV), <CastMember>[]),
+        _runSafe(widget.service.getSimilar(id, isTV: isTV), <Movie>[]),
+        _runSafe(widget.service.getReviews(id, isTV: isTV), <Review>[]),
+        _runSafe(widget.service.getKeywords(id, isTV: isTV), <String>[]),
+      ]);
       if (!mounted) return;
 
       setState(() {
@@ -176,7 +189,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
         final col = details['belongs_to_collection'] as Map<String, dynamic>?;
         if (col != null) {
           final colId = col['id'] as int;
-          final parts = await runSafe(
+          final parts = await _runSafe(
             widget.service.getCollection(colId),
             <Movie>[],
           );
@@ -187,7 +200,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           }
         }
       }
-    });
+    } catch (e, st) {
+      debugPrint('_loadSecondary error: $e\n$st');
+    }
   }
 
   Future<void> _loadFriendsReviews() async {

@@ -56,6 +56,10 @@ class Jwt
         $payload = json_decode(self::b64d($p), true);
         if (!is_array($payload)) return null;
         if (isset($payload['exp']) && time() >= (int)$payload['exp']) return null;
+        // not-before: token henüz aktif değil
+        if (isset($payload['nbf']) && time() < (int)$payload['nbf']) return null;
+        // issued-at: gelecekte üretilmiş token'ları reddet (60 s tolerans)
+        if (isset($payload['iat']) && (int)$payload['iat'] > time() + 60) return null;
         return $payload;
     }
 
