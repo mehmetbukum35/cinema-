@@ -227,11 +227,17 @@ class Moderation
             fail(422, 'Geçersiz istek.');
         }
 
-        if ($action === 'hide' || $action === 'restore') {
+        if ($action === 'hide' || $action === 'restore' || $action === 'dismiss') {
+            // dismiss = "görünür bırak": otomatik gizlenen yorumu da aç.
+            $hidden = match ($action) {
+                'hide' => 1,
+                'restore', 'dismiss' => 0,
+                default => 0,
+            };
             $up = $this->db->prepare(
                 'UPDATE ratings SET is_hidden = ? WHERE user_id = ? AND movie_id = ? AND is_tv = ?'
             );
-            $up->execute([$action === 'hide' ? 1 : 0, $userId, $movieId, $isTV]);
+            $up->execute([$hidden, $userId, $movieId, $isTV]);
         }
 
         $newStatus = $action === 'restore' ? 'dismissed' : 'resolved';

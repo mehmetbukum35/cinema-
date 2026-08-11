@@ -974,6 +974,12 @@ class SocialNotifier extends Notifier<SocialState> {
       );
     }
   }
+
+  /// Mod / arkadaş seçimi değişince uçuştaki kesişim yanıtını düşür.
+  void cancelWatchlistIntersection() {
+    ++_intersectionLoadGeneration;
+    state = state.copyWith(intersectionLoading: false, intersection: []);
+  }
 }
 
 final socialProvider = NotifierProvider<SocialNotifier, SocialState>(

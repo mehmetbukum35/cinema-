@@ -90,6 +90,7 @@ class SwipeNotifier extends Notifier<SwipeState> {
 
   @override
   SwipeState build() {
+    ++_loadGeneration;
     _service = _serviceOverride ?? ref.watch(tmdbServiceProvider);
     _engine = _engineOverride ?? ref.watch(recommendationEngineProvider);
     ref.onDispose(_flushPendingSync);
@@ -143,10 +144,9 @@ class SwipeNotifier extends Notifier<SwipeState> {
     final generation = _loadGeneration;
     try {
       final rated = await PrefsLibraryFacade.getRatedIds();
-      if (ref.mounted) {
-        state = state.copyWith(ratedIds: rated);
-        await loadMore();
-      }
+      if (!ref.mounted || generation != _loadGeneration) return;
+      state = state.copyWith(ratedIds: rated);
+      await loadMore();
     } catch (e) {
       if (ref.mounted && generation == _loadGeneration) {
         state = state.copyWith(loading: false, error: () => e.toString());

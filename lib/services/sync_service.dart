@@ -81,6 +81,61 @@ Future<String> _resolveGenreIdsJson(
   return '[]';
 }
 
+/// Titles join boş gelince REPLACE yerel başlık/poster'ı '' ile ezmesin.
+Future<Map<String, Object?>> _resolveCatalogMetadata(
+  Transaction txn, {
+  required String table,
+  required String where,
+  required List<Object?> whereArgs,
+  required Object? remoteTitle,
+  required Object? remotePoster,
+  required Object? remoteBackdrop,
+  required Object? remoteOverview,
+}) async {
+  final remoteT = (remoteTitle?.toString() ?? '').trim();
+  final remoteP = remotePoster?.toString();
+  final remoteB = remoteBackdrop?.toString();
+  final remoteO = remoteOverview?.toString();
+  if (remoteT.isNotEmpty) {
+    return {
+      'title': remoteT,
+      'poster_path': remoteP,
+      'backdrop_path': remoteB,
+      'overview': remoteO,
+    };
+  }
+  final existing = await txn.query(
+    table,
+    columns: ['title', 'poster_path', 'backdrop_path', 'overview'],
+    where: where,
+    whereArgs: whereArgs,
+    limit: 1,
+  );
+  if (existing.isEmpty) {
+    return {
+      'title': '',
+      'poster_path': remoteP,
+      'backdrop_path': remoteB,
+      'overview': remoteO,
+    };
+  }
+  final row = existing.first;
+  return {
+    'title': (row['title']?.toString().trim().isNotEmpty ?? false)
+        ? row['title']
+        : '',
+    'poster_path': (remoteP != null && remoteP.isNotEmpty)
+        ? remoteP
+        : row['poster_path'],
+    'backdrop_path': (remoteB != null && remoteB.isNotEmpty)
+        ? remoteB
+        : row['backdrop_path'],
+    'overview': (remoteO != null && remoteO.trim().isNotEmpty)
+        ? remoteO
+        : row['overview'],
+  };
+}
+
 /// Bir milisaniyelik örtüşme, watermark ile tam aynı anda yazılan satırların
 /// sonraki turda sessizce atlanmasını önler. Push/pull upsert'leri idempotenttir.
 int _overlappingCursor(int value) => value > 0 ? value - 1 : 0;
@@ -749,15 +804,25 @@ class SyncService {
           whereArgs: [_asInt(f['id']), _asInt(f['is_tv'])],
           remoteGenreIds: f['genre_ids'],
         );
+        final meta = await _resolveCatalogMetadata(
+          txn,
+          table: 'favorites',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [_asInt(f['id']), _asInt(f['is_tv'])],
+          remoteTitle: f['title'],
+          remotePoster: f['poster_path'],
+          remoteBackdrop: f['backdrop_path'],
+          remoteOverview: f['overview'],
+        );
         await txn.insert('favorites', {
           'id': _asInt(f['id']),
           'is_tv': _asInt(f['is_tv']),
           'metadata_locale': f['metadata_locale'] ?? _apiService.localeCode(),
           // Favorites has the same legacy NOT NULL constraint as watchlist.
-          'title': f['title'] ?? '',
-          'poster_path': f['poster_path'],
-          'backdrop_path': f['backdrop_path'],
-          'overview': f['overview'],
+          'title': meta['title'] ?? '',
+          'poster_path': meta['poster_path'],
+          'backdrop_path': meta['backdrop_path'],
+          'overview': meta['overview'],
           'vote_average': _asDouble(f['vote_average']),
           'release_date': f['release_date'],
           'genre_ids': genreIdsJson,

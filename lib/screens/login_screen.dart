@@ -239,9 +239,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             validator: (v) {
                               final s = (v ?? '').trim();
-                              if (s.isEmpty ||
-                                  !s.contains('@') ||
-                                  !s.contains('.')) {
+                              // PHP filter_var(FILTER_VALIDATE_EMAIL) ile uyumlu kabaca kontrol.
+                              final ok = RegExp(
+                                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                              ).hasMatch(s);
+                              if (!ok) {
                                 return AppLocalizations.of(
                                       context,
                                     )?.get('auth_forgot_err_email_invalid') ??
@@ -449,9 +451,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextButton(
                             onPressed: auth.loading
                                 ? null
-                                : () => setState(
-                                    () => _isRegister = !_isRegister,
-                                  ),
+                                : () {
+                                    ref
+                                        .read(authProvider.notifier)
+                                        .clearError();
+                                    setState(
+                                      () => _isRegister = !_isRegister,
+                                    );
+                                  },
                             child: Text(
                               _isRegister
                                   ? (AppLocalizations.of(

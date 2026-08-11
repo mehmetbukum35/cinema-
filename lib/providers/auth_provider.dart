@@ -166,6 +166,10 @@ class AuthNotifier extends Notifier<AuthState>
     return AuthState();
   }
 
+  void clearError() {
+    state = state.copyWith(error: null);
+  }
+
   /// Sunucu hatasını yerel metin anahtarına çevirir. Önce makine-okur `code`
   /// alanına bakılır (yeni sözleşme); kod yoksa eski sunucularla uyum için
   /// Türkçe mesaj eşlemesine düşülür ([_mapBackendError]).

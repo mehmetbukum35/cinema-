@@ -269,6 +269,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     _debounce?.cancel();
     _searchRequestId++;
     _similarRequestId++;
+    ref.read(socialProvider.notifier).cancelWatchlistIntersection();
     setState(() {
       _matchMode = mode;
       _ctrl.clear();
@@ -295,7 +296,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         debugPrint("Sync failed on friend select: $e\n$st");
       }
     }
-    if (!mounted) return;
+    if (!mounted || _selectedFriend?.id != friend.id || _matchMode != 2) {
+      return;
+    }
     ref.read(socialProvider.notifier).loadWatchlistIntersection(friend.id);
   }
 
@@ -413,8 +416,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   _ => MatchFriendBody(
                     selectedFriend: _selectedFriend,
                     onSelectFriend: _onSelectFriend,
-                    onDeselectFriend: () =>
-                        setState(() => _selectedFriend = null),
+                    onDeselectFriend: () {
+                      ref
+                          .read(socialProvider.notifier)
+                          .cancelWatchlistIntersection();
+                      setState(() => _selectedFriend = null);
+                    },
                   ),
                 },
               ),
