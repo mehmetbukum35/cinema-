@@ -421,6 +421,7 @@ class SocialNotifier extends Notifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       final res = await _apiService.setupProfile(username, isPublic);
+      if (!ref.mounted) return false;
       final profileUsername = res['username']?.toString() ?? username;
       final profileIsPublic =
           res['is_public'] == 1 ||
@@ -429,6 +430,7 @@ class SocialNotifier extends Notifier<SocialState> {
       await ref
           .read(authProvider.notifier)
           .updateUserProfile(profileUsername, profileIsPublic);
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false);
       unawaited(loadFriends());
       unawaited(loadActivityFeed());
@@ -438,9 +440,11 @@ class SocialNotifier extends Notifier<SocialState> {
       unawaited(loadTopProfiles());
       return true;
     } on ApiException catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.message);
       return false;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.toString());
       return false;
     }
@@ -450,13 +454,16 @@ class SocialNotifier extends Notifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       await _apiService.sendFriendRequest(searchQuery);
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false);
       await loadFriends();
       return true;
     } on ApiException catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.message);
       return false;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.toString());
       return false;
     }
@@ -466,13 +473,16 @@ class SocialNotifier extends Notifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       await _apiService.acceptFriendRequest(friendId);
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false);
       await loadFriends();
       return true;
     } on ApiException catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.message);
       return false;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.toString());
       return false;
     }
@@ -482,13 +492,16 @@ class SocialNotifier extends Notifier<SocialState> {
     state = state.copyWith(loading: true, error: () => null);
     try {
       await _apiService.rejectFriendRequest(friendId);
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false);
       await loadFriends();
       return true;
     } on ApiException catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.message);
       return false;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(loading: false, error: () => e.toString());
       return false;
     }

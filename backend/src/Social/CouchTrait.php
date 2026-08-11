@@ -148,10 +148,12 @@ trait SocialCouchTrait
             // other's vote.
             $row = $this->loadCouchSession($sessionId, true);
             if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
+                $this->db->rollBack();
                 fail(403, 'Bu oturuma erişim yetkin yok.');
             }
             $this->assertCouchFriendshipForRow($row, $uid);
             if ($row['status'] === 'cancelled' || $row['status'] === 'ended') {
+                $this->db->rollBack();
                 fail(409, 'Oturum sona erdi.');
             }
             if ($row['status'] !== 'matched') {
@@ -162,6 +164,7 @@ trait SocialCouchTrait
                 if (!is_array($deckData) || empty($deckData)) {
                     // DB'deki JSON bozuksa veya deste boşsa oturumu kilitleme;
                     // 409 ile bilgilendirici hata döndür.
+                    $this->db->rollBack();
                     fail(409, 'Oturum destesi geçersiz, oturum yeniden başlatılabilir.');
                 }
                 $deckKeys = array_map(
@@ -169,6 +172,7 @@ trait SocialCouchTrait
                     $deckData
                 );
                 if (!in_array($key, $deckKeys, true)) {
+                    $this->db->rollBack();
                     fail(422, 'Bu yapım destede yok.');
                 }
 
@@ -200,6 +204,7 @@ trait SocialCouchTrait
         try {
             $row = $this->loadCouchSession($sessionId, true);
             if ((int) $row['host_id'] !== $uid && (int) $row['guest_id'] !== $uid) {
+                $this->db->rollBack();
                 fail(403, 'Bu oturuma erişim yetkin yok.');
             }
             $this->assertCouchFriendshipForRow($row, $uid);
@@ -260,7 +265,12 @@ trait SocialCouchTrait
         $st = $this->db->prepare('SELECT * FROM couch_sessions WHERE id = ?' . $lock);
         $st->execute([$sessionId]);
         $row = $st->fetch();
-        if (!$row) fail(404, 'Oturum bulunamadı.');
+        if (!$row) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            fail(404, 'Oturum bulunamadı.');
+        }
         return $row;
     }
 

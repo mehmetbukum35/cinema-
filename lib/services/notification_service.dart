@@ -420,12 +420,26 @@ class NotificationService {
     return next;
   }
 
+  // Release reminders occupy 0x10000000 / 0x20000000. Foreground FCM IDs must
+  // live in a disjoint high bit so a social ping cannot cancel a scheduled
+  // release reminder that happens to share the same low bits of hashCode.
+  static const int _foregroundIdBase = 0x40000000;
+  static const int _releaseIdMovie = 0x20000000;
+  static const int _releaseIdTv = 0x10000000;
+  static const int _releaseIdMask = 0x30000000;
+
+  static int _foregroundNotifId(Object n) =>
+      _foregroundIdBase | (n.hashCode & 0x0FFFFFFF);
+
+  static int _releaseNotifId(int movieId, bool isTV) =>
+      (isTV ? _releaseIdTv : _releaseIdMovie) | (movieId & 0x0FFFFFFF);
+
   Future<void> _showForeground(RemoteMessage m) async {
     final n = m.notification;
     if (n == null) return;
     try {
       await _local.show(
-        id: n.hashCode,
+        id: _foregroundNotifId(n),
         title: n.title,
         body: n.body,
         notificationDetails: NotificationDetails(
@@ -451,19 +465,15 @@ class NotificationService {
   // bildirim planlar. Bildirim kimliği movie id + tür bitinden türetilir ki
   // ekleme/çıkarma ve cihazlar arası senkron sonrası tutarlı kalsın.
 
-  static const int _releaseIdMovie = 0x20000000;
-  static const int _releaseIdTv = 0x10000000;
-  static const int _releaseIdMask = 0x30000000;
-
-  static int _releaseNotifId(int movieId, bool isTV) =>
-      (isTV ? _releaseIdTv : _releaseIdMovie) | (movieId & 0x0FFFFFFF);
-
   /// Çıkış tarihi gelecekteyse o gün saat 10:00'a bildirim planlar.
   Future<void> scheduleReleaseReminder(Movie movie) {
     return _enqueueReminderOperation(() => _scheduleReleaseReminder(movie));
   }
 
   Future<void> _scheduleReleaseReminder(Movie movie) async {
+    // Plugin init olmadan veya kullanıcı izni yokken planlama denemesi
+    // sessizce başarısız olur; gereksiz zonedSchedule çağrısından kaçın.
+    if (!_ready) return;
     if (!await _ensureTimezone()) return;
     try {
       final raw = movie.releaseDate;

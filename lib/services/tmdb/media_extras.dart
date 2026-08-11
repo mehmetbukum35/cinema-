@@ -161,7 +161,8 @@ mixin TmdbMediaExtrasMixin on TmdbServiceBase {
     final list = <CastMember>[];
     for (final item in rawCast.take(15)) {
       if (item is Map) {
-        list.add(CastMember.fromJson(Map<String, dynamic>.from(item)));
+        final member = CastMember.fromJson(Map<String, dynamic>.from(item));
+        if (member.id > 0) list.add(member);
       }
     }
     return list;

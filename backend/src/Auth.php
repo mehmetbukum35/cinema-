@@ -158,7 +158,9 @@ class Auth
             );
             $st->execute([$email]);
             $u = $st->fetch();
-            if (!$u) fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            if (!$u) {
+                $this->failAbortingTxn(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            }
 
             $uid = (int) $u['id'];
             $up = $this->db->prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?');
@@ -305,6 +307,18 @@ class Auth
     }
 
     /**
+     * fail() exit ettiği için catch'teki rollBack çalışmaz; açık transaction
+     * varsa önce kapat, sonra hata dön (PHP-FPM kalıcı bağlantı sızıntısı).
+     */
+    private function failAbortingTxn(int $status, string $msg, ?string $code = null): void
+    {
+        if ($this->db->inTransaction()) {
+            $this->db->rollBack();
+        }
+        fail($status, $msg, $code);
+    }
+
+    /**
      * Kod tablosundan (password_resets / email_verifications) kodu doğrular:
      * süre + 3 deneme sınırı + bcrypt karşılaştırması. Hatalıysa fail() ile
      * çıkar; başarılıysa sessizce döner (satırı silmek çağırana aittir).
@@ -325,13 +339,13 @@ class Auth
         $row = $st->fetch();
 
         if (!$row || now_ms() > (int) $row['expires_at']) {
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            $this->failAbortingTxn(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
 
         $attempts = (int) $row['attempts'];
         if ($attempts >= 3) {
             $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            $this->failAbortingTxn(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
 
         if (!password_verify($code, $row['code_hash'])) {
@@ -341,7 +355,7 @@ class Auth
             if ($attempts + 1 >= 3) {
                 $this->db->prepare("DELETE FROM $table WHERE email = ?")->execute([$email]);
             }
-            fail(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
+            $this->failAbortingTxn(400, 'Geçersiz veya süresi dolmuş doğrulama kodu.', 'verify_code_failed');
         }
     }
 
@@ -708,7 +722,7 @@ class Auth
             $row = $st->fetch();
 
             if (!$row || (int) $row['expires_at'] < time()) {
-                fail(401, 'Geçersiz veya süresi dolmuş yenileme anahtarı.');
+                $this->failAbortingTxn(401, 'Geçersiz veya süresi dolmuş yenileme anahtarı.');
             }
             $uid = (int) $row['user_id'];
 

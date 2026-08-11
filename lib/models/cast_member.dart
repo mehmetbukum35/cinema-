@@ -18,7 +18,7 @@ class CastMember {
         ? (roles.first as Map<String, dynamic>)['character'] as String? ?? ''
         : json['character'] as String? ?? '';
     return CastMember(
-      id: json['id'] as int,
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       name: json['name'] as String? ?? '',
       profilePath: json['profile_path'] as String?,
       character: character,

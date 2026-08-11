@@ -64,6 +64,10 @@ trait SocialSupportTrait
         );
         $check->execute([$uid, $friendId]);
         if (!$check->fetch()) {
+            // fail() exit eder; açık txn catch'e düşmeden kalır.
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             fail(403, $msg);
         }
     }
