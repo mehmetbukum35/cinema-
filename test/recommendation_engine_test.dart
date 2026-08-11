@@ -678,6 +678,48 @@ void main() {
         expect(seeds.length, 12);
       },
     );
+
+    test(
+      'adaptiveExploreRate, keşif dönüşümü iyiyken üst sınıra dayanır',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reco_telemetry_v2',
+          jsonEncode({
+            'explore': {'shown': 100, 'liked': 60},
+            'discover': {'shown': 100, 'liked': 10},
+          }),
+        );
+
+        final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+
+        expect(await engine.adaptiveExploreRate(), 0.20);
+      },
+    );
+
+    test(
+      'adaptiveExploreRate, keşif dönüşümü kötüyken alt sınırda kalır',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reco_telemetry_v2',
+          jsonEncode({
+            'explore': {'shown': 100, 'liked': 1},
+            'discover': {'shown': 100, 'liked': 60},
+          }),
+        );
+
+        final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+
+        expect(await engine.adaptiveExploreRate(), 0.05);
+      },
+    );
+
+    test('adaptiveExploreRate, veri yokken tabana düşer', () async {
+      final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+
+      expect(await engine.adaptiveExploreRate(), closeTo(0.12, 1e-9));
+    });
   });
 
   group('RecommendationEngine Cache Invalidation Tests', () {
