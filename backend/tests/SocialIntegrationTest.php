@@ -1759,4 +1759,75 @@ class SocialIntegrationTest extends TestCase
             $this->assertSame(409, TestHelperRegistry::$lastStatus);
         }
     }
+
+    public function testNewInviteDoesNotEndAMatchWithSomeoneElse(): void
+    {
+        // A(1) ile C(3) eslesti, C kutlamayi henuz gormedi. A simdi B(2) ile
+        // yeni oturum aciyor. Acik oturumlar katilimci basina kapanir ama
+        // C'nin gormedigi eslesme bundan etkilenmemeli.
+        $this->acceptFriendship(1, 3);
+        $this->acceptFriendship(1, 2);
+        $t = 1700000000000;
+        $this->db->prepare(
+            "INSERT INTO couch_sessions
+               (host_id, guest_id, status, deck, host_votes, guest_votes, matched_key, created_at, updated_at)
+             VALUES (1, 3, 'matched', '[]', '{}', '{}', 'movie_101', ?, ?)"
+        )->execute([$t, $t]);
+        $otherMatch = (int) $this->db->lastInsertId();
+
+        $this->social->createCouchSession(1, [
+            'friend_id' => 2,
+            'deck' => $this->couchDeck(),
+        ]);
+
+        $this->assertSame(
+            'matched',
+            (string) $this->db->query(
+                "SELECT status FROM couch_sessions WHERE id = " . $otherMatch
+            )->fetchColumn(),
+            'ucuncu tarafin gormedigi kutlama silinmemeli'
+        );
+
+        $this->social->getActiveCouchSession(3);
+        $this->assertNotNull(
+            TestHelperRegistry::$lastBody['session'],
+            'C hala kutlamasini gorebilmeli'
+        );
+    }
+
+    public function testNewInviteEndsTheOldMatchWithTheSameFriend(): void
+    {
+        // Ayni cift yeniden oynuyorsa eski kutlama gercekten gecersiz.
+        $this->acceptFriendship(1, 2);
+        $t = 1700000000000;
+        $this->db->prepare(
+            "INSERT INTO couch_sessions
+               (host_id, guest_id, status, deck, host_votes, guest_votes, matched_key, created_at, updated_at)
+             VALUES (2, 1, 'matched', '[]', '{}', '{}', 'movie_101', ?, ?)"
+        )->execute([$t, $t]);
+        $pairMatch = (int) $this->db->lastInsertId();
+
+        $this->social->createCouchSession(1, [
+            'friend_id' => 2,
+            'deck' => $this->couchDeck(),
+        ]);
+
+        $this->assertSame(
+            'ended',
+            (string) $this->db->query(
+                "SELECT status FROM couch_sessions WHERE id = " . $pairMatch
+            )->fetchColumn(),
+            'ayni ciftin eski eslesmesi yeni oturumla gecersiz olmali'
+        );
+    }
+
+    public function testActiveSessionReturnsNullWhenThereIsNone(): void
+    {
+        // json_out() testte exit etmiyor; `return` olmadan bu dal asagi dusup
+        // TypeError veriyordu, yani hic test edilmemisti.
+        $this->social->getActiveCouchSession(1);
+
+        $this->assertSame(200, TestHelperRegistry::$lastStatus);
+        $this->assertNull(TestHelperRegistry::$lastBody['session']);
+    }
 }

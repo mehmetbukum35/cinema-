@@ -88,12 +88,18 @@ trait SocialCouchTrait
                     AND status IN ('pending', 'active')"
             );
             $closeOpen->execute([$t, $uid, $friendId, $uid, $friendId]);
+            // Eşleşme kapatma YALNIZCA bu çift için. Açık oturumlar katılımcı
+            // başına kapatılır (bir kişi tek canlı oturumda olabilir), ama
+            // 'matched' canlı oturum değil — görülmeyi bekleyen bir kutlama.
+            // Katılımcı bazında kapatılırsa, A'nın B ile yeni oturum açması
+            // C'nin A ile olan ve hiç görmediği eşleşmesini sessizce siliyordu;
+            // /active 'matched' döndürmesinin tek sebebi buydu.
             $endMatched = $this->db->prepare(
                 "UPDATE couch_sessions SET status = 'ended', updated_at = ?
-                  WHERE (host_id IN (?, ?) OR guest_id IN (?, ?))
+                  WHERE ((host_id = ? AND guest_id = ?) OR (host_id = ? AND guest_id = ?))
                     AND status = 'matched'"
             );
-            $endMatched->execute([$t, $uid, $friendId, $uid, $friendId]);
+            $endMatched->execute([$t, $uid, $friendId, $friendId, $uid]);
 
             $ins = $this->db->prepare(
                 'INSERT INTO couch_sessions
@@ -157,7 +163,13 @@ trait SocialCouchTrait
         $st->execute([$uid, $uid]);
         $row = $st->fetch();
         if (!$row) {
+            // json_out() üretimde exit eder, testteki ikizi etmez. `return`
+            // olmadan bu dal test edilemiyordu: satır yokken akış aşağı düşüp
+            // assertCouchFriendshipForRow(false) ile TypeError veriyordu. Yani
+            // "oturumu olmayan kullanıcı" — her açılışta koşan en sık yol —
+            // hiç test edilmemişti.
             json_out(200, ['session' => null]);
+            return;
         }
         $this->assertCouchFriendshipForRow($row, $uid);
         $row = $this->activateIfGuestArrived($row, $uid);
