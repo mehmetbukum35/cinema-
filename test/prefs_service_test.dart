@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,79 +94,84 @@ void main() {
       expect(w[18]! > w[27]!, isTrue);
     });
 
-    test(
-      'revertRecoOutcome should correctly decrement recommendation telemetry counters',
-      () async {
-        // Record outcomes
-        await PrefsTastePrefs.recordRecoOutcome(
-          source: 'discover',
-          liked: true,
-        );
-        await PrefsTastePrefs.recordRecoOutcome(
-          source: 'discover',
-          liked: false,
-        );
-        await PrefsTastePrefs.recordRecoOutcome(
-          source: 'discover',
-          liked: true,
-        );
+    test('recordRecoShown kaynak başına sayar ve atıfsızları eler', () async {
+      await PrefsTastePrefs.recordRecoShown([
+        'discover',
+        'seed',
+        null,
+        'discover',
+      ]);
 
-        var telemetry = await PrefsTastePrefs.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 3);
-        expect(telemetry['discover']?['liked'], 2);
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 2);
+      expect(telemetry['discover']?['liked'], 0);
+      expect(telemetry['seed']?['shown'], 1);
+      expect(telemetry.keys, isNot(contains('null')));
+    });
 
-        // Revert one liked outcome
-        await PrefsTastePrefs.revertRecoOutcome(
-          source: 'discover',
-          liked: true,
-        );
-        telemetry = await PrefsTastePrefs.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 2);
-        expect(telemetry['discover']?['liked'], 1);
+    test('recordRecoLiked yalnız liked sayacını artırır', () async {
+      await PrefsTastePrefs.recordRecoShown(['discover', 'discover', 'discover']);
+      await PrefsTastePrefs.recordRecoLiked('discover');
+      await PrefsTastePrefs.recordRecoLiked('discover');
+      await PrefsTastePrefs.recordRecoLiked(null);
 
-        // Revert one disliked outcome
-        await PrefsTastePrefs.revertRecoOutcome(
-          source: 'discover',
-          liked: false,
-        );
-        telemetry = await PrefsTastePrefs.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 1);
-        expect(telemetry['discover']?['liked'], 1);
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 3);
+      expect(telemetry['discover']?['liked'], 2);
+    });
 
-        // Revert another liked outcome
-        await PrefsTastePrefs.revertRecoOutcome(
-          source: 'discover',
-          liked: true,
-        );
-        telemetry = await PrefsTastePrefs.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 0);
-        expect(telemetry['discover']?['liked'], 0);
+    test('revertRecoLiked gösterim sayacına dokunmaz', () async {
+      await PrefsTastePrefs.recordRecoShown(['discover', 'discover']);
+      await PrefsTastePrefs.recordRecoLiked('discover');
 
-        // Revert when already 0 should not go negative
-        await PrefsTastePrefs.revertRecoOutcome(
-          source: 'discover',
-          liked: true,
-        );
-        telemetry = await PrefsTastePrefs.getRecoTelemetry();
-        expect(telemetry['discover']?['shown'], 0);
-        expect(telemetry['discover']?['liked'], 0);
-      },
-    );
+      await PrefsTastePrefs.revertRecoLiked('discover');
 
-    test('concurrent recommendation outcomes do not lose increments', () async {
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 2);
+      expect(telemetry['discover']?['liked'], 0);
+    });
+
+    test('revertRecoLiked negatife düşmez ve atıfsızı yok sayar', () async {
+      await PrefsTastePrefs.revertRecoLiked('discover');
+      await PrefsTastePrefs.revertRecoLiked(null);
+
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+      expect(telemetry['discover']?['liked'], 0);
+      expect(telemetry.keys, isNot(contains('null')));
+    });
+
+    test('eşzamanlı gösterim yazımları artışları kaybetmez', () async {
       await Future.wait(
         List.generate(
           50,
-          (index) => PrefsTastePrefs.recordRecoOutcome(
-            source: 'discover',
-            liked: index.isEven,
-          ),
+          (_) => PrefsTastePrefs.recordRecoShown(['discover']),
         ),
       );
 
       final telemetry = await PrefsTastePrefs.getRecoTelemetry();
       expect(telemetry['discover']?['shown'], 50);
-      expect(telemetry['discover']?['liked'], 25);
+    });
+
+    test('v1 telemetri anahtarı okunmaz ve silinir', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'reco_telemetry_v1',
+        jsonEncode({
+          'discover': {'shown': 99, 'liked': 99},
+        }),
+      );
+
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+
+      expect(telemetry['discover'], isNull);
+      expect(prefs.getString('reco_telemetry_v1'), isNull);
+    });
+
+    test('bozuk telemetri yükü boş okunur', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reco_telemetry_v2', 'json değil');
+
+      expect(await PrefsTastePrefs.getRecoTelemetry(), isEmpty);
     });
 
     test('dismiss feedback prompt respects the daily cooldown', () async {

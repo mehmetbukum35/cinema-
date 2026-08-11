@@ -15,8 +15,10 @@ class PrefsRecoSignals {
   // İyi/Harika aldığını sayar. Motorun gerçek başarısını ölçmenin tek yolu:
   // "önerdik → beğendi mi?" dönüşümü. Yalnızca cihazda tutulur.
 
-  static const _keyRecoTelemetry = 'reco_telemetry_v1';
+  static const _keyRecoTelemetry = 'reco_telemetry_v2';
+  static const _keyLegacyRecoTelemetry = 'reco_telemetry_v1';
   static Future<void> _recoTelemetryTail = Future<void>.value();
+  static bool _legacyPurged = false;
 
   static Future<void> _enqueueRecoTelemetry(Future<void> Function() operation) {
     final previous = _recoTelemetryTail;
@@ -35,51 +37,67 @@ class PrefsRecoSignals {
   static int _asInt(Object? v) =>
       v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
 
-  static Future<void> recordRecoOutcome({
-    required String source,
-    required bool liked,
-  }) {
+  /// Bozuk yük yeni sayaç gibi davranır — telemetri hiçbir zaman akışı kırmaz.
+  static Map<String, dynamic> _decodeTelemetry(String? raw) {
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } on FormatException {
+      return {};
+    }
+  }
+
+  static Map<String, dynamic> _bucketOf(
+    Map<String, dynamic> data,
+    String source,
+  ) {
+    final value = data[source];
+    return value is Map
+        ? Map<String, dynamic>.from(value)
+        : {'shown': 0, 'liked': 0};
+  }
+
+  /// Gösterim: kaynak başına `shown++`. Atıfsız (`null`) yapımlar elenir —
+  /// arama gibi öneri motoru dışı yüzeyler sayaçları kirletmesin.
+  static Future<void> recordRecoShown(Iterable<String?> sources) {
+    final counted = sources.whereType<String>().toList(growable: false);
+    if (counted.isEmpty) return Future<void>.value();
     return _enqueueRecoTelemetry(() async {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-      final decoded = jsonDecode(raw);
-      final Map<String, dynamic> data = decoded is Map
-          ? Map<String, dynamic>.from(decoded)
-          : {};
-      final srcVal = data[source];
-      final Map<String, dynamic> bucket = srcVal is Map
-          ? Map<String, dynamic>.from(srcVal)
-          : {'shown': 0, 'liked': 0};
-      bucket['shown'] = _asInt(bucket['shown']) + 1;
-      if (liked) bucket['liked'] = _asInt(bucket['liked']) + 1;
+      final data = _decodeTelemetry(prefs.getString(_keyRecoTelemetry));
+      for (final source in counted) {
+        final bucket = _bucketOf(data, source);
+        bucket['shown'] = _asInt(bucket['shown']) + 1;
+        data[source] = bucket;
+      }
+      await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
+    });
+  }
+
+  /// İsabet: yalnızca İyi/Harika (rating >= 2) oy geldiğinde çağrılır.
+  static Future<void> recordRecoLiked(String? source) {
+    if (source == null) return Future<void>.value();
+    return _enqueueRecoTelemetry(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final data = _decodeTelemetry(prefs.getString(_keyRecoTelemetry));
+      final bucket = _bucketOf(data, source);
+      bucket['liked'] = _asInt(bucket['liked']) + 1;
       data[source] = bucket;
       await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
     });
   }
 
-  static Future<void> revertRecoOutcome({
-    required String source,
-    required bool liked,
-  }) {
+  /// Puan silindi: isabeti geri al. `shown`'a DOKUNMAZ — gösterim gerçekten
+  /// olmuştu, kullanıcının fikrini değiştirmesi onu geri almaz.
+  static Future<void> revertRecoLiked(String? source) {
+    if (source == null) return Future<void>.value();
     return _enqueueRecoTelemetry(() async {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-      final decoded = jsonDecode(raw);
-      final Map<String, dynamic> data = decoded is Map
-          ? Map<String, dynamic>.from(decoded)
-          : {};
-      final srcVal = data[source];
-      final Map<String, dynamic> bucket = srcVal is Map
-          ? Map<String, dynamic>.from(srcVal)
-          : {'shown': 0, 'liked': 0};
-      final shown = _asInt(bucket['shown']);
-      final currentLiked = _asInt(bucket['liked']);
-      if (shown > 0) {
-        bucket['shown'] = shown - 1;
-      }
-      if (liked && currentLiked > 0) {
-        bucket['liked'] = currentLiked - 1;
-      }
+      final data = _decodeTelemetry(prefs.getString(_keyRecoTelemetry));
+      final bucket = _bucketOf(data, source);
+      final liked = _asInt(bucket['liked']);
+      if (liked > 0) bucket['liked'] = liked - 1;
       data[source] = bucket;
       await prefs.setString(_keyRecoTelemetry, jsonEncode(data));
     });
@@ -88,11 +106,13 @@ class PrefsRecoSignals {
   /// Kaynak → {shown, liked} sayaçları. Beğeni oranı = liked/shown.
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyRecoTelemetry) ?? '{}';
-    final decoded = jsonDecode(raw);
-    final Map<String, dynamic> data = decoded is Map
-        ? Map<String, dynamic>.from(decoded)
-        : {};
+    if (!_legacyPurged) {
+      _legacyPurged = true;
+      // v1'in paydası "oylandı"ydı; v2'ninki "gösterildi". Karışım her iki
+      // oranı da bozar, o yüzden taşınmaz — silinir.
+      await prefs.remove(_keyLegacyRecoTelemetry);
+    }
+    final data = _decodeTelemetry(prefs.getString(_keyRecoTelemetry));
     return data.map(
       (k, v) => MapEntry(
         k,
@@ -233,5 +253,6 @@ class PrefsRecoSignals {
 
   static void resetInMemoryCaches() {
     _recoTelemetryTail = Future<void>.value();
+    _legacyPurged = false;
   }
 }

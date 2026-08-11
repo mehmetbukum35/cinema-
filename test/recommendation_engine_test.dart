@@ -632,7 +632,7 @@ void main() {
         // 1. Telemetriyi mock SharedPreferences'a kaydet (seed=8/10, discover=2/10)
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
-          'reco_telemetry_v1',
+          'reco_telemetry_v2',
           jsonEncode({
             'seed': {'shown': 10, 'liked': 8},
             'discover': {'shown': 10, 'liked': 2},

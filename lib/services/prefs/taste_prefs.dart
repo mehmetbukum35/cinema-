@@ -39,15 +39,14 @@ class PrefsTastePrefs {
 
   // ─── Öneri isabet telemetrisi ────────────────────────────────────────────────
 
-  static Future<void> recordRecoOutcome({
-    required String source,
-    required bool liked,
-  }) => PrefsRecoSignals.recordRecoOutcome(source: source, liked: liked);
+  static Future<void> recordRecoShown(Iterable<String?> sources) =>
+      PrefsRecoSignals.recordRecoShown(sources);
 
-  static Future<void> revertRecoOutcome({
-    required String source,
-    required bool liked,
-  }) => PrefsRecoSignals.revertRecoOutcome(source: source, liked: liked);
+  static Future<void> recordRecoLiked(String? source) =>
+      PrefsRecoSignals.recordRecoLiked(source);
+
+  static Future<void> revertRecoLiked(String? source) =>
+      PrefsRecoSignals.revertRecoLiked(source);
 
   static Future<Map<String, Map<String, int>>> getRecoTelemetry() =>
       PrefsRecoSignals.getRecoTelemetry();

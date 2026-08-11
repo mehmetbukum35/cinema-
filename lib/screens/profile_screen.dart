@@ -228,10 +228,9 @@ class ProfileScreen extends ConsumerWidget {
       );
       final prevRating = ratingRecord?['rating'] as int?;
       await PrefsLibraryFacade.deleteRating(movie.id, movie.isTV);
-      if (prevRating != null) {
-        PrefsTastePrefs.revertRecoOutcome(
-          source: movie.recoSource ?? 'discover',
-          liked: prevRating >= 2,
+      if (prevRating != null && prevRating >= 2) {
+        PrefsTastePrefs.revertRecoLiked(
+          movie.recoSource,
         ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
       }
       unawaited(

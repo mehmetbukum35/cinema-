@@ -353,10 +353,12 @@ class SwipeNotifier extends Notifier<SwipeState> {
 
     // İsabet telemetrisi: hangi aday kaynağı gerçekten beğeni üretiyor?
     // (rating>=2 = İyi/Harika → isabet). Best-effort; akışı bloklamaz.
-    PrefsTastePrefs.recordRecoOutcome(
-      source: movie.recoSource ?? 'discover',
-      liked: rating >= 2,
-    ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
+    // Payda gösterim anında yazıldı; burada yalnız isabet sayılır.
+    if (rating >= 2) {
+      PrefsTastePrefs.recordRecoLiked(
+        movie.recoSource,
+      ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
+    }
 
     if (ref.mounted) {
       // await sırasında refreshRatedIds current'ı ilerletmiş olabilir;
@@ -394,10 +396,9 @@ class SwipeNotifier extends Notifier<SwipeState> {
     );
 
     // Revert recommendation telemetry outcome
-    if (prevRating != null) {
-      PrefsTastePrefs.revertRecoOutcome(
-        source: movie.recoSource ?? 'discover',
-        liked: prevRating >= 2,
+    if (prevRating != null && prevRating >= 2) {
+      PrefsTastePrefs.revertRecoLiked(
+        movie.recoSource,
       ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
     }
 

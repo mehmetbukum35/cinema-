@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/providers.dart';
 import '../services/prefs/app_settings.dart';
+import '../services/prefs/taste_prefs.dart';
 import '../services/localization_service.dart';
 import '../services/recommendation_telemetry_service.dart';
 import '../providers/swipe_provider.dart';
@@ -275,6 +276,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
             surface: 'swipe',
             slot: 'card',
           );
+          PrefsTastePrefs.recordRecoShown([movie.recoSource]);
         });
       }
     }

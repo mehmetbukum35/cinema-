@@ -510,11 +510,19 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Gösterim hafızası yalnızca bu yükleme hâlâ geçerliyse yazılsın —
       // iptal edilen refresh/auth reload cooldown'a hayalet başlık basmasın.
-      final shownKeys = <String>[
-        if (tonightPick != null) _movieKey(tonightPick),
-        ...finalPersonal.take(10).map(_movieKey),
+      final shownMovies = <Movie>[
+        if (tonightPick != null) tonightPick,
+        ...finalPersonal.take(10),
       ];
-      unawaited(PrefsTastePrefs.recordRecoImpressions(shownKeys));
+      unawaited(
+        PrefsTastePrefs.recordRecoImpressions(
+          shownMovies.map(_movieKey).toList(),
+        ),
+      );
+      // İsabet telemetrisinin paydası: gösterim hafızasıyla AYNI küme.
+      unawaited(
+        PrefsTastePrefs.recordRecoShown(shownMovies.map((m) => m.recoSource)),
+      );
       // Vitrin kartı ile sıralı liste AYRI slot: ikisi tek listeymiş gibi
       // loglanırsa kalibrasyon hero muamelesini sıralama sinyali sanır.
       // Ortak batch_id ikisini aynı sıralama geçişine bağlı tutar.
@@ -636,6 +644,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     if (pick != null) {
       unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
       unawaited(PrefsTastePrefs.recordRecoImpressions([_movieKey(pick)]));
+      unawaited(PrefsTastePrefs.recordRecoShown([pick.recoSource]));
       unawaited(
         RecommendationTelemetryService.recordShown(
           [pick],
