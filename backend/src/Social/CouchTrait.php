@@ -104,10 +104,16 @@ trait SocialCouchTrait
     public function getActiveCouchSession(int $uid): void
     {
         $st = $this->db->prepare(
+            // `id DESC` sıralamayı belirleyici yapar. Tek açık oturum kuralını
+            // create'teki transaction koruyor ama tabloda bunu garantileyen bir
+            // unique index YOK; iki açık oturum aynı ms'i paylaşırsa yalnızca
+            // updated_at'e bakan sıralama motorun erişim yoluna kalıyordu ve
+            // iki katılımcı ayrı oturumlara düşebiliyordu. Beraberlikte yeni
+            // davet kazanır — "eski bir davet yenisinin önüne geçmesin".
             "SELECT * FROM couch_sessions
               WHERE (host_id = ? OR guest_id = ?)
                 AND status IN ('pending', 'active', 'matched')
-              ORDER BY updated_at DESC
+              ORDER BY updated_at DESC, id DESC
               LIMIT 1"
         );
         $st->execute([$uid, $uid]);
@@ -346,6 +352,14 @@ trait SocialCouchTrait
             return $row;
         }
         $deck = json_decode((string) $row['deck'], true) ?: [];
+        // Boş/bozuk deste: aşağıdaki "iki taraf da bitirdi" koşulu (0 >= 0)
+        // kendiliğinden doğru olur ve oturum sessizce 'ended'e düşerdi. Oy ucu
+        // bu durumu 409 + "oturum yeniden başlatılabilir" ile bildiriyor; poll
+        // 2.5 sn'de bir koştuğu için yarışı hep o kazanıp kullanıcıyı
+        // açıklamasız bırakıyordu. Kararı tek yerde, oy ucunda bırak.
+        if ($deck === []) {
+            return $row;
+        }
         $hostVotes = json_decode((string) $row['host_votes'], true) ?: [];
         $guestVotes = json_decode((string) $row['guest_votes'], true) ?: [];
 

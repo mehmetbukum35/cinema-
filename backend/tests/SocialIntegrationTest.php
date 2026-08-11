@@ -1681,4 +1681,65 @@ class SocialIntegrationTest extends TestCase
         );
         $stmt->execute([$userId, $id, $isTv, $title, $genreIds, $createdAt, $createdAt]);
     }
+
+    /** @return int id of the inserted session */
+    private function insertCouchRow(
+        int $hostId,
+        int $guestId,
+        string $status,
+        int $updatedAt,
+        string $deck = '[]'
+    ): int {
+        $this->db->prepare(
+            "INSERT INTO couch_sessions
+               (host_id, guest_id, status, deck, host_votes, guest_votes, created_at, updated_at)
+             VALUES (?, ?, ?, ?, '{}', '{}', ?, ?)"
+        )->execute([$hostId, $guestId, $status, $deck, $updatedAt, $updatedAt]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function testActiveSessionPicksTheNewerOfTwoTiedRows(): void
+    {
+        // Tek acik oturum kuralini create'teki transaction koruyor, ama tabloda
+        // bunu garantileyen unique index yok: iki taraf ayni anda birbirini
+        // davet ederse ayni ms'te iki acik satir kalabilir. Siralama belirleyici
+        // olmazsa iki katilimci ayri oturumlara oy verip hic eslesmez.
+        $this->acceptFriendship(1, 2);
+        $t = 1700000000000;
+        $this->insertCouchRow(1, 2, 'pending', $t);          // A -> B (eski)
+        $newer = $this->insertCouchRow(2, 1, 'pending', $t); // B -> A (yeni)
+
+        $this->social->getActiveCouchSession(1);
+        $forHost = (int) TestHelperRegistry::$lastBody['session']['id'];
+        $this->social->getActiveCouchSession(2);
+        $forGuest = (int) TestHelperRegistry::$lastBody['session']['id'];
+
+        $this->assertSame($forHost, $forGuest, 'iki katilimci ayni oturumu gormeli');
+        $this->assertSame($newer, $forHost, 'beraberlikte yeni davet kazanmali');
+    }
+
+    public function testEmptyDeckIsNotSilentlyEndedByPolling(): void
+    {
+        // Bozuk/bos deste: oy ucu 409 + "yeniden baslatilabilir" diyor. Poll
+        // yolu ayni durumu sessizce 'ended' yapiyordu ve 2.5 sn'de bir kostugu
+        // icin yarisi hep o kazaniyordu.
+        $this->acceptFriendship(1, 2);
+        $id = $this->insertCouchRow(1, 2, 'active', 1700000000000);
+
+        $this->social->getCouchSession(1, $id);
+        $this->assertSame(
+            'active',
+            (string) TestHelperRegistry::$lastBody['session']['status'],
+            'poll bos desteyi kendiliginden bitirmemeli'
+        );
+
+        try {
+            $this->social->voteCouchSession(1, $id, [
+                'movie_id' => 101, 'is_tv' => 0, 'liked' => true,
+            ]);
+            $this->fail('Bos destede oy kabul edildi');
+        } catch (TestExitException $e) {
+            $this->assertSame(409, TestHelperRegistry::$lastStatus);
+        }
+    }
 }
