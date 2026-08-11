@@ -493,6 +493,14 @@ switch (true) {
         );
         break;
 
+    case $route === 'GET /admin/recommendations/calibration':
+        rate_limit('admin_recommendations', 30, true);
+        $recommendationAnalytics->renderCalibration(
+            isset($_GET['days']) ? (int) $_GET['days'] : 30,
+            isset($_GET['bins']) ? (int) $_GET['bins'] : 20,
+        );
+        break;
+
     // ── Sağlık kontrolü ────────────────────────────────────────────────────
     case $route === 'GET /health':
         rate_limit('health_check', (int) ($cfg['health_rate_limit_per_min'] ?? 120), false);

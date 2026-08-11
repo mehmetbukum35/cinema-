@@ -75,6 +75,22 @@ final class RecommendationAnalyticsTest extends TestCase
         (new RecommendationAnalytics($this->db, 'secret'))->renderReport(30);
     }
 
+    public function testCalibrationEndpointRejectsMissingAdminKey(): void
+    {
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(403);
+
+        (new RecommendationAnalytics($this->db, 'secret'))->renderCalibration(30, 20);
+    }
+
+    public function testCalibrationEndpointHiddenWhenAdminKeyUnset(): void
+    {
+        $this->expectException(TestExitException::class);
+        $this->expectExceptionCode(404);
+
+        (new RecommendationAnalytics($this->db, ''))->renderCalibration(30, 20);
+    }
+
     public function testCalibrationReportsRawQuantilesAcrossSurfaces(): void
     {
         // v1: 0.0, 0.1, ..., 0.9 — iki farklı yüzeye dağılmış.

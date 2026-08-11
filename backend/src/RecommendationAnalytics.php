@@ -14,6 +14,12 @@ final class RecommendationAnalytics
         json_out(200, $this->report($days));
     }
 
+    public function renderCalibration(int $days, int $bins): void
+    {
+        $this->requireAdmin();
+        json_out(200, $this->calibration($days, $bins));
+    }
+
     /** @return array<string, mixed> */
     public function report(int $days, ?int $nowMs = null): array
     {
