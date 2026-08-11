@@ -169,6 +169,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       _page = 1;
       _hasMore = true;
     });
+    if (_scrollCtrl.hasClients) {
+      _scrollCtrl.jumpTo(0);
+    }
     try {
       final batch = await _personalRankBatch(await _fetchDiscover(1));
       if (!mounted ||

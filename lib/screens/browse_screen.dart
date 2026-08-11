@@ -309,18 +309,31 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final basePage = 1 + (daySeed + _reloadNonce) % 4;
       final tvGenres = _toTvGenres(likedGenres);
       final movieGenres = _toMovieGenres(likedGenres);
+      final discoveryContext = ref.read(discoveryContextProvider);
+      // Liste payload'ında runtime yok; short tercihi TMDB with_runtime.lte ile.
+      final int? movieMaxRuntime = switch (discoveryContext.duration) {
+        DiscoveryDuration.short => 100,
+        DiscoveryDuration.medium => 140,
+        DiscoveryDuration.long || DiscoveryDuration.any => null,
+      };
 
       // Phase 1: Load critical lists needed for Tonight's Pick, For You, and Trending
       final phase1Results = await Future.wait([
         movieGenres.isEmpty
             ? Future.value(<Movie>[])
-            : _service.discoverByGenres(movieGenres, isTV: false, page: basePage),
+            : _service.discoverByGenres(
+                movieGenres,
+                isTV: false,
+                page: basePage,
+                maxRuntime: movieMaxRuntime,
+              ),
         movieGenres.isEmpty
             ? Future.value(<Movie>[])
             : _service.discoverByGenres(
                 movieGenres,
                 isTV: false,
                 page: basePage + 1,
+                maxRuntime: movieMaxRuntime,
               ),
         _service.getTrending(),
         // Dizi discover'ı: Sana Özel artık yalnız filmden beslenmiyor.
@@ -346,7 +359,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Hedefli Kültür Çekimi: "Favori Bölgelerim" seçilmişse, havuzu
       // kullanıcının ev sahibi kültürlerinin filmleriyle zenginleştir.
-      final discoveryContext = ref.read(discoveryContextProvider);
       List<Movie> cultureCandidates = const [];
       if (discoveryContext.origin == DiscoveryOrigin.local) {
         try {

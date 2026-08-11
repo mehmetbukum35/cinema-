@@ -202,7 +202,8 @@ trait SocialProfilesPublicTrait
     public function getFriendSignals(int $uid): void
     {
         $st = $this->db->prepare(
-            'SELECT r.movie_id, r.is_tv, u.display_name as friend_name
+            'SELECT r.movie_id, r.is_tv,
+                    COALESCE(NULLIF(TRIM(u.display_name), \'\'), u.username) as friend_name
              FROM friends f
              JOIN users u ON f.friend_id = u.id
              JOIN ratings r ON f.friend_id = r.user_id

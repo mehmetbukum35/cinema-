@@ -345,7 +345,10 @@ class CouchNotifier extends Notifier<CouchState> {
         isTv: card.isTV,
         liked: liked,
       );
-      if (ref.mounted && revision == _sessionRevision) _apply(updated);
+      // Poll refresh revision'ı artırmış olsa bile aynı oturumdaysa oy kazanır.
+      if (ref.mounted && state.session?.id == session.id) {
+        _apply(updated);
+      }
     } on ApiException catch (e) {
       // 409: oturum bu arada bitti/iptal edildi → durumu tazele.
       if (e.statusCode == 409) {
@@ -382,10 +385,12 @@ class CouchNotifier extends Notifier<CouchState> {
 
   Future<void> _performRefresh() async {
     final session = state.session;
-    if (session == null) return;
+    if (session == null || _voteInFlight) return;
     final revision = _sessionRevision;
     try {
       final response = await _api.getCouchSession(session.id);
+      // Oy uçuştayken eski poll payload'ı kartı geri alma.
+      if (_voteInFlight) return;
       if (ref.mounted &&
           revision == _sessionRevision &&
           state.session?.id == session.id) {

@@ -13,9 +13,11 @@ import '../favorite_weights.dart';
 /// Cycle kuralı: bu dosya `prefs_service.dart` import ETMEZ.
 class PrefsGenreWeights {
   static Map<int, double>? _cachedGenreWeights;
+  static int _weightsGeneration = 0;
 
   static void invalidateGenreWeights() {
     _cachedGenreWeights = null;
+    _weightsGeneration++;
   }
 
   static Future<void> resetOnboarding() async {
@@ -32,8 +34,12 @@ class PrefsGenreWeights {
     if (_cachedGenreWeights != null) {
       return _cachedGenreWeights!;
     }
+    final generation = _weightsGeneration;
     final weights = await _calculateGenreWeights();
-    _cachedGenreWeights = weights;
+    // Hesap sırasında invalidate olduysa eski map'i yazma.
+    if (generation == _weightsGeneration) {
+      _cachedGenreWeights = weights;
+    }
     return weights;
   }
 

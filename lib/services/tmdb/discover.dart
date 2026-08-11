@@ -112,12 +112,17 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
     List<int> genreIds, {
     bool isTV = false,
     int page = 1,
+    int? maxRuntime,
   }) async {
     if (genreIds.isEmpty) return getPopular(isTV: isTV, page: page);
     final genreStr = genreIds.join('|');
     return isTV
         ? _discoverTv(genreStr: genreStr, page: page)
-        : _discoverMovies(genreStr: genreStr, page: page);
+        : _discoverMovies(
+            genreStr: genreStr,
+            page: page,
+            maxRuntime: maxRuntime,
+          );
   }
 
   /// Genre-based match: AND logic, min 200 votes, sorted by popularity.
