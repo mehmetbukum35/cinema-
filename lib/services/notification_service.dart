@@ -716,7 +716,13 @@ class NotificationService {
   /// doluysa film detayı açılır. Tanınmayan tip, eksik parça veya çözümlenemeyen
   /// film kimliği null döndürür (yönlendirme yapılmaz).
   @visibleForTesting
-  static ({int? socialTab, bool couch, int? movieId, bool isTV})?
+  static ({
+    int? socialTab,
+    bool couch,
+    int? sessionId,
+    int? movieId,
+    bool isTV,
+  })?
   routeForPayload(String? payload) {
     if (payload == null || payload.isEmpty) return null;
     final parts = payload.split('|');
@@ -725,11 +731,24 @@ class NotificationService {
 
     final socialTab = socialTabForNotificationType(type);
     if (socialTab != null) {
-      return (socialTab: socialTab, couch: false, movieId: null, isTV: false);
+      return (
+        socialTab: socialTab,
+        couch: false,
+        sessionId: null,
+        movieId: null,
+        isTV: false,
+      );
     }
 
     if (type == 'couch_invite' || type == 'couch_match') {
-      return (socialTab: null, couch: true, movieId: null, isTV: false);
+      final sessionId = parts.length > 1 ? int.tryParse(parts[1]) : null;
+      return (
+        socialTab: null,
+        couch: true,
+        sessionId: (sessionId != null && sessionId > 0) ? sessionId : null,
+        movieId: null,
+        isTV: false,
+      );
     }
 
     if (type == 'release' ||
@@ -743,6 +762,7 @@ class NotificationService {
       return (
         socialTab: null,
         couch: false,
+        sessionId: null,
         movieId: movieId,
         isTV: parts[2] == '1' || parts[2] == 'true',
       );
@@ -767,7 +787,11 @@ class NotificationService {
     }
 
     if (route.couch) {
-      nav.push(MaterialPageRoute(builder: (_) => const CouchScreen()));
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => CouchScreen(sessionId: route.sessionId),
+        ),
+      );
       return;
     }
 

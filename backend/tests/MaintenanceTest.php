@@ -204,6 +204,46 @@ final class MaintenanceTest extends TestCase
         );
     }
 
+    public function testExpireGuardsDoNotClobberFreshMatchedOrCancelled(): void
+    {
+        // selectIds ile TOCTOU: id alındıktan sonra durum değişmiş olabilir.
+        // UPDATE status guard'ı matched'i cancelled'e / cancelled'i ended'e çevirmez.
+        $stale = $this->now - 25 * 3600000;
+        $this->db->exec(
+            "INSERT INTO couch_sessions (status, updated_at) VALUES
+             ('matched', $stale), ('cancelled', $stale)"
+        );
+        $matchedId = (int) $this->db->query(
+            "SELECT id FROM couch_sessions WHERE status = 'matched'"
+        )->fetchColumn();
+        $cancelledId = (int) $this->db->query(
+            "SELECT id FROM couch_sessions WHERE status = 'cancelled'"
+        )->fetchColumn();
+
+        $cancel = $this->db->prepare(
+            "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+              WHERE id = ? AND status IN ('pending', 'active')"
+        );
+        $cancel->execute([$this->now, $matchedId]);
+        self::assertSame(0, $cancel->rowCount());
+
+        $end = $this->db->prepare(
+            "UPDATE couch_sessions SET status = 'ended', updated_at = ?
+              WHERE id = ? AND status = 'matched'"
+        );
+        $end->execute([$this->now, $cancelledId]);
+        self::assertSame(0, $end->rowCount());
+
+        self::assertSame(
+            'matched',
+            $this->db->query("SELECT status FROM couch_sessions WHERE id = $matchedId")->fetchColumn()
+        );
+        self::assertSame(
+            'cancelled',
+            $this->db->query("SELECT status FROM couch_sessions WHERE id = $cancelledId")->fetchColumn()
+        );
+    }
+
     public function testInvalidatesDormantDeviceBeforeGarbageCollection(): void
     {
         $deletedAt = $this->now - 31 * 86400000;

@@ -107,29 +107,41 @@ void main() {
       expect(NotificationService.routeForPayload('friend_request'), (
         socialTab: 1,
         couch: false,
+        sessionId: null,
         movieId: null,
         isTV: false,
       ));
       expect(NotificationService.routeForPayload('friend_accept'), (
         socialTab: 0,
         couch: false,
+        sessionId: null,
         movieId: null,
         isTV: false,
       ));
     });
 
     test('sends both couch notification types to the couch screen', () {
-      const couchRoute = (
+      expect(NotificationService.routeForPayload('couch_invite|42'), (
         socialTab: null,
         couch: true,
+        sessionId: 42,
         movieId: null,
         isTV: false,
-      );
-      expect(
-        NotificationService.routeForPayload('couch_invite|42'),
-        couchRoute,
-      );
-      expect(NotificationService.routeForPayload('couch_match|7'), couchRoute);
+      ));
+      expect(NotificationService.routeForPayload('couch_match|7'), (
+        socialTab: null,
+        couch: true,
+        sessionId: 7,
+        movieId: null,
+        isTV: false,
+      ));
+      expect(NotificationService.routeForPayload('couch_invite'), (
+        socialTab: null,
+        couch: true,
+        sessionId: null,
+        movieId: null,
+        isTV: false,
+      ));
     });
 
     test('opens movie detail for every recommendation type', () {
@@ -142,7 +154,13 @@ void main() {
       ]) {
         expect(
           NotificationService.routeForPayload('$type|550|0'),
-          (socialTab: null, couch: false, movieId: 550, isTV: false),
+          (
+            socialTab: null,
+            couch: false,
+            sessionId: null,
+            movieId: 550,
+            isTV: false,
+          ),
           reason: '$type should deep-link into movie detail',
         );
       }

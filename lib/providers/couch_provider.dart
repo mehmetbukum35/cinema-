@@ -19,6 +19,9 @@ class CouchSession {
   final bool isHost;
   final int friendId;
   final String friendName;
+
+  /// Gerçek kullanıcı adı (Yeni Deste / Friend yeniden kurarken display name değil).
+  final String friendUsername;
   final List<Movie> deck;
   final Map<String, bool> myVotes;
   final int theirProgress;
@@ -30,6 +33,7 @@ class CouchSession {
     required this.isHost,
     required this.friendId,
     required this.friendName,
+    required this.friendUsername,
     required this.deck,
     required this.myVotes,
     required this.theirProgress,
@@ -62,11 +66,12 @@ class CouchSession {
         v is Map ? Map<String, dynamic>.from(v) : const {};
 
     final friend = asMap(json['friend']);
+    final username = friend['username']?.toString() ?? '';
     final displayNameStr = friend['display_name']?.toString();
     final friendName =
         (displayNameStr != null && displayNameStr.trim().isNotEmpty)
         ? displayNameStr
-        : '@${friend['username']?.toString() ?? '?'}';
+        : '@${username.isEmpty ? '?' : username}';
 
     final rawMatched = json['matched'];
     return CouchSession(
@@ -75,6 +80,7 @@ class CouchSession {
       isHost: json['is_host'] == true,
       friendId: asInt(friend['id']),
       friendName: friendName,
+      friendUsername: username,
       deck: [
         for (final d in (json['deck'] as List<dynamic>? ?? const []))
           if (d is Map) deckMovie(Map<String, dynamic>.from(d)),
@@ -185,6 +191,10 @@ class CouchNotifier extends Notifier<CouchState> {
 
   /// Katılımcısı olduğum canlı oturumu sorgular (Together açılışı + resume).
   Future<void> checkActive() {
+    // start() _apply ile revizyonu artırır; uçuştaki checkActive yeni create'i
+    // orphan cancel edebilir. start bitene kadar hydrate etme.
+    if (_startInFlight) return Future<void>.value();
+
     final activeFlight = _activeCheckFlight;
     if (activeFlight != null && _activeCheckRevision == _sessionRevision) {
       return activeFlight;
@@ -203,6 +213,7 @@ class CouchNotifier extends Notifier<CouchState> {
   }
 
   Future<void> _performActiveCheck() async {
+    if (_startInFlight) return;
     if (!ref.read(authProvider).isAuthenticated) {
       _apply(null);
       return;
@@ -211,7 +222,9 @@ class CouchNotifier extends Notifier<CouchState> {
     final leavingId = _leavingSessionId;
     try {
       final response = await _api.getActiveCouchSession();
-      if (!ref.mounted || revision != _sessionRevision) return;
+      if (!ref.mounted || revision != _sessionRevision || _startInFlight) {
+        return;
+      }
       // leave() cancel beklerken sunucu hâlâ open dönebilir — geri yükleme.
       if (leavingId != null) {
         final activeId = int.tryParse(response?['id']?.toString() ?? '');
@@ -220,6 +233,33 @@ class CouchNotifier extends Notifier<CouchState> {
       _apply(response);
     } catch (e) {
       debugPrint('Couch checkActive failed: $e');
+    }
+  }
+
+  /// Bildirim deep-link: belirli oturumu hydrate et (ended/matched dahil).
+  Future<void> openById(int sessionId) async {
+    if (sessionId <= 0) {
+      await checkActive();
+      return;
+    }
+    if (!ref.read(authProvider).isAuthenticated) {
+      _apply(null);
+      return;
+    }
+    final revision = _sessionRevision;
+    try {
+      final response = await _api.getCouchSession(sessionId);
+      if (!ref.mounted || revision != _sessionRevision) return;
+      _apply(response);
+    } on ApiException catch (e) {
+      debugPrint('Couch openById failed: $e');
+      // Davet iptal / GC: aktif oturuma düş.
+      if (e.statusCode == 404 || e.statusCode == 403 || e.statusCode == 409) {
+        await checkActive();
+      }
+    } catch (e) {
+      debugPrint('Couch openById failed: $e');
+      await checkActive();
     }
   }
 

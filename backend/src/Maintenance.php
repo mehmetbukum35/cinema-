@@ -372,7 +372,10 @@ final class Maintenance
         $changed = 0;
 
         $ids = $this->selectIds('couch_sessions', "status IN ('pending', 'active') AND updated_at < ?", [$cutoff]);
-        $st = $this->db->prepare("UPDATE couch_sessions SET status = 'cancelled', updated_at = ? WHERE id = ?");
+        $st = $this->db->prepare(
+            "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+              WHERE id = ? AND status IN ('pending', 'active')"
+        );
         foreach ($ids as $id) {
             $st->execute([$nowMs, $id]);
             $changed += $st->rowCount();
@@ -384,7 +387,10 @@ final class Maintenance
         // zorla açar. 30 günlük silme penceresi yerine açık oturum penceresi
         // dolduğunda sunucu kendisi bitirir.
         $matched = $this->selectIds('couch_sessions', "status = 'matched' AND updated_at < ?", [$cutoff]);
-        $end = $this->db->prepare("UPDATE couch_sessions SET status = 'ended', updated_at = ? WHERE id = ?");
+        $end = $this->db->prepare(
+            "UPDATE couch_sessions SET status = 'ended', updated_at = ?
+              WHERE id = ? AND status = 'matched'"
+        );
         foreach ($matched as $id) {
             $end->execute([$nowMs, $id]);
             $changed += $end->rowCount();

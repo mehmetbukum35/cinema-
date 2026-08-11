@@ -1580,6 +1580,23 @@ class SocialIntegrationTest extends TestCase
         $this->assertSame('cancelled', $st->fetchColumn());
     }
 
+    public function testCouchNewSessionEndsPreviousMatched(): void
+    {
+        $id = $this->createCouch();
+        $this->social->voteCouchSession(1, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->social->voteCouchSession(2, $id, ['movie_id' => 101, 'is_tv' => 0, 'liked' => true]);
+        $this->assertSame('matched', TestHelperRegistry::$lastBody['session']['status']);
+
+        // Partner kutlamadayken host yeni deste açarsa matched orphan kalmamalı.
+        $this->social->createCouchSession(1, [
+            'friend_id' => 2,
+            'deck' => $this->couchDeck(),
+        ]);
+        $st = $this->db->prepare('SELECT status FROM couch_sessions WHERE id = ?');
+        $st->execute([$id]);
+        $this->assertSame('ended', $st->fetchColumn());
+    }
+
     public function testBlockingFriendCancelsAndRevokesCouchSession(): void
     {
         $id = $this->createCouch();

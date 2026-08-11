@@ -17,6 +17,12 @@ trait SocialCouchTrait
     /** Katılımcı başına oturum yaşam alanları. */
     private const COUCH_OPEN_STATUSES = ['pending', 'active'];
 
+    /**
+     * Vote/poll txn içinde FCM tutmamak için ertelenmiş push kuyruğu.
+     * @var list<array{0:int,1:int,2:string,3:array<string,mixed>}>
+     */
+    private array $deferredCouchNotifies = [];
+
     // ─── POST /social/couch/create ──────────────────────────────────────────
     // Girdi: { friend_id, deck: [{movie_id,is_tv,title,poster_path,vote_average}] }
     // Desteyi HOST istemcisi kurar (ortak izleme listesi + öneri motoru);
@@ -60,15 +66,34 @@ trait SocialCouchTrait
         $t = now_ms();
         // Tek aktif oturum kuralı: her iki katılımcının da açık oturumları
         // kapatılır — eski bir davet yenisinin önüne geçmesin.
+        // matched → ended (kutlama orphan kalmasın); pending/active → cancelled.
         // Transaction: eşzamanlı create'lerde çift pending/active satırı oluşmasın.
+        // MySQL'de çift yönlü create yazı kayması için çift anahtarı kilitle.
+        $lockName = 'couch:' . min($uid, $friendId) . ':' . max($uid, $friendId);
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $gotLock = false;
+        if ($driver !== 'sqlite') {
+            $lockSt = $this->db->prepare('SELECT GET_LOCK(?, 10)');
+            $lockSt->execute([$lockName]);
+            $gotLock = ((int) $lockSt->fetchColumn()) === 1;
+            if (!$gotLock) {
+                fail(503, 'Oturum oluşturulamadı, tekrar dene.');
+            }
+        }
         $this->db->beginTransaction();
         try {
-            $close = $this->db->prepare(
+            $closeOpen = $this->db->prepare(
                 "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
                   WHERE (host_id IN (?, ?) OR guest_id IN (?, ?))
                     AND status IN ('pending', 'active')"
             );
-            $close->execute([$t, $uid, $friendId, $uid, $friendId]);
+            $closeOpen->execute([$t, $uid, $friendId, $uid, $friendId]);
+            $endMatched = $this->db->prepare(
+                "UPDATE couch_sessions SET status = 'ended', updated_at = ?
+                  WHERE (host_id IN (?, ?) OR guest_id IN (?, ?))
+                    AND status = 'matched'"
+            );
+            $endMatched->execute([$t, $uid, $friendId, $uid, $friendId]);
 
             $ins = $this->db->prepare(
                 'INSERT INTO couch_sessions
@@ -85,12 +110,25 @@ trait SocialCouchTrait
                 $t,
             ]);
             $sessionId = (int) $this->db->lastInsertId();
+            // Kilit altında bile kaçan eski açık satır kalırsa yeni id dışındakileri kapat.
+            $sweep = $this->db->prepare(
+                "UPDATE couch_sessions SET status = 'cancelled', updated_at = ?
+                  WHERE id <> ?
+                    AND (host_id IN (?, ?) OR guest_id IN (?, ?))
+                    AND status IN ('pending', 'active')"
+            );
+            $sweep->execute([$t, $sessionId, $uid, $friendId, $uid, $friendId]);
             $this->db->commit();
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             throw $e;
+        } finally {
+            if ($gotLock) {
+                $rel = $this->db->prepare('SELECT RELEASE_LOCK(?)');
+                $rel->execute([$lockName]);
+            }
         }
 
         $this->notify($friendId, $uid, 'couch_invite', ['session_id' => $sessionId]);
@@ -134,8 +172,11 @@ trait SocialCouchTrait
         // Emniyet ağı: eşzamanlı son oylarda vote ucundaki tespit kaçırdıysa
         // poll yakalar (bkz. resolveCouchOutcome). Poll eden zaten oturum
         // ekranında ve eşleşmeyi yanıtta görecek — push yalnızca karşı tarafa.
+        $this->deferredCouchNotifies = [];
         $row = $this->resolveCouchOutcome($row, $uid);
-        json_out(200, ['session' => $this->couchPayload($row, $uid)]);
+        $payload = $this->couchPayload($row, $uid);
+        $this->flushDeferredCouchNotifies();
+        json_out(200, ['session' => $payload]);
     }
 
     // ─── POST /social/couch/{id}/vote ───────────────────────────────────────
@@ -149,6 +190,7 @@ trait SocialCouchTrait
         $isTv = !empty($in['is_tv']) ? 1 : 0;
         $liked = !empty($in['liked']);
 
+        $this->deferredCouchNotifies = [];
         $this->db->beginTransaction();
         try {
             // Lock the JSON vote row before read-modify-write. Otherwise two
@@ -198,8 +240,11 @@ trait SocialCouchTrait
             $this->db->commit();
         } catch (Throwable $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
+            $this->deferredCouchNotifies = [];
             throw $e;
         }
+        // FOR UPDATE kilidi commit'te salınır; FCM'i txn dışında gönder.
+        $this->flushDeferredCouchNotifies();
         json_out(200, ['session' => $this->couchPayload($row, $uid)]);
     }
 
@@ -379,6 +424,7 @@ trait SocialCouchTrait
                 // Eşleşmeyi çözen istek zaten kendi ekranında görecek;
                 // push, KARŞI tarafı uygulamaya geri çağırır. Hem vote hem
                 // poll yolu çözen kullanıcıyı geçer (exceptUserId).
+                // notify() txn / FOR UPDATE dışında flush edilir.
                 $hostId = (int) $row['host_id'];
                 $guestId = (int) $row['guest_id'];
                 $payload = [
@@ -386,10 +432,10 @@ trait SocialCouchTrait
                     'session_id' => (int) $row['id'],
                 ];
                 if ($exceptUserId !== $hostId) {
-                    $this->notify($hostId, $guestId, 'couch_match', $payload);
+                    $this->deferredCouchNotifies[] = [$hostId, $guestId, 'couch_match', $payload];
                 }
                 if ($exceptUserId !== $guestId) {
-                    $this->notify($guestId, $hostId, 'couch_match', $payload);
+                    $this->deferredCouchNotifies[] = [$guestId, $hostId, 'couch_match', $payload];
                 }
                 $row['status'] = 'matched';
                 $row['matched_key'] = $key;
@@ -409,6 +455,15 @@ trait SocialCouchTrait
             $row['status'] = 'ended';
         }
         return $row;
+    }
+
+    private function flushDeferredCouchNotifies(): void
+    {
+        $pending = $this->deferredCouchNotifies;
+        $this->deferredCouchNotifies = [];
+        foreach ($pending as [$toUid, $fromUid, $type, $payload]) {
+            $this->notify($toUid, $fromUid, $type, $payload);
+        }
     }
 
     public function getUsedCouchMovies(int $uid, int $friendId): void

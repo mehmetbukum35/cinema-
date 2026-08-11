@@ -34,6 +34,7 @@ const Map<String, String> kTrStrings = {
   'couch_deck_done_desc': '{} bitirince sonuç belli olacak.',
   'couch_match_title': 'Eşleşme! 🎬',
   'couch_match_desc': '{} ile anlaştınız. İyi seyirler!',
+  'couch_match_missing': 'Eşleşme bulundu ama film bilgisi yüklenemedi.',
   'couch_no_match_title': 'Eşleşme çıkmadı 😅',
   'couch_no_match_desc': 'Zevkler çatıştı. Yeni bir desteyle tekrar deneyin.',
   'couch_new_deck': 'Yeni Deste',

@@ -46,6 +46,7 @@ void main() {
         ),
       );
       expect(s.friendName, 'Ayşe');
+      expect(s.friendUsername, 'ayse');
       expect(s.deck, hasLength(3));
       expect(s.myVotes, {'movie_101': true, 'movie_102': false});
       expect(s.matched!.id, 101);
@@ -398,6 +399,43 @@ void main() {
       ]);
       expect(await first, isTrue);
       expect(mockApi.createCalls, 1);
+    });
+
+    test('checkActive during start does not orphan the new session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      mockApi.intersectionGate = Completer<List<dynamic>>();
+      mockApi.activeResponse = sessionJson(id: 10, status: 'matched');
+      final friend = Friend(id: 2, username: 'friend');
+
+      final startFuture = notifier.start(friend, deckSize: 1);
+      // start _apply ile revizyonu artırırdı; uçuştaki checkActive create'i
+      // orphan cancel ediyordu.
+      await notifier.checkActive();
+      expect(mockApi.activeCalls, 0);
+      expect(container.read(couchProvider).session, isNull);
+
+      mockApi.intersectionGate!.complete([
+        {
+          'id': 501,
+          'title': 'Shared',
+          'poster_path': '/shared.jpg',
+          'overview': '',
+          'vote_average': 7.0,
+          'is_tv': 0,
+        },
+      ]);
+      expect(await startFuture, isTrue);
+      expect(mockApi.createCalls, 1);
+      expect(mockApi.cancelCalled, isFalse);
+      expect(container.read(couchProvider).session?.id, 99);
+    });
+
+    test('openById hydrates the requested session', () async {
+      final notifier = container.read(couchProvider.notifier);
+      mockApi.getResponse = sessionJson(id: 42, status: 'matched');
+      await notifier.openById(42);
+      expect(mockApi.sessionCalls, 1);
+      expect(container.read(couchProvider).session?.id, 42);
     });
   });
 }

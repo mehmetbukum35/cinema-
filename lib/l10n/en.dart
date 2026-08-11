@@ -34,6 +34,8 @@ const Map<String, String> kEnStrings = {
   'couch_deck_done_desc': 'Waiting for {} to finish.',
   'couch_match_title': 'It\'s a match! 🎬',
   'couch_match_desc': 'You and {} agreed. Enjoy the show!',
+  'couch_match_missing':
+      'It\'s a match, but the title details could not be loaded.',
   'couch_no_match_title': 'No match this time 😅',
   'couch_no_match_desc': 'Tastes clashed. Try again with a fresh deck.',
   'couch_new_deck': 'New Deck',

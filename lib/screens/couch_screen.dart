@@ -21,7 +21,10 @@ import 'social_screen.dart';
 /// döngüsünü (arkadaş seç → oyla → eşleşme/bitiş) tek akışta sunar; canlılık
 /// couchProvider'ın kısa aralıklı poll'uyla sağlanır.
 class CouchScreen extends ConsumerStatefulWidget {
-  const CouchScreen({super.key});
+  /// Bildirim deep-link: doluysa bu oturum hydrate edilir (checkActive yerine).
+  final int? sessionId;
+
+  const CouchScreen({super.key, this.sessionId});
 
   @override
   ConsumerState<CouchScreen> createState() => _CouchScreenState();
@@ -59,7 +62,12 @@ class _CouchScreenState extends ConsumerState<CouchScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _couch.checkActive();
+      final deepLinkId = widget.sessionId;
+      if (deepLinkId != null && deepLinkId > 0) {
+        _couch.openById(deepLinkId);
+      } else {
+        _couch.checkActive();
+      }
       _couch.startPolling();
       if (ref.read(socialProvider).friends.isEmpty) {
         ref.read(socialProvider.notifier).loadFriends();
@@ -184,7 +192,32 @@ class _CouchScreenState extends ConsumerState<CouchScreen>
           await ref.read(couchProvider.notifier).start(friend);
         },
       );
-    } else if (session.status == 'matched' && session.matched != null) {
+    } else if (session.status == 'matched') {
+      // matched_key bozuksa film null olabilir — oy UI'sına düşme (leave gizli).
+      if (session.matched != null) {
+        body = _MatchView(
+          session: session,
+          onClose: () async {
+            await ref.read(couchProvider.notifier).leave();
+            if (context.mounted) Navigator.pop(context);
+          },
+        );
+      } else {
+        body = _CenteredMessage(
+          icon: Icons.celebration_rounded,
+          title: tr?.get('couch_match_title') ?? 'Eşleştiniz!',
+          subtitle:
+              tr?.get('couch_match_missing') ??
+              'Eşleşme bulundu ama film bilgisi yüklenemedi.',
+          actionLabel: tr?.get('couch_close') ?? 'Kapat',
+          onAction: () async {
+            await ref.read(couchProvider.notifier).leave();
+            if (context.mounted) Navigator.pop(context);
+          },
+        );
+      }
+    } else if (session.status == 'ended' && session.matched != null) {
+      // Kutlama kapanmadan ended olursa (maintenance / yeni create) match göster.
       body = _MatchView(
         session: session,
         onClose: () async {
@@ -663,7 +696,9 @@ class _EndedView extends ConsumerWidget {
             .start(
               Friend(
                 id: session.friendId,
-                username: session.friendName,
+                username: session.friendUsername.isNotEmpty
+                    ? session.friendUsername
+                    : session.friendName,
                 displayName: session.friendName,
               ),
             );
