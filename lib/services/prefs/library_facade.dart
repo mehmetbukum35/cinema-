@@ -154,6 +154,10 @@ class PrefsLibraryFacade {
     return await DatabaseHelper().getRatingCount();
   }
 
+  static Future<int> getFavoriteCount() async {
+    return await DatabaseHelper().getFavoriteCount();
+  }
+
   static Future<Map<String, dynamic>> getStats() async {
     final ratings = await DatabaseHelper().getRatings();
 

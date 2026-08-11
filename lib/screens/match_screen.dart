@@ -240,11 +240,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     }
 
     final genres = intersection.toList();
+    // TMDB discover AND: discoverForMatch yalnızca top-2 kullanır; hepsini
+    // AND'lemek boş Results grid üretir.
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ResultsScreen(
-          genreStr: genres.join(','),
+          genreStr: genres.take(2).join(','),
           sortBy: 'vote_average.desc',
           jointGenres: genres,
         ),

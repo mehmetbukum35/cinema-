@@ -247,4 +247,17 @@ mixin DbFavoritesMixin {
       where: 'deleted = 0',
     );
   }
+
+  Future<int> getFavoriteCount() async {
+    final db = await database;
+    if (db == null) {
+      return DatabaseHelper._mockFavorites
+          .where((e) => e['deleted'] != 1)
+          .length;
+    }
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM favorites WHERE deleted = 0'),
+    );
+    return count ?? 0;
+  }
 }

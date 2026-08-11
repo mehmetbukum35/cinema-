@@ -662,8 +662,10 @@ class NotificationService {
       try {
         await authReady().timeout(const Duration(seconds: 30));
       } on TimeoutException {
-        debugPrint('Initial notification route expired before auth restored.');
-        return;
+        // Yavaş unlock/restore: payload'ı atma — navigator hazır olunca yine dene.
+        debugPrint(
+          'Initial notification: auth restore timed out; routing when navigator ready.',
+        );
       }
     }
     const retryDelay = Duration(milliseconds: 250);

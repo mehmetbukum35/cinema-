@@ -433,9 +433,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
                         child: Builder(
                           builder: (context) {
                             return Text(
-                              (swipeState.loadingMore ||
-                                      (swipeState.languageFilter == null &&
-                                          swipeState.providerFilter == null))
+                              swipeState.loadingMore
                                   ? (AppLocalizations.of(
                                           context,
                                         )?.get('loading_more') ??

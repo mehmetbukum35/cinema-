@@ -96,6 +96,7 @@ mixin AuthSessionMixin on Notifier<AuthState> {
         ? MergedGuestData(
             ratingCount: await PrefsLibraryFacade.getRatingCount(),
             watchlistCount: await PrefsLibraryFacade.getWatchlistCount(),
+            favoriteCount: await PrefsLibraryFacade.getFavoriteCount(),
           )
         : null;
 
