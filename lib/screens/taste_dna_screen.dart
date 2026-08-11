@@ -62,8 +62,7 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
         if (currentHash != lastPublishedHash) {
           TasteDnaService.publishSerialized(() async {
             await apiService!.publishTasteDna(dna.toJson());
-            final stillLast =
-                await PrefsTastePrefs.getLastPublishedDnaHash();
+            final stillLast = await PrefsTastePrefs.getLastPublishedDnaHash();
             // Daha yeni bir publish hash'i yazdıysa eski damgayı basma.
             if (stillLast == lastPublishedHash) {
               await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);

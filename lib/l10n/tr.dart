@@ -221,10 +221,8 @@ const Map<String, String> kTrStrings = {
   'auth_guest_data_merged_ratings': '{} puanın hesabına taşındı.',
   'auth_guest_data_merged_watchlist':
       '{} izleme listesi kaydın hesabına taşındı.',
-  'auth_guest_data_merged_favorites':
-      '{} Top 20 başlığın hesabına taşındı.',
-  'auth_guest_data_merged_seasons':
-      '{} izlenen sezon kaydın hesabına taşındı.',
+  'auth_guest_data_merged_favorites': '{} Top 20 başlığın hesabına taşındı.',
+  'auth_guest_data_merged_seasons': '{} izlenen sezon kaydın hesabına taşındı.',
   'auth_guest_data_merged_ratings_favorites':
       '{} puanın ve {} Top 20 başlığın hesabına taşındı.',
   'auth_guest_data_merged_watchlist_favorites':
@@ -771,8 +769,7 @@ const Map<String, String> kTrStrings = {
   'browse_guest_list_title': 'Senin Listen',
   'browse_guest_list_unpublished': 'yayında değil',
   'browse_guest_list_cta': 'Giriş yap ve yayınla',
-  'guest_local_only_hint':
-      'Hesap olmadan zevkin yalnızca bu cihazda kalır.',
+  'guest_local_only_hint': 'Hesap olmadan zevkin yalnızca bu cihazda kalır.',
   'top_lists_empty':
       'Henüz herkese açık profil yok. Profilini paylaş, hareket başlasın!',
   'top_lists_likes': 'beğeni',

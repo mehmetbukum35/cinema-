@@ -102,14 +102,22 @@ class Smtp
         return is_string($name) && $name !== '' ? $name : 'localhost';
     }
 
-    /** @param list<int> $okCodes */
+    /**
+     * @param resource $socket stream_socket_client sonucu; PHP'de native
+     *                         `resource` tip belirteci yok, tip yalnızca
+     *                         PHPDoc ile ifade edilebiliyor.
+     * @param list<int> $okCodes
+     */
     private function command($socket, string $cmd, array $okCodes): string
     {
         fputs($socket, $cmd . "\r\n");
         return $this->expectCode($socket, $okCodes, $cmd);
     }
 
-    /** @param list<int> $okCodes */
+    /**
+     * @param resource $socket
+     * @param list<int> $okCodes
+     */
     private function expectCode($socket, array $okCodes, string $context): string
     {
         $data = '';

@@ -220,10 +220,8 @@ const Map<String, String> kEnStrings = {
   'auth_guest_data_merged_ratings': '{} ratings moved to your account.',
   'auth_guest_data_merged_watchlist':
       '{} watchlist items moved to your account.',
-  'auth_guest_data_merged_favorites':
-      '{} Top 20 titles moved to your account.',
-  'auth_guest_data_merged_seasons':
-      '{} watched seasons moved to your account.',
+  'auth_guest_data_merged_favorites': '{} Top 20 titles moved to your account.',
+  'auth_guest_data_merged_seasons': '{} watched seasons moved to your account.',
   'auth_guest_data_merged_ratings_favorites':
       '{} ratings and {} Top 20 titles moved to your account.',
   'auth_guest_data_merged_watchlist_favorites':

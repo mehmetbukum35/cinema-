@@ -75,7 +75,10 @@ mixin TmdbListsMixin on TmdbServiceBase {
     });
   }
 
-  Future<List<Movie>> getTrendingPaged({required bool isTV, int page = 1}) async {
+  Future<List<Movie>> getTrendingPaged({
+    required bool isTV,
+    int page = 1,
+  }) async {
     final isFamily = await PrefsAppSettings.isFamilyMode();
     if (isFamily) {
       return getPopular(isTV: isTV, page: page);

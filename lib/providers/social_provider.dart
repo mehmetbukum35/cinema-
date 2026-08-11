@@ -13,6 +13,7 @@ class SocialState {
   final List<Friend> pendingSent;
   final List<ActivityItem> activityFeed;
   final List<Movie> intersection;
+
   /// Arkadaş izleme listesi kesişimi yüklenirken true. Genel `loading` ile
   /// paylaşılmaz — loadFriends bitince "ortak film yok" flaşı oluşmasın.
   final bool intersectionLoading;
@@ -255,7 +256,10 @@ class SocialNotifier extends Notifier<SocialState> {
       unawaited(loadTasteScores());
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _friendsLoadGeneration) return;
-      state = state.copyWith(loading: _activityLoading || _friendActivityLoading, error: () => e.message);
+      state = state.copyWith(
+        loading: _activityLoading || _friendActivityLoading,
+        error: () => e.message,
+      );
     } catch (e) {
       if (!ref.mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(
@@ -956,10 +960,7 @@ class SocialNotifier extends Notifier<SocialState> {
           .whereType<Map<dynamic, dynamic>>()
           .map((e) => Movie.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-      state = state.copyWith(
-        intersection: movies,
-        intersectionLoading: false,
-      );
+      state = state.copyWith(intersection: movies, intersectionLoading: false);
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _intersectionLoadGeneration) return;
       state = state.copyWith(

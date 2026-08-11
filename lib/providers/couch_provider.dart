@@ -136,6 +136,7 @@ class CouchNotifier extends Notifier<CouchState> {
   Timer? _pollTimer;
   int _sessionRevision = 0;
   bool _startInFlight = false;
+
   /// leave() cancel bitene kadar checkActive bu id'yi yeniden hydrate etmesin.
   int? _leavingSessionId;
   Future<void>? _activeCheckFlight;

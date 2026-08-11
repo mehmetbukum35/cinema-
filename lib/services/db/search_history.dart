@@ -36,7 +36,10 @@ mixin DbSearchHistoryMixin {
     }
 
     await db.transaction((txn) async {
-      final allHistory = await txn.query('search_history', where: 'deleted = 0');
+      final allHistory = await txn.query(
+        'search_history',
+        where: 'deleted = 0',
+      );
       for (final row in allHistory) {
         final existing = (row['query'] as String? ?? '').toLowerCase();
         if (existing == cqLower ||

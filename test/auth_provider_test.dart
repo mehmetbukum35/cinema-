@@ -841,21 +841,27 @@ void main() {
       expect(state.isAuthenticated, isFalse);
     });
 
-    test('login maps Google-linked password failure to use_google_or_reset', () async {
-      mockApi.loginError = ApiException(
-        statusCode: 401,
-        message:
-            'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.',
-        code: 'use_google_or_reset',
-      );
-      final notifier = container.read(authProvider.notifier);
-      await pumpEventQueue();
+    test(
+      'login maps Google-linked password failure to use_google_or_reset',
+      () async {
+        mockApi.loginError = ApiException(
+          statusCode: 401,
+          message:
+              'Bu hesap Google ile bağlı. Google ile giriş yapın veya şifrenizi sıfırlayın.',
+          code: 'use_google_or_reset',
+        );
+        final notifier = container.read(authProvider.notifier);
+        await pumpEventQueue();
 
-      final result = await notifier.login('test@example.com', 'wrong-pass');
+        final result = await notifier.login('test@example.com', 'wrong-pass');
 
-      expect(result.errorMessage, 'auth_err_use_google_or_reset');
-      expect(container.read(authProvider).error, 'auth_err_use_google_or_reset');
-    });
+        expect(result.errorMessage, 'auth_err_use_google_or_reset');
+        expect(
+          container.read(authProvider).error,
+          'auth_err_use_google_or_reset',
+        );
+      },
+    );
 
     test(
       'forgotPassword maps legacy password_reset_unavailable separately from send failure',

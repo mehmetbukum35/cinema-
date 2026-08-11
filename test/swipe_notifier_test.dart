@@ -477,9 +477,7 @@ void main() {
 
         final state = container.read(swipeProvider);
         expect(
-          state.ratedIds.contains(
-            '${first.isTV ? 'tv' : 'movie'}_${first.id}',
-          ),
+          state.ratedIds.contains('${first.isTV ? 'tv' : 'movie'}_${first.id}'),
           isTrue,
         );
         expect(state.current, greaterThan(0));

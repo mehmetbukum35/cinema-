@@ -455,9 +455,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ref
                                         .read(authProvider.notifier)
                                         .clearError();
-                                    setState(
-                                      () => _isRegister = !_isRegister,
-                                    );
+                                    setState(() => _isRegister = !_isRegister);
                                   },
                             child: Text(
                               _isRegister

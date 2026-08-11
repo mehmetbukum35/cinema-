@@ -229,10 +229,11 @@ class Moderation
 
         if ($action === 'hide' || $action === 'restore' || $action === 'dismiss') {
             // dismiss = "görünür bırak": otomatik gizlenen yorumu da aç.
+            // Üstteki if yalnızca bu üç değeri geçiriyor; `default` kolu
+            // erişilemezdi ve PHPStan'i kırıyordu.
             $hidden = match ($action) {
                 'hide' => 1,
                 'restore', 'dismiss' => 0,
-                default => 0,
             };
             $up = $this->db->prepare(
                 'UPDATE ratings SET is_hidden = ? WHERE user_id = ? AND movie_id = ? AND is_tv = ?'

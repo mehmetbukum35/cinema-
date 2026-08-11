@@ -41,9 +41,7 @@ class TasteDnaService {
   /// lastPublished hash'e yazıp yeniden yayınlamayı kilitlemesin.
   static Future<void> _publishGate = Future<void>.value();
 
-  static Future<void> publishSerialized(
-    Future<void> Function() publish,
-  ) {
+  static Future<void> publishSerialized(Future<void> Function() publish) {
     final done = _publishGate.catchError((_) {}).then((_) => publish());
     _publishGate = done.catchError((_) {});
     return done;

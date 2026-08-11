@@ -89,8 +89,25 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
       final likedGenres = await PrefsTastePrefs.getLikedGenreIds();
       // TV-only id'ler film discover'ı boşaltır; browse ile aynı filtre.
       const movieValid = {
-        28, 12, 16, 35, 80, 99, 18, 10751, 14, 36, 27, 10402, 9648, 10749,
-        878, 10770, 53, 10752, 37,
+        28,
+        12,
+        16,
+        35,
+        80,
+        99,
+        18,
+        10751,
+        14,
+        36,
+        27,
+        10402,
+        9648,
+        10749,
+        878,
+        10770,
+        53,
+        10752,
+        37,
       };
       const tvToMovie = {10759: 28, 10765: 878, 10768: 10752};
       final movieGenres = <int>[];

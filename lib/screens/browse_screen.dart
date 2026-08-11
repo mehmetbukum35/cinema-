@@ -186,11 +186,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       10752,
       37,
     };
-    const tvToMovie = {
-      10759: 28,
-      10765: 878,
-      10768: 10752,
-    };
+    const tvToMovie = {10759: 28, 10765: 878, 10768: 10752};
     final out = <int>[];
     for (final id in ids) {
       final mapped = tvToMovie[id] ?? id;
@@ -625,10 +621,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
       unawaited(PrefsTastePrefs.recordRecoImpressions([_movieKey(pick)]));
       unawaited(
-        RecommendationTelemetryService.recordShown(
-          [pick],
-          surface: 'tonight_pick',
-        ),
+        RecommendationTelemetryService.recordShown([
+          pick,
+        ], surface: 'tonight_pick'),
       );
     }
   }

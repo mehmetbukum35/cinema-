@@ -271,8 +271,7 @@ class ProfileScreen extends ConsumerWidget {
         if (currentHash != lastPublishedHash) {
           await TasteDnaService.publishSerialized(() async {
             await apiService.publishTasteDna(dna.toJson());
-            final stillLast =
-                await PrefsTastePrefs.getLastPublishedDnaHash();
+            final stillLast = await PrefsTastePrefs.getLastPublishedDnaHash();
             if (stillLast == lastPublishedHash) {
               await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
             }

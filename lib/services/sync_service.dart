@@ -681,7 +681,9 @@ class SyncService {
       final remote = _asInt(remoteUpdatedAt);
       // Sapmış yerel damga (sunucudan >> ileride) kör force-apply ile soft-delete
       // / ortadaki edit'i ezmesin; karşılaştırmayı sunucu zamanına indir.
-      final compareLocal = local > serverTime + _clockSkewMs ? serverTime : local;
+      final compareLocal = local > serverTime + _clockSkewMs
+          ? serverTime
+          : local;
       return remote >= compareLocal;
     }
 
@@ -977,8 +979,7 @@ class SyncService {
             await _ensureSession(userId);
             await _apiService.publishTasteDna(dna.toJson());
             await _ensureSession(userId);
-            final stillLast =
-                await PrefsTastePrefs.getLastPublishedDnaHash();
+            final stillLast = await PrefsTastePrefs.getLastPublishedDnaHash();
             if (stillLast == lastPublishedHash) {
               await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
             }
