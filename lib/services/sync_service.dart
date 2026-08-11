@@ -17,6 +17,7 @@ import '../providers/social_provider.dart';
 import 'cultural_preference_service.dart';
 import '../models/cultural_preferences.dart';
 import 'recommendation_telemetry_service.dart';
+import 'taste_dna_service.dart';
 
 /// Sunucudan gelen sayısal alanları güvenle int'e çevirir. Paylaşımlı
 /// hosting'deki MySQL/PDO, BIGINT kolonları JSON'a STRING olarak yazar
@@ -890,10 +891,16 @@ class SyncService {
             await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
-          await _ensureSession(userId);
-          await _apiService.publishTasteDna(dna.toJson());
-          await _ensureSession(userId);
-          await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
+          await TasteDnaService.publishSerialized(() async {
+            await _ensureSession(userId);
+            await _apiService.publishTasteDna(dna.toJson());
+            await _ensureSession(userId);
+            final stillLast =
+                await PrefsTastePrefs.getLastPublishedDnaHash();
+            if (stillLast == lastPublishedHash) {
+              await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
+            }
+          });
           debugPrint("Sync auto-publish DNA succeeded!");
         } else {
           debugPrint("Sync auto-publish DNA skipped (already up to date).");

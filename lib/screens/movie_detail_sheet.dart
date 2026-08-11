@@ -288,6 +288,9 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       unawaited(social.loadFriends());
       unawaited(social.loadFriendSignals());
       unawaited(social.loadActivityFeed().catchError((_) {}));
+      unawaited(social.loadRecommendations());
+      unawaited(social.loadSentRecommendations());
+      unawaited(social.loadReceivedRecommendations());
     } catch (e) {
       _showToast(
         tr?.get('error_occurred_msg').replaceAll('{}', '$e') ?? 'Hata: $e',

@@ -11,6 +11,7 @@ import '../services/localization_service.dart';
 import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
 import '../services/taste_dna_presenter.dart';
+import '../services/taste_dna_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/cinematic_background.dart';
@@ -59,10 +60,15 @@ class _TasteDnaScreenState extends ConsumerState<TasteDnaScreen> {
             await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
-          apiService!
-              .publishTasteDna(dna.toJson())
-              .then((_) => PrefsTastePrefs.setLastPublishedDnaHash(currentHash))
-              .catchError((e) => debugPrint('DNA publish failed: $e'));
+          TasteDnaService.publishSerialized(() async {
+            await apiService!.publishTasteDna(dna.toJson());
+            final stillLast =
+                await PrefsTastePrefs.getLastPublishedDnaHash();
+            // Daha yeni bir publish hash'i yazdıysa eski damgayı basma.
+            if (stillLast == lastPublishedHash) {
+              await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
+            }
+          }).catchError((e) => debugPrint('DNA publish failed: $e'));
         }
       }
       if (!mounted) return;

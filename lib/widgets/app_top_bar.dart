@@ -15,6 +15,7 @@ import '../theme/app_theme.dart';
 import '../screens/movie_detail_sheet.dart';
 import '../screens/my_reviews_screen.dart';
 import '../screens/social_screen.dart';
+import '../models/movie.dart';
 import '../utils/username_helper.dart';
 import '../widgets/about_sheet.dart';
 import '../widgets/app_toast.dart';
@@ -86,7 +87,22 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
 
       final service = ref.read(tmdbServiceProvider);
       final likedGenres = await PrefsTastePrefs.getLikedGenreIds();
-      var results = await service.discoverByGenres(likedGenres, isTV: false);
+      // TV-only id'ler film discover'ı boşaltır; browse ile aynı filtre.
+      const movieValid = {
+        28, 12, 16, 35, 80, 99, 18, 10751, 14, 36, 27, 10402, 9648, 10749,
+        878, 10770, 53, 10752, 37,
+      };
+      const tvToMovie = {10759: 28, 10765: 878, 10768: 10752};
+      final movieGenres = <int>[];
+      for (final id in likedGenres) {
+        final mapped = tvToMovie[id] ?? id;
+        if (movieValid.contains(mapped) && !movieGenres.contains(mapped)) {
+          movieGenres.add(mapped);
+        }
+      }
+      var results = movieGenres.isEmpty
+          ? <Movie>[]
+          : await service.discoverByGenres(movieGenres, isTV: false);
       if (results.isEmpty) {
         results = await service.getPopular(isTV: false);
       }

@@ -260,6 +260,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   Future<void> _undo() async {
     if (_current == 0) return;
+    final prev = _items[_current - 1];
+    await PrefsLibraryFacade.deleteRating(prev.id, prev.isTV);
+    if (!mounted) return;
     final disableAnims =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (disableAnims) {

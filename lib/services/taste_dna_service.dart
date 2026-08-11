@@ -37,6 +37,18 @@ class TasteDnaService {
   /// `top_cultures` gibi yeni alanları sonsuza dek boş bırakmasın.
   static const dnaSchemaVersion = 2;
 
+  /// Eşzamanlı publish (DNA ekranı + sync + profil) eski snapshot'ı
+  /// lastPublished hash'e yazıp yeniden yayınlamayı kilitlemesin.
+  static Future<void> _publishGate = Future<void>.value();
+
+  static Future<void> publishSerialized(
+    Future<void> Function() publish,
+  ) {
+    final done = _publishGate.catchError((_) {}).then((_) => publish());
+    _publishGate = done.catchError((_) {});
+    return done;
+  }
+
   static const _likedDecay = 0.00385; // ~180 gün yarı ömür (motorla aynı)
 
   /// Tür → arketip kümesi. En baskın türün kümesi arketipi belirler.

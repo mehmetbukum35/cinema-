@@ -311,6 +311,7 @@ mixin SocialApi on ApiClient {
     _invalidateInFlightGets('/social/friends');
     _invalidateInFlightGets('/social/profiles/top');
     _invalidateInFlightGets('/social/users/blocked');
+    _invalidateInFlightGets('/social/recommendations');
   }
 
   Future<void> unblockUser(int userId) async {

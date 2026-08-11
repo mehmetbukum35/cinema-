@@ -163,6 +163,44 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     return out;
   }
 
+  /// Dizi türlerini film discover'a gönderme — TV-only id'ler boş/yanlış sonuç verir.
+  static List<int> _toMovieGenres(List<int> ids) {
+    const movieValid = {
+      28,
+      12,
+      16,
+      35,
+      80,
+      99,
+      18,
+      10751,
+      14,
+      36,
+      27,
+      10402,
+      9648,
+      10749,
+      878,
+      10770,
+      53,
+      10752,
+      37,
+    };
+    const tvToMovie = {
+      10759: 28,
+      10765: 878,
+      10768: 10752,
+    };
+    final out = <int>[];
+    for (final id in ids) {
+      final mapped = tvToMovie[id] ?? id;
+      if (movieValid.contains(mapped) && !out.contains(mapped)) {
+        out.add(mapped);
+      }
+    }
+    return out;
+  }
+
   /// Sıralamayı bozmadan tazelik veren yerel karıştırma: liste [window]'luk
   /// pencerelere bölünür ve her pencere kendi içinde karıştırılır. En iyiler
   /// yine üstte kalır ama dizilim her gün/turda farklı görünür.
@@ -270,11 +308,20 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       // Sayfa rotasyonu: sabit 1-2. sayfalar yerine güne/tura göre kaydır.
       final basePage = 1 + (daySeed + _reloadNonce) % 4;
       final tvGenres = _toTvGenres(likedGenres);
+      final movieGenres = _toMovieGenres(likedGenres);
 
       // Phase 1: Load critical lists needed for Tonight's Pick, For You, and Trending
       final phase1Results = await Future.wait([
-        _service.discoverByGenres(likedGenres, isTV: false, page: basePage),
-        _service.discoverByGenres(likedGenres, isTV: false, page: basePage + 1),
+        movieGenres.isEmpty
+            ? Future.value(<Movie>[])
+            : _service.discoverByGenres(movieGenres, isTV: false, page: basePage),
+        movieGenres.isEmpty
+            ? Future.value(<Movie>[])
+            : _service.discoverByGenres(
+                movieGenres,
+                isTV: false,
+                page: basePage + 1,
+              ),
         _service.getTrending(),
         // Dizi discover'ı: Sana Özel artık yalnız filmden beslenmiyor.
         tvGenres.isEmpty

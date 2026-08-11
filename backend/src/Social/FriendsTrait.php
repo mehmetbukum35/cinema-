@@ -218,20 +218,29 @@ trait SocialFriendsTrait
         $friendId = (int) ($in['friend_id'] ?? 0);
         if ($friendId === 0) fail(422, 'friend_id gerekli.');
 
-        // İki yöndeki ilişkileri de sil
-        $del = $this->db->prepare('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)');
-        $del->execute([$uid, $friendId, $friendId, $uid]);
-        $this->cancelCouchSessionsBetween($uid, $friendId);
+        $this->db->beginTransaction();
+        try {
+            // İki yöndeki ilişkileri de sil
+            $del = $this->db->prepare('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)');
+            $del->execute([$uid, $friendId, $friendId, $uid]);
+            $this->cancelCouchSessionsBetween($uid, $friendId);
 
-        // Unfriend sonrası kişisel öneri notları inbox'ta kalmasın (block ile aynı).
-        $purge = $this->db->prepare(
-            'DELETE FROM recommendations
-              WHERE (to_user_id = ? AND from_user_id = ?)
-                 OR (to_user_id = ? AND from_user_id = ?)'
-        );
-        $purge->execute([$uid, $friendId, $friendId, $uid]);
+            // Unfriend sonrası kişisel öneri notları inbox'ta kalmasın (block ile aynı).
+            $purge = $this->db->prepare(
+                'DELETE FROM recommendations
+                  WHERE (to_user_id = ? AND from_user_id = ?)
+                     OR (to_user_id = ? AND from_user_id = ?)'
+            );
+            $purge->execute([$uid, $friendId, $friendId, $uid]);
 
-        json_out(200, ['ok' => true]);
+            $this->db->commit();
+            json_out(200, ['ok' => true]);
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
     }
 
     // ─── GET /social/friends ────────────────────────────────────────────────

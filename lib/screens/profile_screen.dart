@@ -7,6 +7,7 @@ import '../models/movie.dart';
 import '../services/prefs/library_facade.dart';
 import '../services/prefs/taste_prefs.dart';
 import '../services/providers.dart';
+import '../services/taste_dna_service.dart';
 import '../services/localization_service.dart';
 import '../providers/watchlist_provider.dart';
 import '../providers/auth_provider.dart';
@@ -268,8 +269,14 @@ class ProfileScreen extends ConsumerWidget {
             await PrefsTastePrefs.getLastPublishedDnaHash();
 
         if (currentHash != lastPublishedHash) {
-          await apiService.publishTasteDna(dna.toJson());
-          await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
+          await TasteDnaService.publishSerialized(() async {
+            await apiService.publishTasteDna(dna.toJson());
+            final stillLast =
+                await PrefsTastePrefs.getLastPublishedDnaHash();
+            if (stillLast == lastPublishedHash) {
+              await PrefsTastePrefs.setLastPublishedDnaHash(currentHash);
+            }
+          });
           debugPrint("Background DNA auto-publish succeeded!");
         } else {
           debugPrint(
