@@ -158,9 +158,15 @@ trait SocialCouchTrait
                 $row = $this->activateIfGuestArrived($row, $uid);
 
                 $key = ($isTv ? 'tv_' : 'movie_') . $movieId;
+                $deckData = json_decode((string) $row['deck'], true);
+                if (!is_array($deckData) || empty($deckData)) {
+                    // DB'deki JSON bozuksa veya deste boşsa oturumu kilitleme;
+                    // 409 ile bilgilendirici hata döndür.
+                    fail(409, 'Oturum destesi geçersiz, oturum yeniden başlatılabilir.');
+                }
                 $deckKeys = array_map(
                     fn (array $d) => ($d['is_tv'] ? 'tv_' : 'movie_') . $d['movie_id'],
-                    json_decode((string) $row['deck'], true) ?: []
+                    $deckData
                 );
                 if (!in_array($key, $deckKeys, true)) {
                     fail(422, 'Bu yapım destede yok.');

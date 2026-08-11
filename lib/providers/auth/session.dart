@@ -216,6 +216,8 @@ mixin AuthSessionMixin on Notifier<AuthState> {
   /// Giriş/kayıt sonrası buluttan çek + yerel provider'ları yenile.
   Future<void> _postAuthSessionRestore() async {
     ref.invalidate(socialProvider);
+    ref.invalidate(watchlistProvider);
+    ref.invalidate(statsProvider);
     // Logout path Top 20'yi invalidate eder; login da etmeli — aksi halde
     // misafir listesi / hardClear sonrası hayalet Top 20 kalır.
     ref.invalidate(topListProvider);
@@ -223,9 +225,11 @@ mixin AuthSessionMixin on Notifier<AuthState> {
     // biri yavaşladığında/yanıt vermediğinde kullanıcı girişte sonsuza kadar
     // spinner arkasında kalmamalı.
     await ref.read(syncProvider.notifier).performSync();
-    ref.invalidate(watchlistProvider);
-    ref.invalidate(statsProvider);
-    ref.invalidate(topListProvider);
+
+    // Engine cache'i swipe provider invalidate'inden ÖNCE temizle: swipe
+    // yeniden inşa edildiğinde güncel engine ile başlar.
+    await ref.read(recommendationEngineProvider).invalidateCache();
+    ref.invalidate(swipeProvider);
 
     unawaited(
       Future.wait([
@@ -240,8 +244,6 @@ mixin AuthSessionMixin on Notifier<AuthState> {
         return <void>[];
       }),
     );
-    await ref.read(recommendationEngineProvider).invalidateCache();
-    ref.invalidate(swipeProvider);
     // Buluttan gelen puan/liste + arkadaş sinyalleri Keşfet'i besler.
     ref.read(browseRefreshTriggerProvider.notifier).fire();
   }

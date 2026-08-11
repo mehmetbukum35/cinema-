@@ -658,7 +658,7 @@ class SocialNotifier extends Notifier<SocialState> {
     }
     final cursor = state.receivedRecommendationsCursor;
     if (cursor == null) return;
-    final generation = _receivedRecommendationsLoadGeneration;
+    final generation = ++_receivedRecommendationsLoadGeneration;
     state = state.copyWith(receivedRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getRecommendationsPage(cursor: cursor);
@@ -704,7 +704,7 @@ class SocialNotifier extends Notifier<SocialState> {
     }
     final cursor = state.sentRecommendationsCursor;
     if (cursor == null) return;
-    final generation = _sentRecommendationsLoadGeneration;
+    final generation = ++_sentRecommendationsLoadGeneration;
     state = state.copyWith(sentRecommendationsLoadingMore: true);
     try {
       final res = await _apiService.getSentRecommendationsPage(cursor: cursor);

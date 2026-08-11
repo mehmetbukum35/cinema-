@@ -202,6 +202,9 @@ class Sync
     // bunun çok altında kalır; sınır, kimlikli bir istemcinin depoyu sınırsız
     // şişirmesini ve upsert döngüsünün transaction'ı kilitlemesini önler.
     private const MAX_ITEMS_PER_TABLE = 500;
+    // Tüm tablolar toplamında da bir üst sınır: tek bir push'un tüm tabloları
+    // doldurması durumunda lock contention DoS'unu önler.
+    private const MAX_TOTAL_ITEMS_PER_PUSH = 1000;
 
     /** @param array<string, mixed> $in */
     public function push(int $uid, array $in, bool $requireDevice = false): void
@@ -216,15 +219,25 @@ class Sync
         );
         $locale = self::metadataLocale($in['metadata_locale'] ?? null);
         // Sınır kontrolü transaction'a girmeden yapılır.
+        $totalItems = 0;
         foreach (self::TABLES as $table => $def) {
             $items = $in[$table] ?? null;
-            if (is_array($items) && count($items) > self::MAX_ITEMS_PER_TABLE) {
-                fail(413, "Çok fazla kayıt: $table (tek istekte en fazla " . self::MAX_ITEMS_PER_TABLE . ').');
+            if (is_array($items)) {
+                if (count($items) > self::MAX_ITEMS_PER_TABLE) {
+                    fail(413, "Çok fazla kayıt: $table (tek istekte en fazla " . self::MAX_ITEMS_PER_TABLE . ').');
+                }
+                $totalItems += count($items);
             }
         }
         $events = $in['recommendation_events'] ?? [];
-        if (is_array($events) && count($events) > self::MAX_ITEMS_PER_TABLE) {
-            fail(413, 'Çok fazla recommendation_events kaydı.');
+        if (is_array($events)) {
+            if (count($events) > self::MAX_ITEMS_PER_TABLE) {
+                fail(413, 'Çok fazla recommendation_events kaydı.');
+            }
+            $totalItems += count($events);
+        }
+        if ($totalItems > self::MAX_TOTAL_ITEMS_PER_PUSH) {
+            fail(413, 'Tek push isteğinde en fazla ' . self::MAX_TOTAL_ITEMS_PER_PUSH . ' kayıt gönderilebilir.');
         }
 
         $applied = 0;
