@@ -246,6 +246,7 @@ const Map<String, String> kEnStrings = {
   'change_password_button': 'Update Password',
   'change_password_error_mismatch': 'New passwords do not match.',
   'change_password_error_short': 'Password must be at least 8 characters.',
+  'change_password_error_empty': 'Fill in all password fields.',
   'change_password_success': 'Password changed successfully.',
   'google_unlink_title': 'Unlink Google Account',
   'google_unlink_desc': 'Enter your account password to continue.',

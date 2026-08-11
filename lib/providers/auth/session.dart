@@ -134,6 +134,11 @@ mixin AuthSessionMixin on Notifier<AuthState> {
   }) async {
     state = state.copyWith(loading: true);
 
+    // Önceki hesabın uçuştaki sync'i yeni oturuma coalesce olmasın — aksi halde
+    // B'nin performSync()'i A'nın future'ını bekler, A session-change ile yutulur
+    // ve SyncNotifier yine de success yazar; B hiç pull/push etmez.
+    ref.read(syncProvider.notifier).resetForSessionChange();
+
     final previousUserId = await PrefsAuthStorage.getLastAuthenticatedUserId();
     final newUserId = user['id']?.toString();
     final accountSwitched =

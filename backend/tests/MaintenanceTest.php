@@ -47,10 +47,12 @@ final class MaintenanceTest extends TestCase
         );
 
         $nowSeconds = intdiv($this->now, 1000);
+        $nowMinutes = intdiv($nowSeconds, 60);
         $this->db->exec("INSERT INTO refresh_tokens VALUES (1, " . ($nowSeconds - 1) . "), (2, " . ($nowSeconds + 1) . ")");
         $this->db->exec("INSERT INTO password_resets VALUES ('old', " . ($this->now - 1) . "), ('new', " . ($this->now + 1) . ")");
         $this->db->exec("INSERT INTO email_verifications VALUES ('old', " . ($this->now - 1) . "), ('new', " . ($this->now + 1) . ")");
-        $this->db->exec("INSERT INTO rate_limits VALUES ('old', " . ($nowSeconds - 121) . "), ('new', $nowSeconds)");
+        // rate_limits.window_time dakika kovasıdır (Helpers::rate_limit).
+        $this->db->exec("INSERT INTO rate_limits VALUES ('old', " . ($nowMinutes - 6) . "), ('new', $nowMinutes)");
 
         $result = (new Maintenance($this->db, ['batch_limit' => 500]))->run($this->now);
 

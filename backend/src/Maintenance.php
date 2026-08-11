@@ -108,7 +108,13 @@ final class Maintenance
             $result['refresh_tokens_deleted'] = $this->deleteExpired('refresh_tokens', 'expires_at', intdiv($nowMs, 1000));
             $result['password_resets_deleted'] = $this->deleteExpired('password_resets', 'expires_at', $nowMs);
             $result['email_verifications_deleted'] = $this->deleteExpired('email_verifications', 'expires_at', $nowMs);
-            $result['rate_limits_deleted'] = $this->deleteExpired('rate_limits', 'window_time', intdiv($nowMs, 1000) - 120);
+            $result['rate_limits_deleted'] = $this->deleteExpired(
+                'rate_limits',
+                'window_time',
+                // rate_limit() dakika kovası yazar (floor(time()/60)); unix saniye
+                // cutoff tüm canlı satırları silerdi.
+                intdiv(intdiv($nowMs, 1000), 60) - 5
+            );
             $result['recommendation_events_deleted'] = $this->deleteRecommendationEvents($nowMs);
             $this->db->commit();
         } catch (Throwable $e) {

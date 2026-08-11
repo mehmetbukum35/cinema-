@@ -262,12 +262,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   void _onModeChanged(int mode) {
     HapticFeedback.lightImpact();
+    // Uçuştaki arama/benzer sonuçları iptal et — aksi halde film moduna
+    // dönünce stale sonuçlar flaş yapar (_clearSearch ile aynı guard).
+    _debounce?.cancel();
+    _searchRequestId++;
+    _similarRequestId++;
     setState(() {
       _matchMode = mode;
       _ctrl.clear();
       _searchResults = [];
       _selected = null;
       _similar = [];
+      _searching = false;
+      _loadingSimilar = false;
       _resetTogether();
       _selectedFriend = null;
     });

@@ -248,6 +248,7 @@ const Map<String, String> kTrStrings = {
   'change_password_button': 'Şifreyi Güncelle',
   'change_password_error_mismatch': 'Yeni şifreler eşleşmiyor.',
   'change_password_error_short': 'Yeni şifre en az 8 karakter olmalıdır.',
+  'change_password_error_empty': 'Tüm parola alanlarını doldurun.',
   'change_password_success': 'Şifreniz başarıyla değiştirildi.',
   'google_unlink_title': 'Google Bağlantısını Kaldır',
   'google_unlink_desc': 'Devam etmek için hesap parolanızı girin.',

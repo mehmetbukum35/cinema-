@@ -391,7 +391,7 @@ class _FriendIntersectionView extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: socialState.loading
+          child: socialState.intersectionLoading
               ? Center(child: CircularProgressIndicator(color: palette.gold))
               : socialState.error != null
               ? Center(

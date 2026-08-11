@@ -36,14 +36,16 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
 
   Future<void> _submit() async {
     final tr = AppLocalizations.of(context);
-    final oldPass = _oldPasswordCtrl.text.trim();
-    final newPass = _newPasswordCtrl.text.trim();
-    final confirmPass = _confirmPasswordCtrl.text.trim();
+    // Parolaları trim etme — giriş ekranı da etmez; boşluk bilinçli karakterdir.
+    final oldPass = _oldPasswordCtrl.text;
+    final newPass = _newPasswordCtrl.text;
+    final confirmPass = _confirmPasswordCtrl.text;
 
     if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
       setState(() {
         _localError =
-            tr?.get('auth_forgot_err_name_empty') ?? 'Boş alan bırakılamaz.';
+            tr?.get('change_password_error_empty') ??
+            'Tüm parola alanlarını doldurun.';
       });
       return;
     }

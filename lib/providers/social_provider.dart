@@ -13,6 +13,9 @@ class SocialState {
   final List<Friend> pendingSent;
   final List<ActivityItem> activityFeed;
   final List<Movie> intersection;
+  /// Arkadaş izleme listesi kesişimi yüklenirken true. Genel `loading` ile
+  /// paylaşılmaz — loadFriends bitince "ortak film yok" flaşı oluşmasın.
+  final bool intersectionLoading;
   final FriendSignals signals;
 
   /// Arkadaş id → zevk uyumu skoru (0-100). Veri yetersizse anahtar yoktur.
@@ -59,6 +62,7 @@ class SocialState {
     this.pendingSent = const [],
     this.activityFeed = const [],
     this.intersection = const [],
+    this.intersectionLoading = false,
     this.signals = const FriendSignals(),
     this.tasteScores = const {},
     this.recommendations = const [],
@@ -91,6 +95,7 @@ class SocialState {
     List<Friend>? pendingSent,
     List<ActivityItem>? activityFeed,
     List<Movie>? intersection,
+    bool? intersectionLoading,
     FriendSignals? signals,
     Map<int, int>? tasteScores,
     List<RecommendationInboxItem>? recommendations,
@@ -122,6 +127,7 @@ class SocialState {
       pendingSent: pendingSent ?? this.pendingSent,
       activityFeed: activityFeed ?? this.activityFeed,
       intersection: intersection ?? this.intersection,
+      intersectionLoading: intersectionLoading ?? this.intersectionLoading,
       signals: signals ?? this.signals,
       tasteScores: tasteScores ?? this.tasteScores,
       recommendations: recommendations ?? this.recommendations,
@@ -545,7 +551,7 @@ class SocialNotifier extends Notifier<SocialState> {
       try {
         final res = await _apiService.getTasteMatch(id);
         final scoreVal = res['score'];
-        if (scoreVal != null) {
+        if (res['has_data'] == true && scoreVal != null) {
           scores[id] = scoreVal is num
               ? scoreVal.toInt()
               : int.tryParse(scoreVal.toString()) ?? 0;
@@ -919,7 +925,11 @@ class SocialNotifier extends Notifier<SocialState> {
 
   Future<void> loadWatchlistIntersection(int friendId) async {
     final generation = ++_intersectionLoadGeneration;
-    state = state.copyWith(loading: true, error: () => null, intersection: []);
+    state = state.copyWith(
+      intersectionLoading: true,
+      error: () => null,
+      intersection: [],
+    );
     try {
       final list = await _apiService.getWatchlistIntersection(friendId);
       if (!ref.mounted || generation != _intersectionLoadGeneration) return;
@@ -927,13 +937,22 @@ class SocialNotifier extends Notifier<SocialState> {
           .whereType<Map<dynamic, dynamic>>()
           .map((e) => Movie.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-      state = state.copyWith(intersection: movies, loading: false);
+      state = state.copyWith(
+        intersection: movies,
+        intersectionLoading: false,
+      );
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _intersectionLoadGeneration) return;
-      state = state.copyWith(loading: false, error: () => e.message);
+      state = state.copyWith(
+        intersectionLoading: false,
+        error: () => e.message,
+      );
     } catch (e) {
       if (!ref.mounted || generation != _intersectionLoadGeneration) return;
-      state = state.copyWith(loading: false, error: () => e.toString());
+      state = state.copyWith(
+        intersectionLoading: false,
+        error: () => e.toString(),
+      );
     }
   }
 }
