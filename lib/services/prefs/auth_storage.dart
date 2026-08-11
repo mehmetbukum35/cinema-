@@ -18,6 +18,10 @@ class PrefsAuthStorage {
   /// yazıları eski epoch ile cache'i veya secure storage'ı diriltmesin.
   static int _tokenEpoch = 0;
 
+  /// Uzun süren bir iş (token yenileme) başlarken okunur ve [saveTokens]'a
+  /// `expectedEpoch` olarak geçirilir: arada çıkış olduysa yazı düşer.
+  static int get tokenEpoch => _tokenEpoch;
+
   static void clearTokenCache() {
     _tokenEpoch++;
     _cachedAccessToken = null;
@@ -53,11 +57,19 @@ class PrefsAuthStorage {
     return token;
   }
 
+  /// [expectedEpoch] verilirse (token yenileme yolu) yazı yalnızca o epoch hâlâ
+  /// güncelken uygulanır; arada çıkış istendiyse oturum diriltilmez. Giriş
+  /// akışı epoch geçirmez: yeni oturumu koşulsuz yazar.
   static Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
+    int? expectedEpoch,
   }) async {
-    final epoch = _tokenEpoch;
+    final epoch = expectedEpoch ?? _tokenEpoch;
+    // Yazının kaynağı araya giren bir çıkıştan ÖNCE başladıysa hiç yazma:
+    // clearTokens epoch'u senkron artırdığı için, yazı anında yakalanan epoch
+    // artık geçerli görünüyor ve aşağıdaki geri-alma kontrolü tetiklenmiyordu.
+    if (epoch != _tokenEpoch) return;
     await _secureStorage.write(key: _keyAccessToken, value: accessToken);
     await _secureStorage.write(key: _keyRefreshToken, value: refreshToken);
     if (epoch != _tokenEpoch) {
@@ -118,6 +130,7 @@ class PrefsAuthStorage {
   }
 
   static Future<void> clearTokens() async {
+    // Epoch senkron artar: uçuştaki okumalar/yazılar hemen terk etsin.
     _tokenEpoch++;
     _cachedAccessToken = null;
     final prefs = await SharedPreferences.getInstance();
@@ -126,6 +139,7 @@ class PrefsAuthStorage {
     await prefs.remove(_keyAccessToken);
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyUserData);
+    _cachedAccessToken = null;
   }
 
   static Future<void> deleteAllSecure() => _secureStorage.deleteAll();

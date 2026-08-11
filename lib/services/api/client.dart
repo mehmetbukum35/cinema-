@@ -311,6 +311,10 @@ class ApiClient {
     final completer = Completer<RefreshOutcome>();
     _refreshFuture = completer.future;
 
+    // Yenileme boyunca çıkış yapılırsa yazdığımız token oturumu diriltmesin:
+    // epoch burada, ağ turundan ÖNCE alınır (bkz. PrefsAuthStorage.saveTokens).
+    final refreshEpoch = PrefsAuthStorage.tokenEpoch;
+
     try {
       final initialRefreshToken = await PrefsAuthStorage.getRefreshToken();
       final userData = await PrefsAuthStorage.getUserData();
@@ -364,6 +368,7 @@ class ApiClient {
             await PrefsAuthStorage.saveTokens(
               accessToken: newAccessToken,
               refreshToken: newRefreshToken,
+              expectedEpoch: refreshEpoch,
             );
             completer.complete(RefreshOutcome.success);
           }
