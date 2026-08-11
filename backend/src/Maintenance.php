@@ -369,13 +369,27 @@ final class Maintenance
     private function expireOpenCouchSessions(int $nowMs): int
     {
         $cutoff = $nowMs - ((int) $this->options['couch_open_hours'] * 3600000);
+        $changed = 0;
+
         $ids = $this->selectIds('couch_sessions', "status IN ('pending', 'active') AND updated_at < ?", [$cutoff]);
         $st = $this->db->prepare("UPDATE couch_sessions SET status = 'cancelled', updated_at = ? WHERE id = ?");
-        $changed = 0;
         foreach ($ids as $id) {
             $st->execute([$nowMs, $id]);
             $changed += $st->rowCount();
         }
+
+        // Kutlaması kapatılmamış eşleşme. Kapanış tamamen istemcinin cancel
+        // isteğine bağlı; o istek ağda düşerse satır 'matched' kalır, /active
+        // onu döndürmeye devam eder ve istemci her açılışta oturum ekranını
+        // zorla açar. 30 günlük silme penceresi yerine açık oturum penceresi
+        // dolduğunda sunucu kendisi bitirir.
+        $matched = $this->selectIds('couch_sessions', "status = 'matched' AND updated_at < ?", [$cutoff]);
+        $end = $this->db->prepare("UPDATE couch_sessions SET status = 'ended', updated_at = ? WHERE id = ?");
+        foreach ($matched as $id) {
+            $end->execute([$nowMs, $id]);
+            $changed += $end->rowCount();
+        }
+
         return $changed;
     }
 

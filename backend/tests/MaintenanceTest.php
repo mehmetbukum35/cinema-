@@ -172,6 +172,38 @@ final class MaintenanceTest extends TestCase
         self::assertSame(1, (int) $this->db->query('SELECT COUNT(*) FROM ratings')->fetchColumn());
     }
 
+    public function testStaleMatchedCouchSessionIsEnded(): void
+    {
+        // Eşleşme kutlaması istemcinin 'kapat'ına bağlı; o istek ağda düşerse
+        // satır 'matched' kalıp her açılışta ekranı zorla açıyordu. Açık oturum
+        // penceresi (24 sa) dolduğunda sunucu kendisi bitirmeli.
+        $staleMatched = $this->now - 25 * 3600000;
+        $freshMatched = $this->now - 3600000;
+        $staleEnded = $this->now - 25 * 3600000;
+        $this->db->exec(
+            "INSERT INTO couch_sessions (status, updated_at) VALUES
+             ('matched', $staleMatched), ('matched', $freshMatched),
+             ('ended', $staleEnded)"
+        );
+
+        $result = (new Maintenance($this->db))->runCleanup($this->now);
+
+        self::assertSame(1, $result['couch_sessions_expired']);
+        self::assertSame(
+            1,
+            (int) $this->db->query("SELECT COUNT(*) FROM couch_sessions WHERE status = 'matched'")->fetchColumn(),
+            'yalnızca penceresi dolan eşleşme bitmeli'
+        );
+        self::assertSame(
+            $freshMatched,
+            (int) $this->db->query("SELECT updated_at FROM couch_sessions WHERE status = 'matched'")->fetchColumn()
+        );
+        self::assertSame(
+            2,
+            (int) $this->db->query("SELECT COUNT(*) FROM couch_sessions WHERE status = 'ended'")->fetchColumn()
+        );
+    }
+
     public function testInvalidatesDormantDeviceBeforeGarbageCollection(): void
     {
         $deletedAt = $this->now - 31 * 86400000;
