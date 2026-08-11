@@ -814,10 +814,10 @@ Faz 2'nin go/no-go gate'i. Yalnız swipe yüzeyi sayılır: kullanıcı her kart
         $this->scoredEvent('s1', 'a', 'shown', 'swipe', 'v1', 99_000_000, 0.0);
         $this->scoredEvent('s2', 'a', 'rated', 'swipe', 'v1', 99_000_001, null, 1);
         $this->scoredEvent('s3', 'b', 'shown', 'swipe', 'v1', 99_000_002, 1.0);
-        $this->scoredEvent('s4', 'b', 'rated', 'swipe', 'v1', 99_000_003, 3);
+        $this->scoredEvent('s4', 'b', 'rated', 'swipe', 'v1', 99_000_003, null, 3);
 
         // Aynı gösterime ikinci oy: en yenisi kazanır (3 → 0, yani beğeni geri alındı).
-        $this->scoredEvent('s5', 'b', 'rated', 'swipe', 'v1', 99_000_009, 0);
+        $this->scoredEvent('s5', 'b', 'rated', 'swipe', 'v1', 99_000_009, null, 0);
 
         // Oylanmamış swipe gösterimi: shown sayılır, rated sayılmaz.
         $this->scoredEvent('s6', 'c', 'shown', 'swipe', 'v1', 99_000_004, 1.0);
