@@ -47,11 +47,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final notifier = ref.read(authProvider.notifier);
     final result = _isRegister
         ? await notifier.register(
-            _emailCtrl.text,
+            _emailCtrl.text.trim().toLowerCase(),
             _passCtrl.text,
             displayName: _nameCtrl.text.trim(),
           )
-        : await notifier.login(_emailCtrl.text, _passCtrl.text);
+        : await notifier.login(
+            _emailCtrl.text.trim().toLowerCase(),
+            _passCtrl.text,
+          );
     // Kayıt yolu kodu zaten gönderdi; girişte (doğrulanmamış hesap) kodun
     // doğrulama ekranı açılırken yeniden gönderilmesi gerekir.
     await _handleAuthResult(result, verificationCodeSent: _isRegister);

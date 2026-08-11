@@ -69,7 +69,18 @@ trait SocialFriendsTrait
             $this->db->beginTransaction();
             try {
                 // Engel / silinmiş pending ile yarış: lock + yeniden doğrula.
-                $this->failIfBlocked($uid, $friendId);
+                // failIfBlocked fail() → exit yaptığı için catch bloğu çalışmaz;
+                // rollback'i burada açıkça yap.
+                $blkCheck = $this->db->prepare(
+                    'SELECT 1 FROM user_blocks
+                      WHERE (user_id = ? AND blocked_user_id = ?)
+                         OR (user_id = ? AND blocked_user_id = ?)'
+                );
+                $blkCheck->execute([$uid, $friendId, $friendId, $uid]);
+                if ($blkCheck->fetch()) {
+                    $this->db->rollBack();
+                    fail(404, 'Kullanıcı bulunamadı.');
+                }
                 $lock = $this->friendsRowLockSuffix();
                 $pending = $this->db->prepare(
                     'SELECT 1 FROM friends
@@ -77,6 +88,7 @@ trait SocialFriendsTrait
                 );
                 $pending->execute([$friendId, $uid]);
                 if (!$pending->fetch()) {
+                    $this->db->rollBack();
                     fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
                 }
 
@@ -86,6 +98,7 @@ trait SocialFriendsTrait
                 );
                 $up->execute([$t, $friendId, $uid]);
                 if ($up->rowCount() < 1) {
+                    $this->db->rollBack();
                     fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
                 }
 
@@ -136,7 +149,17 @@ trait SocialFriendsTrait
         $this->db->beginTransaction();
         try {
             // Engelleme / reject ile yarış: pending yoksa arkadaşlık UYDURMA.
-            $this->failIfBlocked($uid, $friendId);
+            // failIfBlocked fail() → exit yaptığı için rollback'i açıkça yap.
+            $blkCheck2 = $this->db->prepare(
+                'SELECT 1 FROM user_blocks
+                  WHERE (user_id = ? AND blocked_user_id = ?)
+                     OR (user_id = ? AND blocked_user_id = ?)'
+            );
+            $blkCheck2->execute([$uid, $friendId, $friendId, $uid]);
+            if ($blkCheck2->fetch()) {
+                $this->db->rollBack();
+                fail(404, 'Kullanıcı bulunamadı.');
+            }
 
             $lock = $this->friendsRowLockSuffix();
             $st = $this->db->prepare(
@@ -145,6 +168,7 @@ trait SocialFriendsTrait
             );
             $st->execute([$friendId, $uid]);
             if (!$st->fetch()) {
+                $this->db->rollBack();
                 fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
             }
 
@@ -155,6 +179,7 @@ trait SocialFriendsTrait
             );
             $up->execute([$t, $friendId, $uid]);
             if ($up->rowCount() < 1) {
+                $this->db->rollBack();
                 fail(404, 'Onaylanacak arkadaşlık isteği bulunamadı.');
             }
 

@@ -261,7 +261,7 @@ class Auth
 
             $smtp->send($email, $subject, $body);
         } catch (Throwable $e) {
-            cinema_error("Failed to send verification code for $email: " . $e->getMessage());
+            cinema_error('Failed to send verification code: ' . $e->getMessage());
         }
     }
 
@@ -1000,7 +1000,7 @@ class Auth
 
             $smtp->send($email, $subject, $body);
         } catch (Throwable $e) {
-            cinema_error("Failed to process background password reset for $email: " . $e->getMessage());
+            cinema_error('Failed to process background password reset: ' . $e->getMessage());
         }
     }
 

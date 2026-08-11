@@ -109,6 +109,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -231,8 +232,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   Future<void> _loadMore() async {
+    // Senkron guard: iki hızlı scroll event setState işlenmeden önce gelirse
+    // _loadingMore setState'ten önce true yapılmış olur → duplicate request yok.
+    if (_loadingMore || !_hasMore || _loading) return;
+    _loadingMore = true;
     final generation = _loadGeneration;
-    setState(() => _loadingMore = true);
+    setState(() {});
     final nextPage = _page + 1;
     try {
       final batch = await _personalRankBatch(await _fetchDiscover(nextPage));
