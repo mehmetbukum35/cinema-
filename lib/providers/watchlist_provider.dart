@@ -13,6 +13,7 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   final Future<List<Movie>> Function() _readWatchlist;
   final bool autoLoad;
   int _loadGeneration = 0;
+  Future<void> _persistTail = Future<void>.value();
 
   WatchlistNotifier({
     Future<List<Movie>> Function()? readWatchlist,
@@ -66,18 +67,23 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   }
 
   Future<bool> add(Movie movie) async {
-    ++_loadGeneration;
+    final generation = ++_loadGeneration;
     try {
-      await PrefsLibraryFacade.addToWatchlist(
-        movie,
-        metadataLocale: ref.read(localeProvider).languageCode,
-      );
+      final previous = _persistTail;
+      final operation = previous.catchError((_) {}).then((_) async {
+        if (!ref.mounted || generation != _loadGeneration) return;
+        await PrefsLibraryFacade.addToWatchlist(
+          movie,
+          metadataLocale: ref.read(localeProvider).languageCode,
+        );
+      });
+      _persistTail = operation;
+      await operation;
+      if (!ref.mounted || generation != _loadGeneration) return true;
       // state.value üzerine yama değil: eşzamanlı add/remove sonrası DB'den oku.
       // (load() için enjekte edilen _readWatchlist değil — o stale-load testine
       // bağlanır; mutasyonlar her zaman gerçek library facade'e yazar.)
-      if (ref.mounted) {
-        state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
-      }
+      state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
       try {
@@ -107,12 +113,17 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   }
 
   Future<bool> remove(int id, bool isTV) async {
-    ++_loadGeneration;
+    final generation = ++_loadGeneration;
     try {
-      await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
-      if (ref.mounted) {
-        state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
-      }
+      final previous = _persistTail;
+      final operation = previous.catchError((_) {}).then((_) async {
+        if (!ref.mounted || generation != _loadGeneration) return;
+        await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
+      });
+      _persistTail = operation;
+      await operation;
+      if (!ref.mounted || generation != _loadGeneration) return true;
+      state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
       try {

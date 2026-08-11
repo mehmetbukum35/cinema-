@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -231,6 +233,11 @@ class ProfileScreen extends ConsumerWidget {
           liked: prevRating >= 2,
         ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
       }
+      unawaited(
+        ref
+            .read(recommendationEngineProvider)
+            .invalidateCache(isNegativeChange: true),
+      );
       ref.invalidate(statsProvider);
     }
   }

@@ -261,6 +261,19 @@ class PrefsLibraryFacade {
     await DatabaseHelper().toggleSeason(tvId, seasonNumber);
   }
 
+  /// UI niyetini mutlak yazar (flip değil) — stale sheet LWW tersine çevirmesin.
+  static Future<void> setSeasonWatched(
+    int tvId,
+    int seasonNumber,
+    bool watched,
+  ) async {
+    await DatabaseHelper().toggleSeason(
+      tvId,
+      seasonNumber,
+      deleted: watched ? 0 : 1,
+    );
+  }
+
   static Future<Set<int>> getWatchedSeasons(int tvId) async {
     return await DatabaseHelper().getWatchedSeasons(tvId);
   }

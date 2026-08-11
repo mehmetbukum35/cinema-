@@ -350,8 +350,16 @@ class ApiClient {
               newRefreshToken == null) {
             completer.complete(RefreshOutcome.denied);
           } else if (stillRefresh != initialRefreshToken) {
-            // Another refresh already rotated the token; treat as success.
-            completer.complete(RefreshOutcome.success);
+            // Başka refresh veya login token yazdı. Aynı kullanıcıysa rotation OK
+            // (retry storage'daki access ile); hesap değiştiyse yanlış oturumda
+            // retry etme.
+            final initialId = userData?['id'];
+            final stillId = stillUser['id'];
+            if (initialId != null && initialId == stillId) {
+              completer.complete(RefreshOutcome.success);
+            } else {
+              completer.complete(RefreshOutcome.transient);
+            }
           } else {
             await PrefsAuthStorage.saveTokens(
               accessToken: newAccessToken,

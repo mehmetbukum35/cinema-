@@ -430,9 +430,17 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
   }
 
   Future<void> _toggleSeason(int seasonNumber) async {
-    await PrefsLibraryFacade.toggleSeason(widget.movie.id, seasonNumber);
+    final wantWatched = !_watchedSeasons.contains(seasonNumber);
+    await PrefsLibraryFacade.setSeasonWatched(
+      widget.movie.id,
+      seasonNumber,
+      wantWatched,
+    );
     final updated = await PrefsLibraryFacade.getWatchedSeasons(widget.movie.id);
     if (mounted) setState(() => _watchedSeasons = updated);
+    if (ref.read(authProvider).isLoggedIn) {
+      ref.read(syncServiceProvider).sync().catchError((_) => {});
+    }
   }
 
   // ─── Puan / yorum iş mantığı ──────────────────────────────────────────────
@@ -568,6 +576,12 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
       metadataLocale: ref.read(localeProvider).languageCode,
     );
     if (!mounted) return;
+    // Gizlilik değişince public-only reco cache eski puanı tutmasın.
+    unawaited(
+      ref
+          .read(recommendationEngineProvider)
+          .invalidateCache(isNegativeChange: _currentRating! <= 1),
+    );
     if (ref.read(authProvider).isLoggedIn) {
       ref.read(syncServiceProvider).sync().catchError((_) => {});
     }

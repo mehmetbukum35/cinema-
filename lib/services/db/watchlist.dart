@@ -45,11 +45,18 @@ mixin DbWatchlistMixin {
     // Soft-delete revive: eski created_at korunsun (sıra + sync LWW).
     final existing = await db.query(
       'watchlist',
-      columns: ['created_at'],
+      columns: ['created_at', 'updated_at', 'deleted'],
       where: 'id = ? AND is_tv = ?',
       whereArgs: [movie.id, movie.isTV ? 1 : 0],
       limit: 1,
     );
+    if (existing.isNotEmpty) {
+      final exUpdated = _dbInt(existing.first['updated_at']);
+      final exDeleted = _dbInt(existing.first['deleted']);
+      // Eşzamanlı remove daha yeni tombstone yazdıysa stale add diriltmesin.
+      if (delVal == 0 && exDeleted == 1 && exUpdated >= now) return;
+      if (exUpdated > now) return;
+    }
     final createdAt = existing.isNotEmpty
         ? _dbInt(existing.first['created_at'], now)
         : now;

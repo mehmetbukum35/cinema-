@@ -49,6 +49,12 @@ List<dynamic> _decodeJsonList(Object? value) {
   }
 }
 
+/// Pull gövdesindeki tablo alanları: PHP boş `{}` / Map → cast patlamasın.
+List<dynamic> _asSoftList(Object? value) {
+  if (value is List) return List<dynamic>.from(value);
+  return const [];
+}
+
 /// Titles join boş/eksik gelince REPLACE yerel türleri `[]` ile ezmesin.
 Future<String> _resolveGenreIdsJson(
   Transaction txn, {
@@ -621,7 +627,7 @@ class SyncService {
     // Apply remote updates to local SQLite database
     await db.transaction((txn) async {
       // Ratings
-      final remoteRatings = pullResult['ratings'] as List<dynamic>? ?? [];
+      final remoteRatings = _asSoftList(pullResult['ratings']);
       for (final r in remoteRatings) {
         if (!await shouldApply(txn, 'ratings', 'movie_id = ? AND is_tv = ?', [
           _asInt(r['movie_id']),
@@ -683,7 +689,7 @@ class SyncService {
       }
 
       // Watchlist
-      final remoteWatchlist = pullResult['watchlist'] as List<dynamic>? ?? [];
+      final remoteWatchlist = _asSoftList(pullResult['watchlist']);
       for (final w in remoteWatchlist) {
         if (!await shouldApply(txn, 'watchlist', 'id = ? AND is_tv = ?', [
           _asInt(w['id']),
@@ -720,7 +726,7 @@ class SyncService {
       }
 
       // Favorites
-      final remoteFavorites = pullResult['favorites'] as List<dynamic>? ?? [];
+      final remoteFavorites = _asSoftList(pullResult['favorites']);
       for (final f in remoteFavorites) {
         if (!await shouldApply(txn, 'favorites', 'id = ? AND is_tv = ?', [
           _asInt(f['id']),
@@ -755,8 +761,7 @@ class SyncService {
       }
 
       // Watched Seasons
-      final remoteWatchedSeasons =
-          pullResult['watched_seasons'] as List<dynamic>? ?? [];
+      final remoteWatchedSeasons = _asSoftList(pullResult['watched_seasons']);
       for (final ws in remoteWatchedSeasons) {
         if (!await shouldApply(
           txn,
@@ -777,8 +782,7 @@ class SyncService {
       }
 
       // Search History
-      final remoteSearchHistory =
-          pullResult['search_history'] as List<dynamic>? ?? [];
+      final remoteSearchHistory = _asSoftList(pullResult['search_history']);
       for (final sh in remoteSearchHistory) {
         if (!await shouldApply(txn, 'search_history', 'query = ?', [
           sh['query'],
