@@ -824,7 +824,7 @@ Faz 2'nin go/no-go gate'i. Yalnız swipe yüzeyi sayılır: kullanıcı her kart
 
         // Browse yüzeyi eğriye HİÇ girmez (ama kuantillere girer).
         $this->scoredEvent('s7', 'd', 'shown', 'browse', 'v1', 99_000_005, 1.0);
-        $this->scoredEvent('s8', 'd', 'rated', 'browse', 'v1', 99_000_006, 3);
+        $this->scoredEvent('s8', 'd', 'rated', 'browse', 'v1', 99_000_006, null, 3);
 
         $report = (new RecommendationAnalytics($this->db, 'secret'))
             ->calibration(1, 4, 100_000_000);
