@@ -318,28 +318,39 @@ class Sync
             return $encoded !== false && strlen($encoded) <= 8192 ? $encoded : null;
         };
         $createdAt = max(0, (int) ($event['created_at'] ?? 0));
-        $insert = $this->db->prepare(
-            'INSERT INTO recommendation_events
-             (event_id, user_id, impression_id, movie_id, is_tv, action,
-              surface, source, model_version, score_components, metadata,
-              created_at, received_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        $insert->execute([
-            $eventId,
-            $uid,
-            $impressionId,
-            $movieId,
-            !empty($event['is_tv']) ? 1 : 0,
-            $action,
-            mb_substr((string) ($event['surface'] ?? 'unknown'), 0, 32),
-            mb_substr((string) ($event['source'] ?? 'unknown'), 0, 32),
-            mb_substr((string) ($event['model_version'] ?? 'unknown'), 0, 64),
-            $json($event['score_components'] ?? null),
-            $json($event['metadata'] ?? null),
-            $createdAt,
-            now_ms(),
-        ]);
+        $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $orIgnore = $driver === 'mysql' ? 'INSERT IGNORE' : 'INSERT OR IGNORE';
+        try {
+            $insert = $this->db->prepare(
+                "$orIgnore INTO recommendation_events
+                 (event_id, user_id, impression_id, movie_id, is_tv, action,
+                  surface, source, model_version, score_components, metadata,
+                  created_at, received_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            $insert->execute([
+                $eventId,
+                $uid,
+                $impressionId,
+                $movieId,
+                !empty($event['is_tv']) ? 1 : 0,
+                $action,
+                mb_substr((string) ($event['surface'] ?? 'unknown'), 0, 32),
+                mb_substr((string) ($event['source'] ?? 'unknown'), 0, 32),
+                mb_substr((string) ($event['model_version'] ?? 'unknown'), 0, 64),
+                $json($event['score_components'] ?? null),
+                $json($event['metadata'] ?? null),
+                $createdAt,
+                now_ms(),
+            ]);
+        } catch (PDOException $e) {
+            // Telemetry UNIQUE ihlali tüm sync push'u rollback etmesin.
+            if (!str_starts_with((string) $e->getCode(), '23')
+                && (int) ($e->errorInfo[1] ?? 0) !== 1062
+                && !str_contains($e->getMessage(), 'UNIQUE')) {
+                throw $e;
+            }
+        }
         return $eventId;
     }
 

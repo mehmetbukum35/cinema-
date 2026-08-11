@@ -44,6 +44,11 @@ trait SocialProfilesPublicTrait
                 } catch (PDOException $e) {
                     // Eşzamanlı çift istekte PK ihlali olabilir — beğeni zaten
                     // var demektir, idempotent kabul edilir.
+                    if (!str_starts_with((string) $e->getCode(), '23')
+                        && (int) ($e->errorInfo[1] ?? 0) !== 1062
+                        && !str_contains($e->getMessage(), 'UNIQUE')) {
+                        throw $e;
+                    }
                 }
             }
         } else {

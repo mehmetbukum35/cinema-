@@ -192,6 +192,7 @@ class SocialNotifier extends Notifier<SocialState> {
 
   bool _friendsLoading = false;
   bool _activityLoading = false;
+  bool _friendActivityLoading = false;
   int _friendsLoadGeneration = 0;
   int _activityLoadGeneration = 0;
   int _recommendationsLoadGeneration = 0;
@@ -248,17 +249,17 @@ class SocialNotifier extends Notifier<SocialState> {
         friends: friendsList,
         pendingReceived: pendingReceivedList,
         pendingSent: pendingSentList,
-        loading: _activityLoading,
+        loading: _activityLoading || _friendActivityLoading,
       );
       // Rozetler için uyum skorlarını arka planda yükle (await edilmez).
       unawaited(loadTasteScores());
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _friendsLoadGeneration) return;
-      state = state.copyWith(loading: _activityLoading, error: () => e.message);
+      state = state.copyWith(loading: _activityLoading || _friendActivityLoading, error: () => e.message);
     } catch (e) {
       if (!ref.mounted || generation != _friendsLoadGeneration) return;
       state = state.copyWith(
-        loading: _activityLoading,
+        loading: _activityLoading || _friendActivityLoading,
         error: () => e.toString(),
       );
     } finally {
@@ -286,15 +287,18 @@ class SocialNotifier extends Notifier<SocialState> {
         activityFeed: feedList,
         activityCursor: () => page.nextCursor,
         activityHasMore: page.hasMore,
-        loading: _friendsLoading,
+        loading: _friendsLoading || _friendActivityLoading,
       );
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _activityLoadGeneration) return;
-      state = state.copyWith(loading: _friendsLoading, error: () => e.message);
+      state = state.copyWith(
+        loading: _friendsLoading || _friendActivityLoading,
+        error: () => e.message,
+      );
     } catch (e) {
       if (!ref.mounted || generation != _activityLoadGeneration) return;
       state = state.copyWith(
-        loading: _friendsLoading,
+        loading: _friendsLoading || _friendActivityLoading,
         error: () => e.toString(),
       );
     } finally {
@@ -340,6 +344,7 @@ class SocialNotifier extends Notifier<SocialState> {
 
   Future<void> loadFriendActivity(int friendId) async {
     final generation = ++_friendActivityLoadGeneration;
+    _friendActivityLoading = true;
     state = state.copyWith(
       loading: true,
       error: () => null,
@@ -365,14 +370,28 @@ class SocialNotifier extends Notifier<SocialState> {
         friendActivities: map,
         friendActivityCursor: () => page.nextCursor,
         friendActivityHasMore: page.hasMore,
-        loading: false,
+        loading: _friendsLoading || _activityLoading,
       );
     } on ApiException catch (e) {
       if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
-      state = state.copyWith(loading: false, error: () => e.message);
+      state = state.copyWith(
+        loading: _friendsLoading || _activityLoading,
+        error: () => e.message,
+      );
     } catch (e) {
       if (!ref.mounted || generation != _friendActivityLoadGeneration) return;
-      state = state.copyWith(loading: false, error: () => e.toString());
+      state = state.copyWith(
+        loading: _friendsLoading || _activityLoading,
+        error: () => e.toString(),
+      );
+    } finally {
+      if (ref.mounted && generation == _friendActivityLoadGeneration) {
+        _friendActivityLoading = false;
+        // Stale early-return loading:true bırakmasın.
+        if (state.loading && !_friendsLoading && !_activityLoading) {
+          state = state.copyWith(loading: false);
+        }
+      }
     }
   }
 

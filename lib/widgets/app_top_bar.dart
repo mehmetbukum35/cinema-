@@ -79,6 +79,10 @@ class _AppTopBarState extends ConsumerState<AppTopBar> {
         );
         if (!mounted) return;
       }
+      if (isFirst) {
+        await PrefsAppSettings.setFirstTimeDiceSeen();
+        if (!mounted) return;
+      }
 
       final service = ref.read(tmdbServiceProvider);
       final likedGenres = await PrefsTastePrefs.getLikedGenreIds();

@@ -356,22 +356,24 @@ trait SocialCouchTrait
                       WHERE id = ? AND status IN ('pending', 'active')"
                 );
                 $up->execute([$key, now_ms(), (int) $row['id']]);
-                if ($up->rowCount() > 0) {
-                    // Eşleşmeyi çözen istek zaten kendi ekranında görecek;
-                    // push, KARŞI tarafı uygulamaya geri çağırır. Poll yolu
-                    // (exceptUserId=null) her iki tarafa da bildirebilir.
-                    $hostId = (int) $row['host_id'];
-                    $guestId = (int) $row['guest_id'];
-                    $payload = [
-                        'title'      => (string) $item['title'],
-                        'session_id' => (int) $row['id'],
-                    ];
-                    if ($exceptUserId !== $hostId) {
-                        $this->notify($hostId, $guestId, 'couch_match', $payload);
-                    }
-                    if ($exceptUserId !== $guestId) {
-                        $this->notify($guestId, $hostId, 'couch_match', $payload);
-                    }
+                if ($up->rowCount() < 1) {
+                    // Concurrent cancel/end kazandı — hayalet matched döndürme.
+                    return $this->loadCouchSession((int) $row['id']);
+                }
+                // Eşleşmeyi çözen istek zaten kendi ekranında görecek;
+                // push, KARŞI tarafı uygulamaya geri çağırır. Poll yolu
+                // (exceptUserId=null) her iki tarafa da bildirebilir.
+                $hostId = (int) $row['host_id'];
+                $guestId = (int) $row['guest_id'];
+                $payload = [
+                    'title'      => (string) $item['title'],
+                    'session_id' => (int) $row['id'],
+                ];
+                if ($exceptUserId !== $hostId) {
+                    $this->notify($hostId, $guestId, 'couch_match', $payload);
+                }
+                if ($exceptUserId !== $guestId) {
+                    $this->notify($guestId, $hostId, 'couch_match', $payload);
                 }
                 $row['status'] = 'matched';
                 $row['matched_key'] = $key;
@@ -385,6 +387,9 @@ trait SocialCouchTrait
                   WHERE id = ? AND status IN ('pending', 'active')"
             );
             $up->execute([now_ms(), (int) $row['id']]);
+            if ($up->rowCount() < 1) {
+                return $this->loadCouchSession((int) $row['id']);
+            }
             $row['status'] = 'ended';
         }
         return $row;

@@ -260,10 +260,11 @@ class PrefsAppSettings {
 
   static Future<bool> isFirstTimeDice() async {
     final prefs = await SharedPreferences.getInstance();
-    final first = prefs.getBool('first_time_dice') ?? true;
-    if (first) {
-      await prefs.setBool('first_time_dice', false);
-    }
-    return first;
+    return prefs.getBool('first_time_dice') ?? true;
+  }
+
+  static Future<void> setFirstTimeDiceSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('first_time_dice', false);
   }
 }
