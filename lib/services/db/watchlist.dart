@@ -54,7 +54,8 @@ mixin DbWatchlistMixin {
       final exUpdated = _dbInt(existing.first['updated_at']);
       final exDeleted = _dbInt(existing.first['deleted']);
       // Eşzamanlı remove daha yeni tombstone yazdıysa stale add diriltmesin.
-      if (delVal == 0 && exDeleted == 1 && exUpdated >= now) return;
+      // Aynı ms (veya açıkça daha yeni updatedAt) revive'a izin ver.
+      if (delVal == 0 && exDeleted == 1 && exUpdated > now) return;
       if (exUpdated > now) return;
     }
     final createdAt = existing.isNotEmpty

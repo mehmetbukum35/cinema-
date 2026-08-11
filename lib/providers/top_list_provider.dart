@@ -132,31 +132,30 @@ class TopListNotifier extends Notifier<AsyncValue<List<Movie>>> {
   }
 
   Future<void> _persist(List<Movie> list) async {
-    final generation = ++_loadGeneration;
+    ++_loadGeneration;
     // Optimistic UI: önce bellek, disk yazımı başarısız olursa geri al.
     final prior = state.value;
     _activeList = list;
     if (ref.mounted) state = AsyncValue.data(list);
     final previous = _persistTail;
-    var wrote = false;
-    // Sync/load generation artınca eski kuyruk yazımı tombstone'u diriltmesin.
+    // Kuyruk sırayla yazar; sonraki persist generation'ı eski yazımı atlamasın
+    // (concurrent add [1] sonra [1,2] kaybolurdu). load() zaten generation ile
+    // stale UI apply'ı iptal eder.
     final operation = previous.catchError((_) {}).then((_) async {
-      if (!ref.mounted || generation != _loadGeneration) return;
+      if (!ref.mounted) return;
       await _writeList(list);
-      wrote = true;
     });
     _persistTail = operation;
     try {
       await operation;
     } catch (e, st) {
       debugPrint('Top list persist failed, rolling back UI: $e\n$st');
-      if (prior != null && generation == _loadGeneration) {
+      if (prior != null) {
         _activeList = prior;
         if (ref.mounted) state = AsyncValue.data(prior);
       }
       rethrow;
     }
-    if (!wrote || !ref.mounted || generation != _loadGeneration) return;
     // Favori değişti → öneri motorunun bellek önbelleğini (keyword vektörü + oy
     // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
     // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)

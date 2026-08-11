@@ -658,14 +658,16 @@ void main() {
         expect(raw, hasLength(1));
         expect(raw.first['deleted'], 1);
         expect(raw.first['updated_at'] as int, greaterThan(1000));
+        final removedAt = raw.first['updated_at'] as int;
 
-        await helper.addToWatchlist(movie(1, 'Film'), updatedAt: 3000);
+        // Revive, tombstone'dan daha yeni damga ile gelmeli (LWW).
+        await helper.addToWatchlist(movie(1, 'Film'), updatedAt: removedAt + 1);
         expect(await helper.isInWatchlist(1, false), isTrue);
         final resurrected = await db.query('watchlist');
         expect(resurrected, hasLength(1));
         expect(resurrected.first['deleted'], 0);
         expect(resurrected.first['created_at'], 1000);
-        expect(resurrected.first['updated_at'], 3000);
+        expect(resurrected.first['updated_at'], removedAt + 1);
       });
 
       test('same id movie and tv are distinct entries', () async {

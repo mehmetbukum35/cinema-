@@ -96,8 +96,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250)); // resolve animation
       await tester.pump(); // render next frame
 
-      // Queue is empty now (loading text shows up)
-      expect(find.text('Daha fazla yükleniyor...'), findsOneWidget);
+      // Queue is empty now — filtre yokken de sonsuz "loading more" yok.
+      expect(find.text('İçerik Kalmadı'), findsOneWidget);
 
       // Verify that rating is saved in shared preferences mock database
       final ratedIds = await PrefsLibraryFacade.getRatedIds();

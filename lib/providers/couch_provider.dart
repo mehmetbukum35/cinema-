@@ -351,6 +351,8 @@ class CouchNotifier extends Notifier<CouchState> {
     } on ApiException catch (e) {
       // 409: oturum bu arada bitti/iptal edildi → durumu tazele.
       if (e.statusCode == 409) {
+        // refresh(), _voteInFlight iken no-op; önce bayrağı indir.
+        _voteInFlight = false;
         await refresh();
       } else if (ref.mounted) {
         state = state.copyWith(error: () => e.message);

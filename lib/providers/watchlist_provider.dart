@@ -67,11 +67,11 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   }
 
   Future<bool> add(Movie movie) async {
-    final generation = ++_loadGeneration;
+    ++_loadGeneration;
     try {
       final previous = _persistTail;
       final operation = previous.catchError((_) {}).then((_) async {
-        if (!ref.mounted || generation != _loadGeneration) return;
+        if (!ref.mounted) return;
         await PrefsLibraryFacade.addToWatchlist(
           movie,
           metadataLocale: ref.read(localeProvider).languageCode,
@@ -79,10 +79,9 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
       });
       _persistTail = operation;
       await operation;
-      if (!ref.mounted || generation != _loadGeneration) return true;
-      // state.value üzerine yama değil: eşzamanlı add/remove sonrası DB'den oku.
-      // (load() için enjekte edilen _readWatchlist değil — o stale-load testine
-      // bağlanır; mutasyonlar her zaman gerçek library facade'e yazar.)
+      // Sonraki eşzamanlı add'ler kuyrukta; state'i kuyruk bitince oku.
+      await _persistTail;
+      if (!ref.mounted) return true;
       state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
@@ -113,16 +112,17 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
   }
 
   Future<bool> remove(int id, bool isTV) async {
-    final generation = ++_loadGeneration;
+    ++_loadGeneration;
     try {
       final previous = _persistTail;
       final operation = previous.catchError((_) {}).then((_) async {
-        if (!ref.mounted || generation != _loadGeneration) return;
+        if (!ref.mounted) return;
         await PrefsLibraryFacade.removeFromWatchlist(id, isTV);
       });
       _persistTail = operation;
       await operation;
-      if (!ref.mounted || generation != _loadGeneration) return true;
+      await _persistTail;
+      if (!ref.mounted) return true;
       state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
