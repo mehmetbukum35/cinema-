@@ -133,12 +133,23 @@ class TopListNotifier extends Notifier<AsyncValue<List<Movie>>> {
 
   Future<void> _persist(List<Movie> list) async {
     ++_loadGeneration;
+    // Optimistic UI: önce bellek, disk yazımı başarısız olursa geri al.
+    final prior = state.value;
     _activeList = list;
     if (ref.mounted) state = AsyncValue.data(list);
     final previous = _persistTail;
     final operation = previous.catchError((_) {}).then((_) => _writeList(list));
     _persistTail = operation;
-    await operation;
+    try {
+      await operation;
+    } catch (e, st) {
+      debugPrint('Top list persist failed, rolling back UI: $e\n$st');
+      if (prior != null) {
+        _activeList = prior;
+        if (ref.mounted) state = AsyncValue.data(prior);
+      }
+      rethrow;
+    }
     // Favori değişti → öneri motorunun bellek önbelleğini (keyword vektörü + oy
     // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
     // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)

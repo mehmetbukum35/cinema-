@@ -35,42 +35,44 @@ mixin DbSearchHistoryMixin {
       return;
     }
 
-    final allHistory = await db.query('search_history', where: 'deleted = 0');
-    for (final row in allHistory) {
-      final existing = (row['query'] as String? ?? '').toLowerCase();
-      if (existing == cqLower ||
-          cqLower.startsWith(existing) ||
-          existing.startsWith(cqLower)) {
-        await db.update(
+    await db.transaction((txn) async {
+      final allHistory = await txn.query('search_history', where: 'deleted = 0');
+      for (final row in allHistory) {
+        final existing = (row['query'] as String? ?? '').toLowerCase();
+        if (existing == cqLower ||
+            cqLower.startsWith(existing) ||
+            existing.startsWith(cqLower)) {
+          await txn.update(
+            'search_history',
+            {'deleted': 1, 'updated_at': now},
+            where: 'query = ?',
+            whereArgs: [row['query']],
+          );
+        }
+      }
+
+      await txn.insert('search_history', {
+        'query': cleanQuery,
+        'created_at': now,
+        'updated_at': now,
+        'deleted': 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      final List<Map<String, dynamic>> oldest = await txn.query(
+        'search_history',
+        where: 'deleted = 0',
+        orderBy: 'created_at DESC',
+        offset: 10,
+      );
+      for (final row in oldest) {
+        await txn.update(
           'search_history',
           {'deleted': 1, 'updated_at': now},
           where: 'query = ?',
           whereArgs: [row['query']],
         );
       }
-    }
-
-    await db.insert('search_history', {
-      'query': cleanQuery,
-      'created_at': now,
-      'updated_at': now,
-      'deleted': 0,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-
-    final List<Map<String, dynamic>> oldest = await db.query(
-      'search_history',
-      where: 'deleted = 0',
-      orderBy: 'created_at DESC',
-      offset: 10,
-    );
-    for (final row in oldest) {
-      await db.update(
-        'search_history',
-        {'deleted': 1, 'updated_at': now},
-        where: 'query = ?',
-        whereArgs: [row['query']],
-      );
-    }
+    });
   }
 
   Future<List<String>> getSearchHistory() async {

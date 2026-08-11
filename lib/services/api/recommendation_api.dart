@@ -27,7 +27,7 @@ mixin RecommendationApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['scores'] as List<dynamic>? ?? const [];
+      return _asDynamicList(data['scores']);
     }
     throw ApiException(
       statusCode: response.statusCode,
@@ -203,7 +203,7 @@ mixin RecommendationApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['titles'] as List<dynamic>? ?? const [];
+      return _asDynamicList(data['titles']);
     }
     throw ApiException(
       statusCode: response.statusCode,

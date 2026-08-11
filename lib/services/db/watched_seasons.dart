@@ -38,29 +38,25 @@ mixin DbWatchedSeasonsMixin {
       }
       return;
     }
-    final maps = await db.query(
-      'watched_seasons',
-      where: 'tv_id = ? AND season_number = ?',
-      whereArgs: [tvId, seasonNumber],
-    );
 
-    if (maps.isNotEmpty) {
-      final wasDeleted = maps.first['deleted'] == 1;
-      final nextDeleted = deleted ?? (wasDeleted ? 0 : 1);
-      await db.update(
-        'watched_seasons',
-        {'deleted': nextDeleted, 'updated_at': now},
-        where: 'tv_id = ? AND season_number = ?',
-        whereArgs: [tvId, seasonNumber],
-      );
-    } else {
-      await db.insert('watched_seasons', {
-        'tv_id': tvId,
-        'season_number': seasonNumber,
-        'deleted': deleted ?? 0,
-        'updated_at': now,
-      });
-    }
+    // Atomik upsert: SELECT→INSERT yarışı çift dokunuşta PK hatasına düşmesin.
+    // deleted == null → mevcut satırda flip, yoksa 0 ile ekle.
+    // deleted != null → o değeri zorla yaz.
+    final hasExplicit = deleted != null ? 1 : 0;
+    final explicitVal = deleted ?? 0;
+    await db.execute(
+      '''
+      INSERT INTO watched_seasons (tv_id, season_number, deleted, updated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(tv_id, season_number) DO UPDATE SET
+        deleted = CASE
+          WHEN ? = 1 THEN ?
+          ELSE CASE WHEN watched_seasons.deleted = 1 THEN 0 ELSE 1 END
+        END,
+        updated_at = ?
+      ''',
+      [tvId, seasonNumber, explicitVal, now, hasExplicit, explicitVal, now],
+    );
   }
 
   Future<Set<int>> getWatchedSeasons(int tvId) async {

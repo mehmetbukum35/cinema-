@@ -154,7 +154,7 @@ mixin SocialApi on ApiClient {
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return ActivityFeedPage(
-        items: data['activity'] as List<dynamic>? ?? const [],
+        items: _asDynamicList(data['activity']),
         nextCursor: data['next_cursor'] as String?,
         hasMore: data['has_more'] == true,
       );
@@ -340,7 +340,7 @@ mixin SocialApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      return data['blocked'] as List<dynamic>? ?? [];
+      return _asDynamicList(data['blocked']);
     }
     throw ApiException(
       statusCode: response.statusCode,

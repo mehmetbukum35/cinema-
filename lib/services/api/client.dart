@@ -271,6 +271,13 @@ class ApiClient {
     }
   }
 
+  /// JSON'da beklenen dizi alanı Map/skaler gelirse (PHP boş assoc, proxy)
+  /// cast patlamasın — boş liste dön.
+  List<dynamic> _asDynamicList(dynamic value) {
+    if (value is List) return List<dynamic>.from(value);
+    return const [];
+  }
+
   Never _throwRateLimited(http.Response response) {
     String message = 'auth_err_rate_limited';
     String? code;

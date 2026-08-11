@@ -128,7 +128,7 @@ mixin CouchApi on ApiClient {
     );
     final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
-      final list = data['used_keys'] as List<dynamic>? ?? const [];
+      final list = _asDynamicList(data['used_keys']);
       return list.map((e) => e.toString()).toList();
     }
     throw ApiException(

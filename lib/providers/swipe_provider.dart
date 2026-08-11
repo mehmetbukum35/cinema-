@@ -193,7 +193,9 @@ class SwipeNotifier extends Notifier<SwipeState> {
       bool includeMovies = true;
       bool includeTv = true;
       try {
-        final ratings = await DatabaseHelper().getRatings();
+        // Gizli puanlar reco tür ağırlıklarına sızmaz; swipe film/dizi oranını
+        // da aynı kurala bağla — aksi halde özel notlar keşif havuzunu büker.
+        final ratings = await DatabaseHelper().getRatingsForWeights();
         if (ratings.length >= 5) {
           final tvCount = ratings.where((r) => r['isTV'] == true).length;
           tvRatio = tvCount / ratings.length;
@@ -333,7 +335,8 @@ class SwipeNotifier extends Notifier<SwipeState> {
 
   Future<void> rate(int rating) async {
     if (state.current >= state.queue.length) return;
-    final movie = state.queue[state.current];
+    final ratedIndex = state.current;
+    final movie = state.queue[ratedIndex];
 
     // Add to rated IDs
     final key = "${movie.isTV ? 'tv' : 'movie'}_${movie.id}";
@@ -356,7 +359,12 @@ class SwipeNotifier extends Notifier<SwipeState> {
     ).catchError((e) => debugPrint("Reco telemetry write failed: $e"));
 
     if (ref.mounted) {
-      state = state.copyWith(ratedIds: newRatedIds, current: state.current + 1);
+      // await sırasında refreshRatedIds current'ı ilerletmiş olabilir;
+      // kör +1 kart atlar. Yalnızca hâlâ aynı karttaysak ilerle.
+      final nextCurrent = state.current == ratedIndex
+          ? ratedIndex + 1
+          : state.current;
+      state = state.copyWith(ratedIds: newRatedIds, current: nextCurrent);
       _afterRate();
     }
 
