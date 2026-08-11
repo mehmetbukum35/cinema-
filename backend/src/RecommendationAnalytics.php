@@ -94,6 +94,100 @@ final class RecommendationAnalytics
         return $shown === 0 ? 0.0 : round($count / $shown, 4);
     }
 
+    /**
+     * Skor kalibrasyonu ölçümü.
+     *
+     * `quantiles`: TÜM yüzeylerdeki gösterimlerin ham skor dağılımı — rozet her
+     * yüzeyde göründüğü için persentil eşlemesinin referansı da yüzey-bağımsız
+     * olmalı.
+     *
+     * @return array<string, mixed>
+     */
+    public function calibration(int $days, int $bins = 20, ?int $nowMs = null): array
+    {
+        $days = max(1, min(90, $days));
+        $bins = max(4, min(100, $bins));
+        $nowMs ??= now_ms();
+        $since = $nowMs - ($days * 86_400_000);
+
+        $stmt = $this->db->prepare(
+            "SELECT model_version, score_components
+             FROM recommendation_events
+             WHERE action = 'shown' AND created_at >= ?"
+        );
+        $stmt->execute([$since]);
+
+        // Sabit bellek: ham değerleri saklamayız, 0.001 çözünürlüklü histogram
+        // tutarız. 90 günlük tarama satır sayısından bağımsız çalışır.
+        $histograms = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $raw = $this->rawScore($row['score_components']);
+            if ($raw === null) continue;
+            $model = (string) $row['model_version'];
+            $slot = (int) round($raw * 1000);
+            $histograms[$model][$slot] = ($histograms[$model][$slot] ?? 0) + 1;
+        }
+
+        ksort($histograms);
+        $quantiles = [];
+        foreach ($histograms as $model => $histogram) {
+            $quantiles[] = [
+                'model_version' => $model,
+                'shown' => array_sum($histogram),
+                'percentiles' => $this->percentiles($histogram),
+            ];
+        }
+
+        return [
+            'period_days' => $days,
+            'bins' => $bins,
+            'since' => $since,
+            'generated_at' => $nowMs,
+            'quantiles' => $quantiles,
+        ];
+    }
+
+    /** Bozuk/eksik yük sessizce atlanır — rapor tek bir kayıt yüzünden çökmez. */
+    private function rawScore(mixed $scoreComponents): ?float
+    {
+        if (!is_string($scoreComponents) || $scoreComponents === '') return null;
+        $decoded = json_decode($scoreComponents, true);
+        if (!is_array($decoded) || !isset($decoded['final'])) return null;
+        return is_numeric($decoded['final']) ? (float) $decoded['final'] : null;
+    }
+
+    /**
+     * p0, p5, ..., p100 — histogramdan en yakın-sıra yöntemiyle.
+     *
+     * @param array<int, int> $histogram slot (raw*1000) => adet
+     * @return array<string, float>
+     */
+    private function percentiles(array $histogram): array
+    {
+        ksort($histogram);
+        $total = array_sum($histogram);
+        $slots = array_keys($histogram);
+
+        $targets = [];
+        for ($p = 0; $p <= 100; $p += 5) {
+            $targets[$p] = (int) ceil($p / 100 * ($total - 1));
+        }
+
+        $result = [];
+        $index = 0;
+        $seen = 0;
+        foreach ($targets as $p => $target) {
+            while ($seen + $histogram[$slots[$index]] <= $target
+                   && $index < count($slots) - 1) {
+                $seen += $histogram[$slots[$index]];
+                $index++;
+            }
+            $result['p' . $p] = $slots[$index] / 1000;
+        }
+
+        return $result;
+    }
+
     private function requireAdmin(): void
     {
         if ($this->adminKey === '') {
