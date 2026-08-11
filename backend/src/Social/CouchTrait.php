@@ -126,8 +126,9 @@ trait SocialCouchTrait
         $row = $this->requireCouchParticipant($uid, $sessionId);
         $row = $this->activateIfGuestArrived($row, $uid);
         // Emniyet ağı: eşzamanlı son oylarda vote ucundaki tespit kaçırdıysa
-        // poll yakalar (bkz. resolveCouchOutcome).
-        $row = $this->resolveCouchOutcome($row);
+        // poll yakalar (bkz. resolveCouchOutcome). Poll eden zaten oturum
+        // ekranında ve eşleşmeyi yanıtta görecek — push yalnızca karşı tarafa.
+        $row = $this->resolveCouchOutcome($row, $uid);
         json_out(200, ['session' => $this->couchPayload($row, $uid)]);
     }
 
@@ -362,8 +363,8 @@ trait SocialCouchTrait
                     return $this->loadCouchSession((int) $row['id']);
                 }
                 // Eşleşmeyi çözen istek zaten kendi ekranında görecek;
-                // push, KARŞI tarafı uygulamaya geri çağırır. Poll yolu
-                // (exceptUserId=null) her iki tarafa da bildirebilir.
+                // push, KARŞI tarafı uygulamaya geri çağırır. Hem vote hem
+                // poll yolu çözen kullanıcıyı geçer (exceptUserId).
                 $hostId = (int) $row['host_id'];
                 $guestId = (int) $row['guest_id'];
                 $payload = [

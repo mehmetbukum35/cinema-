@@ -3,6 +3,25 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+/** Push'ları ağa çıkmadan kaydeden Fcm ikizi. */
+final class RecordingFcm extends Fcm
+{
+    /** @var list<array{user_id: int, title: string}> */
+    public array $sent = [];
+
+    /** @phpstan-ignore-next-line constructor.missingParentCall */
+    public function __construct()
+    {
+    }
+
+    /** @param array<string, mixed> $data */
+    public function sendToUser(PDO $db, int $userId, string $title, string $body, array $data = []): int
+    {
+        $this->sent[] = ['user_id' => $userId, 'title' => $title];
+        return 1;
+    }
+}
+
 class SocialIntegrationTest extends TestCase
 {
     private PDO $db;
@@ -1367,6 +1386,33 @@ class SocialIntegrationTest extends TestCase
             'deck' => $this->couchDeck(),
         ]);
         return (int) TestHelperRegistry::$lastBody['session']['id'];
+    }
+
+    public function testPollResolvedMatchNotifiesOnlyTheOtherSide(): void
+    {
+        $couchId = $this->createCouch(1, 2);
+
+        // Emniyet ağı durumu: iki taraf da aynı yapımı beğenmiş ama satır hâlâ
+        // 'active' — vote ucundaki tespit kaçmış. Eşleşmeyi poll çözecek.
+        $mutual = json_encode(['movie_101' => true]);
+        $this->db->prepare(
+            "UPDATE couch_sessions
+                SET status = 'active', host_votes = ?, guest_votes = ?
+              WHERE id = ?"
+        )->execute([$mutual, $mutual, $couchId]);
+
+        $fcm = new RecordingFcm();
+        $social = new Social($this->db, null, $fcm);
+
+        // Host poll ediyor: eşleşmeyi o çözüyor.
+        $social->getCouchSession(1, $couchId);
+
+        $this->assertSame('matched', TestHelperRegistry::$lastBody['session']['status']);
+        $this->assertSame(
+            [2],
+            array_column($fcm->sent, 'user_id'),
+            'eşleşmeyi poll ile çözen taraf kendi ekranında görüyor; push yalnızca karşı tarafa gitmeli'
+        );
     }
 
     public function testCouchCreateRequiresFriendshipAndValidDeck(): void
