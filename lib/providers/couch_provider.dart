@@ -127,6 +127,10 @@ class CouchState {
       session != null && session!.status == 'pending' && !session!.isHost;
 }
 
+/// Sunucunun kabul ettiği en küçük deste (SocialCouchTrait::COUCH_MIN_DECK).
+/// Altına düşen deste 422 ile geri çevrilir.
+const int _minDeckSize = 5;
+
 class CouchNotifier extends Notifier<CouchState> {
   /// Testler mock API'yi buradan enjekte eder; uretimde apiServiceProvider.
   final ApiService? _apiOverride;
@@ -263,21 +267,38 @@ class CouchNotifier extends Notifier<CouchState> {
           ...await service.getTrending(),
           ...await service.getPopular(),
         ];
-        final excluded = {
+        // Puanlanan ve engellenen yapımlar kullanıcının kendi sinyali: bunlar
+        // her koşulda dışarıda kalır.
+        final personal = {
           ...await PrefsLibraryFacade.getRatedIds(),
           ...await PrefsAppSettings.getBlockedKeys(),
         };
+        var usedKeys = const <String>[];
         try {
-          final usedKeys = await _api.getUsedCouchMovies(friend.id);
-          excluded.addAll(usedKeys);
+          usedKeys = await _api.getUsedCouchMovies(friend.id);
         } catch (e) {
           debugPrint('Failed to load used couch movies (ignored): $e');
         }
         final ranked = await engine.rankForYou(
           candidates,
-          excludedKeys: excluded,
+          excludedKeys: {...personal, ...usedKeys},
         );
         addAll(ranked);
+
+        // Son oturumların tekrarını önlemek bir TERCİH, kural değil. Aday
+        // havuzu (trending + popular + tohumlar) sınırlı olduğu ve desteler de
+        // aynı havuzdan kurulduğu için birkaç oturum sonra eleme havuzu
+        // yiyordu: ölçümde 30 adaylık havuzda 3. oturumda deste 0'a düşüp
+        // sunucu 422 veriyordu — ve yeni oturum açılamadığı için "son 5
+        // oturum" penceresi de donuyor, yani çıkmaz sokak kalıcı. Deste
+        // sunucunun alt sınırını tutmuyorsa tekrar pahasına doldur.
+        if (deckMovies.length < _minDeckSize && usedKeys.isNotEmpty) {
+          final relaxed = await engine.rankForYou(
+            candidates,
+            excludedKeys: personal,
+          );
+          addAll(relaxed);
+        }
       }
 
       final session = await _api.createCouchSession(

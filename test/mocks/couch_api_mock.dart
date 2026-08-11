@@ -62,6 +62,7 @@ class MockCouchApi implements ApiService {
   Completer<void>? cancelGate;
   Completer<List<dynamic>>? intersectionGate;
   int createCalls = 0;
+  List<Map<String, dynamic>>? lastDeck;
   int intersectionCalls = 0;
   int sessionCalls = 0;
   int activeCalls = 0;
@@ -112,6 +113,7 @@ class MockCouchApi implements ApiService {
     required List<Map<String, dynamic>> deck,
   }) async {
     createCalls++;
+    lastDeck = deck;
     return sessionJson(id: 99);
   }
 
