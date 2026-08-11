@@ -114,7 +114,7 @@ class SyncService {
   static const int _pushBatchSize = 500;
   final ApiService _apiService;
   final Ref? _ref;
-  Future<void>? _syncFuture;
+  Future<bool>? _syncFuture;
 
   /// After a local wipe for sync_reset_required, declare local_reset until
   /// one successful sync clears the server-side invalidation.
@@ -217,25 +217,26 @@ class SyncService {
     return applied;
   }
 
-  // Core 2-way delta-sync method
-  Future<void> sync() async {
+  // Core 2-way delta-sync method.
+  // true = gerçek sync tamamlandı; false = auth yok / oturum değişimi ile iptal.
+  Future<bool> sync() async {
     if (_ref != null) {
       final authState = _ref.read(authProvider);
       if (!authState.isAuthenticated) {
         debugPrint("Skipping sync: user is not authenticated.");
-        return;
+        return false;
       }
     }
     if (_syncFuture != null) {
       debugPrint("Sync already in progress, coalescing request.");
-      return _syncFuture;
+      return _syncFuture!;
     }
     // Coalesce the recovery wrapper so waiters also get reset recovery /
     // session-change swallow — not the raw _performSync future.
     final currentSync = _syncWithRecovery();
     _syncFuture = currentSync;
     try {
-      await currentSync;
+      return await currentSync;
     } finally {
       // Çıkış + yeniden giriş arada yeni bir sync başlatmış olabilir. Eski
       // Future tamamlanınca yeni oturumun kilidini yanlışlıkla temizleme.
@@ -245,11 +246,13 @@ class SyncService {
     }
   }
 
-  Future<void> _syncWithRecovery() async {
+  Future<bool> _syncWithRecovery() async {
     try {
       await _performSync();
+      return true;
     } on _SyncSessionChanged {
       debugPrint('Sync cancelled because the authenticated user changed.');
+      return false;
     } on ApiException catch (e) {
       if (e.code != 'sync_reset_required') rethrow;
       debugPrint('Sync device expired; performing a safe full resync.');
@@ -264,6 +267,7 @@ class SyncService {
           await PrefsSyncMeta.setLastPushTime(0);
           await _performSync();
         }
+        return true;
       } catch (e) {
         await _restorePendingLocalChanges(pendingLocalChanges);
         rethrow;
@@ -1002,8 +1006,9 @@ class SyncNotifier extends Notifier<SyncStatus> {
     try {
       // Eşzamanlı çağrıları birleştirme sorumluluğu SyncService'tedir. İkinci
       // bir kilit aynı davranışı iki katmanda tutup durum yönetimini karmaşıklaştırıyordu.
-      await _syncService.sync();
-      state = SyncStatus.success;
+      final completed = await _syncService.sync();
+      // Oturum değişimi / unauth no-op success toast üretmesin.
+      state = completed ? SyncStatus.success : SyncStatus.idle;
     } catch (e) {
       if (enforceAuth && !ref.read(authProvider).isAuthenticated) {
         state = SyncStatus.idle;

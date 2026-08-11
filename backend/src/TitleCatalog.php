@@ -52,6 +52,10 @@ final class TitleCatalog
         if ($tmdbId <= 0) {
             return;
         }
+        // TMDB proxy adult=true düşürür; istemci sync yolu bunu atlamasın.
+        if (array_key_exists('adult', $item) && filter_var($item['adult'], FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
         $isTv = !empty($item['is_tv']) ? 1 : 0;
 
         // Geçersiz yol, aşağıdaki "hiç metadata yok" kontrolünden önce düşmeli;

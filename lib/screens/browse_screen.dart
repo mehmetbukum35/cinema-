@@ -444,7 +444,17 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         debugPrint("Exploration slice failed (non-fatal): $e");
       }
 
-      // Gösterim hafızasını yaz (best-effort, akışı bekletme).
+      final ratingCount = await PrefsLibraryFacade.getRatingCount();
+      final bannerDismissed =
+          await PrefsAppSettings.isOnboardingBannerDismissed();
+      final initialGenres = await PrefsAppSettings.getInitialGenres();
+      final showBanner =
+          ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
+
+      if (!mounted || loadGeneration != _loadGeneration) return;
+
+      // Gösterim hafızası yalnızca bu yükleme hâlâ geçerliyse yazılsın —
+      // iptal edilen refresh/auth reload cooldown'a hayalet başlık basmasın.
       final shownKeys = <String>[
         if (tonightPick != null) _movieKey(tonightPick),
         ...finalPersonal.take(10).map(_movieKey),
@@ -460,14 +470,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(tonightPick)));
       }
 
-      final ratingCount = await PrefsLibraryFacade.getRatingCount();
-      final bannerDismissed =
-          await PrefsAppSettings.isOnboardingBannerDismissed();
-      final initialGenres = await PrefsAppSettings.getInitialGenres();
-      final showBanner =
-          ratingCount == 0 && initialGenres.isEmpty && !bannerDismissed;
-
-      if (!mounted || loadGeneration != _loadGeneration) return;
       setState(() {
         _tonight = tonightPick;
         _tonightPool = pool;

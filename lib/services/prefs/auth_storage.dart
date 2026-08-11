@@ -14,15 +14,23 @@ class PrefsAuthStorage {
   // pahalı; access token bellekte cache'lenir. saveTokens/clearTokens günceller.
   static String? _cachedAccessToken;
 
+  /// clearTokens / clearTokenCache ile artar; uçuştaki read/migration
+  /// yazıları eski epoch ile cache'i veya secure storage'ı diriltmesin.
+  static int _tokenEpoch = 0;
+
   static void clearTokenCache() {
+    _tokenEpoch++;
     _cachedAccessToken = null;
   }
 
   static Future<String?> getAccessToken() async {
     if (_cachedAccessToken != null) return _cachedAccessToken;
 
+    final epoch = _tokenEpoch;
+
     // Try secure storage first
     String? token = await _secureStorage.read(key: _keyAccessToken);
+    if (epoch != _tokenEpoch) return _cachedAccessToken;
     if (token != null) {
       _cachedAccessToken = token;
       return token;
@@ -30,10 +38,16 @@ class PrefsAuthStorage {
 
     // Migration fallback
     final prefs = await SharedPreferences.getInstance();
+    if (epoch != _tokenEpoch) return _cachedAccessToken;
     token = prefs.getString(_keyAccessToken);
     if (token != null) {
       await _secureStorage.write(key: _keyAccessToken, value: token);
       await prefs.remove(_keyAccessToken);
+      if (epoch != _tokenEpoch) {
+        // clearTokens yarışı kazandı — migration yazısını geri al.
+        await _secureStorage.delete(key: _keyAccessToken);
+        return null;
+      }
       _cachedAccessToken = token;
     }
     return token;
@@ -43,22 +57,36 @@ class PrefsAuthStorage {
     required String accessToken,
     required String refreshToken,
   }) async {
+    final epoch = _tokenEpoch;
     await _secureStorage.write(key: _keyAccessToken, value: accessToken);
     await _secureStorage.write(key: _keyRefreshToken, value: refreshToken);
+    if (epoch != _tokenEpoch) {
+      // clearTokens uçuş sırasında çağrıldı; yazdıklarımızı sil.
+      await _secureStorage.delete(key: _keyAccessToken);
+      await _secureStorage.delete(key: _keyRefreshToken);
+      return;
+    }
     _cachedAccessToken = accessToken;
   }
 
   static Future<String?> getRefreshToken() async {
+    final epoch = _tokenEpoch;
     // Try secure storage first
     String? token = await _secureStorage.read(key: _keyRefreshToken);
+    if (epoch != _tokenEpoch) return null;
     if (token != null) return token;
 
     // Migration fallback
     final prefs = await SharedPreferences.getInstance();
+    if (epoch != _tokenEpoch) return null;
     token = prefs.getString(_keyRefreshToken);
     if (token != null) {
       await _secureStorage.write(key: _keyRefreshToken, value: token);
       await prefs.remove(_keyRefreshToken);
+      if (epoch != _tokenEpoch) {
+        await _secureStorage.delete(key: _keyRefreshToken);
+        return null;
+      }
     }
     return token;
   }
@@ -90,8 +118,9 @@ class PrefsAuthStorage {
   }
 
   static Future<void> clearTokens() async {
-    final prefs = await SharedPreferences.getInstance();
+    _tokenEpoch++;
     _cachedAccessToken = null;
+    final prefs = await SharedPreferences.getInstance();
     await _secureStorage.delete(key: _keyAccessToken);
     await _secureStorage.delete(key: _keyRefreshToken);
     await prefs.remove(_keyAccessToken);

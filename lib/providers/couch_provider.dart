@@ -136,6 +136,8 @@ class CouchNotifier extends Notifier<CouchState> {
   Timer? _pollTimer;
   int _sessionRevision = 0;
   bool _startInFlight = false;
+  /// leave() cancel bitene kadar checkActive bu id'yi yeniden hydrate etmesin.
+  int? _leavingSessionId;
   Future<void>? _activeCheckFlight;
   int? _activeCheckRevision;
   Future<void>? _refreshFlight;
@@ -201,9 +203,16 @@ class CouchNotifier extends Notifier<CouchState> {
       return;
     }
     final revision = _sessionRevision;
+    final leavingId = _leavingSessionId;
     try {
       final response = await _api.getActiveCouchSession();
-      if (ref.mounted && revision == _sessionRevision) _apply(response);
+      if (!ref.mounted || revision != _sessionRevision) return;
+      // leave() cancel beklerken sunucu hâlâ open dönebilir — geri yükleme.
+      if (leavingId != null) {
+        final activeId = int.tryParse(response?['id']?.toString() ?? '');
+        if (activeId == leavingId) return;
+      }
+      _apply(response);
     } catch (e) {
       debugPrint('Couch checkActive failed: $e');
     }
@@ -283,7 +292,20 @@ class CouchNotifier extends Notifier<CouchState> {
             },
         ],
       );
-      if (!ref.mounted || revision != _sessionRevision) return false;
+      if (!ref.mounted || revision != _sessionRevision) {
+        // Oturum sunucuda oluştu ama yerel revizyon bayat — orphan iptal.
+        final orphanId = int.tryParse(session['id']?.toString() ?? '');
+        if (orphanId != null && orphanId > 0) {
+          unawaited(() async {
+            try {
+              await _api.cancelCouchSession(orphanId);
+            } catch (e) {
+              debugPrint('Couch orphan cancel failed: $e');
+            }
+          }());
+        }
+        return false;
+      }
       _apply(session);
       return true;
     } on ApiException catch (e) {
@@ -377,6 +399,7 @@ class CouchNotifier extends Notifier<CouchState> {
   /// Açık oturumda iptal; eşleşmiş oturumda kapanış. Yerel durum temizlenir.
   Future<void> leave() async {
     final session = state.session;
+    _leavingSessionId = session?.id;
     _apply(null);
     if (session != null) {
       try {
@@ -384,6 +407,9 @@ class CouchNotifier extends Notifier<CouchState> {
       } catch (e) {
         debugPrint('Couch cancel failed (ignored): $e');
       }
+    }
+    if (_leavingSessionId == session?.id) {
+      _leavingSessionId = null;
     }
   }
 

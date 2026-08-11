@@ -90,6 +90,19 @@ final class TitleCatalogTest extends TestCase
         self::assertSame('/valid/path.jpg', $row['backdrop_path']);
     }
 
+    public function testRejectsAdultClientIngest(): void
+    {
+        $catalog = new TitleCatalog($this->db, null);
+        $catalog->ingestFromClient([
+            'movie_id' => 66,
+            'title' => 'Adult Title',
+            'adult' => true,
+            'poster_path' => '/a.jpg',
+        ], 'movie_id', 100, 'und');
+
+        self::assertFalse($this->row(66));
+    }
+
     public function testRejectsMalformedImagePaths(): void
     {
         $catalog = new TitleCatalog($this->db, null);

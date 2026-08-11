@@ -45,9 +45,9 @@ class _SyncHeaderActionState extends ConsumerState<SyncHeaderAction> {
     setState(() => _syncing = true);
     HapticFeedback.lightImpact();
     try {
-      await ref.read(syncServiceProvider).sync();
+      final completed = await ref.read(syncServiceProvider).sync();
       await _loadSyncTime();
-      if (mounted) {
+      if (mounted && completed) {
         showAppToast(
           context,
           AppLocalizations.of(context)?.get('sync_success') ??
