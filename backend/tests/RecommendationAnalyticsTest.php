@@ -131,6 +131,59 @@ final class RecommendationAnalyticsTest extends TestCase
         self::assertSame([], $report['quantiles']);
     }
 
+    public function testLikeCurveCountsOnlySwipeAndUsesLatestRating(): void
+    {
+        // Swipe: raw 0.0 (beğenilmedi) ve raw 1.0 (beğenildi).
+        $this->scoredEvent('s1', 'a', 'shown', 'swipe', 'v1', 99_000_000, 0.0);
+        $this->scoredEvent('s2', 'a', 'rated', 'swipe', 'v1', 99_000_001, null, 1);
+        $this->scoredEvent('s3', 'b', 'shown', 'swipe', 'v1', 99_000_002, 1.0);
+        $this->scoredEvent('s4', 'b', 'rated', 'swipe', 'v1', 99_000_003, null, 3);
+
+        // Aynı gösterime ikinci oy: en yenisi kazanır (3 → 0, yani beğeni geri alındı).
+        $this->scoredEvent('s5', 'b', 'rated', 'swipe', 'v1', 99_000_009, null, 0);
+
+        // Oylanmamış swipe gösterimi: shown sayılır, rated sayılmaz.
+        $this->scoredEvent('s6', 'c', 'shown', 'swipe', 'v1', 99_000_004, 1.0);
+
+        // Browse yüzeyi eğriye HİÇ girmez (ama kuantillere girer).
+        $this->scoredEvent('s7', 'd', 'shown', 'browse', 'v1', 99_000_005, 1.0);
+        $this->scoredEvent('s8', 'd', 'rated', 'browse', 'v1', 99_000_006, 3);
+
+        $report = (new RecommendationAnalytics($this->db, 'secret'))
+            ->calibration(1, 4, 100_000_000);
+
+        // Kuantiller browse'u da saydı: 4 gösterim.
+        self::assertSame(4, $report['quantiles'][0]['shown']);
+
+        $curve = $report['like_curve'];
+        self::assertCount(4, $curve);
+        self::assertSame('v1', $curve[0]['model_version']);
+
+        // İlk kova [0.0, 0.25): tek gösterim, oylandı, beğenilmedi.
+        self::assertSame(0, $curve[0]['bin']);
+        self::assertEqualsWithDelta(0.0, $curve[0]['bin_lo'], 0.001);
+        self::assertSame(1, $curve[0]['shown']);
+        self::assertSame(1, $curve[0]['rated']);
+        self::assertSame(0, $curve[0]['liked']);
+        self::assertSame(0.0, $curve[0]['like_rate']);
+
+        // Son kova [0.75, 1.0]: iki gösterim, biri oylandı (en yeni oy 0 → beğeni yok).
+        self::assertSame(2, $curve[3]['shown']);
+        self::assertSame(1, $curve[3]['rated']);
+        self::assertSame(0, $curve[3]['liked']);
+    }
+
+    public function testLikeCurveIsEmptyWithoutSwipeData(): void
+    {
+        $this->scoredEvent('b1', 'a', 'shown', 'browse', 'v1', 99_000_000, 0.5);
+
+        $report = (new RecommendationAnalytics($this->db, 'secret'))
+            ->calibration(1, 20, 100_000_000);
+
+        self::assertSame([], $report['like_curve']);
+        self::assertCount(1, $report['quantiles']);
+    }
+
     private function event(
         string $eventId,
         string $impressionId,

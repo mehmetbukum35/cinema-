@@ -111,7 +111,7 @@ final class RecommendationAnalytics
         $since = $nowMs - ($days * 86_400_000);
 
         $stmt = $this->db->prepare(
-            "SELECT model_version, score_components
+            "SELECT model_version, surface, impression_id, score_components
              FROM recommendation_events
              WHERE action = 'shown' AND created_at >= ?"
         );
@@ -120,12 +120,17 @@ final class RecommendationAnalytics
         // Sabit bellek: ham değerleri saklamayız, 0.001 çözünürlüklü histogram
         // tutarız. 90 günlük tarama satır sayısından bağımsız çalışır.
         $histograms = [];
+        // Eğri için yalnız swipe gösterimleri tutulur — payda orada yanlılıksız.
+        $swipeRaw = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $raw = $this->rawScore($row['score_components']);
             if ($raw === null) continue;
             $model = (string) $row['model_version'];
             $slot = (int) round($raw * 1000);
             $histograms[$model][$slot] = ($histograms[$model][$slot] ?? 0) + 1;
+            if ((string) $row['surface'] === 'swipe') {
+                $swipeRaw[(string) $row['impression_id']] = [$model, $raw];
+            }
         }
 
         ksort($histograms);
@@ -138,12 +143,70 @@ final class RecommendationAnalytics
             ];
         }
 
+        $ratedStmt = $this->db->prepare(
+            "SELECT impression_id, metadata
+             FROM recommendation_events
+             WHERE action = 'rated' AND created_at >= ?
+             ORDER BY created_at ASC"
+        );
+        $ratedStmt->execute([$since]);
+
+        // ASC sıra: aynı gösterime gelen ikinci oy birincinin üzerine yazar.
+        $likedOf = [];
+        while ($row = $ratedStmt->fetch(PDO::FETCH_ASSOC)) {
+            $impression = (string) $row['impression_id'];
+            if (!isset($swipeRaw[$impression])) continue;
+            $rating = $this->ratingOf($row['metadata']);
+            if ($rating === null) continue;
+            $likedOf[$impression] = $rating >= 2;
+        }
+
+        $byModel = [];
+        foreach ($swipeRaw as $impression => [$model, $raw]) {
+            $byModel[$model][] = [$raw, $likedOf[$impression] ?? null];
+        }
+        ksort($byModel);
+
+        $likeCurve = [];
+        foreach ($byModel as $model => $rows) {
+            $values = array_column($rows, 0);
+            $lo = min($values);
+            $hi = max($values);
+            $width = $hi > $lo ? ($hi - $lo) / $bins : 0.0;
+
+            $buckets = array_fill(0, $bins, ['shown' => 0, 'rated' => 0, 'liked' => 0]);
+            foreach ($rows as [$raw, $liked]) {
+                $index = $width > 0.0
+                    ? min($bins - 1, (int) floor(($raw - $lo) / $width))
+                    : 0;
+                $buckets[$index]['shown']++;
+                if ($liked !== null) {
+                    $buckets[$index]['rated']++;
+                    if ($liked) $buckets[$index]['liked']++;
+                }
+            }
+
+            foreach ($buckets as $index => $bucket) {
+                $likeCurve[] = [
+                    'model_version' => $model,
+                    'bin' => $index,
+                    'bin_lo' => round($lo + ($index * $width), 4),
+                    'bin_hi' => round($lo + (($index + 1) * $width), 4),
+                    'shown' => $bucket['shown'],
+                    'rated' => $bucket['rated'],
+                    'liked' => $bucket['liked'],
+                    'like_rate' => $this->rate($bucket['liked'], $bucket['rated']),
+                ];
+            }
+        }
+
         return [
             'period_days' => $days,
             'bins' => $bins,
             'since' => $since,
             'generated_at' => $nowMs,
             'quantiles' => $quantiles,
+            'like_curve' => $likeCurve,
         ];
     }
 
@@ -154,6 +217,15 @@ final class RecommendationAnalytics
         $decoded = json_decode($scoreComponents, true);
         if (!is_array($decoded) || !isset($decoded['final'])) return null;
         return is_numeric($decoded['final']) ? (float) $decoded['final'] : null;
+    }
+
+    /** Bozuk/eksik metadata sessizce atlanır. */
+    private function ratingOf(mixed $metadata): ?int
+    {
+        if (!is_string($metadata) || $metadata === '') return null;
+        $decoded = json_decode($metadata, true);
+        if (!is_array($decoded) || !isset($decoded['rating'])) return null;
+        return is_numeric($decoded['rating']) ? (int) $decoded['rating'] : null;
     }
 
     /**
