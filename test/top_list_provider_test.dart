@@ -15,8 +15,9 @@ class MockSyncService implements SyncService {
   bool syncCalled = false;
 
   @override
-  Future<void> sync() async {
+  Future<bool> sync() async {
     syncCalled = true;
+    return true;
   }
 
   @override

@@ -442,7 +442,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     final updated = await PrefsLibraryFacade.getWatchedSeasons(widget.movie.id);
     if (mounted) setState(() => _watchedSeasons = updated);
     if (ref.read(authProvider).isLoggedIn) {
-      ref.read(syncServiceProvider).sync().catchError((_) => {});
+      ref.read(syncServiceProvider).sync().catchError((_) => false);
     }
   }
 
@@ -586,7 +586,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           .invalidateCache(isNegativeChange: _currentRating! <= 1),
     );
     if (ref.read(authProvider).isLoggedIn) {
-      ref.read(syncServiceProvider).sync().catchError((_) => {});
+      ref.read(syncServiceProvider).sync().catchError((_) => false);
     }
   }
 
@@ -625,7 +625,7 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
           .invalidateCache(isNegativeChange: _currentRating! <= 1)
           .catchError((_) => {});
       ref.invalidate(statsProvider);
-      ref.read(syncServiceProvider).sync().catchError((_) => {});
+      ref.read(syncServiceProvider).sync().catchError((_) => false);
       if (ref.read(authProvider).isLoggedIn) {
         ref
             .read(socialProvider.notifier)

@@ -116,7 +116,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
       item['movie_id'] as int,
       (item['is_tv'] as int) == 1,
     );
-    ref.read(syncServiceProvider).sync().catchError((_) => {});
+    ref.read(syncServiceProvider).sync().catchError((_) => false);
     if (!mounted) return;
     showAppToast(
       context,

@@ -31,7 +31,7 @@ class AppFlowSyncService extends SyncService {
   AppFlowSyncService(this._api) : super(_api, null);
 
   @override
-  Future<void> sync() async {
+  Future<bool> sync() async {
     await _api.push({
       'ratings': [],
       'watchlist': [],
@@ -40,5 +40,6 @@ class AppFlowSyncService extends SyncService {
       'search_history': [],
     });
     await _api.pull(0);
+    return true;
   }
 }

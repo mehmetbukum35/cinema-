@@ -337,7 +337,6 @@ class CouchNotifier extends Notifier<CouchState> {
     final card = session?.nextCard;
     if (session == null || card == null || !session.isOpen) return;
     _voteInFlight = true;
-    final revision = _sessionRevision;
     try {
       final updated = await _api.voteCouchSession(
         sessionId: session.id,

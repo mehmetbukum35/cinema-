@@ -17,10 +17,11 @@ class MockSyncService implements SyncService {
   Completer<void>? gate;
 
   @override
-  Future<void> sync() async {
+  Future<bool> sync() async {
     syncCalled = true;
     if (!started.isCompleted) started.complete();
     await gate?.future;
+    return true;
   }
 
   @override

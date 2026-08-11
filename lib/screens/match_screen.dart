@@ -57,7 +57,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.isAuthenticated) {
-        ref.read(syncServiceProvider).sync().catchError((_) {});
+        ref.read(syncServiceProvider).sync().catchError((_) => false);
         ref.read(socialProvider.notifier).loadFriends();
       }
     });
@@ -307,7 +307,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (previous?.isAuthenticated != next.isAuthenticated &&
           next.isAuthenticated) {
-        ref.read(syncServiceProvider).sync().catchError((_) {});
+        ref.read(syncServiceProvider).sync().catchError((_) => false);
         ref.read(socialProvider.notifier).loadFriends();
       }
     });
