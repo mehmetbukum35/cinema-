@@ -886,8 +886,9 @@ class Auth
             $up = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?');
             $up->execute([$newHash, now_ms(), $uid]);
 
-            // Güvenlik: parola değişince tüm refresh token'ları iptal et.
+            // Güvenlik: parola değişince tüm refresh token'ları ve FCM kayıtlarını iptal et.
             $this->db->prepare('DELETE FROM refresh_tokens WHERE user_id = ?')->execute([$uid]);
+            $this->db->prepare('DELETE FROM device_tokens WHERE user_id = ?')->execute([$uid]);
             $this->db->commit();
         } catch (Throwable $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();

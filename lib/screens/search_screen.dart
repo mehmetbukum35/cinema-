@@ -213,10 +213,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onChanged: _search,
                 onSubmitted: _saveToHistory,
                 onClear: () {
+                  _debounce?.cancel();
+                  _searchRequestId++;
                   _ctrl.clear();
                   setState(() {
                     _results = [];
                     _lastQuery = '';
+                    _searching = false;
+                    _hasError = false;
                   });
                 },
                 onOpenFilters: _openFilters,

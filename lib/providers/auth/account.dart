@@ -68,6 +68,8 @@ mixin AuthAccountMixin on Notifier<AuthState> {
   Future<bool> changePassword(String oldPassword, String newPassword) async {
     state = state.copyWith(loading: true, error: null);
     try {
+      // clearAuthData API yanıtında token'ı siler; önce FCM unregister (auth gerekir).
+      await NotificationService.instance.unregisterToken();
       await _apiService.changePassword(
         oldPassword: oldPassword,
         newPassword: newPassword,

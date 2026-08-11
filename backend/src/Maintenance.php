@@ -298,17 +298,22 @@ final class Maintenance
 
         $where = implode(' AND ', array_map(fn (string $key): string => "`$key` = ?", $keys));
         $delete = $this->db->prepare(
-            "DELETE FROM `$table` WHERE user_id = ? AND $where AND deleted = 1"
+            "DELETE FROM `$table` WHERE user_id = ? AND $where AND deleted = 1 AND server_updated_at = ?"
         );
         $gcByUser = [];
         $changed = 0;
         foreach ($rows as $row) {
             $params = [(int) $row['user_id']];
             foreach ($keys as $key) $params[] = $row[$key];
+            $params[] = (int) $row['server_updated_at'];
             $delete->execute($params);
-            $changed += $delete->rowCount();
-            $uid = (int) $row['user_id'];
-            $gcByUser[$uid] = max($gcByUser[$uid] ?? 0, (int) $row['server_updated_at']);
+            $rc = $delete->rowCount();
+            $changed += $rc;
+            // Cursor yalnızca gerçek silmede ilerlesin — 0 satırda atlama tombstone kaçırır.
+            if ($rc > 0) {
+                $uid = (int) $row['user_id'];
+                $gcByUser[$uid] = max($gcByUser[$uid] ?? 0, (int) $row['server_updated_at']);
+            }
         }
 
         $findGc = $this->db->prepare('SELECT gc_cursor FROM sync_gc_state WHERE user_id = ?');

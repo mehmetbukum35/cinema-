@@ -40,12 +40,18 @@ trait SocialProfilesTrait
         }
 
         if ($up->rowCount() === 0) {
-            // Satır güncellenmedi: ya kullanıcı yoktur ya da username çakıştı.
-            // Kullanıcı varlığını doğrula; yoksa 404, varsa username çakışması.
-            $exists = $this->db->prepare('SELECT 1 FROM users WHERE id = ?');
-            $exists->execute([$uid]);
-            if (!$exists->fetch()) {
+            // MySQL/SQLite: değerler aynıysa rowCount=0 — false username_taken verme.
+            $cur = $this->db->prepare('SELECT username, is_public FROM users WHERE id = ?');
+            $cur->execute([$uid]);
+            $row = $cur->fetch();
+            if (!$row) {
                 fail(404, 'Kullanıcı bulunamadı.');
+            }
+            if (
+                (string) $row['username'] === $username
+                && (int) $row['is_public'] === $isPublic
+            ) {
+                json_out(200, ['ok' => true, 'username' => $username, 'is_public' => $isPublic]);
             }
             fail(409, 'Bu kullanıcı adı zaten alınmış.', 'username_taken');
         }

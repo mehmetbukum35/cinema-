@@ -61,6 +61,7 @@ class NotificationService {
   StreamSubscription<RemoteMessage>? _openedMessages;
   StreamSubscription<String>? _tokenRefreshes;
   Future<bool>? _tzInit;
+  String? _lastRegisteredToken;
 
   /// Saat dilimi veritabanını bir kez kurar; zamanlanmış bildirimler için
   /// gereklidir. init()'ten bağımsız çağrılabilir (ör. açılıştaki watchlist
@@ -304,7 +305,10 @@ class NotificationService {
           } else {
             await _api?.unregisterDevice(token);
           }
+          _lastRegisteredToken = null;
         });
+      } else {
+        _lastRegisteredToken = null;
       }
     } catch (e, st) {
       final isTest =
@@ -386,15 +390,30 @@ class NotificationService {
             generation != _tokenRegistrationGeneration) {
           return;
         }
+        final previous = _lastRegisteredToken;
+        if (previous != null && previous != token) {
+          try {
+            final unreg = _unregisterTokenOverride;
+            if (unreg != null) {
+              await unreg(previous);
+            } else {
+              await _api?.unregisterDevice(previous);
+            }
+          } catch (e) {
+            debugPrint('Failed to unregister previous FCM token: $e');
+          }
+        }
         final override = _registerTokenOverride;
         if (override != null) {
           await override(token);
+          _lastRegisteredToken = token;
           return;
         }
         final platform = Platform.isIOS
             ? 'ios'
             : (Platform.isAndroid ? 'android' : 'web');
         await _api?.registerDevice(token, platform: platform);
+        _lastRegisteredToken = token;
       });
     } catch (e, st) {
       debugPrint('Failed to send FCM token to API: $e\n$st');
