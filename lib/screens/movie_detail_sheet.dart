@@ -580,6 +580,19 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
     FocusScope.of(context).unfocus();
     if (_currentRating == null) return;
     try {
+      // Sync tombstone sonrası bellek puanı saveRating ile dirilmesin.
+      final existing = await PrefsLibraryFacade.getRating(
+        widget.movie.id,
+        widget.movie.isTV,
+      );
+      if (!mounted) return;
+      if (existing == null || (existing['deleted'] as int? ?? 0) == 1) {
+        setState(() {
+          _currentRating = null;
+          _commentController.clear();
+        });
+        return;
+      }
       final commentText = _commentController.text.trim();
       await PrefsLibraryFacade.saveRating(
         movie: widget.movie,

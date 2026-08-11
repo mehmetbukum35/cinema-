@@ -14,9 +14,12 @@ trait SocialFeedTrait
         $limit = max(1, min(50, $limit));
         $locale = cinema_content_locale();
         // Gizlenen (is_hidden=1) yorum metni akışa sızmaz; puan aktivitesi kalır.
+        // Cursor created_at üzerinde: yorum düzeni updated_at'i kaydırınca sayfa
+        // atlaması olmasın (keyset kaybolmasın).
         $sql = 'SELECT r.movie_id, r.is_tv, r.rating,
                        COALESCE(t.title, tf.title) AS title,
-                       COALESCE(t.poster_path, tf.poster_path) AS poster_path, r.updated_at,
+                       COALESCE(t.poster_path, tf.poster_path) AS poster_path,
+                       r.created_at, r.updated_at,
                        CASE WHEN r.is_hidden = 1 THEN NULL ELSE r.comment END as comment,
                        r.is_spoiler,
                        u.id as friend_id, u.display_name as friend_name, u.username as friend_username
@@ -38,16 +41,16 @@ trait SocialFeedTrait
         $cursorData = $this->decodeActivityCursor($cursor);
         if ($cursorData !== null) {
             $sql .= ' AND (
-                r.updated_at < ? OR
-                (r.updated_at = ? AND f.friend_id < ?) OR
-                (r.updated_at = ? AND f.friend_id = ? AND r.movie_id < ?) OR
-                (r.updated_at = ? AND f.friend_id = ? AND r.movie_id = ? AND r.is_tv < ?)
+                r.created_at < ? OR
+                (r.created_at = ? AND f.friend_id < ?) OR
+                (r.created_at = ? AND f.friend_id = ? AND r.movie_id < ?) OR
+                (r.created_at = ? AND f.friend_id = ? AND r.movie_id = ? AND r.is_tv < ?)
             )';
             $params = array_merge($params, [
-                $cursorData['updated_at'],
-                $cursorData['updated_at'], $cursorData['friend_id'],
-                $cursorData['updated_at'], $cursorData['friend_id'], $cursorData['movie_id'],
-                $cursorData['updated_at'], $cursorData['friend_id'], $cursorData['movie_id'], $cursorData['is_tv'],
+                $cursorData['created_at'],
+                $cursorData['created_at'], $cursorData['friend_id'],
+                $cursorData['created_at'], $cursorData['friend_id'], $cursorData['movie_id'],
+                $cursorData['created_at'], $cursorData['friend_id'], $cursorData['movie_id'], $cursorData['is_tv'],
             ]);
         }
 
@@ -55,7 +58,7 @@ trait SocialFeedTrait
         // gizlense bile puan aktivitesi (yorum metni NULL) kalır.
         $sql .= ' AND (r.rating >= 2 OR (r.is_hidden = 0 AND r.comment IS NOT NULL AND r.comment <> \'\'))
                   AND r.deleted = 0
-                ORDER BY r.updated_at DESC, f.friend_id DESC, r.movie_id DESC, r.is_tv DESC
+                ORDER BY r.created_at DESC, f.friend_id DESC, r.movie_id DESC, r.is_tv DESC
                 LIMIT ' . ($limit + 1);
 
         $st = $this->db->prepare($sql);
@@ -67,7 +70,7 @@ trait SocialFeedTrait
         if ($hasMore && $feed !== []) {
             $last = $feed[array_key_last($feed)];
             $nextCursor = rtrim(strtr(base64_encode((string) json_encode([
-                'updated_at' => (int) $last['updated_at'],
+                'created_at' => (int) $last['created_at'],
                 'friend_id' => (int) $last['friend_id'],
                 'movie_id' => (int) $last['movie_id'],
                 'is_tv' => (int) $last['is_tv'],
@@ -81,7 +84,7 @@ trait SocialFeedTrait
         ]);
     }
 
-    /** @return array{updated_at: int, friend_id: int, movie_id: int, is_tv: int}|null */
+    /** @return array{created_at: int, friend_id: int, movie_id: int, is_tv: int}|null */
     private function decodeActivityCursor(?string $cursor): ?array
     {
         if ($cursor === null || $cursor === '') return null;
@@ -91,11 +94,20 @@ trait SocialFeedTrait
         if ($raw === false) fail(422, 'Geçersiz aktivite cursor değeri.');
         $data = json_decode($raw, true);
         if (!is_array($data)) fail(422, 'Geçersiz aktivite cursor değeri.');
-        foreach (['updated_at', 'friend_id', 'movie_id', 'is_tv'] as $key) {
+        // Eski istemci cursor'ları updated_at taşıyabilir — created_at'e map et.
+        if (!isset($data['created_at']) && isset($data['updated_at'])) {
+            $data['created_at'] = $data['updated_at'];
+        }
+        foreach (['created_at', 'friend_id', 'movie_id', 'is_tv'] as $key) {
             if (!isset($data[$key]) || !is_numeric($data[$key])) {
                 fail(422, 'Geçersiz aktivite cursor değeri.');
             }
         }
-        return array_map('intval', $data);
+        return [
+            'created_at' => (int) $data['created_at'],
+            'friend_id' => (int) $data['friend_id'],
+            'movie_id' => (int) $data['movie_id'],
+            'is_tv' => (int) $data['is_tv'],
+        ];
     }
 }

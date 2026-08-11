@@ -1611,19 +1611,19 @@ class SocialIntegrationTest extends TestCase
     private function insertRating(int $userId, int $movieId, int $isTv, int $rating, string $title, int $updatedAt, ?string $genreIds = null): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, poster_path, genre_ids, updated_at, deleted)
-             VALUES (?, ?, ?, ?, ?, "/poster.jpg", ?, ?, 0)'
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, poster_path, genre_ids, created_at, updated_at, deleted)
+             VALUES (?, ?, ?, ?, ?, "/poster.jpg", ?, ?, ?, 0)'
         );
-        $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $genreIds, $updatedAt]);
+        $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $genreIds, $updatedAt, $updatedAt]);
     }
 
     private function insertRatingPrivate(int $userId, int $movieId, int $isTv, int $rating, string $title, int $updatedAt, int $isPrivate): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, poster_path, genre_ids, updated_at, deleted, is_private)
-             VALUES (?, ?, ?, ?, ?, "/poster.jpg", NULL, ?, 0, ?)'
+            'INSERT INTO ratings (user_id, movie_id, is_tv, rating, title, poster_path, genre_ids, created_at, updated_at, deleted, is_private)
+             VALUES (?, ?, ?, ?, ?, "/poster.jpg", NULL, ?, ?, 0, ?)'
         );
-        $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $updatedAt, $isPrivate]);
+        $stmt->execute([$userId, $movieId, $isTv, $rating, $title, $updatedAt, $updatedAt, $isPrivate]);
     }
 
     private function insertWatchlist(int $userId, int $id, int $isTv, string $title, string $genreIds, int $createdAt): void

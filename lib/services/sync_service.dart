@@ -610,10 +610,10 @@ class SyncService {
       if (rows.isEmpty) return true;
       final local = _asInt(rows.first['updated_at']);
       final remote = _asInt(remoteUpdatedAt);
-      // Yerel damga saati sapmışsa (sunucudan >> ileride) remote'u kabul et;
-      // aksi halde sapmış cihaz karşı tarafın yazımını sonsuza kadar reddeder.
-      if (local > serverTime + _clockSkewMs) return true;
-      return remote >= local;
+      // Sapmış yerel damga (sunucudan >> ileride) kör force-apply ile soft-delete
+      // / ortadaki edit'i ezmesin; karşılaştırmayı sunucu zamanına indir.
+      final compareLocal = local > serverTime + _clockSkewMs ? serverTime : local;
+      return remote >= compareLocal;
     }
 
     int appliedCount = 0;

@@ -55,11 +55,14 @@ mixin AuthPasswordResetMixin on Notifier<AuthState> {
     state = state.copyWith(loading: true, error: null);
     try {
       await _apiService.resetPassword(email, code, newPassword);
-      // Reset, sunucudaki tüm refresh token'ları iptal eder. Mevcut access token
-      // hâlâ kısa süre geçerliyken cihaz kaydını kaldır; ardından normal güvenli
-      // oturum kapatma yolu FCM token'ını ve hesaba bağlı provider'ları temizlesin.
-      await NotificationService.instance.unregisterToken();
-      await _endLocalSession(wipeLocalData: false);
+      // Reset sunucudaki refresh token'ları iptal eder. Yalnız bu cihazda oturum
+      // açıksa FCM/provider temizliği yap — misafirken reset login yarışını bozmasın.
+      if (state.isAuthenticated) {
+        await NotificationService.instance.unregisterToken();
+        await _endLocalSession(wipeLocalData: false);
+      } else {
+        state = state.copyWith(loading: false);
+      }
       return true;
     } on ApiException catch (e) {
       final mapped = _mapApiError(e);

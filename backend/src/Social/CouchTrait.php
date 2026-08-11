@@ -116,6 +116,7 @@ trait SocialCouchTrait
             json_out(200, ['session' => null]);
         }
         $this->assertCouchFriendshipForRow($row, $uid);
+        $row = $this->activateIfGuestArrived($row, $uid);
         json_out(200, ['session' => $this->couchPayload($row, $uid)]);
     }
 
