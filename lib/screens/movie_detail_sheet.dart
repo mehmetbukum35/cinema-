@@ -505,6 +505,17 @@ class _MovieDetailSheetState extends ConsumerState<MovieDetailSheet> {
             .catchError((_) => {});
 
         // İsabet telemetrisi: atıfsız yapımlar API içinde elenir.
+        // Yeniden puanlama tek bir gösterime iki isabet yazmasın: `shown` bir
+        // kez sayıldığı için önce eski beğeni geri alınır, sonra yenisi
+        // yazılır. Böylece 2 → 3'te `liked` 1'de kalır, 3 → 1'de geri çekilir;
+        // her iki yönde de `liked <= shown` değişmezi korunur.
+        // `_currentRating` bu noktada hâlâ ESKİ puanı tutuyor.
+        final previousRating = _currentRating;
+        if (previousRating != null && previousRating >= 2) {
+          PrefsTastePrefs.revertRecoLiked(
+            widget.movie.recoSource,
+          ).catchError((e) => debugPrint("Reco telemetry revert failed: $e"));
+        }
         if (rating >= 2) {
           PrefsTastePrefs.recordRecoLiked(
             widget.movie.recoSource,

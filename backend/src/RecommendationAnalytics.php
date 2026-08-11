@@ -116,6 +116,12 @@ final class RecommendationAnalytics
         $nowMs ??= now_ms();
         $since = $nowMs - ($days * 86_400_000);
 
+        // ÖNCE oylar: eşleme oylama hacmiyle sınırlıdır, gösterim hacminden
+        // mertebelerce küçük. Ters sırada (önce gösterimler) her swipe gösterimi
+        // için bir dizi girdisi tutmak gerekirdi — 30 günlük bir pencerede
+        // paylaşımlı hostun `memory_limit`'ini aşan yer.
+        $likedOf = $this->likedByImpression($since);
+
         $stmt = $this->db->prepare(
             "SELECT model_version, surface, impression_id, score_components
              FROM recommendation_events
@@ -126,17 +132,28 @@ final class RecommendationAnalytics
         // Sabit bellek: ham değerleri saklamayız, 0.001 çözünürlüklü histogram
         // tutarız. 90 günlük tarama satır sayısından bağımsız çalışır.
         $histograms = [];
-        // Eğri için yalnız swipe gösterimleri tutulur — payda orada yanlılıksız.
-        $swipeRaw = [];
+        // Eğri için yalnız swipe gösterimleri sayılır — payda orada yanlılıksız.
+        // Bunlar da AYNI 0.001 çözünürlüklü slot histogramında birikir; slot
+        // başına {shown, rated, liked}, yani bellek yine satır sayısından
+        // bağımsız.
+        $swipeSlots = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $raw = $this->rawScore($row['score_components']);
             if ($raw === null) continue;
             $model = (string) $row['model_version'];
             $slot = (int) round($raw * 1000);
             $histograms[$model][$slot] = ($histograms[$model][$slot] ?? 0) + 1;
-            if ((string) $row['surface'] === 'swipe') {
-                $swipeRaw[(string) $row['impression_id']] = [$model, $raw];
+            if ((string) $row['surface'] !== 'swipe') continue;
+
+            $counts = $swipeSlots[$model][$slot]
+                ?? ['shown' => 0, 'rated' => 0, 'liked' => 0];
+            $counts['shown']++;
+            $liked = $likedOf[(string) $row['impression_id']] ?? null;
+            if ($liked !== null) {
+                $counts['rated']++;
+                if ($liked) $counts['liked']++;
             }
+            $swipeSlots[$model][$slot] = $counts;
         }
 
         ksort($histograms);
@@ -149,47 +166,81 @@ final class RecommendationAnalytics
             ];
         }
 
-        $ratedStmt = $this->db->prepare(
+        ksort($swipeSlots);
+        $likeCurve = $this->buildLikeCurve($swipeSlots, $bins);
+
+        return [
+            'period_days' => $days,
+            'bins' => $bins,
+            'since' => $since,
+            'generated_at' => $nowMs,
+            'quantiles' => $quantiles,
+            'like_curve' => $likeCurve,
+        ];
+    }
+
+    /**
+     * `impression_id` → beğenildi mi. Bellek oylama hacmiyle sınırlı.
+     *
+     * ASC sıra: aynı gösterime gelen ikinci oy birincinin üzerine yazar.
+     *
+     * Negatif puan ("Bunu izlemedim", `rating = -1`) eksik puanla aynı muameleyi
+     * görür — atlanır. Bir tercih sinyali değil, "değerlendiremiyorum" demek;
+     * `rated`/`liked` paydasına girseydi beğenilmemiş gibi sayılır ve sık bir
+     * swipe aksiyonu olduğu için `like_rate` eğrisini yapay olarak düzleştirirdi.
+     * Gösterim `shown` sayısında kalır.
+     *
+     * @return array<string, bool>
+     */
+    private function likedByImpression(int $since): array
+    {
+        $stmt = $this->db->prepare(
             "SELECT impression_id, metadata
              FROM recommendation_events
              WHERE action = 'rated' AND created_at >= ?
              ORDER BY created_at ASC"
         );
-        $ratedStmt->execute([$since]);
+        $stmt->execute([$since]);
 
-        // ASC sıra: aynı gösterime gelen ikinci oy birincinin üzerine yazar.
         $likedOf = [];
-        while ($row = $ratedStmt->fetch(PDO::FETCH_ASSOC)) {
-            $impression = (string) $row['impression_id'];
-            if (!isset($swipeRaw[$impression])) continue;
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $rating = $this->ratingOf($row['metadata']);
-            if ($rating === null) continue;
-            $likedOf[$impression] = $rating >= 2;
+            if ($rating === null || $rating < 0) continue;
+            $likedOf[(string) $row['impression_id']] = $rating >= 2;
         }
 
-        $byModel = [];
-        foreach ($swipeRaw as $impression => [$model, $raw]) {
-            $byModel[$model][] = [$raw, $likedOf[$impression] ?? null];
-        }
-        ksort($byModel);
+        return $likedOf;
+    }
 
+    /**
+     * Slot histogramından `bins` adet eşit kova.
+     *
+     * `lo`/`hi` ham float min/max yerine 0.001'e yuvarlanmış slot değerlerinden
+     * gelir; kova sınırları zaten 4 haneye yuvarlanarak döndüğü için bu fark
+     * raporun okunuşunu değiştirmez. Tüm skorların eşit olduğu durumda genişlik
+     * 0'dır ve her şey ilk kovaya düşer.
+     *
+     * @param array<string, array<int, array{shown:int, rated:int, liked:int}>> $slotsByModel
+     * @return list<array<string, mixed>>
+     */
+    private function buildLikeCurve(array $slotsByModel, int $bins): array
+    {
         $likeCurve = [];
-        foreach ($byModel as $model => $rows) {
-            $values = array_column($rows, 0);
-            $lo = min($values);
-            $hi = max($values);
+        foreach ($slotsByModel as $model => $slots) {
+            ksort($slots);
+            $slotKeys = array_keys($slots);
+            $lo = $slotKeys[0] / 1000;
+            $hi = $slotKeys[count($slotKeys) - 1] / 1000;
             $width = $hi > $lo ? ($hi - $lo) / $bins : 0.0;
 
             $buckets = array_fill(0, $bins, ['shown' => 0, 'rated' => 0, 'liked' => 0]);
-            foreach ($rows as [$raw, $liked]) {
+            foreach ($slots as $slot => $counts) {
                 $index = $width > 0.0
-                    ? min($bins - 1, (int) floor(($raw - $lo) / $width))
+                    ? min($bins - 1, (int) floor((($slot / 1000) - $lo) / $width))
                     : 0;
-                $buckets[$index]['shown']++;
-                if ($liked !== null) {
-                    $buckets[$index]['rated']++;
-                    if ($liked) $buckets[$index]['liked']++;
-                }
+                $buckets[$index]['shown'] += $counts['shown'];
+                $buckets[$index]['rated'] += $counts['rated'];
+                $buckets[$index]['liked'] += $counts['liked'];
             }
 
             foreach ($buckets as $index => $bucket) {
@@ -206,14 +257,7 @@ final class RecommendationAnalytics
             }
         }
 
-        return [
-            'period_days' => $days,
-            'bins' => $bins,
-            'since' => $since,
-            'generated_at' => $nowMs,
-            'quantiles' => $quantiles,
-            'like_curve' => $likeCurve,
-        ];
+        return $likeCurve;
     }
 
     /** Bozuk/eksik yük sessizce atlanır — rapor tek bir kayıt yüzünden çökmez. */

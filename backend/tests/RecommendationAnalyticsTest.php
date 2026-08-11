@@ -189,6 +189,60 @@ final class RecommendationAnalyticsTest extends TestCase
         self::assertSame(0, $curve[3]['liked']);
     }
 
+    public function testLikeCurveHandlesZeroWidthRange(): void
+    {
+        // Bir modelin tüm swipe ham skorları aynı: kova genişliği 0.
+        $this->scoredEvent('z1', 'a', 'shown', 'swipe', 'v1', 99_000_000, 0.42);
+        $this->scoredEvent('z2', 'a', 'rated', 'swipe', 'v1', 99_000_001, null, 3);
+        $this->scoredEvent('z3', 'b', 'shown', 'swipe', 'v1', 99_000_002, 0.42);
+        $this->scoredEvent('z4', 'b', 'rated', 'swipe', 'v1', 99_000_003, null, 1);
+        $this->scoredEvent('z5', 'c', 'shown', 'swipe', 'v1', 99_000_004, 0.42);
+
+        $report = (new RecommendationAnalytics($this->db, 'secret'))
+            ->calibration(1, 4, 100_000_000);
+
+        $curve = $report['like_curve'];
+        self::assertCount(4, $curve);
+
+        // Hepsi ilk kovaya düşer; sınırlar çöker.
+        self::assertSame(0, $curve[0]['bin']);
+        self::assertSame(0.42, $curve[0]['bin_lo']);
+        self::assertSame(0.42, $curve[0]['bin_hi']);
+        self::assertSame(3, $curve[0]['shown']);
+        self::assertSame(2, $curve[0]['rated']);
+        self::assertSame(1, $curve[0]['liked']);
+        self::assertSame(0.5, $curve[0]['like_rate']);
+
+        foreach ([1, 2, 3] as $index) {
+            self::assertSame(0, $curve[$index]['shown']);
+            self::assertSame(0, $curve[$index]['rated']);
+            self::assertSame(0, $curve[$index]['liked']);
+        }
+    }
+
+    public function testNegativeRatingIsNotCountedAsRated(): void
+    {
+        // "Bunu izlemedim" (-1): gösterim sayılır, oylama sayılmaz.
+        $this->scoredEvent('n1', 'a', 'shown', 'swipe', 'v1', 99_000_000, 1.0);
+        $this->scoredEvent('n2', 'a', 'rated', 'swipe', 'v1', 99_000_001, null, -1);
+        // Beğenilmiş bir gösterime sonradan gelen -1 beğeniyi geri almaz.
+        $this->scoredEvent('n3', 'b', 'shown', 'swipe', 'v1', 99_000_002, 1.0);
+        $this->scoredEvent('n4', 'b', 'rated', 'swipe', 'v1', 99_000_003, null, 3);
+        $this->scoredEvent('n5', 'b', 'rated', 'swipe', 'v1', 99_000_004, null, -1);
+        // 0 ("beğenmedim") bir tercih sinyali: oylanmış sayılır.
+        $this->scoredEvent('n6', 'c', 'shown', 'swipe', 'v1', 99_000_005, 1.0);
+        $this->scoredEvent('n7', 'c', 'rated', 'swipe', 'v1', 99_000_006, null, 0);
+
+        $report = (new RecommendationAnalytics($this->db, 'secret'))
+            ->calibration(1, 4, 100_000_000);
+
+        $curve = $report['like_curve'];
+        self::assertCount(4, $curve);
+        self::assertSame(3, $curve[0]['shown']);
+        self::assertSame(2, $curve[0]['rated']);
+        self::assertSame(1, $curve[0]['liked']);
+    }
+
     public function testLikeCurveIsEmptyWithoutSwipeData(): void
     {
         $this->scoredEvent('b1', 'a', 'shown', 'browse', 'v1', 99_000_000, 0.5);

@@ -118,12 +118,19 @@ yerler, ek altyapı gerekmiyor:
 
 | Yer | Küme |
 |---|---|
-| `lib/screens/browse_screen.dart:513` | Vitrin + `finalPersonal` ilk 10 (`recordRecoImpressions` ile aynı küme) |
+| `lib/screens/browse_screen.dart:513` | Vitrin + `finalPersonal`'ın TAMAMI (`recordRecoImpressions`'tan farklı küme: cooldown ilk 10'da kalır) |
 | `lib/screens/browse_screen.dart:638` | Vitrin yeniden çekilişi |
 | `lib/screens/swipe_screen.dart:273` | Kart görünürken (kart başına bir kez) |
 
 Kaynak `Movie.recoSource` alanından okunur; atıfsız (`null`) yapımlar API içinde
 elenir.
+
+Keşfet paydası neden rayın tamamı: ray 20 kartın hepsini çiziyor ve hepsi
+oylanabilir; dahası keşif seçimleri 4., 9. ve **14.** indekslere serpiştiriliyor,
+yani ilk 10 ile sınırlamak üçüncü keşif seçimini paydadan düşürüp beğenisini
+sayardı — `adaptiveExploreRate`'in kullandığı `crExplore/crDiscover` oranını
+~1.4x çarpıtan sistematik bir yanlılık. Gösterim cooldown'ı (`recordRecoImpressions`)
+ilk 10'da kalır: ceza penceresini genişletmek ayrı bir karar ve istenmiyor.
 
 **`liked` yazan noktalar** (yalnız `rating >= 2` iken):
 `lib/providers/swipe_provider.dart:356`, `lib/screens/movie_detail_sheet.dart:514`.
@@ -177,6 +184,12 @@ olmayan tek yüzey orası: kullanıcı her kartı görüp aksiyon almak zorunda.
 
 `liked`, `rated` olayının `metadata.rating >= 2` koşulundan türetilir
 (`lib/screens/swipe_screen.dart:97` metadata'yı zaten taşıyor).
+
+Negatif puanlar (`rating < 0` — swipe'taki "Bunu izlemedim", `-1`) hiç sayılmaz:
+puanı olmayan bir gösterimle aynı muameleyi görür, `shown`'da kalır ama
+`rated`/`liked` paydasına girmez. Bir tercih sinyali değil ("değerlendiremiyorum"
+demek) ve sık bir swipe aksiyonu olduğu için `rated` sayılsaydı beğenilmemiş gibi
+işlenip Faz 2'nin go/no-go kararını verecek eğriyi yapay olarak düzleştirirdi.
 
 Bu blok eşlemeyi kurmaz; **Faz 2'nin go/no-go koşuludur**: `like_rate` raw ile
 birlikte artmıyorsa skor beğeniyi öngörmüyor demektir ve kalibrasyonun anlamı

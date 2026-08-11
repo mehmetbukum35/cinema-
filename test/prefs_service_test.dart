@@ -110,7 +110,11 @@ void main() {
     });
 
     test('recordRecoLiked yalnız liked sayacını artırır', () async {
-      await PrefsTastePrefs.recordRecoShown(['discover', 'discover', 'discover']);
+      await PrefsTastePrefs.recordRecoShown([
+        'discover',
+        'discover',
+        'discover',
+      ]);
       await PrefsTastePrefs.recordRecoLiked('discover');
       await PrefsTastePrefs.recordRecoLiked('discover');
       await PrefsTastePrefs.recordRecoLiked(null);
@@ -131,6 +135,27 @@ void main() {
       expect(telemetry['discover']?['liked'], 0);
     });
 
+    test('yeniden puanlama liked <= shown değişmezini korur', () async {
+      // Tek gösterim, ardından 2 → 3 yeniden puanlaması: ekran önce eskiyi
+      // geri alır, sonra yenisini yazar. `liked` 1'de kalmalı, `shown` 1'de.
+      await PrefsTastePrefs.recordRecoShown(['discover']);
+
+      await PrefsTastePrefs.recordRecoLiked('discover');
+      await PrefsTastePrefs.revertRecoLiked('discover');
+      await PrefsTastePrefs.recordRecoLiked('discover');
+
+      final telemetry = await PrefsTastePrefs.getRecoTelemetry();
+      expect(telemetry['discover']?['shown'], 1);
+      expect(telemetry['discover']?['liked'], 1);
+
+      // 3 → 1 düşürmesi: yalnız geri alma çalışır, kredi geri çekilir.
+      await PrefsTastePrefs.revertRecoLiked('discover');
+
+      final after = await PrefsTastePrefs.getRecoTelemetry();
+      expect(after['discover']?['shown'], 1);
+      expect(after['discover']?['liked'], 0);
+    });
+
     test('revertRecoLiked negatife düşmez ve atıfsızı yok sayar', () async {
       await PrefsTastePrefs.revertRecoLiked('discover');
       await PrefsTastePrefs.revertRecoLiked(null);
@@ -142,10 +167,7 @@ void main() {
 
     test('eşzamanlı gösterim yazımları artışları kaybetmez', () async {
       await Future.wait(
-        List.generate(
-          50,
-          (_) => PrefsTastePrefs.recordRecoShown(['discover']),
-        ),
+        List.generate(50, (_) => PrefsTastePrefs.recordRecoShown(['discover'])),
       );
 
       final telemetry = await PrefsTastePrefs.getRecoTelemetry();

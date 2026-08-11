@@ -563,6 +563,19 @@ uç 404 döner. Ham öneri olayları varsayılan olarak sunucuya ulaştıkları 
 itibaren 90 gün tutulur ve günlük `maintenance.php cleanup` görevi tarafından
 sınırlı partiler halinde silinir.
 
+### GET `/admin/recommendations/calibration?days=30&bins=20`
+
+Skor kalibrasyonu ölçümü; iki blok döndürür. `quantiles`: `model_version`
+başına ham sıralama skorunun (`score_components.final`) p0, p5, …, p100
+değerleri — **tüm yüzeylerdeki** `shown` olaylarından, 0.001 çözünürlüklü sabit
+bellekli histogramla. `like_curve`: ham skoru `bins` adet eşit kovaya bölüp her
+kovada `{bin_lo, bin_hi, shown, rated, liked, like_rate}` — **yalnız
+`surface = 'swipe'`**, pozisyon yanlılığı olmayan tek yüzey orası. `liked`,
+`metadata.rating >= 2` koşulundan türer; negatif puanlar ("Bunu izlemedim",
+`-1`) oylanmamış sayılır. `days` 1–90 günle sınırlıdır (varsayılan 30), `bins`
+4–100 (varsayılan 20). Erişim `X-Admin-Key` başlığındaki `admin_key` ile
+korunur; anahtar yapılandırılmamışsa uç 404 döner.
+
 ---
 
 ## 5. Güvenlik & Migration Yöneticisi

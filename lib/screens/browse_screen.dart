@@ -510,18 +510,23 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
       // Gösterim hafızası yalnızca bu yükleme hâlâ geçerliyse yazılsın —
       // iptal edilen refresh/auth reload cooldown'a hayalet başlık basmasın.
-      final shownMovies = <Movie>[
-        if (tonightPick != null) tonightPick,
-        ...finalPersonal.take(10),
-      ];
+      final cooldownMovies = <Movie>[?tonightPick, ...finalPersonal.take(10)];
       unawaited(
         PrefsTastePrefs.recordRecoImpressions(
-          shownMovies.map(_movieKey).toList(),
+          cooldownMovies.map(_movieKey).toList(),
         ),
       );
-      // İsabet telemetrisinin paydası: gösterim hafızasıyla AYNI küme.
+      // İsabet telemetrisinin paydası: vitrin + rayın TAMAMI — cooldown'dan
+      // farklı bir küme. Ray 20 kartın hepsini çiziyor ve hepsi oylanabilir;
+      // dahası keşif seçimleri 4., 9. ve 14. indekslere serpiştiriliyor, yani
+      // ilk 10 ile sınırlamak üçüncü keşif seçimini paydadan düşürüp beğenisini
+      // saymak olurdu (liked/shown oranını kaynaklar arası çarpıtır). Cooldown
+      // ise ilk 10'da kalır: gösterim cezası penceresini genişletmek istemiyoruz.
       unawaited(
-        PrefsTastePrefs.recordRecoShown(shownMovies.map((m) => m.recoSource)),
+        PrefsTastePrefs.recordRecoShown(<Movie>[
+          ?tonightPick,
+          ...finalPersonal,
+        ].map((m) => m.recoSource)),
       );
       // Vitrin kartı ile sıralı liste AYRI slot: ikisi tek listeymiş gibi
       // loglanırsa kalibrasyon hero muamelesini sıralama sinyali sanır.

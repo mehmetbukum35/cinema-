@@ -203,6 +203,7 @@ Tüm korumalı uçlar istek başlığında `Authorization: Bearer <access_token>
 | GET | `/download` | Uygulama indirme yönlendirme sayfası (Web) | – |
 | GET | `/tmdb/*` | Sunucu üzerinden rate-limit'li TMDB istek proxy'si | – |
 | GET | `/admin/recommendations?days=30` | Model ve yüzey bazında toplulaştırılmış öneri hunisi (1–90 gün) | `X-Admin-Key` |
+| GET | `/admin/recommendations/calibration?days=30&bins=20` | Skor kalibrasyonu: ham skor kuantilleri (tüm yüzeyler) + beğeni eğrisi (yalnız swipe, `bins` 4–100) | `X-Admin-Key` |
 
 ## Güvenlik notları
 

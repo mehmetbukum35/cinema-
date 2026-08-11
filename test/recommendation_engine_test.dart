@@ -691,7 +691,11 @@ void main() {
           }),
         );
 
-        final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+        final engine = RecommendationEngine(
+          TmdbService(
+            client: MockClient((_) async => http.Response('{}', 200)),
+          ),
+        );
 
         expect(await engine.adaptiveExploreRate(), 0.20);
       },
@@ -709,14 +713,20 @@ void main() {
           }),
         );
 
-        final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+        final engine = RecommendationEngine(
+          TmdbService(
+            client: MockClient((_) async => http.Response('{}', 200)),
+          ),
+        );
 
         expect(await engine.adaptiveExploreRate(), 0.05);
       },
     );
 
     test('adaptiveExploreRate, veri yokken tabana düşer', () async {
-      final engine = RecommendationEngine(TmdbService(client: MockClient((_) async => http.Response('{}', 200))));
+      final engine = RecommendationEngine(
+        TmdbService(client: MockClient((_) async => http.Response('{}', 200))),
+      );
 
       expect(await engine.adaptiveExploreRate(), closeTo(0.12, 1e-9));
     });
