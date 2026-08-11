@@ -737,7 +737,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         // Top 20 titles join locale'e bağlı; TMDB raylarıyla birlikte tazele.
         ref.invalidate(popularTitlesProvider(false));
         ref.invalidate(popularTitlesProvider(true));
-        _load();
+        Future.microtask(() {
+          if (mounted) _load();
+        });
       }
     });
 
@@ -747,7 +749,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       final isIn = next.isAuthenticated;
       if (wasIn == isIn) return;
       if (isIn && _guestPreview != null) {
-        setState(() => _guestPreview = null);
+        Future.microtask(() {
+          if (mounted) setState(() => _guestPreview = null);
+        });
       }
       _authSyncRefreshDebounce?.cancel();
       _authSyncRefreshDebounce = Timer(const Duration(milliseconds: 400), () {
