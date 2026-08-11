@@ -74,4 +74,19 @@ mixin DbWatchedSeasonsMixin {
     );
     return maps.map((m) => m['season_number'] as int).toSet();
   }
+
+  Future<int> getWatchedSeasonCount() async {
+    final db = await database;
+    if (db == null) {
+      return DatabaseHelper._mockWatchedSeasons
+          .where((e) => e['deleted'] != 1)
+          .length;
+    }
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM watched_seasons WHERE deleted = 0',
+      ),
+    );
+    return count ?? 0;
+  }
 }

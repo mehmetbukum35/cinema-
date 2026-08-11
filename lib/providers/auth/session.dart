@@ -97,6 +97,7 @@ mixin AuthSessionMixin on Notifier<AuthState> {
             ratingCount: await PrefsLibraryFacade.getRatingCount(),
             watchlistCount: await PrefsLibraryFacade.getWatchlistCount(),
             favoriteCount: await PrefsLibraryFacade.getFavoriteCount(),
+            seasonCount: await PrefsLibraryFacade.getWatchedSeasonCount(),
           )
         : null;
 

@@ -277,4 +277,8 @@ class PrefsLibraryFacade {
   static Future<Set<int>> getWatchedSeasons(int tvId) async {
     return await DatabaseHelper().getWatchedSeasons(tvId);
   }
+
+  static Future<int> getWatchedSeasonCount() async {
+    return await DatabaseHelper().getWatchedSeasonCount();
+  }
 }

@@ -12,6 +12,7 @@ void showGuestDataMergedToast(BuildContext context, MergedGuestData merged) {
   final r = merged.ratingCount;
   final w = merged.watchlistCount;
   final f = merged.favoriteCount;
+  final s = merged.seasonCount;
   final String message;
   if (r > 0 && w > 0 && f > 0) {
     message =
@@ -48,11 +49,16 @@ void showGuestDataMergedToast(BuildContext context, MergedGuestData merged) {
         (tr?.get('auth_guest_data_merged_watchlist') ??
                 '{} izleme listesi kaydın hesabına taşındı.')
             .replaceFirst('{}', '$w');
-  } else {
+  } else if (f > 0) {
     message =
         (tr?.get('auth_guest_data_merged_favorites') ??
                 '{} Top 20 titles moved to your account.')
             .replaceFirst('{}', '$f');
+  } else {
+    message =
+        (tr?.get('auth_guest_data_merged_seasons') ??
+                '{} watched seasons moved to your account.')
+            .replaceFirst('{}', '$s');
   }
   showAppToast(context, message);
 }

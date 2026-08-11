@@ -42,15 +42,20 @@ class MergedGuestData {
   final int ratingCount;
   final int watchlistCount;
   final int favoriteCount;
+  final int seasonCount;
 
   const MergedGuestData({
     required this.ratingCount,
     required this.watchlistCount,
     this.favoriteCount = 0,
+    this.seasonCount = 0,
   });
 
   bool get isEmpty =>
-      ratingCount == 0 && watchlistCount == 0 && favoriteCount == 0;
+      ratingCount == 0 &&
+      watchlistCount == 0 &&
+      favoriteCount == 0 &&
+      seasonCount == 0;
 }
 
 class AuthResult {

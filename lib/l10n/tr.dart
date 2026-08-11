@@ -223,6 +223,8 @@ const Map<String, String> kTrStrings = {
       '{} izleme listesi kaydın hesabına taşındı.',
   'auth_guest_data_merged_favorites':
       '{} Top 20 başlığın hesabına taşındı.',
+  'auth_guest_data_merged_seasons':
+      '{} izlenen sezon kaydın hesabına taşındı.',
   'auth_guest_data_merged_ratings_favorites':
       '{} puanın ve {} Top 20 başlığın hesabına taşındı.',
   'auth_guest_data_merged_watchlist_favorites':

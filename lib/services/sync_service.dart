@@ -767,6 +767,16 @@ class SyncService {
           whereArgs: [_asInt(w['id']), _asInt(w['is_tv'])],
           remoteGenreIds: w['genre_ids'],
         );
+        final meta = await _resolveCatalogMetadata(
+          txn,
+          table: 'watchlist',
+          where: 'id = ? AND is_tv = ?',
+          whereArgs: [_asInt(w['id']), _asInt(w['is_tv'])],
+          remoteTitle: w['title'],
+          remotePoster: w['poster_path'],
+          remoteBackdrop: w['backdrop_path'],
+          remoteOverview: w['overview'],
+        );
         await txn.insert('watchlist', {
           'id': _asInt(w['id']),
           'is_tv': _asInt(w['is_tv']),
@@ -774,10 +784,10 @@ class SyncService {
           // Compacted legacy tombstones may no longer have catalog metadata.
           // SQLite keeps this legacy column NOT NULL, so retain a harmless
           // placeholder for deleted rows instead of aborting the entire sync.
-          'title': w['title'] ?? '',
-          'poster_path': w['poster_path'],
-          'backdrop_path': w['backdrop_path'],
-          'overview': w['overview'],
+          'title': meta['title'] ?? '',
+          'poster_path': meta['poster_path'],
+          'backdrop_path': meta['backdrop_path'],
+          'overview': meta['overview'],
           'vote_average': _asDouble(w['vote_average']),
           'release_date': w['release_date'],
           'genre_ids': genreIdsJson,

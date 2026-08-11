@@ -58,7 +58,10 @@ class SocialWebRenderer
             $topMovies = $this->catalog->loadTopList($userId, false, $lang);
             $topShows = $this->catalog->loadTopList($userId, true, $lang);
 
-            $displayName = htmlspecialchars($user['display_name'] ?? $user['username']);
+            $rawName = trim((string) ($user['display_name'] ?? ''));
+            $displayName = htmlspecialchars(
+                $rawName !== '' ? $rawName : (string) $user['username']
+            );
             $userHandle = htmlspecialchars($user['username']);
 
             // Sinema DNA (snapshot varsa ve hazırsa gösterim dizisi; yoksa null)
