@@ -56,6 +56,7 @@ class MockCouchApi implements ApiService {
   bool? lastVotedLiked;
   bool cancelCalled = false;
   ApiException? voteThrows;
+  ApiException? sessionThrows;
   Map<String, dynamic>? getResponse;
   List<String> usedCouchMoviesResponse = [];
   Completer<Map<String, dynamic>?>? activeGate;
@@ -77,6 +78,7 @@ class MockCouchApi implements ApiService {
   @override
   Future<Map<String, dynamic>> getCouchSession(int sessionId) async {
     sessionCalls++;
+    if (sessionThrows != null) throw sessionThrows!;
     return sessionGate?.future ?? getResponse ?? sessionJson();
   }
 
@@ -456,6 +458,43 @@ void main() {
       await leave;
 
       expect(container.read(couchProvider).session!.id, 20);
+    });
+
+    test('double leave keeps the resurrect guard until cancel lands', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10));
+      mockApi.cancelGate = Completer<void>();
+
+      // Çift dokunuş: ikinci çağrı state.session'ı zaten null görür.
+      final firstLeave = notifier.leave();
+      final secondLeave = notifier.leave();
+
+      // Cancel daha sunucuya ulaşmadı; /active hâlâ oturumu açık döner.
+      mockApi.activeResponse = sessionJson(id: 10, status: 'active');
+      await notifier.checkActive();
+
+      expect(container.read(couchProvider).session, isNull);
+
+      mockApi.cancelGate!.complete();
+      await Future.wait([firstLeave, secondLeave]);
+      expect(container.read(couchProvider).session, isNull);
+    });
+
+    test('poll denial closes the session instead of looping forever', () async {
+      final notifier = container.read(couchProvider.notifier);
+      notifier.debugSetSession(sessionJson(id: 10, status: 'active'));
+      notifier.startPolling();
+
+      // Arkadaşlık bozuldu / satır GC'lendi: poll ucu artık 403 döner.
+      mockApi.sessionThrows = ApiException(
+        statusCode: 403,
+        message: 'Bu oturuma erişim yetkin yok.',
+      );
+      await notifier.refresh();
+
+      expect(container.read(couchProvider).session, isNull);
+      expect(container.read(couchProvider).error, 'couch_session_closed');
+      notifier.stopPolling();
     });
 
     test('duplicate start taps create only one couch session', () async {

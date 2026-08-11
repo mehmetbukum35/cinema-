@@ -398,6 +398,20 @@ class CouchNotifier extends Notifier<CouchState> {
           state.session?.id == session.id) {
         _apply(response);
       }
+    } on ApiException catch (e) {
+      // 403 (arkadaşlık bozuldu/engel) ve 404 (satır GC'lendi) kalıcıdır:
+      // yutmak 2.5 sn'lik poll'u sonsuza dek döndürüyor ve ekran asla
+      // kapanmayan bir oturumda takılı kalıyordu. Yerel oturumu kapat.
+      final gone = e.statusCode == 403 || e.statusCode == 404;
+      if (gone &&
+          ref.mounted &&
+          revision == _sessionRevision &&
+          state.session?.id == session.id) {
+        _apply(null);
+        state = state.copyWith(error: () => 'couch_session_closed');
+      } else {
+        debugPrint('Couch refresh failed: $e');
+      }
     } catch (e) {
       debugPrint('Couch refresh failed: $e');
     }
@@ -406,16 +420,22 @@ class CouchNotifier extends Notifier<CouchState> {
   /// Açık oturumda iptal; eşleşmiş oturumda kapanış. Yerel durum temizlenir.
   Future<void> leave() async {
     final session = state.session;
-    _leavingSessionId = session?.id;
-    _apply(null);
-    if (session != null) {
-      try {
-        await _api.cancelCouchSession(session.id);
-      } catch (e) {
-        debugPrint('Couch cancel failed (ignored): $e');
-      }
+    // Çift dokunuşta ikinci çağrı state'i zaten boş görür; koruma id'sini
+    // null'a çekmek, uçuştaki cancel bitmeden checkActive'in oturumu geri
+    // diriltmesine yol açıyordu. Oturumu olmayan leave yalnızca revizyonu
+    // artırır (uçuştaki start'ı orphan olarak iptal ettiren mekanizma).
+    if (session == null) {
+      _apply(null);
+      return;
     }
-    if (_leavingSessionId == session?.id) {
+    _leavingSessionId = session.id;
+    _apply(null);
+    try {
+      await _api.cancelCouchSession(session.id);
+    } catch (e) {
+      debugPrint('Couch cancel failed (ignored): $e');
+    }
+    if (_leavingSessionId == session.id) {
       _leavingSessionId = null;
     }
   }
