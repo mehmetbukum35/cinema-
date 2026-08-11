@@ -268,7 +268,13 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen>
       if (_trackedMovieKey != key) {
         _trackedMovieKey = key;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          RecommendationTelemetryService.recordShown([movie], surface: 'swipe');
+          // `card`: kullanıcı kartı görmek ve aksiyon almak zorunda — bu
+          // yüzeyde gösterim yanlılığı yok, kalibrasyonun temiz kaynağı.
+          RecommendationTelemetryService.recordShown(
+            [movie],
+            surface: 'swipe',
+            slot: 'card',
+          );
         });
       }
     }

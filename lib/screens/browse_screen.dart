@@ -515,11 +515,27 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         ...finalPersonal.take(10).map(_movieKey),
       ];
       unawaited(PrefsTastePrefs.recordRecoImpressions(shownKeys));
+      // Vitrin kartı ile sıralı liste AYRI slot: ikisi tek listeymiş gibi
+      // loglanırsa kalibrasyon hero muamelesini sıralama sinyali sanır.
+      // Ortak batch_id ikisini aynı sıralama geçişine bağlı tutar.
+      final browseBatchId = RecommendationTelemetryService.newBatchId();
+      if (tonightPick != null) {
+        unawaited(
+          RecommendationTelemetryService.recordShown(
+            [tonightPick],
+            surface: 'browse',
+            slot: 'tonight',
+            batchId: browseBatchId,
+          ),
+        );
+      }
       unawaited(
-        RecommendationTelemetryService.recordShown([
-          ?tonightPick,
-          ...finalPersonal.take(10),
-        ], surface: 'browse'),
+        RecommendationTelemetryService.recordShown(
+          finalPersonal.take(10),
+          surface: 'browse',
+          slot: 'list',
+          batchId: browseBatchId,
+        ),
       );
       if (tonightPick != null) {
         unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(tonightPick)));
@@ -621,9 +637,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
       unawaited(PrefsTastePrefs.recordRecoImpressions([_movieKey(pick)]));
       unawaited(
-        RecommendationTelemetryService.recordShown([
-          pick,
-        ], surface: 'tonight_pick'),
+        RecommendationTelemetryService.recordShown(
+          [pick],
+          surface: 'tonight_pick',
+          slot: 'tonight',
+        ),
       );
     }
   }

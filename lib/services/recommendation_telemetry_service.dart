@@ -13,17 +13,38 @@ class RecommendationTelemetryService {
   static const _uuid = Uuid();
   static Future<void> _writeTail = Future<void>.value();
 
+  /// Tek sıralama geçişinin birden çok slot'a yayılan gösterimlerini bağlamak
+  /// için (ör. Keşfet'te vitrin kartı + sıralı liste).
+  static String newBatchId() => _uuid.v4();
+
   static String movieKey(Movie movie) =>
       '${movie.isTV ? 'tv' : 'movie'}_${movie.id}';
 
+  /// [slot] gösterim yuvası: `list` (sıralı liste), `tonight` (vitrin/hero
+  /// kartı), `card` (swipe). Hero kartı listenin ilk elemanı DEĞİL — ayrı
+  /// etiketlenmezse kalibrasyon slot etkisini zevk sinyali sanır.
+  ///
+  /// [batchId] tek bir sıralama geçişinden çıkan tüm gösterimleri birbirine
+  /// bağlar; verilmezse üretilir. Sıralanmış listenin tamamını yeniden kurmak
+  /// (ters-olasılık ağırlığı, listwise değerlendirme) buna bağlı.
+  ///
+  /// Not: gösterim listeyi KURARKEN yazılıyor, viewport'a girince değil. Yani
+  /// `rank` incelenme olasılığının ölçümü değil vekili — pozisyon-yanlılığı
+  /// düzeltmesi bunu varsayım olarak almalı. Tek istisna `card` (swipe):
+  /// kullanıcı her kartı görüp aksiyon almak zorunda, o yüzden o yüzeyde
+  /// gösterim yanlılığı yok.
   static Future<void> recordShown(
     Iterable<Movie> movies, {
     required String surface,
+    String slot = 'list',
+    String? batchId,
   }) => _enqueue(() async {
     final prefs = await SharedPreferences.getInstance();
     final queue = _readList(prefs.getString(_queueKey));
     final latest = _readMap(prefs.getString(_latestKey));
     final now = DateTime.now().millisecondsSinceEpoch;
+    final resolvedBatchId = batchId ?? _uuid.v4();
+    var rank = 0;
     final experiment = await RecommendationExperimentService.current();
 
     for (final movie in movies) {
@@ -45,8 +66,10 @@ class RecommendationTelemetryService {
           action: 'shown',
           surface: surface,
           createdAt: now,
+          metadata: {'rank': rank, 'slot': slot, 'batch_id': resolvedBatchId},
         ),
       );
+      rank++;
     }
     await _persist(prefs, queue, latest);
   });
