@@ -654,8 +654,11 @@ class Auth
         // yine de gelmediyse kullanıcı Apple ID ayarlarından uygulama iznini
         // kaldırıp yeniden denemelidir.
         if ($email === '') {
-            fail(422, 'Apple hesabınızdan e-posta alınamadı. Apple ID ayarlarından '
-                . '"Apple ile Oturum Açma" iznini kaldırıp tekrar deneyin.');
+            $this->failAbortingTxn(
+                422,
+                'Apple hesabınızdan e-posta alınamadı. Apple ID ayarlarından '
+                . '"Apple ile Oturum Açma" iznini kaldırıp tekrar deneyin.'
+            );
         }
 
         // 2) Aynı e-postalı mevcut hesap → Apple'ı bağla.

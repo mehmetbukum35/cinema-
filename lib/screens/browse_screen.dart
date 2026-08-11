@@ -508,7 +508,16 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           .catchError((e, st) {
             debugPrint("Error loading secondary browse lists: $e\n$st");
             if (!mounted || loadGeneration != _loadGeneration) return;
-            setState(() => _phase2Pending = false);
+            setState(() {
+              _phase2Pending = false;
+              // Birincil raylar boşsa null error → "null" ekranı; gerçek hata yaz.
+              if (_personal.isEmpty &&
+                  _trending.isEmpty &&
+                  _movies.isEmpty &&
+                  _error == null) {
+                _error = e.toString();
+              }
+            });
           });
     } catch (e) {
       if (!mounted || loadGeneration != _loadGeneration) return;
@@ -556,6 +565,12 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     if (pick != null) {
       unawaited(PrefsTastePrefs.recordTonightPick(_movieKey(pick)));
       unawaited(PrefsTastePrefs.recordRecoImpressions([_movieKey(pick)]));
+      unawaited(
+        RecommendationTelemetryService.recordShown(
+          [pick],
+          surface: 'tonight_pick',
+        ),
+      );
     }
   }
 

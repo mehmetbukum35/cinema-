@@ -855,6 +855,13 @@ class SyncService {
     final remoteValue = CulturalPreferences.fromJson(normalized);
     final localValue = await CulturalPreferenceService.load();
     if (remoteValue.updatedAt < localValue.updatedAt) return false;
+    // Push→pull eşit timestamp'te sunucu source:'sync' basar; explicit/dismiss
+    // korumasını silme — learner kilidini düşürmesin.
+    if (remoteValue.updatedAt == localValue.updatedAt &&
+        (localValue.source == 'explicit_edit' ||
+            localValue.source == 'dismiss_feedback')) {
+      return false;
+    }
     await CulturalPreferenceService.saveSnapshot(remoteValue);
     return jsonEncode(remoteValue.toJson()) != jsonEncode(localValue.toJson());
   }

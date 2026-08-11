@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show
@@ -204,7 +205,19 @@ class OfflineNotifier extends Notifier<bool> with WidgetsBindingObserver {
   static Future<bool> _probeApi() async {
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/health');
     final response = await http.get(uri).timeout(const Duration(seconds: 3));
-    return response.statusCode == 200 && response.body.contains('"ok"');
+    // 429/503 = sunucu ayakta ama kısıtlı; cihazı offline sayma.
+    if (response.statusCode == 429 || response.statusCode == 503) {
+      return true;
+    }
+    if (response.statusCode != 200) return false;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['ok'] == true) return true;
+    } catch (_) {
+      // Eski/düz metin health yanıtı
+      if (response.body.contains('"ok"')) return true;
+    }
+    return false;
   }
 
   @override

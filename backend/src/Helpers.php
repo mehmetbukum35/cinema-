@@ -151,11 +151,14 @@ function rate_limit(string $bucket, int $perMin, bool $failClosed = false): void
     try {
         $db = Db::conn();
         
-        // Temizlik: 5 dakika öncesine ait pencereleri periyodik olarak temizleyelim (sorgu yükü olmaması için)
-        // Her 20 istekten birinde temizlik yapsın (random temizlik)
+        // Temizlik: GC hataları fail-closed 503 üretmesin.
         if (mt_rand(1, 20) === 1) {
-            $stmtClean = $db->prepare("DELETE FROM rate_limits WHERE window_time < ?");
-            $stmtClean->execute([$win - 5]);
+            try {
+                $stmtClean = $db->prepare("DELETE FROM rate_limits WHERE window_time < ?");
+                $stmtClean->execute([$win - 5]);
+            } catch (Throwable $cleanErr) {
+                cinema_error('Rate limit cleanup failed: ' . $cleanErr->getMessage());
+            }
         }
 
         $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
