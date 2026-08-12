@@ -1124,7 +1124,8 @@ class SocialIntegrationTest extends TestCase
                 is_public INTEGER NOT NULL DEFAULT 1,
                 updated_at INTEGER NOT NULL DEFAULT 0,
                 taste_dna TEXT NULL,
-                taste_dna_at INTEGER NOT NULL DEFAULT 0
+                taste_dna_at INTEGER NOT NULL DEFAULT 0,
+                locale TEXT DEFAULT \'tr\'
             )'
         );
         $this->db->exec(
@@ -1413,6 +1414,20 @@ class SocialIntegrationTest extends TestCase
             array_column($fcm->sent, 'user_id'),
             'eşleşmeyi poll ile çözen taraf kendi ekranında görüyor; push yalnızca karşı tarafa gitmeli'
         );
+    }
+
+    public function testPushNotificationLocalizationRespectsUserLocale(): void
+    {
+        $this->db->exec("UPDATE users SET locale = 'en' WHERE id = 2");
+        $fcm = new RecordingFcm();
+        $social = new Social($this->db, null, $fcm);
+
+        $social->sendFriendRequest(1, ['search_query' => 'bob']);
+
+        $this->assertNotEmpty($fcm->sent);
+        $lastNotif = end($fcm->sent);
+        $this->assertSame(2, $lastNotif['user_id']);
+        $this->assertSame('New friend request', $lastNotif['title']);
     }
 
     public function testCouchCreateRequiresFriendshipAndValidDeck(): void

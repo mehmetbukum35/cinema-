@@ -563,6 +563,21 @@ class NotificationService {
     }
   }
 
+  /// Servisin init() ile tamamen başlatılmasını bekler.
+  Future<void> _ensureReady() async {
+    if (_ready) return;
+    final flight = _initFlight;
+    if (flight != null) {
+      await flight;
+    }
+  }
+
+  @visibleForTesting
+  bool get isReadyForTesting => _ready;
+
+  @visibleForTesting
+  Future<void> ensureReadyForTesting() => _ensureReady();
+
   /// Planlanmış hatırlatıcıları watchlist ile hizalar: listeden çıkanları
   /// iptal eder, eksik olanları planlar. Cihazlar arası senkron sonrası
   /// (başka cihazda eklenen/çıkarılan yapımlar) tutarlılık için çağrılır.
@@ -572,6 +587,7 @@ class NotificationService {
   }
 
   Future<void> _syncReleaseReminders(List<Movie> watchlist) async {
+    await _ensureReady();
     if (!await _ensureTimezone()) return;
     try {
       final expected = <int, Movie>{

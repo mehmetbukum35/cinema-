@@ -729,5 +729,16 @@ void main() {
       expect(service.keywordMemoryCacheSize, 1);
       expect(calls, 1);
     });
+
+    test('Movie.fromStorage handles List, JSON array string, and comma-separated string for genre_ids', () {
+      final fromList = Movie.fromStorage({'id': 1, 'genre_ids': [28, 12]});
+      expect(fromList.genreIds, [28, 12]);
+
+      final fromJsonArray = Movie.fromStorage({'id': 2, 'genre_ids': '[28, 12]'});
+      expect(fromJsonArray.genreIds, [28, 12]);
+
+      final fromCommaSeparated = Movie.fromStorage({'id': 3, 'genre_ids': '28, 12, 35'});
+      expect(fromCommaSeparated.genreIds, [28, 12, 35]);
+    });
   });
 }

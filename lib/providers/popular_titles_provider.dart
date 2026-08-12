@@ -23,17 +23,30 @@ class PopularTitle {
         : double.tryParse(value?.toString() ?? '') ?? 0;
     List<int> genres = const [];
     final rawGenres = m['genre_ids'];
-    try {
-      final decoded = rawGenres is String && rawGenres.isNotEmpty
-          ? jsonDecode(rawGenres)
-          : rawGenres;
-      if (decoded is List) {
-        genres = decoded
-            .map((value) => int.tryParse(value.toString()))
+    if (rawGenres is List) {
+      genres = rawGenres
+          .map((value) => int.tryParse(value.toString()))
+          .whereType<int>()
+          .toList();
+    } else if (rawGenres is String && rawGenres.trim().isNotEmpty) {
+      if (rawGenres.trim().startsWith('[')) {
+        try {
+          final decoded = jsonDecode(rawGenres.trim());
+          if (decoded is List) {
+            genres = decoded
+                .map((value) => int.tryParse(value.toString()))
+                .whereType<int>()
+                .toList();
+          }
+        } catch (_) {}
+      } else {
+        genres = rawGenres
+            .split(',')
+            .map((value) => int.tryParse(value.trim()))
             .whereType<int>()
             .toList();
       }
-    } catch (_) {}
+    }
     return PopularTitle(
       rank: asInt(m['rank']),
       votes: asInt(m['votes']),

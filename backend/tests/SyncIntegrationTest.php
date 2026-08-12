@@ -722,7 +722,8 @@ class SyncIntegrationTest extends TestCase
                 id INTEGER PRIMARY KEY,
                 review_banned INTEGER NOT NULL DEFAULT 0,
                 cultural_preferences TEXT,
-                cultural_preferences_updated_at INTEGER NOT NULL DEFAULT 0
+                cultural_preferences_updated_at INTEGER NOT NULL DEFAULT 0,
+                locale TEXT DEFAULT \'tr\'
             )'
         );
         $this->db->exec('INSERT INTO users (id, review_banned) VALUES (1, 0), (2, 0)');

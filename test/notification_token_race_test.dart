@@ -218,4 +218,18 @@ void main() {
       expect(events, isEmpty);
     });
   });
+
+  group('NotificationService readiness and reminder seam', () {
+    test('ensureReadyForTesting completes when ready state is checked', () async {
+      final service = NotificationService.instance;
+      expect(service.isReadyForTesting, isFalse);
+      await expectLater(service.ensureReadyForTesting(), completes);
+    });
+
+    test('syncReleaseReminders awaits readiness before processing', () async {
+      final service = NotificationService.instance;
+      await service.syncReleaseReminders([]);
+      expect(service.isReadyForTesting, isFalse);
+    });
+  });
 }

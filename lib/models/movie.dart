@@ -35,6 +35,34 @@ class Movie {
     this.runtimeMinutes,
   });
 
+  static List<int> _parseGenreIds(dynamic rawGenreIds) {
+    if (rawGenreIds is List) {
+      return rawGenreIds
+          .map((e) => int.tryParse(e.toString()))
+          .whereType<int>()
+          .toList();
+    } else if (rawGenreIds is String && rawGenreIds.trim().isNotEmpty) {
+      if (rawGenreIds.trim().startsWith('[')) {
+        try {
+          final decoded = jsonDecode(rawGenreIds.trim());
+          if (decoded is List) {
+            return decoded
+                .map((e) => int.tryParse(e.toString()))
+                .whereType<int>()
+                .toList();
+          }
+        } catch (_) {}
+      } else {
+        return rawGenreIds
+            .split(',')
+            .map((e) => int.tryParse(e.trim()))
+            .whereType<int>()
+            .toList();
+      }
+    }
+    return const [];
+  }
+
   factory Movie.fromJson(Map<String, dynamic> json, {bool isTV = false}) {
     final parsedId = json['id'] is int
         ? json['id'] as int
@@ -50,7 +78,6 @@ class Movie {
     final rawReleaseDate = parsedIsTv
         ? (json['first_air_date'] ?? json['release_date'])
         : (json['release_date'] ?? json['first_air_date']);
-    final rawGenreIds = json['genre_ids'];
     return Movie(
       id: parsedId,
       title: rawTitle is String ? rawTitle : '',
@@ -65,8 +92,8 @@ class Movie {
           double.tryParse(json['vote_average']?.toString() ?? '') ?? 0.0,
       releaseDate: rawReleaseDate is String ? rawReleaseDate : null,
       isTV: parsedIsTv,
-      genreIds: rawGenreIds is List
-          ? rawGenreIds
+      genreIds: json['genre_ids'] is List
+          ? (json['genre_ids'] as List)
                 .map((e) => int.tryParse(e.toString()))
                 .whereType<int>()
                 .toList()
@@ -148,25 +175,6 @@ class Movie {
   };
 
   factory Movie.fromStorage(Map<String, dynamic> json) {
-    final rawGenreIds = json['genre_ids'];
-    List<int> parsedGenreIds = const [];
-    if (rawGenreIds is List) {
-      parsedGenreIds = rawGenreIds
-          .map((e) => int.tryParse(e.toString()))
-          .whereType<int>()
-          .toList();
-    } else if (rawGenreIds is String && rawGenreIds.trim().startsWith('[')) {
-      try {
-        final decoded = jsonDecode(rawGenreIds.trim());
-        if (decoded is List) {
-          parsedGenreIds = decoded
-              .map((e) => int.tryParse(e.toString()))
-              .whereType<int>()
-              .toList();
-        }
-      } catch (_) {}
-    }
-
     return Movie(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       title: json['title']?.toString() ?? '',
@@ -177,7 +185,7 @@ class Movie {
           double.tryParse(json['vote_average']?.toString() ?? '') ?? 0.0,
       releaseDate: json['release_date']?.toString(),
       isTV: json['isTV'] == true || json['isTV'] == 1 || json['isTV'] == '1',
-      genreIds: parsedGenreIds,
+      genreIds: _parseGenreIds(json['genre_ids']),
       popularity: double.tryParse(json['popularity']?.toString() ?? '') ?? 0.0,
       voteCount: int.tryParse(json['vote_count']?.toString() ?? '') ?? 0,
       adult:

@@ -14,39 +14,49 @@ trait SocialSupportTrait
             $st = $this->db->prepare('SELECT display_name, username FROM users WHERE id = ?');
             $st->execute([$fromUserId]);
             $u = $st->fetch();
-            $name = 'Biri';
+
+            $userLocale = 'tr';
+            $targetSt = $this->db->prepare('SELECT locale FROM users WHERE id = ?');
+            $targetSt->execute([$toUserId]);
+            $targetUser = $targetSt->fetch();
+            if ($targetUser && !empty($targetUser['locale']) && in_array(strtolower((string) $targetUser['locale']), ['tr', 'en'], true)) {
+                $userLocale = strtolower((string) $targetUser['locale']);
+            }
+
+            $isEn = $userLocale === 'en';
+            $name = $isEn ? 'Someone' : 'Biri';
             if ($u) {
                 $name = trim((string) ($u['display_name'] ?? '')) !== ''
                     ? $u['display_name']
-                    : '@' . ($u['username'] ?? 'kullanıcı');
+                    : '@' . ($u['username'] ?? ($isEn ? 'user' : 'kullanıcı'));
             }
 
             $data = ['from_id' => $fromUserId];
             if ($type === 'request') {
-                $title = 'Yeni arkadaşlık isteği';
-                $body  = "$name seni arkadaş olarak eklemek istiyor.";
+                $title = $isEn ? 'New friend request' : 'Yeni arkadaşlık isteği';
+                $body  = $isEn ? "$name wants to add you as a friend." : "$name seni arkadaş olarak eklemek istiyor.";
                 $kind  = 'friend_request';
             } elseif ($type === 'recommend') {
                 $movieTitle = (string) ($extra['title'] ?? '');
-                $title = 'Arkadaşından öneri';
-                $body  = "$name sana \"$movieTitle\" yapımını önerdi.";
+                $title = $isEn ? 'Recommendation from a friend' : 'Arkadaşından öneri';
+                $body  = $isEn ? "$name recommended \"$movieTitle\" to you." : "$name sana \"$movieTitle\" yapımını önerdi.";
                 $kind  = 'friend_recommend';
                 $data['movie_id'] = (string) ($extra['movie_id'] ?? '');
                 $data['is_tv']    = (string) ($extra['is_tv'] ?? '0');
             } elseif ($type === 'couch_invite') {
-                $title = 'Birlikte Seç daveti 🍿';
-                $body  = "$name seninle film seçmek istiyor. Desten hazır!";
+                $title = $isEn ? 'Couch Watch Invite 🍿' : 'Birlikte Seç daveti 🍿';
+                $body  = $isEn ? "$name wants to pick a movie with you. Your deck is ready!" : "$name seninle film seçmek istiyor. Desten hazır!";
                 $kind  = 'couch_invite';
                 $data['session_id'] = (string) ($extra['session_id'] ?? '');
             } elseif ($type === 'couch_match') {
                 $movieTitle = (string) ($extra['title'] ?? '');
-                $title = 'Eşleşme! 🎬';
-                $body  = "$name ile anlaştınız: \"$movieTitle\". İyi seyirler!";
+                $title = $isEn ? 'Match! 🎬' : 'Eşleşme! 🎬';
+                $body  = $isEn ? "Matched with $name: \"$movieTitle\". Enjoy watching!" : "$name ile anlaştınız: \"$movieTitle\". İyi seyirler!";
                 $kind  = 'couch_match';
                 $data['session_id'] = (string) ($extra['session_id'] ?? '');
             } else {
-                $title = 'Arkadaşlık isteği kabul edildi';
-                $body  = "$name isteğini kabul etti.";
+                $title = $isEn ? 'Friend request accepted' : 'Arkadaşlık isteği kabul edildi';
+                $body  = $isEn ? "$name accepted your friend request." : "$name isteğini kabul etti.";
                 $kind  = 'friend_accept';
             }
             $data['type'] = $kind;

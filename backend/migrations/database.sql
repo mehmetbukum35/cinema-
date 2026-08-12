@@ -228,7 +228,8 @@ CREATE TABLE `recommendation_events` (
   PRIMARY KEY (`event_id`),
   KEY `idx_reco_events_user_created` (`user_id`,`created_at`),
   KEY `idx_reco_events_model_action` (`model_version`,`action`),
-  KEY `idx_reco_events_impression` (`impression_id`)
+  KEY `idx_reco_events_impression` (`impression_id`),
+  KEY `idx_reco_events_received_at` (`received_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -254,6 +255,7 @@ CREATE TABLE `users` (
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
   `signup_source` varchar(32) DEFAULT NULL,
   `review_banned` tinyint(1) NOT NULL DEFAULT 0,
+  `locale` varchar(5) NOT NULL DEFAULT 'tr',
   `apple_sub` varchar(64) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
