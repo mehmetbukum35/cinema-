@@ -276,6 +276,11 @@ mixin AuthSessionMixin on Notifier<AuthState> {
       await DatabaseHelper().hardClearAllData();
       await PrefsService.clearAccountScopedPreferences();
       await PrefsAuthStorage.setLastAuthenticatedUserId(null);
+      // Zamanlanmış çıkış hatırlatıcıları watchlist'in cihazdaki kopyasıdır;
+      // veri silindiyse onlar da gitmeli. Watchlist provider'ın yeniden
+      // yüklenip hizalamasına GÜVENİLEMEZ: invalidate edilen provider'ı
+      // dinleyen yoksa hiç kurulmaz ve bildirimler düşmeye devam eder.
+      await NotificationService.instance.cancelAllReleaseReminders();
     }
     await _invalidateGuestProviders();
     ref.read(syncProvider.notifier).resetStatus();
@@ -326,6 +331,7 @@ mixin AuthSessionMixin on Notifier<AuthState> {
       }
     }
     await PrefsService.resetAll();
+    await NotificationService.instance.cancelAllReleaseReminders();
     await _invalidateGuestProviders();
     ref.read(syncProvider.notifier).resetStatus();
   }

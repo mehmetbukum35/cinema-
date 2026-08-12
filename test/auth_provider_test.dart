@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +19,42 @@ import 'package:ne_izlesem/services/prefs_service.dart';
 import 'package:ne_izlesem/services/db_helper.dart';
 import 'package:ne_izlesem/services/notification_service.dart';
 import 'mocks/secure_storage_mock.dart';
+
+/// Planlanmış yerel bildirimleri bellekte tutan sahte platform katmanı.
+class _FakeNotificationPlatform extends FlutterLocalNotificationsPlatform {
+  _FakeNotificationPlatform(this.pending);
+
+  final List<int> pending;
+  final List<int> cancelled = [];
+
+  @override
+  Future<List<PendingNotificationRequest>> pendingNotificationRequests() async {
+    return [
+      for (final id in pending) PendingNotificationRequest(id, 'T', 'B', null),
+    ];
+  }
+
+  @override
+  Future<void> cancel({required int id}) async {
+    cancelled.add(id);
+    pending.remove(id);
+  }
+}
+
+/// notification_service.dart içindeki hatırlatıcı kimlik şemasının aynısı.
+int _releaseReminderId(int movieId, bool isTV) =>
+    (isTV ? 0x10000000 : 0x20000000) | (movieId & 0x0FFFFFFF);
+
+/// Sahte katmanı kurar. Eklenti kurucusu gerçek katmanı kaydettiği için önce
+/// [NotificationService.instance]'a dokunulur; hedef platform da masaüstüne
+/// sabitlenir ki `cancel` Android'e özel yola sapmasın.
+_FakeNotificationPlatform _installFakeNotificationPlatform(List<int> pending) {
+  NotificationService.instance;
+  debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+  final fake = _FakeNotificationPlatform(pending);
+  FlutterLocalNotificationsPlatform.instance = fake;
+  return fake;
+}
 
 /// ApiException olmayan beklenmeyen bir arıza (soket kopması, serileştirme
 /// hatası…). Notifier'ın bunu ham metin olarak arayüze sızdırmadığını doğrular.
@@ -397,6 +435,36 @@ void main() {
 
       expect(await PrefsAuthStorage.getAccessToken(), isNull);
       expect(await PrefsAuthStorage.getRefreshToken(), isNull);
+    });
+
+    // Zamanlanmış çıkış hatırlatıcısı watchlist'in cihazdaki bir kopyasıdır:
+    // gövdesinde başlığı taşır ve veri silindikten sonra da düşmeye devam eder.
+    // watchlistProvider'ın invalidate sonrası kendini yeniden kurup hizalamasına
+    // güvenilemez — o provider'ı dinleyen yoksa hiç kurulmaz.
+    test('wipeLocalData ile çıkış planlı hatırlatıcıları da siler', () async {
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'secret123');
+
+      final fake = _installFakeNotificationPlatform([
+        _releaseReminderId(603, false),
+      ]);
+
+      await notifier.logout(wipeLocalData: true);
+
+      expect(fake.cancelled, [_releaseReminderId(603, false)]);
+    });
+
+    test('veri silmeden çıkışta hatırlatıcılar korunur', () async {
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'secret123');
+
+      final fake = _installFakeNotificationPlatform([
+        _releaseReminderId(603, false),
+      ]);
+
+      await notifier.logout();
+
+      expect(fake.cancelled, isEmpty);
     });
 
     test(

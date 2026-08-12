@@ -605,6 +605,36 @@ class NotificationService {
     }
   }
 
+  /// Planlanmış TÜM çıkış hatırlatıcılarını iptal eder.
+  ///
+  /// Yerel veri silindiğinde çağrılır: zamanlanmış bildirim, watchlist'in
+  /// cihazda duran bir KOPYASIDIR (başlığı gövdesinde taşır). Veri silinince
+  /// onlar da gitmeli; yoksa "bu cihazdaki verileri de sil" dedikten sonra
+  /// haftalarca "X bugün vizyonda, izleme listende seni bekliyor" bildirimi
+  /// düşmeye devam eder.
+  ///
+  /// Yalnız hatırlatıcı bit'i taşıyan kimlikler iptal edilir ([_releaseIdMask]);
+  /// cancelAll() ilgisiz bildirimleri de düşürürdü.
+  Future<void> cancelAllReleaseReminders() =>
+      _enqueueReminderOperation(_cancelAllReleaseReminders);
+
+  Future<void> _cancelAllReleaseReminders() async {
+    try {
+      final pending = await _local.pendingNotificationRequests();
+      for (final p in pending) {
+        if ((p.id & _releaseIdMask) == 0) continue;
+        await _local.cancel(id: p.id);
+      }
+    } catch (e) {
+      final isTest =
+          const bool.fromEnvironment('dart.library.io') &&
+          Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('Failed to cancel release reminders: $e');
+      }
+    }
+  }
+
   Future<void> _enqueueReminderOperation(Future<void> Function() operation) {
     final previous = _reminderOperationTail;
     final next = () async {
