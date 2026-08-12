@@ -915,6 +915,183 @@ void main() {
     });
   });
 
+  group('RecommendationEngine keyword recall', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    // http.Response charset verilmezse gövdeyi latin-1 ile kodlar ve Türkçe
+    // karakterde patlar; hata catchError'a düşüp sinyali sessizce yutar.
+    const utf8Json = {'content-type': 'application/json; charset=utf-8'};
+
+    /// Tohum 900'e [seedKeywords] verir; discover isteklerini [discoverUrls]
+    /// biriktirir ve [discoverResults] içindeki filmleri döndürür.
+    Future<RecommendationEngine> setUpEngine({
+      required List<({int id, String name})> seedKeywords,
+      required List<Uri> discoverUrls,
+      List<Map<String, dynamic>> discoverResults = const [],
+    }) async {
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.endsWith('/keywords')) {
+          final segments = path.split('/');
+          final id = int.tryParse(segments[segments.length - 2]) ?? 0;
+          final entries = id == 900
+              ? seedKeywords
+              : const <({int id, String name})>[];
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                for (final k in entries) {'id': k.id, 'name': k.name},
+              ],
+            }),
+            200,
+            headers: utf8Json,
+          );
+        }
+        if (path.contains('/discover/')) {
+          discoverUrls.add(request.url);
+          return http.Response(
+            jsonEncode({'results': discoverResults}),
+            200,
+            headers: utf8Json,
+          );
+        }
+        return http.Response(
+          jsonEncode({'results': []}),
+          200,
+          headers: utf8Json,
+        );
+      });
+      return RecommendationEngine(TmdbService(client: client));
+    }
+
+    test(
+      'kullanıcının tepe temalarını with_keywords olarak OR ile geçer',
+      () async {
+        final urls = <Uri>[];
+        final engine = await setUpEngine(
+          seedKeywords: const [(id: 10, name: 'zaman yolculuğu')],
+          discoverUrls: urls,
+        );
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(900, title: 'Seed'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+
+        await engine.fetchKeywordCandidates();
+
+        expect(urls, isNotEmpty);
+        expect(urls.first.queryParameters['with_keywords'], '10');
+      },
+    );
+
+    test('keyword vektörü boşken hiç discover isteği yapılmaz', () async {
+      // Soğuk başlangıç: yeni kullanıcı boşuna beklemesin.
+      final urls = <Uri>[];
+      final engine = await setUpEngine(
+        seedKeywords: const [],
+        discoverUrls: urls,
+      );
+
+      final result = await engine.fetchKeywordCandidates();
+
+      expect(result, isEmpty);
+      expect(urls, isEmpty);
+    });
+
+    test('gelen adaylar keyword kaynağıyla işaretlenir', () async {
+      final urls = <Uri>[];
+      final engine = await setUpEngine(
+        seedKeywords: const [(id: 10, name: 'zaman yolculuğu')],
+        discoverUrls: urls,
+        discoverResults: [
+          {
+            'id': 55,
+            'title': 'Thematic Film',
+            'vote_average': 7.0,
+            'genre_ids': [18],
+            'vote_count': 500,
+            // _sanitizeList postersiz yapımları eler.
+            'poster_path': '/p.jpg',
+          },
+        ],
+      );
+      await PrefsLibraryFacade.saveRating(
+        movie: _movie(900, title: 'Seed'),
+        rating: 3,
+        metadataLocale: 'tr',
+      );
+
+      final result = await engine.fetchKeywordCandidates();
+
+      expect(result, isNotEmpty);
+      expect(result.first.recoSource, 'keyword');
+      expect(result.first.recoReasonType, 'keyword');
+    });
+
+    test(
+      'keyword kaynaklı aday, ön elemede dipte olsa da keyword çekimine girer',
+      () async {
+        // Bu, recall düzeltmesinin ranking tarafından yutulmamasının testi:
+        // tematik aday tür bakımından zayıf olduğu için ön elemede sona düşer.
+        final keywordPaths = <String>[];
+        final client = MockClient((request) async {
+          final path = request.url.path;
+          if (path.endsWith('/keywords')) {
+            keywordPaths.add(path);
+            final segments = path.split('/');
+            final id = int.tryParse(segments[segments.length - 2]) ?? 0;
+            final ids = id == 900 ? [10] : (id == 55 ? [10] : <int>[]);
+            return http.Response(
+              jsonEncode({
+                'keywords': [
+                  for (final k in ids) {'id': k, 'name': 'zaman yolculuğu'},
+                ],
+              }),
+              200,
+              headers: const {
+                'content-type': 'application/json; charset=utf-8',
+              },
+            );
+          }
+          return http.Response(jsonEncode({'results': []}), 200);
+        });
+        final engine = RecommendationEngine(TmdbService(client: client));
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(900, title: 'Seed'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+
+        // Yüksek puanlı, profile uyan 3 aday + düşük puanlı tematik aday.
+        final thematic = _movie(55, title: 'Thematic', genres: [18], vote: 5.0)
+          ..recoSource = 'keyword'
+          ..recoReasonType = 'keyword';
+        final ranked = await engine.rankForYou(
+          [
+            for (var i = 1; i <= 3; i++)
+              _movie(i, title: 'Popular $i', vote: 9.0),
+            thematic,
+          ],
+          keywordFetchK: 1,
+          diversify: false,
+        );
+
+        expect(
+          keywordPaths.any((p) => p.contains('/55/')),
+          isTrue,
+          reason: 'Garanti slot olmazsa tematik adayın keyword\'ü hiç çekilmez',
+        );
+        final scored = ranked.firstWhere((m) => m.id == 55);
+        expect(scored.recoReason, 'zaman yolculuğu');
+        expect(scored.recommendationScoreComponents['keyword_imputed'], 0.0);
+      },
+    );
+  });
+
   group('RecommendationEngine Cache Invalidation Tests', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});

@@ -353,6 +353,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       );
       if (!mounted || loadGeneration != _loadGeneration) return;
 
+      // Tema havuzu: türü profile uymayan ama temayı tutturan yapımlar başka
+      // hiçbir kaynaktan gelmiyor (bkz. fetchKeywordCandidates).
+      final keywordCandidates = await engine.fetchKeywordCandidates(
+        discoveryContext: discoveryContext,
+      );
+      if (!mounted || loadGeneration != _loadGeneration) return;
+
       // Hedefli Kültür Çekimi: "Favori Bölgelerim" seçilmişse, havuzu
       // kullanıcının ev sahibi kültürlerinin filmleriyle zenginleştir.
       List<Movie> cultureCandidates = const [];
@@ -422,6 +429,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
           ...page2,
           ...tvDiscover,
           ...seedCandidates,
+          ...keywordCandidates,
           ...cultureCandidates,
         ],
         discoveryContext: discoveryContext,

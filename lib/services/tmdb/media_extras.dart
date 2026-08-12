@@ -250,6 +250,43 @@ mixin TmdbMediaExtrasMixin on TmdbServiceBase {
     return ids;
   }
 
+  /// Anahtar kelimeleri id+ad çifti olarak döndürür.
+  ///
+  /// [getKeywords] ve [getKeywordIds] aynı yanıtı paylaşır ama farklı `take()`
+  /// sınırları ve farklı filtreler uygular, yani ids[i] ile names[i] hizalı
+  /// olduğu garanti DEĞİL. Gerekçe etiketinde ("'zaman yolculuğu' temasını
+  /// sevdiğin için") id'yi ada güvenle bağlamak için bu metot kullanılır.
+  /// Aynı önbellek girdisini okur — ekstra ağ isteği yapmaz.
+  Future<List<({int id, String name})>> getKeywordEntries(
+    int id, {
+    bool isTV = false,
+  }) async {
+    final path = isTV ? '/3/tv/$id/keywords' : '/3/movie/$id/keywords';
+    final json = await _fetchRawWithCache(
+      path: path,
+      params: {'api_key': _apiKey},
+    );
+    if (json == null) return const [];
+    final list =
+        (json['keywords'] as List<dynamic>?) ??
+        (json['results'] as List<dynamic>?) ??
+        [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map((k) {
+          final kid = k['id'] is num
+              ? (k['id'] as num).toInt()
+              : int.tryParse(k['id']?.toString() ?? '');
+          final name = (k['name'] as String?)?.trim() ?? '';
+          return kid != null && kid > 0 && name.isNotEmpty
+              ? (id: kid, name: name)
+              : null;
+        })
+        .whereType<({int id, String name})>()
+        .take(15)
+        .toList();
+  }
+
   Future<Map<String, dynamic>?> getPersonDetails(int personId) async {
     final json = await _fetchRawWithCache(
       path: '/3/person/$personId',

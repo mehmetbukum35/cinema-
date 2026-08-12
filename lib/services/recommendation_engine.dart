@@ -49,6 +49,11 @@ class RecommendationEngine {
   /// Kullanıcının anahtar kelime zevk vektörü (keyword_id → ağırlık).
   Map<int, double>? _userKeywordVector;
 
+  /// Vektördeki keyword'lerin okunabilir adları (keyword_id → ad).
+  /// Gerekçe etiketi için: "'zaman yolculuğu' temasını sevdiğin için".
+  /// Vektörle birlikte, aynı ağ yanıtından doldurulur.
+  Map<int, String>? _keywordNames;
+
   /// Kullanıcı oylama listesinin bellek önbelleği.
   List<Map<String, dynamic>>? _cachedRatings;
 
@@ -64,6 +69,7 @@ class RecommendationEngine {
   /// olsa bile sunucuya yeniden POST /social/dna atılmasına yol açıyordu.
   Future<void> invalidateCache({bool isNegativeChange = true}) async {
     _userKeywordVector = null;
+    _keywordNames = null;
     _cachedRatings = null;
     if (isNegativeChange) {
       _cachedNegativeKeys = null;
@@ -352,6 +358,7 @@ class RecommendationEngine {
     if (cached != null) return cached;
 
     final vec = <int, double>{};
+    final names = <int, String>{};
     try {
       final ratings = await _getRatings();
       // En son 15 oylamayı al (tüm beğenilenler ve beğenilmeyenler dahil)
@@ -370,9 +377,11 @@ class RecommendationEngine {
               r['isTV'] == true ||
               r['is_tv'] == 1 ||
               r['is_tv']?.toString() == '1';
+          // Entries (id+ad) çekiyoruz: adlar gerekçe etiketi için lazım ve
+          // getKeywordIds ile AYNI önbellek girdisinden geliyor — ek istek yok.
           return _service
-              .getKeywordIds(id, isTV: isTV)
-              .catchError((_) => <int>[]);
+              .getKeywordEntries(id, isTV: isTV)
+              .catchError((_) => const <({int id, String name})>[]);
         }),
       );
 
@@ -397,8 +406,9 @@ class RecommendationEngine {
         final days = (nowMs - createdAt) / 86400000.0;
         final decay = exp(-0.00385 * days);
         final w = base * decay;
-        for (final kid in kwLists[i]) {
-          vec[kid] = (vec[kid] ?? 0.0) + w;
+        for (final entry in kwLists[i]) {
+          vec[entry.id] = (vec[entry.id] ?? 0.0) + w;
+          names[entry.id] = entry.name;
         }
       }
 
@@ -435,13 +445,14 @@ class RecommendationEngine {
           final favKwLists = await Future.wait(
             topFav.map(
               (f) => _service
-                  .getKeywordIds(f.id, isTV: f.isTV)
-                  .catchError((_) => <int>[]),
+                  .getKeywordEntries(f.id, isTV: f.isTV)
+                  .catchError((_) => const <({int id, String name})>[]),
             ),
           );
           for (var i = 0; i < topFav.length; i++) {
-            for (final kid in favKwLists[i]) {
-              vec[kid] = (vec[kid] ?? 0.0) + topFav[i].w;
+            for (final entry in favKwLists[i]) {
+              vec[entry.id] = (vec[entry.id] ?? 0.0) + topFav[i].w;
+              names[entry.id] = entry.name;
             }
           }
         }
@@ -454,7 +465,65 @@ class RecommendationEngine {
     }
 
     _userKeywordVector = vec;
+    _keywordNames = names;
     return vec;
+  }
+
+  /// [movieKeywordIds] içinde kullanıcının EN ÇOK sevdiği temanın adı.
+  /// Gerekçe etiketi için; eşleşme yoksa null (rozet gerekçesiz gösterilir).
+  String? _bestKeywordName(List<int> movieKeywordIds, Map<int, double> vector) {
+    final names = _keywordNames;
+    if (names == null) return null;
+    int? bestId;
+    var bestWeight = 0.0;
+    for (final id in movieKeywordIds) {
+      final w = vector[id] ?? 0.0;
+      if (w > bestWeight && names.containsKey(id)) {
+        bestWeight = w;
+        bestId = id;
+      }
+    }
+    return bestId == null ? null : names[bestId];
+  }
+
+  /// Kullanıcının tepe temalarından aday toplar (`with_keywords` discover).
+  ///
+  /// Tür-bazlı discover ve tohum listeleri, temaya uyan ama TÜRÜ profile
+  /// uymayan yapımı hiç getirmiyor: zihinsel bilimkurguyu seven birine aynı
+  /// temayı işleyen bir dram, Drama ağırlığı düşük olduğu için ne discover'dan
+  /// ne tohumlardan geliyor. Bu metot o boşluğu en fazla 2 istekle kapatır.
+  ///
+  /// Soğuk başlangıçta (boş vektör) hiç istek yapmadan boş liste döner.
+  Future<List<Movie>> fetchKeywordCandidates({
+    DiscoveryContext discoveryContext = const DiscoveryContext(),
+    int keywordCount = 5,
+    int page = 1,
+  }) async {
+    try {
+      final vector = await buildUserKeywordVector();
+      final positive = vector.entries.where((e) => e.value > 0).toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      if (positive.isEmpty) return const [];
+
+      final ids = positive.take(keywordCount).map((e) => e.key).toList();
+      final results = await _service.discover(
+        // `|` = OR: temalardan herhangi biri yeterli.
+        keywordStr: ids.join('|'),
+        includeMovies: discoveryContext.media != DiscoveryMedia.tv,
+        includeTv: discoveryContext.media != DiscoveryMedia.movie,
+        page: page,
+      );
+
+      for (final m in results) {
+        m
+          ..recoSource = 'keyword'
+          ..recoReasonType = 'keyword';
+      }
+      return results;
+    } catch (e) {
+      debugPrint('Keyword candidate fetch failed: $e');
+      return const [];
+    }
   }
 
   /// İki rank-sıralı listeyi harmanlar: a[0], b[0], a[1], b[1], … Böylece film ve
@@ -890,10 +959,16 @@ class RecommendationEngine {
         ),
       );
       for (var i = 0; i < entries.length; i++) {
+        final movie = entries[i].value;
         kwSims[entries[i].key] = PrefsTastePrefs.calculateSimilarity(
           kwVector,
           kwLists[i],
         );
+        // Gerekçe ancak burada verilebilir: hangi temanın eşleştiğini bilmek
+        // için adayın kendi keyword'leri lazım, onlar da bu adımda çekiliyor.
+        if (movie.recoSource == 'keyword' && movie.recoReason == null) {
+          movie.recoReason = _bestKeywordName(kwLists[i], kwVector);
+        }
       }
     }
 

@@ -3,6 +3,7 @@ part of '../tmdb_service.dart';
 mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
   Future<List<Movie>> _discoverMovies({
     String? genreStr,
+    String? keywordStr,
     int? maxRuntime,
     int? providerId,
     String? originalLanguage,
@@ -27,6 +28,9 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       'watch_region': _region,
       'page': page.toString(),
       'with_genres': ?genreStr,
+      // TMDB'de `|` OR, `,` AND anlamına gelir. Kullanıcının temalarından
+      // HERHANGİ biri yeterli — AND kullanmak havuzu neredeyse boşaltırdı.
+      'with_keywords': ?keywordStr,
       if (genreStr == null || !genreStr.contains('16')) 'without_genres': '16',
       if (maxRuntime != null) 'with_runtime.lte': maxRuntime.toString(),
       if (providerId != null) 'with_watch_providers': providerId.toString(),
@@ -45,6 +49,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
 
   Future<List<Movie>> _discoverTv({
     String? genreStr,
+    String? keywordStr,
     int? providerId,
     String? originalLanguage,
     String? originCountry,
@@ -74,6 +79,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       'watch_region': _region,
       'page': page.toString(),
       'with_genres': ?tvGenreStr,
+      'with_keywords': ?keywordStr,
       if (tvGenreStr == null || !tvGenreStr.contains('16'))
         'without_genres': '16',
       if (providerId != null) 'with_watch_providers': providerId.toString(),
@@ -166,6 +172,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
 
   Future<List<Movie>> discover({
     String? genreStr,
+    String? keywordStr,
     int? maxRuntime,
     int? providerId,
     String? originalLanguage,
@@ -198,6 +205,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       codes.map(
         (lang) => _discoverSingleLanguage(
           genreStr: genreStr,
+          keywordStr: keywordStr,
           maxRuntime: maxRuntime,
           providerId: providerId,
           originalLanguage: lang,
@@ -229,6 +237,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
 
   Future<List<Movie>> _discoverSingleLanguage({
     String? genreStr,
+    String? keywordStr,
     int? maxRuntime,
     int? providerId,
     String? originalLanguage,
@@ -249,6 +258,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       futures.add(
         _discoverMovies(
           genreStr: genreStr,
+          keywordStr: keywordStr,
           maxRuntime: maxRuntime,
           providerId: providerId,
           originalLanguage: originalLanguage,
@@ -267,6 +277,7 @@ mixin TmdbDiscoverMixin on TmdbServiceBase, TmdbListsMixin {
       futures.add(
         _discoverTv(
           genreStr: genreStr,
+          keywordStr: keywordStr,
           providerId: providerId,
           originalLanguage: originalLanguage,
           originCountry: originCountry,

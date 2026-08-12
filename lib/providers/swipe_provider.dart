@@ -263,8 +263,13 @@ class SwipeNotifier extends Notifier<SwipeState> {
         }
       }
 
+      // Filtre yokken tohum + tema havuzu eklenir; filtre varken kullanıcı
+      // zaten daraltılmış bir küme istiyor, genişletmek isteğine ters düşer.
       final similarCandidates = (startLang == null && startProv == null)
           ? await _engine.fetchSeedCandidates()
+          : <Movie>[];
+      final keywordCandidates = (startLang == null && startProv == null)
+          ? await _engine.fetchKeywordCandidates()
           : <Movie>[];
 
       // Check if state changed/reset during network call
@@ -276,7 +281,11 @@ class SwipeNotifier extends Notifier<SwipeState> {
         return;
       }
 
-      final allCandidates = [...merged, ...similarCandidates];
+      final allCandidates = [
+        ...merged,
+        ...similarCandidates,
+        ...keywordCandidates,
+      ];
 
       Map<String, List<String>> friendSignals = const {};
       if (enableSideEffects) {
