@@ -116,10 +116,20 @@ class RecommendationEngine {
   /// Ham skoru kullanıcıya gösterilen uyum yüzdesine [40, 98] eşler.
   /// Sigmoid 0.2 (cold-start ortalaması) merkezlidir; 98 tavanı "sahte %100"
   /// vaadini engeller.
-  static int toDisplayScore(double raw) {
+  /// Kişisel zevk uyumu (genre/keyword match) düşükse gösterilen puanı baskılar
+  /// ki genel popüler yüksek puanlı filmler sahte %75+ Uyum iddiasında bulunmasın.
+  static int toDisplayScore(double raw, {double personalSim = 0.0}) {
     final z = (raw - 0.2) * 4.0;
     final sigmoid = 1.0 / (1.0 + exp(-z));
-    return (40 + (sigmoid * 58)).round().clamp(40, 98);
+    int score = (40 + (sigmoid * 58)).round();
+
+    if (personalSim > 0.0 && personalSim < 0.10) {
+      score = min(score, 58);
+    } else if (personalSim > 0.0 && personalSim < 0.20) {
+      score = min(score, 68);
+    }
+
+    return score.clamp(40, 98);
   }
 
   static double culturalPreferenceInfluence(int ratingCount) {
@@ -996,9 +1006,11 @@ class RecommendationEngine {
     final imputationSample = baselineKwSims.isNotEmpty
         ? baselineKwSims
         : kwSims.values.toList(growable: false);
+    // Bilinmeyen adaylar için keyword ortalaması %65 belirsizlik iskontosu ile atanır,
+    // böylece keyword'ü doğrudan ölçülüp eşleşen adayların önüne haksız geçmesi engellenir.
     final double? meanKwSim = imputationSample.isEmpty
         ? null
-        : imputationSample.reduce((a, b) => a + b) / imputationSample.length;
+        : (imputationSample.reduce((a, b) => a + b) / imputationSample.length) * 0.65;
 
     // ── 3. Tek nihai puanlama ─────────────────────────────────────────────
     // Tek ölçek: eskiden kaba sıralama genreOnlyWeights, re-rank fullWeights
@@ -1011,6 +1023,7 @@ class RecommendationEngine {
       final genreSim = genreSims[key]!;
       final measuredKwSim = kwSims[key];
       final kwSim = meanKwSim == null ? null : (measuredKwSim ?? meanKwSim);
+      final personalSim = kwSim != null ? (0.6 * genreSim + 0.4 * kwSim) : genreSim;
 
       // Soft filter: Eh (1) oylanan filmin recommendations/similar havuzunda olanlara puan cezası (-0.25)
       double penalty = 0.0;
@@ -1068,7 +1081,7 @@ class RecommendationEngine {
             ..recoSource = 'culture';
         }
       }
-      m.personalizedMatchScore = toDisplayScore(raw);
+      m.personalizedMatchScore = toDisplayScore(raw, personalSim: personalSim);
       m.recoSource ??= 'discover';
       scored.add(ScoredMovie(m, raw));
     }
@@ -1079,7 +1092,12 @@ class RecommendationEngine {
     // Görünen uyum %, sıralama skorunun friend-boost sonrası haliyle uyumlu olsun
     // (jitter keşif gürültüsüdür — %'ye yansıtılmaz).
     for (final s in scored) {
-      s.movie.personalizedMatchScore = toDisplayScore(s.score);
+      final key = keyOf(s.movie);
+      final genreSim = genreSims[key] ?? 0.0;
+      final measuredKwSim = kwSims[key];
+      final kwSim = meanKwSim == null ? null : (measuredKwSim ?? meanKwSim);
+      final personalSim = kwSim != null ? (0.6 * genreSim + 0.4 * kwSim) : genreSim;
+      s.movie.personalizedMatchScore = toDisplayScore(s.score, personalSim: personalSim);
     }
 
     // Keşif için jitter (gürültü) ekle (yalnızca swipe kuyruğunda kullanılabilir)
