@@ -741,6 +741,180 @@ void main() {
     });
   });
 
+  group('RecommendationEngine keyword ölçek tutarlılığı', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await PrefsService.resetAll();
+    });
+
+    /// Kullanıcıya keyword 10 ve 11'i sevdiren bir oy kaydeder; adayların
+    /// keyword'lerini [candidateKeywords] belirler. [keywordPaths] çağrılan
+    /// /keywords yollarını biriktirir.
+    Future<RecommendationEngine> setUpEngine({
+      required Map<int, List<int>> candidateKeywords,
+      required List<String> keywordPaths,
+    }) async {
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.endsWith('/keywords')) {
+          keywordPaths.add(path);
+          // İstekler proxy önekiyle gidiyor (/api/tmdb/3/movie/900/keywords),
+          // kimlik sondan ikinci segment.
+          final segments = path.split('/');
+          final id = int.tryParse(segments[segments.length - 2]) ?? 0;
+          final ids = candidateKeywords[id] ?? const <int>[];
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                for (final k in ids) {'id': k, 'name': 'kw$k'},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(jsonEncode({'results': []}), 200);
+      });
+      return RecommendationEngine(TmdbService(client: client));
+    }
+
+    test(
+      'hiçbir aday keyword eşleşmiyorken çekilen ve çekilmeyen aday aynı skoru alır',
+      () async {
+        // Bu, eski hatanın doğrudan regresyon testi: kaba sıralama
+        // genreOnlyWeights, re-rank fullWeights kullandığı için kwSim'i düşük
+        // olan aday sırf ölçek uyuşmazlığından çekilmeyenlerin altına
+        // düşüyordu.
+        final paths = <String>[];
+        final engine = await setUpEngine(
+          // Tohum (900) keyword 10 veriyor; adayların hiçbirinde yok.
+          candidateKeywords: {
+            900: const [10],
+          },
+          keywordPaths: paths,
+        );
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(900, title: 'Seed'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+
+        // Dört özdeş aday; yalnız ikisinin keyword'ü çekilecek.
+        final candidates = [
+          for (var i = 1; i <= 4; i++) _movie(i, title: 'Candidate $i'),
+        ];
+
+        final ranked = await engine.rankForYou(
+          candidates,
+          keywordFetchK: 2,
+          diversify: false,
+        );
+
+        expect(ranked.length, 4);
+        // Vektör boş kalırsa keyword fazı tümden atlanır ve iddia boş yere
+        // doğru çıkar — çekimin gerçekten olduğunu doğrula.
+        expect(
+          paths.where((p) => !p.contains('/900/')),
+          hasLength(2),
+          reason: 'keywordFetchK=2 kadar aday çekilmeli',
+        );
+        final scores = ranked
+            .map((m) => m.recommendationScoreComponents['final'] as double)
+            .toSet();
+        expect(
+          scores.length,
+          1,
+          reason:
+              'Tür/puanı özdeş adaylar, keyword çekilip çekilmediğinden '
+              'bağımsız olarak aynı skoru almalı',
+        );
+      },
+    );
+
+    test('keyword eşleşen aday, eşleşmeyenlerin üstüne çıkar', () async {
+      final paths = <String>[];
+      final engine = await setUpEngine(
+        candidateKeywords: {
+          900: const [10, 11], // tohum → kullanıcı vektörü {10, 11}
+          2: const [10, 11], // aday 2 tam eşleşme
+        },
+        keywordPaths: paths,
+      );
+      await PrefsLibraryFacade.saveRating(
+        movie: _movie(900, title: 'Seed'),
+        rating: 3,
+        metadataLocale: 'tr',
+      );
+
+      final ranked = await engine.rankForYou([
+        _movie(1, title: 'No match'),
+        _movie(2, title: 'Thematic match'),
+        _movie(3, title: 'No match'),
+      ], diversify: false);
+
+      expect(ranked.first.id, 2);
+      final top =
+          ranked.first.recommendationScoreComponents['keyword_similarity']
+              as double;
+      final other =
+          ranked.last.recommendationScoreComponents['keyword_similarity']
+              as double;
+      expect(top, greaterThan(other));
+    });
+
+    test(
+      'ortalamayla doldurulan aday score_components içinde işaretlenir',
+      () async {
+        final paths = <String>[];
+        final engine = await setUpEngine(
+          candidateKeywords: {
+            900: const [10],
+          },
+          keywordPaths: paths,
+        );
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(900, title: 'Seed'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+
+        final ranked = await engine.rankForYou(
+          [for (var i = 1; i <= 3; i++) _movie(i, title: 'Candidate $i')],
+          keywordFetchK: 1,
+          diversify: false,
+        );
+
+        final imputed = ranked
+            .map((m) => m.recommendationScoreComponents['keyword_imputed'])
+            .toList();
+        expect(imputed.where((v) => v == 1.0), hasLength(2));
+        expect(imputed.where((v) => v == 0.0), hasLength(1));
+      },
+    );
+
+    test('keyword vektörü boşken hiç keyword isteği yapılmaz', () async {
+      // Soğuk başlangıç: hiç oy, hiç favori → keyword fazı tümden atlanır ve
+      // yeni kullanıcı boşuna beklemez.
+      final paths = <String>[];
+      final engine = await setUpEngine(
+        candidateKeywords: const {},
+        keywordPaths: paths,
+      );
+
+      final ranked = await engine.rankForYou([
+        for (var i = 1; i <= 5; i++) _movie(i, title: 'Candidate $i'),
+      ], diversify: false);
+
+      expect(ranked, hasLength(5));
+      expect(paths, isEmpty);
+      expect(
+        ranked.first.recommendationScoreComponents.containsKey(
+          'keyword_similarity',
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('RecommendationEngine Cache Invalidation Tests', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});

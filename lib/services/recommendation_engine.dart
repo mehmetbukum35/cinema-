@@ -25,10 +25,11 @@ class ScoredMovie {
 /// Boru hattı (recall → rank):
 ///  1. Aday toplama: tür-bazlı discover + son "Harika"lardan TMDB
 ///     similar/recommendations (seed) + arkadaş sinyalleri (boost).
-///  2. Kaba sıralama: tür kosinüs benzerliği + TMDB puanı harmanı; birden
-///     fazla tohumun benzerlerinde geçen adaya kesişim bonusu eklenir.
-///  3. Hassas re-rank: görünecek ilk dilim (top-K) keyword zevk vektörüyle
-///     yeniden puanlanır.
+///  2. Ön eleme: ucuz bir tür+puan skoruyla keyword'ü çekilecek adaylar
+///     SEÇİLİR (sıralanmaz) — keyword uçları başlık başına bir TMDB isteği.
+///  3. Tek puanlama: herkes aynı formülle puanlanır; keyword'ü çekilmeyen
+///     aday çekilenlerin ORTALAMASINI alır, böylece "cache'te olmak" bir
+///     sıralama sinyaline dönüşmez.
 ///  4. Çeşitlilik (MMR-lite): birbirinin kopyası türdeki adaylar cezalandırılır
 ///     ki ray tek tip görünmesin.
 ///  5. Gerekçe atıfı: her adaya "neden önerildi" etiketi (seed adı / arkadaş
@@ -83,14 +84,11 @@ class RecommendationEngine {
     return public;
   }
 
-  // ── Harman ağırlıkları (tek doğruluk kaynağı) ─────────────────────────────
-  /// Keyword sinyali yokken: tür lider, TMDB puanı taban.
-  static const genreOnlyWeights = (genre: 0.7, vote: 0.3);
-
-  /// Keyword sinyali varken: tür lider, keyword güçlü ikinci, puan taban.
-  static const fullWeights = (genre: 0.45, keyword: 0.25, vote: 0.3);
-
   /// Ham skor harmanı. [kwSim] null ise keyword fazı atlanır.
+  ///
+  /// Ağırlıkların tek doğruluk kaynağı [RecommendationExperimentService.active].
+  /// (Burada vaktiyle bir kopyaları duruyordu; hiçbir yerden okunmuyor ama
+  /// "tek doğruluk kaynağı" diye etiketli oldukları için yanıltıcıydılar.)
   static double blend({
     required double genreSim,
     double? kwSim,
@@ -753,10 +751,19 @@ class RecommendationEngine {
   }
 
   /// Tam sıralama boru hattı. [candidates] içinden puanlanmış/engellenmişler
-  /// [excludedKeys] ile ayıklanır, tür benzerliğiyle kaba sıralanır, ilk
-  /// [rerankK] aday keyword vektörüyle yeniden puanlanır, arkadaş sinyalleri
+  /// [excludedKeys] ile ayıklanır, ucuz bir ön elemeyle [keywordFetchK] adayın
+  /// keyword'ü çekilir, herkes TEK formülle puanlanır, arkadaş sinyalleri
   /// eklenir ve çeşitlilik geçişi uygulanır. Dönen listedeki her filmde
   /// `personalizedMatchScore` (ve varsa `recoReason`) doldurulmuş olur.
+  ///
+  /// [keywordFetchK]: keyword'ü çekilecek aday sayısı. Keyword uçları başlık
+  /// başına bir TMDB isteği olduğundan havuzun tamamı çekilemez; çekilmeyen
+  /// adaylar çekilenlerin ORTALAMASINI alır (sıfır değil — bkz. puanlama
+  /// bloğundaki gerekçe).
+  /// [keywordSourceSlots]: `recoSource == 'keyword'` olan adaylara ayrılan
+  /// garanti çekim slotu. Bu adaylar tür bakımından zayıf olduğu için ön
+  /// elemede dibe düşer; slot olmazsa keyword recall'ı ranking aşamasında
+  /// yutulur.
   /// [cooldownKeys]: yakın zamanda kullanıcıya GÖSTERİLMİŞ yapımların
   /// anahtarları — küçük bir skor cezası ([cooldownPenalty]) alır ki vitrin ve
   /// ray her açılışta aynı yüzlerle dizilmesin (impression cooldown).
@@ -767,7 +774,8 @@ class RecommendationEngine {
     Map<String, List<String>> friendSignals = const {},
     Set<String> cooldownKeys = const {},
     double cooldownPenalty = 0.08,
-    int rerankK = 20,
+    int keywordFetchK = 30,
+    int keywordSourceSlots = 10,
     bool diversify = true,
     double jitter = 0.0,
     bool suppressFranchises = false,
@@ -834,16 +842,85 @@ class RecommendationEngine {
     final experiment = RecommendationExperimentService.active;
     final ratingCount = ratings.length;
 
-    // Kaba sıralama: tür + puan.
+    String keyOf(Movie m) => "${m.isTV ? 'tv' : 'movie'}_${m.id}";
+
+    // Tür benzerliği hem ön elemede hem nihai puanlamada lazım — bir kez hesapla.
+    final genreSims = {
+      for (final m in fresh)
+        keyOf(m): PrefsTastePrefs.calculateSimilarity(userWeights, m.genreIds),
+    };
+
+    // ── 1. Ön eleme: kimin keyword'ü çekilecek? ───────────────────────────
+    // Bu skor SIRALAMA DEĞİL SEÇİM içindir. Keyword uçları başlık başına bir
+    // TMDB isteği olduğundan hepsini çekemeyiz; nihai puanlama aşağıda tek
+    // formülle bir kez yapılır.
+    final kwVector = await buildUserKeywordVector();
+    final kwSims = <String, double>{};
+    if (kwVector.isNotEmpty) {
+      final preScores = {
+        for (final m in fresh)
+          keyOf(m): blend(
+            genreSim: genreSims[keyOf(m)]!,
+            voteAverage: m.voteAverage,
+            experiment: experiment,
+          ),
+      };
+      final preRanked = List.of(fresh)
+        ..sort((a, b) => preScores[keyOf(b)]!.compareTo(preScores[keyOf(a)]!));
+
+      final fetchSet = <String, Movie>{
+        for (final m in preRanked.take(keywordFetchK)) keyOf(m): m,
+        // Keyword discover'dan gelen aday tür bakımından zayıf olduğu için ön
+        // elemede dibe düşebilir. Garanti slot olmazsa keyword'ü hiç çekilmez,
+        // ortalamaya sabitlenir ve hiç yükselemez — yani recall düzeltmesi
+        // ranking aşamasında sessizce yutulur.
+        for (final m
+            in fresh
+                .where((m) => m.recoSource == 'keyword')
+                .take(keywordSourceSlots))
+          keyOf(m): m,
+      };
+
+      final entries = fetchSet.entries.toList(growable: false);
+      final kwLists = await Future.wait(
+        entries.map(
+          (e) => _service
+              .getKeywordIds(e.value.id, isTV: e.value.isTV)
+              .catchError((_) => <int>[]),
+        ),
+      );
+      for (var i = 0; i < entries.length; i++) {
+        kwSims[entries[i].key] = PrefsTastePrefs.calculateSimilarity(
+          kwVector,
+          kwLists[i],
+        );
+      }
+    }
+
+    // ── 2. Bilinmeyen kwSim'ler ortalamayla atanır ────────────────────────
+    // Sıfır atamak "cache'te olmak"ı sıralama sinyaline çevirirdi: keyword'ü
+    // bilinen aday pozitif değer alabilirken bilinmeyen tavanı sıfır olan bir
+    // cezaya mahkûm olurdu — üstelik cache'te olanlar geçmişte zaten üst
+    // sıralara girmiş olanlar, yani kendini pekiştiren bir döngü. Ortalama ile
+    // bilgi adayı ortalamaya göre yukarı YA DA aşağı taşır, bilgisizlik nötr
+    // kalır. Hiç bilinen yoksa (soğuk başlangıç) keyword fazı tümden atlanır.
+    final double? meanKwSim = kwSims.isEmpty
+        ? null
+        : kwSims.values.reduce((a, b) => a + b) / kwSims.length;
+
+    // ── 3. Tek nihai puanlama ─────────────────────────────────────────────
+    // Tek ölçek: eskiden kaba sıralama genreOnlyWeights, re-rank fullWeights
+    // kullanıyor ve iki farklı ölçekteki skor birlikte sıralanıyordu. kwSim'i
+    // düşük olan her aday sırf ölçek uyuşmazlığından 21+ sıradakilerin altına
+    // düşüyordu (başabaş noktası kwSim ~0.52; tipik değer 0.1-0.3).
     final scored = <ScoredMovie>[];
     for (final m in fresh) {
-      final genreSim = PrefsTastePrefs.calculateSimilarity(
-        userWeights,
-        m.genreIds,
-      );
+      final key = keyOf(m);
+      final genreSim = genreSims[key]!;
+      final measuredKwSim = kwSims[key];
+      final kwSim = meanKwSim == null ? null : (measuredKwSim ?? meanKwSim);
 
       // Soft filter: Eh (1) oylanan filmin recommendations/similar havuzunda olanlara puan cezası (-0.25)
-      final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
       double penalty = 0.0;
       if (ehKeys.contains(key)) {
         penalty = -0.25;
@@ -868,6 +945,7 @@ class RecommendationEngine {
       final raw =
           blend(
             genreSim: genreSim,
+            kwSim: kwSim,
             voteAverage: m.voteAverage,
             experiment: experiment,
           ) +
@@ -877,6 +955,10 @@ class RecommendationEngine {
           contextBoost;
       m.recommendationScoreComponents = {
         'genre_similarity': genreSim,
+        'keyword_similarity': ?kwSim,
+        // Sinyal ölçüldü mü yoksa ortalamayla mı dolduruldu — kalibrasyon
+        // analizinin bunu ayırt edebilmesi gerekiyor.
+        if (kwSim != null) 'keyword_imputed': measuredKwSim == null ? 1.0 : 0.0,
         'vote_average': m.voteAverage / 10.0,
         'negative_penalty': penalty,
         'seed_overlap': overlap,
@@ -896,73 +978,6 @@ class RecommendationEngine {
       scored.add(ScoredMovie(m, raw));
     }
     scored.sort((a, b) => b.score.compareTo(a.score));
-
-    // Hassas re-rank: görünecek ilk dilimi keyword zevkiyle yeniden puanla.
-    final kwVector = await buildUserKeywordVector();
-    if (kwVector.isNotEmpty) {
-      final k = min(rerankK, scored.length);
-      final top = scored.sublist(0, k);
-      final kwLists = await Future.wait(
-        top.map(
-          (s) => _service
-              .getKeywordIds(s.movie.id, isTV: s.movie.isTV)
-              .catchError((_) => <int>[]),
-        ),
-      );
-      for (var i = 0; i < top.length; i++) {
-        final m = top[i].movie;
-        final genreSim = PrefsTastePrefs.calculateSimilarity(
-          userWeights,
-          m.genreIds,
-        );
-        final kwSim = PrefsTastePrefs.calculateSimilarity(kwVector, kwLists[i]);
-
-        // Soft filter penalty check again in re-rank phase
-        final key = "${m.isTV ? 'tv' : 'movie'}_${m.id}";
-        double penalty = 0.0;
-        if (ehKeys.contains(key)) {
-          penalty = -0.25;
-        }
-        if (cooldownKeys.contains(key)) {
-          penalty -= cooldownPenalty;
-        }
-        final overlap = seedOverlapBoost(seedTitlesByKey[key]?.length ?? 0);
-        final cultureBoost =
-            culturalBoost(
-              movie: m,
-              preferences: culturalPreferences,
-              ratingCount: ratingCount,
-            ) *
-            experiment.preferenceBoostMultiplier;
-        final contextBoost =
-            discoveryContextBoost(m, discoveryContext) *
-            experiment.preferenceBoostMultiplier;
-
-        final raw =
-            blend(
-              genreSim: genreSim,
-              kwSim: kwSim,
-              voteAverage: m.voteAverage,
-              experiment: experiment,
-            ) +
-            penalty +
-            overlap +
-            cultureBoost +
-            contextBoost;
-        m.recommendationScoreComponents = {
-          'genre_similarity': genreSim,
-          'keyword_similarity': kwSim,
-          'vote_average': m.voteAverage / 10.0,
-          'negative_penalty': penalty,
-          'seed_overlap': overlap,
-          'culture': cultureBoost,
-          'context': contextBoost,
-          'final': raw,
-        };
-        m.personalizedMatchScore = toDisplayScore(raw);
-        top[i].score = raw;
-      }
-    }
 
     // Sosyal kanıt: arkadaş sinyali olan adayları yükselt + gerekçele.
     applyFriendSignals(scored, friendSignals);
