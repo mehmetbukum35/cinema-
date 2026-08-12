@@ -8,6 +8,7 @@ import '../models/discovery_context.dart';
 import 'cultural_classifier.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
+import 'keyword_stoplist.dart';
 import 'prefs/library_facade.dart';
 import 'prefs/taste_prefs.dart';
 import 'recommendation_experiment_service.dart';
@@ -407,6 +408,9 @@ class RecommendationEngine {
         final decay = exp(-0.00385 * days);
         final w = base * decay;
         for (final entry in kwLists[i]) {
+          // Jenerik keyword'ler her yapımda geçtiği için ağırlık toplamının
+          // tepesini garantili işgal eder; vektöre hiç girmemeliler.
+          if (isStoplistedKeyword(entry.name)) continue;
           vec[entry.id] = (vec[entry.id] ?? 0.0) + w;
           names[entry.id] = entry.name;
         }
@@ -451,6 +455,7 @@ class RecommendationEngine {
           );
           for (var i = 0; i < topFav.length; i++) {
             for (final entry in favKwLists[i]) {
+              if (isStoplistedKeyword(entry.name)) continue;
               vec[entry.id] = (vec[entry.id] ?? 0.0) + topFav[i].w;
               names[entry.id] = entry.name;
             }
@@ -925,6 +930,9 @@ class RecommendationEngine {
     // formülle bir kez yapılır.
     final kwVector = await buildUserKeywordVector();
     final kwSims = <String, double>{};
+    // Ortalama atamasının örneklemi: yalnız ÖN ELEMEDEN gelen ölçümler.
+    // Garanti slottaki keyword adayları buraya girmez (bkz. aşağıdaki 2. adım).
+    final baselineKwSims = <double>[];
     if (kwVector.isNotEmpty) {
       final preScores = {
         for (final m in fresh)
@@ -960,10 +968,9 @@ class RecommendationEngine {
       );
       for (var i = 0; i < entries.length; i++) {
         final movie = entries[i].value;
-        kwSims[entries[i].key] = PrefsTastePrefs.calculateSimilarity(
-          kwVector,
-          kwLists[i],
-        );
+        final sim = PrefsTastePrefs.calculateSimilarity(kwVector, kwLists[i]);
+        kwSims[entries[i].key] = sim;
+        if (movie.recoSource != 'keyword') baselineKwSims.add(sim);
         // Gerekçe ancak burada verilebilir: hangi temanın eşleştiğini bilmek
         // için adayın kendi keyword'leri lazım, onlar da bu adımda çekiliyor.
         if (movie.recoSource == 'keyword' && movie.recoReason == null) {
@@ -979,9 +986,19 @@ class RecommendationEngine {
     // sıralara girmiş olanlar, yani kendini pekiştiren bir döngü. Ortalama ile
     // bilgi adayı ortalamaya göre yukarı YA DA aşağı taşır, bilgisizlik nötr
     // kalır. Hiç bilinen yoksa (soğuk başlangıç) keyword fazı tümden atlanır.
-    final double? meanKwSim = kwSims.isEmpty
+    //
+    // Örneklem ön eleme dilimidir, çekim kümesinin TAMAMI değil: garanti
+    // slottaki keyword adaylarının kwSim'i yapı gereği yüksek, ortalamaya
+    // karışırsa motorun hiç ölçmediği kuyruk toptan yükselir ve ölçülüp vasat
+    // bulunan adayların üstüne çıkar (ölçüldü: 0.177 → 0.349, final +0.052 —
+    // tohum kesişimi bonusundan büyük). Örneklem yalnız keyword adaylarından
+    // oluşuyorsa (ön eleme boş) elde olana düşülür.
+    final imputationSample = baselineKwSims.isNotEmpty
+        ? baselineKwSims
+        : kwSims.values.toList(growable: false);
+    final double? meanKwSim = imputationSample.isEmpty
         ? null
-        : kwSims.values.reduce((a, b) => a + b) / kwSims.length;
+        : imputationSample.reduce((a, b) => a + b) / imputationSample.length;
 
     // ── 3. Tek nihai puanlama ─────────────────────────────────────────────
     // Tek ölçek: eskiden kaba sıralama genreOnlyWeights, re-rank fullWeights

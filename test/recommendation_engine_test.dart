@@ -1090,6 +1090,139 @@ void main() {
         expect(scored.recommendationScoreComponents['keyword_imputed'], 0.0);
       },
     );
+
+    // Ağırlık bir FREKANS toplamı: her yapımda bulunan jenerik keyword'ler
+    // ("duringcreditsstinger") yapısal olarak tepeye çıkar. Filtrelenmezse
+    // recall sorgusu da gerekçe etiketi de gürültüyle sürülür.
+    test('jenerik keyword\'ler tema seçimine ve gerekçeye girmez', () async {
+      const stinger = (id: 179430, name: 'duringcreditsstinger');
+      const novel = (id: 818, name: 'based on novel or book');
+      const timeTravel = (id: 4379, name: 'time travel');
+      final urls = <Uri>[];
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.endsWith('/keywords')) {
+          final segments = path.split('/');
+          final id = int.tryParse(segments[segments.length - 2]) ?? 0;
+          // Tohumların hepsinde jenerikler var, ayırt edici tema yalnız birinde.
+          final entries = id >= 900
+              ? [stinger, novel, timeTravel]
+              : (id == 55
+                    ? [stinger, timeTravel]
+                    : const <({int id, String name})>[]);
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                for (final k in entries) {'id': k.id, 'name': k.name},
+              ],
+            }),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        if (path.contains('/discover/')) urls.add(request.url);
+        return http.Response(
+          jsonEncode({'results': const []}),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      final engine = RecommendationEngine(TmdbService(client: client));
+      for (var id = 900; id <= 902; id++) {
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(id, title: 'Seed $id'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+      }
+
+      final vector = await engine.buildUserKeywordVector();
+      expect(vector.containsKey(stinger.id), isFalse);
+      expect(vector.containsKey(novel.id), isFalse);
+      expect(vector.containsKey(timeTravel.id), isTrue);
+
+      await engine.fetchKeywordCandidates();
+      expect(urls.first.queryParameters['with_keywords'], '${timeTravel.id}');
+
+      // Gerekçe de jeneriğe düşmemeli: aday hem stinger hem tema taşıyor.
+      final thematic = _movie(55, title: 'Thematic', genres: [18], vote: 5.0)
+        ..recoSource = 'keyword'
+        ..recoReasonType = 'keyword';
+      final ranked = await engine.rankForYou([
+        thematic,
+      ], keywordFetchK: 1, diversify: false);
+      expect(ranked.first.recoReason, timeTravel.name);
+    });
+
+    // Garanti slottaki keyword adaylarının kwSim'i yapı gereği yüksek.
+    // Ortalamaya karışırlarsa, motorun HİÇ ÖLÇMEDİĞİ kuyruk toptan yükselir
+    // ve ölçülüp vasat bulunan adayların üstüne çıkar.
+    test('ortalama kwSim ataması keyword dilimiyle şişmez', () async {
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.endsWith('/keywords')) {
+          final segments = path.split('/');
+          final id = int.tryParse(segments[segments.length - 2]) ?? 0;
+          final List<int> ids;
+          if (id >= 900) {
+            ids = [4379, 111, 222, 333]; // tohum → kullanıcı vektörü
+          } else if (id >= 50) {
+            ids = [4379, 111, 222]; // tema havuzu adayı: güçlü örtüşme
+          } else if (id.isEven) {
+            ids = [4379, 555]; // tipik aday: kısmi örtüşme
+          } else {
+            ids = [777, 888]; // örtüşmesiz aday
+          }
+          return http.Response(
+            jsonEncode({
+              'keywords': [
+                for (final k in ids) {'id': k, 'name': 'theme $k'},
+              ],
+            }),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'results': const []}),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      Future<double> imputedTailKwSim({required bool withKeywordPool}) async {
+        SharedPreferences.setMockInitialValues({});
+        await PrefsService.resetAll();
+        final engine = RecommendationEngine(TmdbService(client: client));
+        await PrefsLibraryFacade.saveRating(
+          movie: _movie(900, title: 'Seed'),
+          rating: 3,
+          metadataLocale: 'tr',
+        );
+        final ranked = await engine.rankForYou(
+          [
+            // 40 normal aday: ilk 30'u ölçülür, kalanı ortalamaya sabitlenir.
+            for (var i = 10; i <= 49; i++)
+              _movie(i, title: 'Normal $i', vote: 9.0 - (i - 10) * 0.05),
+            if (withKeywordPool)
+              for (var i = 50; i <= 59; i++)
+                _movie(i, title: 'Thematic $i', genres: [18], vote: 5.0)
+                  ..recoSource = 'keyword'
+                  ..recoReasonType = 'keyword',
+          ],
+          keywordFetchK: 30,
+          diversify: false,
+        );
+        final tail = ranked.firstWhere((m) => m.id == 48);
+        expect(tail.recommendationScoreComponents['keyword_imputed'], 1.0);
+        return tail.recommendationScoreComponents['keyword_similarity']!;
+      }
+
+      final without = await imputedTailKwSim(withKeywordPool: false);
+      final with_ = await imputedTailKwSim(withKeywordPool: true);
+      expect(with_, closeTo(without, 1e-9));
+    });
   });
 
   group('RecommendationEngine Cache Invalidation Tests', () {

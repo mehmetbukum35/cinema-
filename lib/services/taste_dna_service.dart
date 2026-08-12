@@ -9,6 +9,7 @@ import '../models/taste_dna.dart';
 import 'cultural_classifier.dart';
 import 'cultural_preference_service.dart';
 import 'db_helper.dart';
+import 'keyword_stoplist.dart';
 import 'prefs/library_facade.dart';
 import 'prefs/taste_prefs.dart';
 import 'tmdb_service.dart';
@@ -74,29 +75,9 @@ class TasteDnaService {
   };
 
   /// Tema olarak gösterilmemesi gereken gürültü keyword'leri.
-  static const _themeStoplist = {
-    'aftercreditsstinger',
-    'duringcreditsstinger',
-    'based on novel or book',
-    'based on novel',
-    'woman director',
-    'live action',
-    'sequel',
-    'remake',
-    // Kişi/rol belirten genel anahtarlar zevki açıklayan bir tema değildir.
-    'man',
-    'woman',
-    'boy',
-    'girl',
-    'father',
-    'mother',
-    'son',
-    'daughter',
-    'king',
-    'queen',
-    'male protagonist',
-    'female protagonist',
-  };
+  /// Liste [kKeywordStoplist] ile ortak: aynı gürültü öneri motorunun zevk
+  /// vektörünü de kirletiyordu, iki kopya tutmak ikisinin ayrışmasını bekler.
+  static const _themeStoplist = kKeywordStoplist;
 
   /// Saf çekirdek: girdilerden DNA üretir. [themes] önceden çözülmüş keyword
   /// isimleridir (ağ gerektirdiğinden [generate]'te toplanır).
