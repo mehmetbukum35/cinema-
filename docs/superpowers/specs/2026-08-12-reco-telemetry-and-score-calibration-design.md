@@ -1,6 +1,7 @@
 # Öneri telemetrisi ve skor kalibrasyonu
 
-**Tarih:** 2026-08-12 · **Durum:** onaylandı, plana hazır
+**Tarih:** 2026-08-12 · **Durum:** Faz 1 tamamlandı ve yayında · Faz 2 ertelendi
+(kullanıcı kitlesi bekleniyor — bkz. "Faz 2" bölümü)
 
 ## Problem
 
@@ -76,7 +77,7 @@ Tek sigmoid ikisini birden kalibre edemez.
 |---|---|
 | Yüzdenin anlamı | Mutlak ve kalibre |
 | Kalibrasyon kaynağı | Üretimdeki `recommendation_events` verisi |
-| Parametre dağıtımı | Kodda sabit, `model_version` başına |
+| Parametre dağıtımı | Kodda sabit, `model_version` başına (A/B kapatıldıktan sonra tek tablo) |
 | "Gösterildi" tanımı | Mevcut gösterim hafızası vekili (vitrin + ilk 10; swipe'ta kart) |
 | Sunum ölçeği | Referans dağılımdaki yüzdelik dilim (persentil) |
 | İş akışı | İki faz: önce ölçüm ucu, veri geldikten sonra sabitler |
@@ -207,16 +208,60 @@ sessizce atlanır, rapor çökmez.
 
 ---
 
-## Faz 2 — Persentil eşlemesi
+## Faz 2 — Persentil eşlemesi (ERTELENDİ)
 
-**Ön koşul:** Faz 1B raporu çalıştırılmış, `like_curve` monoton çıkmış ve
-`model_version` başına en az ~500 oylanmış swipe gösterimi birikmiş olmalı. İki
-kol ayrı ayrı değerlendirilir; biri hazır diğeri değilse yalnız hazır olanı
-gömülür.
+**Durum: 2026-08-12 itibarıyla ertelendi. Gerçek bir kullanıcı kitlesi
+oluşana kadar başlanmayacak.**
+
+Faz 1B raporu 90 günlük veriyle çalıştırıldı; sonuçlar bu bölümün özgün
+ön koşulunu geçersiz kıldı.
+
+**Ölçülen durum.** `quantiles` tarafı sağlam: `recommendation_v5_ab_personalization`
+için 1406, `recommendation_v5_ab_control` için 515 gösterim. Dağılım çift tepeli
+— gösterimlerin ~%10'u soğuk-başlangıç kuyruğunda (0.08–0.27, `genreSim = 0`
+olduğunda geriye kalan `vote` payı), ~%90'ı 0.60–0.83 aralığında yoğunlaşıyor.
+Mevcut sigmoid bu kütleyi ekranda **%88–%93**'e eziyor; yani sorun spec'in
+başında tahmin edilenden (%69–%88) belirgin biçimde daha kötü.
+
+**Neden ertelendi.** `like_curve` tarafında kol başına yalnızca 8 ve 2 oy
+birikti. Özgün ön koşul olan "kol başına ~500 oylanmış swipe gösterimi" bu
+trafikte doldurulamaz: en yoğun kolda günde ~1.7 oy, yani ~10 ay. Uygulamayı
+şu an fiilen tek kişi kullanıyor.
+
+Bu, eşiğin gevşetilmesiyle çözülecek bir sorun değil, ölçülen şeyin doğasıyla
+ilgili: skorun beğeniyi öngördüğünü kanıtlamak tanımı gereği bir popülasyon
+gerektirir. Rozetin ayırt edici olmaması ise tek kullanıcıyla da gözlemlenebilir
+bir arayüz kusuru — ama tek kullanıcıyla düzeltmenin gözlemlenebilir bir faydası
+da yok, ve bugün gömülecek tablo tek kişinin zevk profilinden çıkacağı için
+kitle geldiğinde nasılsa yeniden ölçülecek. İki kez yapılacak işin doğru zamanı
+ikinci ölçümün mümkün olduğu andır.
+
+**Eşik kaldırıldı.** Yerine geçen kural: Faz 2, `like_curve` kol başına en az
+birkaç yüz oy taşıdığında yeniden değerlendirilir. O ana kadar ölçüm ucu yerinde
+durur ve veri biriktirir.
+
+**Kısmi teselli.** `genreSim` ve `kwSim` kosinüs benzerliği olduğundan kullanıcının
+ağırlık vektörünün büyüklüğüne göre normalize; `vote/10` kullanıcıdan bağımsız,
+boost'lar sınırlı. Yani ham skorun **ölçeği** kullanıcılar arası taşınabilir;
+kişiden kişiye değişen dağılımın şekli. Tek kullanıcıdan çıkan tablo mükemmel
+değil ama tahmin edilmiş bir sigmoiddan iyi — erteleme kararı bu tabloyu
+çöpe atmıyor, kullanmadan önce doğrulamayı bekliyor.
+
+**A/B kapatıldı (2026-08-12).** Tek kullanıcıyla iki kollu deney deney değildi:
+"kollar" aynı kişinin farklı cihazlarıydı, veriyi ikiye bölüyor ve her ölçümü
+yarı yarıya güçsüzleştiriyordu. Atama mantığı kaldırıldı, aktif yapılandırma
+eski `personalization` kolunun ağırlıkları, `modelVersion` → `recommendation_v6`.
+Ağırlıklar değişmediği için aşağıdaki kuantil tablosu tartışması geçerliliğini
+korur; yalnızca **tek** tablo gerekir, kol başına değil.
+
+---
+
+Aşağıdaki tasarım, Faz 2'ye dönüldüğünde uygulanacak haliyle korunmuştur.
 
 ### Eşlemenin temsili: kuantil tablosu
 
-`RecommendationExperiment` her kol için kendi tablosunu taşır:
+`RecommendationExperiment` aktif yapılandırmanın tablosunu taşır (A/B geri
+gelirse kol başına bir tane):
 
 ```dart
 final List<double> rawQuantiles;   // p0, p5, ..., p100 — 21 eleman, azalmayan
@@ -228,7 +273,7 @@ final List<double> rawQuantiles;   // p0, p5, ..., p100 — 21 eleman, azalmayan
 ```dart
 static int toDisplayScore(
   double raw, {
-  RecommendationExperiment experiment = RecommendationExperimentService.control,
+  RecommendationExperiment experiment = RecommendationExperimentService.active,
 });
 // raw → kuantil interpolasyonu → persentil → clamp(5, 99)
 ```
