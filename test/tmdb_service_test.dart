@@ -696,5 +696,38 @@ void main() {
         expect(keywordIds, contains(30));
       },
     );
+
+    // Zevk vektörü her oylamadan sonra yeniden kuruluyor; keyword uçları
+    // bellek cache'ini atlarsa her kurulum onlarca sqlite okuması + JSON
+    // decode demek.
+    test('getKeywordEntries bellek cache kullanır ve getKeywordIds ile paylaşır', () async {
+      var calls = 0;
+      final client = MockClient((request) async {
+        calls++;
+        return http.Response(
+          jsonEncode({
+            'keywords': [
+              {'id': 4379, 'name': 'time travel'},
+            ],
+          }),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      final service = TmdbService(client: client);
+      expect(service.keywordMemoryCacheSize, 0);
+
+      final first = await service.getKeywordEntries(550);
+      expect(first.single.name, 'time travel');
+      expect(service.keywordMemoryCacheSize, 1);
+
+      await service.getKeywordEntries(550);
+      final ids = await service.getKeywordIds(550);
+
+      expect(ids, [4379]);
+      expect(service.keywordMemoryCacheSize, 1);
+      expect(calls, 1);
+    });
   });
 }

@@ -217,50 +217,27 @@ mixin TmdbMediaExtrasMixin on TmdbServiceBase {
   }
 
   /// Kosinüs benzerliği için anahtar kelime ID'leri (isim değil — dil bağımsız,
-  /// stabil eşleştirme). getKeywords ile AYNI cache girdisini kullanır; ekstra
-  /// ağ isteği yapmaz.
+  /// stabil eşleştirme). [getKeywordEntries] ile aynı bellek girdisini paylaşır.
   Future<List<int>> getKeywordIds(int id, {bool isTV = false}) async {
-    final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
-    final cached = _readMemoryCache(_keywordIdsCache, cacheKey);
-    if (cached != null) {
-      return cached;
-    }
-    final path = isTV ? '/3/tv/$id/keywords' : '/3/movie/$id/keywords';
-    final json = await _fetchRawWithCache(
-      path: path,
-      params: {'api_key': _apiKey},
-    );
-    if (json == null) return [];
-    final list =
-        (json['keywords'] as List<dynamic>?) ??
-        (json['results'] as List<dynamic>?) ??
-        [];
-    final ids = list
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (k) => k['id'] is num
-              ? (k['id'] as num).toInt()
-              : int.tryParse(k['id']?.toString() ?? ''),
-        )
-        .whereType<int>()
-        .where((id) => id > 0)
-        .take(15)
-        .toList();
-    _writeMemoryCache(_keywordIdsCache, cacheKey, ids);
-    return ids;
+    final entries = await getKeywordEntries(id, isTV: isTV);
+    return entries.map((e) => e.id).toList();
   }
 
-  /// Anahtar kelimeleri id+ad çifti olarak döndürür.
+  /// Anahtar kelimeleri id+ad çifti olarak döndürür — keyword uçlarının TEK
+  /// okuma yolu ([getKeywordIds] buna delege eder, [getKeywords] aynı HTTP
+  /// önbelleğinden okur).
   ///
-  /// [getKeywords] ve [getKeywordIds] aynı yanıtı paylaşır ama farklı `take()`
-  /// sınırları ve farklı filtreler uygular, yani ids[i] ile names[i] hizalı
-  /// olduğu garanti DEĞİL. Gerekçe etiketinde ("'zaman yolculuğu' temasını
-  /// sevdiğin için") id'yi ada güvenle bağlamak için bu metot kullanılır.
-  /// Aynı önbellek girdisini okur — ekstra ağ isteği yapmaz.
+  /// Bellek önbelleği şart: zevk vektörü her oylamadan sonra geçersizleşiyor ve
+  /// yeniden kurulurken onlarca keyword ucu okuyor. Önbellek atlanırsa bunların
+  /// her biri sqlite okuması + JSON decode olur.
   Future<List<({int id, String name})>> getKeywordEntries(
     int id, {
     bool isTV = false,
   }) async {
+    final cacheKey = "${isTV ? 'tv' : 'movie'}_$id";
+    final cached = _readMemoryCache(_keywordEntriesCache, cacheKey);
+    if (cached != null) return cached;
+
     final path = isTV ? '/3/tv/$id/keywords' : '/3/movie/$id/keywords';
     final json = await _fetchRawWithCache(
       path: path,
@@ -271,7 +248,7 @@ mixin TmdbMediaExtrasMixin on TmdbServiceBase {
         (json['keywords'] as List<dynamic>?) ??
         (json['results'] as List<dynamic>?) ??
         [];
-    return list
+    final entries = list
         .whereType<Map<String, dynamic>>()
         .map((k) {
           final kid = k['id'] is num
@@ -285,6 +262,8 @@ mixin TmdbMediaExtrasMixin on TmdbServiceBase {
         .whereType<({int id, String name})>()
         .take(15)
         .toList();
+    _writeMemoryCache(_keywordEntriesCache, cacheKey, entries);
+    return entries;
   }
 
   Future<Map<String, dynamic>?> getPersonDetails(int personId) async {

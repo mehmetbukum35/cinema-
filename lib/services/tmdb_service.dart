@@ -61,7 +61,10 @@ class TmdbServiceBase {
   final String _language;
   final String _region;
 
-  final Map<String, List<int>> _keywordIdsCache = {};
+  /// Keyword uçlarının tek bellek önbelleği: id'ler de adlar da buradan gelir,
+  /// böylece iki metot aynı girdiyi paylaşır ve indeks hizası doğal olarak
+  /// garanti olur.
+  final Map<String, List<({int id, String name})>> _keywordEntriesCache = {};
   final Map<String, List<Movie>> _similarCache = {};
   final Map<String, List<Movie>> _recommendationsCache = {};
 
@@ -504,7 +507,7 @@ class TmdbService extends TmdbServiceBase
   int get recommendationsMemoryCacheSize => _recommendationsCache.length;
 
   @visibleForTesting
-  int get keywordMemoryCacheSize => _keywordIdsCache.length;
+  int get keywordMemoryCacheSize => _keywordEntriesCache.length;
 
   @visibleForTesting
   bool isSimilarMemoryCached(int id, {bool isTV = false}) =>

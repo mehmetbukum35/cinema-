@@ -57,11 +57,16 @@ class RecommendationTelemetryService {
       movie
         ..recommendationImpressionId = impressionId
         ..recommendationModelVersion = assignedModelVersion;
-      latest[movieKey(movie)] = {
-        'impression_id': impressionId,
-        'model_version': assignedModelVersion,
-        'shown_at': now,
-      };
+      // remove + set: girdi haritanın SONUNA taşınır, böylece anahtar sırası
+      // tazelik sırası olur ve budama en eskiden başlar (bkz. [_persist]).
+      final key = movieKey(movie);
+      latest
+        ..remove(key)
+        ..[key] = {
+          'impression_id': impressionId,
+          'model_version': assignedModelVersion,
+          'shown_at': now,
+        };
       queue.add(
         _event(
           movie: movie,
@@ -193,12 +198,20 @@ class RecommendationTelemetryService {
     return {};
   }
 
+  /// Son gösterim indeksinin üst sınırı. Kuyruk gibi bunun da sınırı olmalı:
+  /// budanmazsa her gösterimle büyür ve HER telemetri yazımında baştan encode
+  /// edilir. Aksiyon atfı yalnızca yakın geçmişi gerektiriyor.
+  static const _latestLimit = 300;
+
   static Future<void> _persist(
     SharedPreferences prefs,
     List<Map<String, dynamic>> queue,
     Map<String, dynamic> latest,
   ) async {
     if (queue.length > 500) queue.removeRange(0, queue.length - 500);
+    while (latest.length > _latestLimit) {
+      latest.remove(latest.keys.first);
+    }
     await Future.wait([
       prefs.setString(_queueKey, jsonEncode(queue)),
       prefs.setString(_latestKey, jsonEncode(latest)),
