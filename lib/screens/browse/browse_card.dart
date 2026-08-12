@@ -190,6 +190,7 @@ class BrowseCard extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            const SizedBox(height: 2),
             // Gerekçe varsa yılın yerine "neden önerildi" satırı — "seni
             // tanıyor" hissini kart seviyesine taşır (yıl detayda zaten var).
             Builder(

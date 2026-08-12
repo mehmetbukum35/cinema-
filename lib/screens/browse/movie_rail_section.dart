@@ -37,7 +37,7 @@ class BrowseMovieRailSection extends StatelessWidget {
             gradient: CinemaGradients.gold,
           ),
           SizedBox(
-            height: 275,
+            height: 292,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
