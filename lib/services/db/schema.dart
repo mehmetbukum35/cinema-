@@ -109,7 +109,7 @@ mixin DbSchemaMixin {
   /// eski migration kodu hataları yuttuğu için bazı kurulumlarda şema yarım
   /// kalmış olabilir ve `onUpgrade` o cihazlarda bir daha çalışmaz.
   Future<void> ensureSchema(Database db) async {
-    await db.execute('PRAGMA busy_timeout = 3000;');
+    await db.rawQuery('PRAGMA busy_timeout = 3000;');
     await db.execute(_tmdbCacheDdl);
     for (final table in _migratedColumns.keys) {
       await _addColumnsIfMissing(db, table, _migratedColumns[table]!);
