@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
@@ -173,7 +174,13 @@ class _SyncSessionChanged implements Exception {
 }
 
 class SyncService {
+  /// Tek istekte tablo başına üst sınır (`Sync::MAX_ITEMS_PER_TABLE`).
   static const int _pushBatchSize = 500;
+
+  /// Tek istekte TÜM tablolar + telemetri toplamı için üst sınır. Sunucu
+  /// 1000'de kesiyor (`Sync::MAX_TOTAL_ITEMS_PER_PUSH`); 900 ile pay bırakıyoruz
+  /// ki sunucu tarafında sayılmayan bir alan eklendiğinde sınıra dayanmayalım.
+  static const int _pushMaxTotalItems = 900;
   final ApiService _apiService;
   final Ref? _ref;
   Future<bool>? _syncFuture;
@@ -223,6 +230,18 @@ class SyncService {
     }
   }
 
+  /// Yerel değişiklikleri sunucunun kabul edeceği parçalara bölerek gönderir.
+  ///
+  /// Parçalama TOPLAM kayıt bütçesine göre yapılır, satır indeksine göre değil:
+  /// sunucu tablo başına [_pushBatchSize] VE tüm tablolar toplamında
+  /// [_pushMaxTotalItems]'dan fazlasını reddediyor (`Sync::MAX_TOTAL_ITEMS_PER_PUSH`).
+  /// İndekse göre bölmek her tabloya ayrı ayrı 500 hakkı tanıdığından üç dolu
+  /// tablo tek istekte 1500 kayıt gönderip 413 alıyordu — ve her deneme aynı
+  /// isteği ürettiği için sync kalıcı olarak duruyordu (ölçüldü: 600 oy + 550
+  /// watchlist + 120 favori → ilk chunk 1120 kayıt, 413, çıkmaz sokak).
+  ///
+  /// Telemetri olayları da aynı bütçeden yer kaplar; tek parçaya sığmazsa
+  /// sonraki parçalara taşarlar.
   Future<({int applied, int serverTime})> _pushPayloadInChunks(
     Map<String, dynamic> payload,
     String? sessionUserId,
@@ -234,38 +253,57 @@ class SyncService {
       'watched_seasons',
       'search_history',
     ];
-    final maxLength = tables.fold<int>(0, (max, table) {
-      final length = (payload[table] as List?)?.length ?? 0;
-      return length > max ? length : max;
-    });
-    final batchCount = maxLength == 0 ? 1 : (maxLength / _pushBatchSize).ceil();
+    final events = (payload['recommendation_events'] as List?) ?? const [];
+    final cursors = {for (final table in tables) table: 0};
+    var eventCursor = 0;
     var applied = 0;
     var serverTime = 0;
+    var isFirstChunk = true;
 
-    for (var batch = 0; batch < batchCount; batch++) {
-      final start = batch * _pushBatchSize;
+    List<dynamic> items(String table) =>
+        (payload[table] as List<dynamic>?) ?? const <dynamic>[];
+    bool hasPending() =>
+        eventCursor < events.length ||
+        tables.any((table) => cursors[table]! < items(table).length);
+
+    do {
+      var budget = _pushMaxTotalItems;
       final chunk = <String, dynamic>{
         'metadata_locale': payload['metadata_locale'],
       };
-      if (batch == 0 && payload['cultural_preferences'] != null) {
+      if (isFirstChunk && payload['cultural_preferences'] != null) {
         chunk['cultural_preferences'] = payload['cultural_preferences'];
-      }
-      if (batch == 0 && payload['recommendation_events'] != null) {
-        chunk['recommendation_events'] = payload['recommendation_events'];
       }
       if (payload['local_reset'] == true) {
         chunk['local_reset'] = true;
       }
+
+      final eventCount = min(
+        min(_pushBatchSize, budget),
+        events.length - eventCursor,
+      );
+      if (eventCount > 0) {
+        chunk['recommendation_events'] = events.sublist(
+          eventCursor,
+          eventCursor + eventCount,
+        );
+        eventCursor += eventCount;
+        budget -= eventCount;
+      }
+
       for (final table in tables) {
-        final items = payload[table] as List? ?? const [];
-        if (start < items.length) {
-          final candidateEnd = start + _pushBatchSize;
-          final end = candidateEnd < items.length ? candidateEnd : items.length;
-          chunk[table] = items.sublist(start, end);
+        final rows = items(table);
+        final start = cursors[table]!;
+        final take = min(min(_pushBatchSize, budget), rows.length - start);
+        if (take > 0) {
+          chunk[table] = rows.sublist(start, start + take);
+          cursors[table] = start + take;
+          budget -= take;
         } else {
           chunk[table] = const [];
         }
       }
+
       await _ensureSession(sessionUserId);
       final result = await _apiService.push(chunk);
       await _ensureSession(sessionUserId);
@@ -278,7 +316,9 @@ class SyncService {
       if (accepted != null) {
         await RecommendationTelemetryService.removeEvents(accepted);
       }
-    }
+      isFirstChunk = false;
+    } while (hasPending());
+
     return (applied: applied, serverTime: serverTime);
   }
 
