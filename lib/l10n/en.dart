@@ -1,6 +1,7 @@
 /// EN locale strings for Cinema+.
 const Map<String, String> kEnStrings = {
   'app_title': 'Cinema+',
+  'back': 'Back',
   'tagline': 'WHAT TO WATCH?',
   'profile_about': 'About App',
   'profile_about_desc': 'Version, author and application info',

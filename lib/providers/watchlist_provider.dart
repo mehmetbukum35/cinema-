@@ -81,8 +81,9 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
       await operation;
       // Sonraki eşzamanlı add'ler kuyrukta; state'i kuyruk bitince oku.
       await _persistTail;
+      final updatedList = await PrefsLibraryFacade.getWatchlist();
       if (!ref.mounted) return true;
-      state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
+      state = AsyncValue.data(updatedList);
 
       // Henüz çıkmadıysa çıkış gününe hatırlatıcı planla (best-effort)
       try {
@@ -122,8 +123,9 @@ class WatchlistNotifier extends Notifier<AsyncValue<List<Movie>>> {
       _persistTail = operation;
       await operation;
       await _persistTail;
+      final updatedList = await PrefsLibraryFacade.getWatchlist();
       if (!ref.mounted) return true;
-      state = AsyncValue.data(await PrefsLibraryFacade.getWatchlist());
+      state = AsyncValue.data(updatedList);
 
       // Planlanmış çıkış hatırlatıcısını iptal et (best-effort)
       try {

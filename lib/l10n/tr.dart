@@ -1,6 +1,7 @@
 /// TR locale strings for Cinema+.
 const Map<String, String> kTrStrings = {
   'app_title': 'Cinema+',
+  'back': 'Geri',
   'tagline': 'NE İZLESEM?',
   'profile_about': 'Uygulama Hakkında',
   'profile_about_desc': 'Sürüm, yazar ve uygulama bilgileri',

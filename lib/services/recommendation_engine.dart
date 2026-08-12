@@ -1060,10 +1060,13 @@ class RecommendationEngine {
       };
       m.recommendationModelVersion = experiment.modelVersion;
       if (cultureBoost > 0 && m.recoReason == null) {
-        m
-          ..recoReason = CulturalClassifier.classify(m).first
-          ..recoReasonType = 'culture'
-          ..recoSource = 'culture';
+        final classified = CulturalClassifier.classify(m);
+        if (classified.isNotEmpty) {
+          m
+            ..recoReason = classified.first
+            ..recoReasonType = 'culture'
+            ..recoSource = 'culture';
+        }
       }
       m.personalizedMatchScore = toDisplayScore(raw);
       m.recoSource ??= 'discover';

@@ -35,10 +35,12 @@ trait SocialMatchTrait
         $st->execute([$locale, $uid, $friendId]);
         $items = $st->fetchAll();
 
-        // JSON formatına uygun parse et
         foreach ($items as &$item) {
             if (isset($item['genre_ids'])) {
-                $item['genre_ids'] = json_decode($item['genre_ids'], true);
+                $decoded = is_string($item['genre_ids']) ? json_decode($item['genre_ids'], true) : null;
+                $item['genre_ids'] = is_array($decoded) ? $decoded : [];
+            } else {
+                $item['genre_ids'] = [];
             }
         }
 

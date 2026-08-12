@@ -64,7 +64,9 @@ class _FamilyModeCardState extends ConsumerState<FamilyModeCard> {
     }
     if (!mounted) return;
     ref.invalidate(swipeProvider);
-    ref.read(recommendationEngineProvider).invalidateCache().catchError((_) {});
+    ref.read(recommendationEngineProvider).invalidateCache().catchError(
+          (e) => debugPrint('Family mode invalidateCache failed: $e'),
+        );
     ref.read(browseRefreshTriggerProvider.notifier).fire();
   }
 

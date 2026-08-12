@@ -795,6 +795,7 @@ class SocialNotifier extends Notifier<SocialState> {
         }
       }
       await _apiService.deleteRecommendation(recommendationId);
+      if (!ref.mounted) return true;
       // Silme başlamadan önceki GET/page yanıtları öğeyi diriltmemeli.
       _recommendationsLoadGeneration++;
       _receivedRecommendationsLoadGeneration++;

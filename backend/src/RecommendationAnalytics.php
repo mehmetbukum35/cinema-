@@ -227,6 +227,9 @@ final class RecommendationAnalytics
     {
         $likeCurve = [];
         foreach ($slotsByModel as $model => $slots) {
+            if (empty($slots)) {
+                continue;
+            }
             ksort($slots);
             $slotKeys = array_keys($slots);
             $lo = $slotKeys[0] / 1000;
@@ -238,9 +241,9 @@ final class RecommendationAnalytics
                 $index = $width > 0.0
                     ? min($bins - 1, (int) floor((($slot / 1000) - $lo) / $width))
                     : 0;
-                $buckets[$index]['shown'] += $counts['shown'];
-                $buckets[$index]['rated'] += $counts['rated'];
-                $buckets[$index]['liked'] += $counts['liked'];
+                $buckets[$index]['shown'] += (int) ($counts['shown'] ?? 0);
+                $buckets[$index]['rated'] += (int) ($counts['rated'] ?? 0);
+                $buckets[$index]['liked'] += (int) ($counts['liked'] ?? 0);
             }
 
             foreach ($buckets as $index => $bucket) {
@@ -286,6 +289,9 @@ final class RecommendationAnalytics
      */
     private function percentiles(array $histogram): array
     {
+        if (empty($histogram)) {
+            return [];
+        }
         ksort($histogram);
         $total = array_sum($histogram);
         $slots = array_keys($histogram);

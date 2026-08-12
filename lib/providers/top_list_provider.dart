@@ -160,6 +160,7 @@ class TopListNotifier extends Notifier<AsyncValue<List<Movie>>> {
     // önbelleği) tazele ki Top 20 düzenlemesi anında önerilere yansısın.
     // (Tür ağırlıkları zaten saveFavorite* içinde invalidate ediliyor.)
     await ref.read(recommendationEngineProvider).invalidateCache();
+    if (!ref.mounted) return;
     ref.read(browseRefreshTriggerProvider.notifier).fire();
     final auth = ref.read(authProvider);
     if (auth.isAuthenticated) {
