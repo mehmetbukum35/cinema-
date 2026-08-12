@@ -523,10 +523,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       // saymak olurdu (liked/shown oranını kaynaklar arası çarpıtır). Cooldown
       // ise ilk 10'da kalır: gösterim cezası penceresini genişletmek istemiyoruz.
       unawaited(
-        PrefsTastePrefs.recordRecoShown(<Movie>[
-          ?tonightPick,
-          ...finalPersonal,
-        ].map((m) => m.recoSource)),
+        PrefsTastePrefs.recordRecoShown(
+          <Movie>[?tonightPick, ...finalPersonal].map((m) => m.recoSource),
+        ),
       );
       // Vitrin kartı ile sıralı liste AYRI slot: ikisi tek listeymiş gibi
       // loglanırsa kalibrasyon hero muamelesini sıralama sinyali sanır.

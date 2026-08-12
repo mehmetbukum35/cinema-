@@ -7,7 +7,10 @@ import '../models/movie.dart';
 import 'recommendation_experiment_service.dart';
 
 class RecommendationTelemetryService {
-  static const modelVersion = 'recommendation_v5_ab_control';
+  /// Son çare: atıfsız bir olayın taşıyacağı sürüm. Aktif yapılandırmadan
+  /// türetilir ki elle yazılmış bir sabit bir daha bayatlamasın.
+  static String get modelVersion =>
+      RecommendationExperimentService.active.modelVersion;
   static const _queueKey = 'recommendation_event_queue_v1';
   static const _latestKey = 'recommendation_latest_impressions_v1';
   static const _uuid = Uuid();
@@ -45,7 +48,7 @@ class RecommendationTelemetryService {
     final now = DateTime.now().millisecondsSinceEpoch;
     final resolvedBatchId = batchId ?? _uuid.v4();
     var rank = 0;
-    final experiment = await RecommendationExperimentService.current();
+    final experiment = RecommendationExperimentService.active;
 
     for (final movie in movies) {
       final impressionId = _uuid.v4();

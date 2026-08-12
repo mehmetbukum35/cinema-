@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/models/discovery_context.dart';
 import 'package:ne_izlesem/models/movie.dart';
 import 'package:ne_izlesem/services/recommendation_engine.dart';
+import 'package:ne_izlesem/services/recommendation_experiment_service.dart';
 import 'package:ne_izlesem/services/tmdb_service.dart';
 import 'package:ne_izlesem/services/prefs/library_facade.dart';
 import 'package:ne_izlesem/services/prefs_service.dart';
@@ -33,18 +34,26 @@ void main() {
   setupSecureStorageMock();
 
   group('RecommendationEngine.blend', () {
-    test('keyword yokken 0.7/0.3 tür+puan harmanı uygular', () {
+    // Ağırlıkların kendisi (toplam 1.0, sıralama) aktif yapılandırmanın kendi
+    // testinde doğrulanıyor; buradaki testler kablolamayı sabitliyor: kwSim
+    // null iken hangi ağırlık kümesinin seçildiği ve puanın 10'a bölündüğü.
+    test('keyword yokken tür+puan harmanı uygular', () {
+      final w = RecommendationExperimentService.active.genreOnlyWeights;
       final raw = RecommendationEngine.blend(genreSim: 0.5, voteAverage: 8.0);
-      expect(raw, closeTo(0.7 * 0.5 + 0.3 * 0.8, 1e-9));
+      expect(raw, closeTo(w.genre * 0.5 + w.vote * 0.8, 1e-9));
     });
 
-    test('keyword varken 0.45/0.25/0.30 harmanı uygular', () {
+    test('keyword varken tür+keyword+puan harmanı uygular', () {
+      final w = RecommendationExperimentService.active.fullWeights;
       final raw = RecommendationEngine.blend(
         genreSim: 0.5,
         kwSim: 0.4,
         voteAverage: 8.0,
       );
-      expect(raw, closeTo(0.45 * 0.5 + 0.25 * 0.4 + 0.3 * 0.8, 1e-9));
+      expect(
+        raw,
+        closeTo(w.genre * 0.5 + w.keyword * 0.4 + w.vote * 0.8, 1e-9),
+      );
     });
 
     test('keyword sinyali skoru gerçekten ayrıştırır', () {

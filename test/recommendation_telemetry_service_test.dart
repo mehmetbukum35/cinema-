@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ne_izlesem/models/movie.dart';
+import 'package:ne_izlesem/services/recommendation_experiment_service.dart';
 import 'package:ne_izlesem/services/recommendation_telemetry_service.dart';
 
 void main() {
@@ -32,7 +33,10 @@ void main() {
     expect(events[0]['action'], 'shown');
     expect(events[1]['action'], 'detail_opened');
     expect(events[1]['impression_id'], events[0]['impression_id']);
-    expect(events[0]['model_version'], 'recommendation_v5_ab_control');
+    expect(
+      events[0]['model_version'],
+      RecommendationExperimentService.active.modelVersion,
+    );
   });
 
   test('ignores actions that have no recommendation impression', () async {

@@ -96,7 +96,7 @@ class RecommendationEngine {
     double? kwSim,
     required double voteAverage,
     RecommendationExperiment experiment =
-        RecommendationExperimentService.control,
+        RecommendationExperimentService.active,
   }) {
     final vote = voteAverage / 10.0;
     if (kwSim == null) {
@@ -831,7 +831,7 @@ class RecommendationEngine {
     if (fresh.isEmpty) return fresh;
 
     final userWeights = await PrefsTastePrefs.getGenreWeights();
-    final experiment = await RecommendationExperimentService.current();
+    final experiment = RecommendationExperimentService.active;
     final ratingCount = ratings.length;
 
     // Kaba sıralama: tür + puan.
@@ -882,7 +882,6 @@ class RecommendationEngine {
         'seed_overlap': overlap,
         'culture': cultureBoost,
         'context': contextBoost,
-        'experiment_personalization': experiment.isPersonalization ? 1.0 : 0.0,
         'final': raw,
       };
       m.recommendationModelVersion = experiment.modelVersion;
@@ -958,9 +957,6 @@ class RecommendationEngine {
           'seed_overlap': overlap,
           'culture': cultureBoost,
           'context': contextBoost,
-          'experiment_personalization': experiment.isPersonalization
-              ? 1.0
-              : 0.0,
           'final': raw,
         };
         m.personalizedMatchScore = toDisplayScore(raw);
