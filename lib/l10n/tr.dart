@@ -524,6 +524,9 @@ const Map<String, String> kTrStrings = {
   'reco_reason_seed': '{x} beğendiğin için',
   'reco_reason_seed_short': '{x} benzeri',
   'reco_reason_friend': '{x} buna bayıldı',
+  // {x} bir tema adı (TMDB keyword'ü, İngilizce) — tırnak onu film adından ayırır.
+  'reco_reason_keyword': '\'{x}\' temasını sevdiğin için',
+  'reco_reason_keyword_short': '\'{x}\' teması',
   'match_find_suggestions': 'Ortak Önerileri Bul',
   'detail_seasons': 'Sezonlar',
   'mood_fantasy': 'Fantastik dünya',

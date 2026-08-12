@@ -594,6 +594,8 @@ const Map<String, String> kEnStrings = {
   'reco_reason_seed': 'Because you liked {x}',
   'reco_reason_seed_short': 'More like {x}',
   'reco_reason_friend': '{x} loved this',
+  'reco_reason_keyword': 'Because you like the theme \'{x}\'',
+  'reco_reason_keyword_short': 'Theme: \'{x}\'',
   'browse_trending_week': 'Trending This Week',
   'browse_api_unauthorized': 'Authorization Error (401)',
   'browse_api_unauthorized_desc':

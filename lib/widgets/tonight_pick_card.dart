@@ -5,7 +5,11 @@ import '../theme/app_theme.dart';
 import 'app_cached_image.dart';
 
 /// Filmin öneri gerekçesini kullanıcı diline çevirir:
-/// seed → "X'i beğendiğin için", friend → "X buna bayıldı". Gerekçe yoksa null.
+/// seed → "X'i beğendiğin için", friend → "X buna bayıldı",
+/// keyword → "'zaman yolculuğu' temasını sevdiğin için". Gerekçe yoksa null.
+///
+/// `keyword` kendi şablonunu kullanmak ZORUNDA: gerekçe bir film adı değil bir
+/// tema adı, tohum şablonuna düşerse tema film sanılır.
 ///
 /// [compact]: dar ray kartları için kısa şablon ("More like {x}"). Uzun
 /// şablonda film adı SONDA kaldığından tek satırlık ellipsis dar kartta tam
@@ -21,10 +25,13 @@ String? recoReasonLabel(
   if (reason == null || reason.isEmpty) return null;
   final isFriend = movie.recoReasonType == 'friend';
   final isCulture = movie.recoReasonType == 'culture';
+  final isKeyword = movie.recoReasonType == 'keyword';
   final key = isCulture
       ? 'reco_reason_culture'
       : isFriend
       ? 'reco_reason_friend'
+      : isKeyword
+      ? (compact ? 'reco_reason_keyword_short' : 'reco_reason_keyword')
       : (compact ? 'reco_reason_seed_short' : 'reco_reason_seed');
   final localizedReason = isCulture
       ? AppLocalizations.of(context)?.get('culture_$reason') ?? reason
@@ -35,6 +42,8 @@ String? recoReasonLabel(
           ? 'Because you prefer {x}'
           : isFriend
           ? '{x} loved this'
+          : isKeyword
+          ? (compact ? "Theme: '{x}'" : "Because you like the theme '{x}'")
           : (compact ? 'More like {x}' : 'Because you liked {x}'));
   return tpl.replaceFirst('{x}', localizedReason);
 }
