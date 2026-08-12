@@ -198,10 +198,17 @@ class RecommendationTelemetryService {
     return {};
   }
 
-  /// Son gösterim indeksinin üst sınırı. Kuyruk gibi bunun da sınırı olmalı:
+  /// Son gösterim indeksinin sınırları. Kuyruk gibi bunun da sınırı olmalı:
   /// budanmazsa her gösterimle büyür ve HER telemetri yazımında baştan encode
-  /// edilir. Aksiyon atfı yalnızca yakın geçmişi gerektiriyor.
-  static const _latestLimit = 300;
+  /// edilir.
+  ///
+  /// Önce YAŞA göre budanır, sonra adede: budama bir aksiyonun gösterimine
+  /// bağlanmasını engelleyebilir (`recordAction` impression_id bulamazsa olayı
+  /// hiç yazmaz), o yüzden sınır "ne kadar geçmişi atfedebiliriz" sorusunun
+  /// cevabı olmalı, keyfi bir sayı değil. 30 gün sonra atıf zaten anlamsız;
+  /// adet sınırı yalnız yoğun kullanımda devreye giren emniyet supabı.
+  static const _latestMaxAgeMs = 30 * 24 * 3600 * 1000;
+  static const _latestLimit = 1000;
 
   static Future<void> _persist(
     SharedPreferences prefs,
@@ -209,6 +216,11 @@ class RecommendationTelemetryService {
     Map<String, dynamic> latest,
   ) async {
     if (queue.length > 500) queue.removeRange(0, queue.length - 500);
+    final ageCutoff = DateTime.now().millisecondsSinceEpoch - _latestMaxAgeMs;
+    latest.removeWhere((_, value) {
+      final shownAt = value is Map ? value['shown_at'] : null;
+      return shownAt is num && shownAt < ageCutoff;
+    });
     while (latest.length > _latestLimit) {
       latest.remove(latest.keys.first);
     }

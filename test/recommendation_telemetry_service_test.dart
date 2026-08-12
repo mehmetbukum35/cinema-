@@ -121,14 +121,14 @@ void main() {
     expect(events.map((event) => event['impression_id']).toSet(), hasLength(1));
   });
 
-  // Kuyruk 500'de kesiliyor ama son-gösterim indeksi büdanmazsa sınırsız
+  // Kuyruk 500'de kesiliyor ama son-gösterim indeksi budanmazsa sınırsız
   // büyür ve HER telemetri yazımında baştan encode edilir.
   test('son gösterim indeksi sınırsız büyümez, en yeniyi tutar', () async {
     Movie m(int id) =>
         Movie(id: id, title: 'M$id', overview: '', voteAverage: 7);
 
     await RecommendationTelemetryService.recordShown([
-      for (var id = 1; id <= 320; id++) m(id),
+      for (var id = 1; id <= 1020; id++) m(id),
     ], surface: 'browse');
 
     final prefs = await SharedPreferences.getInstance();
@@ -138,19 +138,49 @@ void main() {
             )
             as Map<String, dynamic>;
 
-    expect(latest(), hasLength(300));
+    expect(latest(), hasLength(1000));
     expect(latest().containsKey('movie_1'), isFalse);
-    expect(latest().containsKey('movie_320'), isTrue);
+    expect(latest().containsKey('movie_1020'), isTrue);
 
     // Yeniden gösterilen yapım en tazeye taşınır; budama en eskiden başlar.
-    // m(321) sınırı aştırır, m(21) tazelendiği için kurban m(22) olur.
+    // m(1021) sınırı aştırır, m(21) tazelendiği için kurban m(22) olur.
     await RecommendationTelemetryService.recordShown([
       m(21),
-      m(321),
+      m(1021),
     ], surface: 'browse');
 
-    expect(latest(), hasLength(300));
+    expect(latest(), hasLength(1000));
     expect(latest().containsKey('movie_21'), isTrue);
     expect(latest().containsKey('movie_22'), isFalse);
+  });
+
+  // Adet sınırına değmeyen ama bayatlamış girdiler de düşmeli; yoksa seyrek
+  // kullanan bir cihazda indeks aylarca taşınır.
+  test('30 günden eski gösterim girdileri budanır', () async {
+    final old = DateTime.now().millisecondsSinceEpoch -
+        const Duration(days: 31).inMilliseconds;
+    SharedPreferences.setMockInitialValues({
+      'recommendation_experiment_ranking_weights_v2': 'control',
+      'recommendation_latest_impressions_v1': jsonEncode({
+        'movie_777': {
+          'impression_id': '11111111-1111-4111-8111-111111111111',
+          'model_version': 'v1',
+          'shown_at': old,
+        },
+      }),
+    });
+
+    await RecommendationTelemetryService.recordShown([
+      Movie(id: 1, title: 'Fresh', overview: '', voteAverage: 7),
+    ], surface: 'browse');
+
+    final prefs = await SharedPreferences.getInstance();
+    final latest =
+        jsonDecode(
+              prefs.getString('recommendation_latest_impressions_v1') ?? '{}',
+            )
+            as Map<String, dynamic>;
+    expect(latest.containsKey('movie_777'), isFalse);
+    expect(latest.containsKey('movie_1'), isTrue);
   });
 }
