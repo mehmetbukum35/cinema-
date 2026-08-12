@@ -248,12 +248,7 @@ class Auth
                 )->execute([$email, $codeHash, $expiresAt, $now]);
             }
 
-            $smtp = new Smtp(
-                $this->cfg['smtp']['host'],
-                (int) $this->cfg['smtp']['port'],
-                $this->cfg['smtp']['user'],
-                $this->cfg['smtp']['pass']
-            );
+            $smtp = $this->createSmtp();
 
             $subject = "E-posta Doğrulama Kodu";
             $body = "<h2>Cinema+ Üyelik Doğrulama</h2>"
@@ -1003,12 +998,7 @@ class Auth
                 $ups->execute([$email, $codeHash, $expiresAt, $now]);
             }
 
-            $smtp = new Smtp(
-                $this->cfg['smtp']['host'],
-                (int) $this->cfg['smtp']['port'],
-                $this->cfg['smtp']['user'],
-                $this->cfg['smtp']['pass']
-            );
+            $smtp = $this->createSmtp();
 
             $subject = "Şifre Sıfırlama Kodu";
             $body = "<h2>Cinema+ Şifre Sıfırlama</h2>"
@@ -1135,5 +1125,18 @@ class Auth
             'refresh_token' => $refresh,
             'expires_in'    => (int) $this->cfg['access_ttl'],
         ];
+    }
+
+    private function createSmtp(): Smtp
+    {
+        $smtpCfg = $this->cfg['smtp'] ?? [];
+        return new Smtp(
+            (string) ($smtpCfg['host'] ?? ''),
+            (int) ($smtpCfg['port'] ?? 465),
+            (string) ($smtpCfg['user'] ?? ''),
+            (string) ($smtpCfg['pass'] ?? ''),
+            (string) ($smtpCfg['from'] ?? ''),
+            (string) ($smtpCfg['from_name'] ?? '')
+        );
     }
 }

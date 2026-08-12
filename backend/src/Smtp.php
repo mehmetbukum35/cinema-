@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Minimal SMTP client (AUTH LOGIN + HTML body).
  *
  * Port 465 → implicit SSL (`ssl://`).
- * Port 587 (ve diğerleri) → düz TCP + STARTTLS.
+ * Port 587 (ve diğerleri) → düz TCP + STARTTLS (TLS 1.2/1.3 desteği ile).
  *
  * Başarısızlıkta false dönmez; RuntimeException fırlatır ki Auth arka plan
  * işinde cinema_error ile görülsün (forgot-password yanıtı zaten 200
@@ -17,13 +17,23 @@ class Smtp
     private int $port;
     private string $user;
     private string $pass;
+    private string $fromEmail;
+    private string $fromName;
 
-    public function __construct(string $host, int $port, string $user, string $pass)
-    {
+    public function __construct(
+        string $host,
+        int $port,
+        string $user,
+        string $pass,
+        ?string $fromEmail = null,
+        ?string $fromName = null
+    ) {
         $this->host = $host;
         $this->port = $port;
         $this->user = $user;
         $this->pass = $pass;
+        $this->fromEmail = ($fromEmail !== null && trim($fromEmail) !== '') ? trim($fromEmail) : $user;
+        $this->fromName = ($fromName !== null && trim($fromName) !== '') ? trim($fromName) : 'Cinema+';
     }
 
     public function send(string $to, string $subject, string $body): bool
@@ -35,14 +45,29 @@ class Smtp
         // Sanitize to prevent CRLF injection in SMTP headers/commands
         $to = str_replace(["\r", "\n"], '', $to);
         $subject = str_replace(["\r", "\n"], '', $subject);
+        $fromEmail = str_replace(["\r", "\n"], '', $this->fromEmail);
+        $fromName = str_replace(["\r", "\n"], '', $this->fromName);
 
         $useImplicitSsl = $this->port === 465;
         $remote = ($useImplicitSsl ? 'ssl://' : 'tcp://') . $this->host;
+
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+                'allow_self_signed' => false,
+                'SNI_enabled' => true,
+                'peer_name' => $this->host,
+            ],
+        ]);
+
         $socket = @stream_socket_client(
             "$remote:{$this->port}",
             $errno,
             $errstr,
-            15
+            15,
+            STREAM_CLIENT_CONNECT,
+            $context
         );
         if (!$socket) {
             throw new RuntimeException("SMTP connection failed: $errstr ($errno)");
@@ -57,10 +82,19 @@ class Smtp
 
             if (!$useImplicitSsl) {
                 $this->command($socket, 'STARTTLS', [220]);
+
+                $cryptoMethod = STREAM_CRYPTO_METHOD_TLS_CLIENT;
+                if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) {
+                    $cryptoMethod |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+                }
+                if (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT')) {
+                    $cryptoMethod |= STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+                }
+
                 $cryptoOk = @stream_socket_enable_crypto(
                     $socket,
                     true,
-                    STREAM_CRYPTO_METHOD_TLS_CLIENT
+                    $cryptoMethod
                 );
                 if ($cryptoOk !== true) {
                     throw new RuntimeException('SMTP STARTTLS handshake failed');
@@ -72,21 +106,26 @@ class Smtp
             $this->command($socket, base64_encode($this->user), [334]);
             $this->command($socket, base64_encode($this->pass), [235]);
 
-            $this->command($socket, "MAIL FROM:<{$this->user}>", [250]);
+            $this->command($socket, "MAIL FROM:<{$fromEmail}>", [250]);
             $this->command($socket, "RCPT TO:<{$to}>", [250, 251]);
             $this->command($socket, 'DATA', [354]);
 
             $headers = [
                 'MIME-Version: 1.0',
                 'Content-Type: text/html; charset=UTF-8',
-                'From: =?UTF-8?B?' . base64_encode('Cinema+') . "?= <{$this->user}>",
+                'From: =?UTF-8?B?' . base64_encode($fromName) . "?= <{$fromEmail}>",
                 "To: <{$to}>",
                 'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
                 'Date: ' . date('r'),
-                'Message-ID: <' . time() . '.' . bin2hex(random_bytes(8)) . '-' . md5($this->user . $to) . '@' . $this->host . '>',
+                'Message-ID: <' . time() . '.' . bin2hex(random_bytes(8)) . '-' . md5($fromEmail . $to) . '@' . $this->host . '>',
             ];
 
-            $message = implode("\r\n", $headers) . "\r\n\r\n" . $body . "\r\n.";
+            // RFC 5321 §4.5.2 Transparent Duty (Dot-Stuffing)
+            $normalizedBody = str_replace(["\r\n", "\r"], "\n", $body);
+            $stuffedBody = str_replace("\n.", "\n..", $normalizedBody);
+            $formattedBody = str_replace("\n", "\r\n", $stuffedBody);
+
+            $message = implode("\r\n", $headers) . "\r\n\r\n" . $formattedBody . "\r\n.";
             $this->command($socket, $message, [250]);
             $this->command($socket, 'QUIT', [221, 250]);
         } finally {
@@ -103,9 +142,7 @@ class Smtp
     }
 
     /**
-     * @param resource $socket stream_socket_client sonucu; PHP'de native
-     *                         `resource` tip belirteci yok, tip yalnızca
-     *                         PHPDoc ile ifade edilebiliyor.
+     * @param resource $socket
      * @param list<int> $okCodes
      */
     private function command($socket, string $cmd, array $okCodes): string
