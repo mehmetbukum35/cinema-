@@ -1096,20 +1096,13 @@ class SyncService {
     };
 
     final pushResult = await _pushPayloadInChunks(payload, sessionUserId);
-    final pushedMax = _maxUpdatedAtInPayload(payload);
-    if (pushedMax > 0) {
-      final lastPush = await PrefsSyncMeta.getLastPushTime();
-      var next = pushedMax > lastPush
-          ? _overlappingCursor(pushedMax)
-          : lastPush;
-      if (pushResult.serverTime > 0) {
-        final cap = pushResult.serverTime + _clockSkewMs;
-        if (next > cap) next = cap;
-      }
-      if (next > lastPush) {
-        await PrefsSyncMeta.setLastPushTime(next);
-      }
-    }
+    // Push imleci BİLEREK ilerletilmiyor. İmleç tüm tablolar için ortaktır ve
+    // "bu damgaya kadar her şey gönderildi" der; buradaki push ise yalnız
+    // favori satırları taşıyor ve damgası normalize'ın duvar saati. İmleci
+    // oraya atlatmak, ana push ile normalize arasında — yani bir ağ turu
+    // boyunca — yapılan her yerel yazımı (araya giren bir puan gibi) sessizce
+    // atlardı. Bu favoriler bir sonraki turda normal push'a girer, imleç de
+    // orada kendi kuralıyla (gönderilen satırların max updated_at'i) ilerler.
     debugPrint(
       'Sync pushed ${rows.length} favorites after cap normalize '
       '(applied=${pushResult.applied}).',
